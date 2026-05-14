@@ -21,6 +21,8 @@ AOC is intentionally split into three layers with strict one-way dependency flow
 
 ### Core Rule
 
+> Canonical protocol contracts are defined in AOC-Protocol and consumed by enterprise orchestration contracts. See `docs/architecture/protocol-integration.md`.
+
 > **Upward composition only:** Protocol -> Enterprise -> Applications. No reverse dependencies.
 
 ---
