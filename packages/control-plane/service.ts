@@ -1,11 +1,11 @@
 import { randomUUID } from 'crypto';
 import type {
-  AccessRequest,
-  ConsentDecision,
+  AccessRequestRecord,
+  ConsentDecisionRecord,
   ControlPlaneAuditEvent,
   CreateAccessRequestInput,
   DecideAccessRequestInput,
-  GrantedAccess,
+  GrantedAccessRecord,
   ListActiveGrantsInput,
   ListRequestsInput,
   RevokeGrantInput,
@@ -19,10 +19,10 @@ function nowIso(): string {
 export class ControlPlaneService {
   constructor(private readonly store: FileControlPlaneStore = new FileControlPlaneStore()) {}
 
-  createAccessRequest(input: CreateAccessRequestInput): AccessRequest {
+  createAccessRequest(input: CreateAccessRequestInput): AccessRequestRecord {
     const state = this.store.read();
     const timestamp = nowIso();
-    const request: AccessRequest = {
+    const request: AccessRequestRecord = {
       request_id: randomUUID(),
       subject_id: input.subject_id,
       requester_id: input.requester_id,
@@ -40,7 +40,7 @@ export class ControlPlaneService {
     return request;
   }
 
-  listRequestsBySubject(input: ListRequestsInput): AccessRequest[] {
+  listRequestsBySubject(input: ListRequestsInput): AccessRequestRecord[] {
     const state = this.store.read();
     return state.requests
       .filter((request) => request.subject_id === input.subject_id)
@@ -48,7 +48,7 @@ export class ControlPlaneService {
       .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   }
 
-  decideAccessRequest(input: DecideAccessRequestInput): { request: AccessRequest; decision: ConsentDecision; grant?: GrantedAccess } {
+  decideAccessRequest(input: DecideAccessRequestInput ): { request: AccessRequestRecord; decision: ConsentDecisionRecord; grant?: GrantedAccessRecord } {
     const state = this.store.read();
     const request = state.requests.find((item) => item.request_id === input.request_id);
 
@@ -65,7 +65,7 @@ export class ControlPlaneService {
     request.status = input.decision === 'approve' ? 'approved' : 'denied';
     request.updated_at = nowIso();
 
-    const decision: ConsentDecision = {
+    const decision: ConsentDecisionRecord = {
       decision_id: randomUUID(),
       request_id: request.request_id,
       subject_id: input.subject_id,
@@ -78,7 +78,7 @@ export class ControlPlaneService {
     const decisionEventType = input.decision === 'approve' ? 'ACCESS_REQUEST_APPROVED' : 'ACCESS_REQUEST_DENIED';
     state.auditEvents.push(this.audit(decisionEventType, request, { decision_id: decision.decision_id }));
 
-    let grant: GrantedAccess | undefined;
+    let grant: GrantedAccessRecord | undefined;
     if (input.decision === 'approve') {
       grant = {
         grant_id: randomUUID(),
@@ -98,7 +98,7 @@ export class ControlPlaneService {
     return { request: { ...request }, decision, grant };
   }
 
-  listActiveGrants(input: ListActiveGrantsInput = {}): GrantedAccess[] {
+  listActiveGrants(input: ListActiveGrantsInput = {}): GrantedAccessRecord[] {
     const state = this.store.read();
     return state.grants
       .filter((grant) => grant.status === 'active')
@@ -107,7 +107,7 @@ export class ControlPlaneService {
       .sort((a, b) => Date.parse(b.granted_at) - Date.parse(a.granted_at));
   }
 
-  revokeGrant(input: RevokeGrantInput): GrantedAccess {
+  revokeGrant(input: RevokeGrantInput): GrantedAccessRecord {
     const state = this.store.read();
     const grant = state.grants.find((item) => item.grant_id === input.grant_id);
     if (grant === undefined) {
@@ -147,7 +147,7 @@ export class ControlPlaneService {
 
   private audit(
     eventType: ControlPlaneAuditEvent['event_type'],
-    request: Pick<AccessRequest, 'request_id' | 'subject_id' | 'requester_id'>,
+    request: Pick<AccessRequestRecord, 'request_id' | 'subject_id' | 'requester_id'>,
     metadata?: Record<string, unknown>
   ): ControlPlaneAuditEvent {
     return {
