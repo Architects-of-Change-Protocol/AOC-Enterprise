@@ -40,3 +40,15 @@ Compatibility exports are marked in docs first, then deprecated for at least one
 ## PMFreak and future consumer expectations
 
 PMFreak and other consumers should import only from stable entrypoints. Deep internal module imports are unsupported and can change without notice.
+
+## Runtime package surface discipline
+
+`@aoc-enterprise/runtime` follows explicit export-map contracts. Only declared root and subpath exports are considered stable, versioned API surface.
+
+Consumer rules:
+
+1. Import only from declared export-map paths.
+2. Never import from `src/` or undeclared deep runtime paths.
+3. Treat compatibility aliases as transitional and monitor release notes for migration windows.
+
+The repository validates these guarantees with publishability checks that run `npm pack`, install the tarball in an isolated fixture, and verify both positive and negative import resolution.

@@ -10,7 +10,9 @@
     "build": "tsc -b --pretty false",
     "lint": "node scripts/lint-architecture.mjs && node scripts/lint-public-surface.mjs",
     "test": "npm run build && node --test",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "validate:invalid-imports": "node scripts/assert-invalid-imports.mjs",
+    "validate:publishability": "node scripts/validate-publishability.mjs"
   },
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",

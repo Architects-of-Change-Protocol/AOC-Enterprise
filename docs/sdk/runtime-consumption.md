@@ -101,3 +101,30 @@ export const agentAccess: AgentAccessEvaluatorAdapter = {
 
 A vertical app should own adapter wiring and call runtime APIs only through stable entrypoints.
 PMFreak compatibility should target `evaluateEnforcementPipeline` and `enforceEnforcementPipeline` from `@aoc-enterprise/runtime`.
+
+## External installation and supported imports
+
+Install from npm:
+
+```bash
+npm install @aoc-enterprise/runtime
+```
+
+Use only documented public entrypoints:
+
+- `@aoc-enterprise/runtime`
+- `@aoc-enterprise/runtime/authorization`
+- `@aoc-enterprise/runtime/audit`
+- `@aoc-enterprise/runtime/crypto`
+- `@aoc-enterprise/runtime/adapters`
+
+Unsupported import patterns (must remain blocked):
+
+- `@aoc-enterprise/runtime/src/*`
+- `@aoc-enterprise/runtime/runtime/*`
+- any undeclared deep runtime evaluator/orchestration path
+
+Compatibility note for current PMFreak consumers:
+
+- `evaluateEnforcementPipeline` and `enforceEnforcementPipeline` remain available from `@aoc-enterprise/runtime`.
+- Authorization and adapter types remain available through documented runtime entrypoints.

@@ -83,3 +83,9 @@ Runtime consumers must import from stable SDK entrypoints only:
 - `@aoc-enterprise/runtime/adapters`
 
 Internal runtime modules remain implementation details and are not a compatibility contract.
+
+## External consumer boundary
+
+The runtime is validated as a publishable package artifact, not only as a workspace module. CI and local validation run against packed tarballs to ensure external consumers can resolve declarations and runtime entrypoints through export maps alone.
+
+This boundary is enforced with negative checks for deep import paths so internal runtime layering can evolve without creating accidental API commitments.
