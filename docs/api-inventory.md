@@ -1,0 +1,91 @@
+# API Inventory
+
+Generated route inventory with classification hints.
+
+- `//api/ai/escalation-guide` — authenticated
+- `//api/ai/meetings` — authenticated
+- `//api/ai/message-nudges` — authenticated
+- `//api/ai/meta-intelligence` — authenticated
+- `//api/ai/pmfreak-brain` — authenticated
+- `//api/ai/political-risk` — authenticated
+- `//api/ai/project-memory` — authenticated
+- `//api/ai/project-state` — authenticated
+- `//api/ai/stakeholder-intel` — authenticated
+- `//api/ai/suggestions` — authenticated
+- `//api/analyze-ai` — authenticated
+- `//api/billing/create-checkout-session` — authenticated; internal-only
+- `//api/billing/create-portal-session` — authenticated; internal-only
+- `//api/billing/state` — authenticated; internal-only
+- `//api/billing/webhook` — system/webhook; internal-only
+- `//api/change-detection` — authenticated
+- `//api/copilot/context` — authenticated
+- `//api/copilot/memory` — authenticated
+- `//api/copilot` — authenticated
+- `//api/debug-auth` — authenticated
+- `//api/early-access/accept` — authenticated
+- `//api/early-access/founder-actions` — authenticated
+- `//api/early-access/invites` — authenticated
+- `//api/early-access/summary` — authenticated
+- `//api/executive-synthesis` — authenticated
+- `//api/getting-started` — authenticated
+- `//api/governance/approvals/[id]/approve` — authenticated; internal-only
+- `//api/governance/approvals/[id]/reject` — authenticated; internal-only
+- `//api/governance/approvals` — authenticated; internal-only
+- `//api/governance/capabilities/verify` — authenticated; internal-only
+- `//api/governance/delegations/consume` — authenticated; internal-only
+- `//api/governance/delegations/issue` — authenticated; internal-only
+- `//api/governance/delegations/revoke` — authenticated; internal-only
+- `//api/governance/delegations` — authenticated; internal-only
+- `//api/governance/executions/consume` — authenticated; internal-only
+- `//api/governance/trust/.well-known/capability-issuer` — authenticated; internal-only
+- `//api/governance/trust/events/import` — authenticated; internal-only
+- `//api/governance/trust/events` — authenticated; internal-only
+- `//api/governance/trust/handshakes/[id]/approve` — authenticated; internal-only
+- `//api/governance/trust/handshakes/[id]/reject` — authenticated; internal-only
+- `//api/governance/trust/handshakes/[id]/revoke` — authenticated; internal-only
+- `//api/governance/trust/handshakes/request` — authenticated; internal-only
+- `//api/governance/trust/handshakes` — authenticated; internal-only
+- `//api/governance/trust/keys` — authenticated; internal-only
+- `//api/input-hub` — authenticated
+- `//api/intelligence/coordination` — authenticated
+- `//api/intelligence/execution-risk` — authenticated
+- `//api/intelligence/interventions` — authenticated
+- `//api/intelligence/operational-live` — authenticated
+- `//api/intelligence/stakeholders` — authenticated
+- `//api/login` — authenticated
+- `//api/onboarding` — authenticated
+- `//api/operational-memory` — authenticated
+- `//api/portfolio` — authenticated
+- `//api/projects/[id]` — authenticated
+- `//api/projects` — authenticated
+- `//api/runtime/authority` — authenticated; internal-only
+- `//api/sdk/agents/[id]` — authenticated; SDK/public API candidate
+- `//api/sdk/agents/evaluate` — authenticated; SDK/public API candidate
+- `//api/sdk/agents` — authenticated; SDK/public API candidate
+- `//api/sdk/agents/scopes` — authenticated; SDK/public API candidate
+- `//api/sdk/audit/agents` — authenticated; SDK/public API candidate
+- `//api/sdk/audit/capabilities` — authenticated; SDK/public API candidate
+- `//api/sdk/audit/resources` — authenticated; SDK/public API candidate
+- `//api/sdk/audit/timeline` — authenticated; SDK/public API candidate
+- `//api/sdk/capabilities/grants/[id]/revoke` — authenticated; SDK/public API candidate
+- `//api/sdk/capabilities/grants` — authenticated; SDK/public API candidate
+- `//api/sdk/capabilities/requests/[id]/approve` — authenticated; SDK/public API candidate
+- `//api/sdk/capabilities/requests/[id]/deny` — authenticated; SDK/public API candidate
+- `//api/sdk/capabilities/requests` — authenticated; SDK/public API candidate
+- `//api/sdk/policies/[id]` — authenticated; SDK/public API candidate
+- `//api/sdk/policies/evaluate` — authenticated; SDK/public API candidate
+- `//api/sdk/policies` — authenticated; SDK/public API candidate
+- `//api/telemetry/first-user` — authenticated
+- `//api/upload` — authenticated
+- `//api/v1/agent-scopes` — authenticated; SDK/public API candidate
+- `//api/v1/agents/[id]` — authenticated; SDK/public API candidate
+- `//api/v1/agents` — authenticated; SDK/public API candidate
+- `//api/v1/audit-events` — authenticated; SDK/public API candidate
+- `//api/v1/capability-grants/[id]/revoke` — authenticated; SDK/public API candidate
+- `//api/v1/capability-grants` — authenticated; SDK/public API candidate
+- `//api/v1/capability-requests/[id]/approve` — authenticated; SDK/public API candidate
+- `//api/v1/capability-requests/[id]/deny` — authenticated; SDK/public API candidate
+- `//api/v1/capability-requests` — authenticated; SDK/public API candidate
+- `//api/v1/policies/[id]` — authenticated; SDK/public API candidate
+- `//api/v1/policies/evaluate` — authenticated; SDK/public API candidate
+- `//api/v1/policies` — authenticated; SDK/public API candidate
