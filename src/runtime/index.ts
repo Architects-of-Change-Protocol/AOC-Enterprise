@@ -5,23 +5,26 @@ export type {
   EnforcementEvaluationInput,
   EnforcementEvaluationResult,
   EnforcementRuntimeDeps,
-  RuntimeAuditEmitter,
+} from './authorization';
+export type { RuntimeAuditEmitter } from './audit';
+export type {
   CapabilityVerificationContext,
   DelegationVerificationContext,
   VerificationResult,
+} from './crypto';
+export type {
   AgentAccessEvaluatorAdapter,
   AuditSinkAdapter,
   CapabilityRegistryAdapter,
   DelegationStoreAdapter,
   IdentityResolverAdapter,
   PolicyDecisionAdapter,
-} from './runtime';
+} from './adapters';
 
 export {
   evaluateEnforcementPipeline,
   enforceEnforcementPipeline,
   orchestrateAuthorization,
-  emitRuntimeAuditEvent,
-  verifyCapabilityToken,
-  verifyDelegatedCapability,
-} from './runtime';
+} from './authorization';
+export { emitRuntimeAuditEvent } from './audit';
+export { verifyCapabilityToken, verifyDelegatedCapability } from './crypto';

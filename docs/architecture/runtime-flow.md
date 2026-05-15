@@ -71,3 +71,15 @@ All transitions are correlation-ID bound and replay-reconstructable from audit e
 - JIT (just-in-time) access requests trigger elevated policy path.
 - Temporary capabilities include absolute expiry and non-renewable nonce constraints by default.
 - Elevated sessions require stronger audit granularity and optional human approval gates.
+
+## Public runtime surface policy
+
+Runtime consumers must import from stable SDK entrypoints only:
+
+- `@aoc-enterprise/runtime`
+- `@aoc-enterprise/runtime/authorization`
+- `@aoc-enterprise/runtime/audit`
+- `@aoc-enterprise/runtime/crypto`
+- `@aoc-enterprise/runtime/adapters`
+
+Internal runtime modules remain implementation details and are not a compatibility contract.
