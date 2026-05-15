@@ -10,5 +10,10 @@
   "exclude": [
     "**/__tests__/**",
     "dist"
+  ],
+  "references": [
+    {
+      "path": "../policy-runtime"
+    }
   ]
 }
