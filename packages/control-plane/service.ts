@@ -70,7 +70,7 @@ export class ControlPlaneService {
       request_id: request.request_id,
       subject_id: input.subject_id,
       decision: input.decision,
-      reason: input.reason,
+      ...(input.reason === undefined ? {} : { reason: input.reason }),
       decided_at: nowIso(),
     };
     state.decisions.push(decision);
@@ -95,7 +95,7 @@ export class ControlPlaneService {
     }
 
     this.store.write(state);
-    return { request: { ...request }, decision, grant };
+    return grant === undefined ? { request: { ...request }, decision } : { request: { ...request }, decision, grant };
   }
 
   listActiveGrants(input: ListActiveGrantsInput = {}): GrantedAccessRecord[] {

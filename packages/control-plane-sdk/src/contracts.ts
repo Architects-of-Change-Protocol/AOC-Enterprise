@@ -14,7 +14,7 @@ import type {
 import type {
   EnterprisePolicyEvaluationRequest,
   EnterprisePolicyEvaluationResponse,
-} from '../../policy-runtime/src/contracts';
+} from '@aoc-enterprise/policy-runtime';
 
 export interface ControlPlaneEvaluationInput {
   caller: AocIdentityClaims;
