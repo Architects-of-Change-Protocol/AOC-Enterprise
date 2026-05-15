@@ -1,0 +1,15 @@
+{
+  "name": "aoc-enterprise",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc -b --pretty false --noEmit",
+    "build": "tsc -b --pretty false",
+    "lint": "node scripts/lint-architecture.mjs",
+    "test": "npm run build && node --test packages/*/dist/**/__tests__/*.test.js",
+    "clean": "node scripts/clean.mjs"
+  }
+}
