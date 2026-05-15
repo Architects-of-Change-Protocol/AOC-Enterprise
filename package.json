@@ -6,10 +6,10 @@
     "packages/*"
   ],
   "scripts": {
-    "typecheck": "tsc -b --pretty false --noEmit",
+    "typecheck": "tsc -b --pretty false",
     "build": "tsc -b --pretty false",
     "lint": "node scripts/lint-architecture.mjs",
-    "test": "npm run build && node --test packages/*/dist/**/__tests__/*.test.js",
+    "test": "npm run build && node --test",
     "clean": "node scripts/clean.mjs"
   }
 }
