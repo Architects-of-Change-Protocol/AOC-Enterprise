@@ -1,5 +1,5 @@
 {
-  "name": "aoc-enterprise",
+  "name": "@aoc-enterprise/runtime",
   "private": true,
   "version": "0.1.0",
   "workspaces": [
@@ -8,8 +8,35 @@
   "scripts": {
     "typecheck": "tsc -b --pretty false",
     "build": "tsc -b --pretty false",
-    "lint": "node scripts/lint-architecture.mjs",
+    "lint": "node scripts/lint-architecture.mjs && node scripts/lint-public-surface.mjs",
     "test": "npm run build && node --test",
     "clean": "node scripts/clean.mjs"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./authorization": {
+      "types": "./dist/src/runtime/authorization/index.d.ts",
+      "default": "./dist/src/runtime/authorization/index.js"
+    },
+    "./audit": {
+      "types": "./dist/src/runtime/audit/index.d.ts",
+      "default": "./dist/src/runtime/audit/index.js"
+    },
+    "./crypto": {
+      "types": "./dist/src/runtime/crypto/index.d.ts",
+      "default": "./dist/src/runtime/crypto/index.js"
+    },
+    "./adapters": {
+      "types": "./dist/src/runtime/adapters/index.d.ts",
+      "default": "./dist/src/runtime/adapters/index.js"
+    }
   }
 }
