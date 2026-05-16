@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -30,21 +30,7 @@ try {
   const tarballPath = resolve(root, tarballName);
   await cp(fixtureDir, consumerDir, { recursive: true });
 
-  const protocolStubDir = join(tmp, 'protocol-contracts-stub');
-  await mkdir(protocolStubDir, { recursive: true });
-  await writeFile(join(protocolStubDir, 'package.json'), JSON.stringify({
-    name: '@aoc/protocol',
-    version: '0.0.0',
-    private: true,
-    type: 'module',
-    exports: {
-      './contracts': { types: './contracts.d.ts', default: './contracts.js' }
-    }
-  }, null, 2));
-  await writeFile(join(protocolStubDir, 'contracts.d.ts'), 'export type AocIdentityClaims = Record<string, unknown>;\nexport type CapabilityToken = Record<string, unknown>;\nexport type ConsentGrant = Record<string, unknown>;\nexport type ScopedAccessRequest = Record<string, unknown>;\nexport type AuditEventEnvelope = Record<string, unknown>;\n');
-  await writeFile(join(protocolStubDir, 'contracts.js'), 'export {};\n');
-
-  run('npm', ['install', protocolStubDir], consumerDir);
+  run('npm', ['install'], consumerDir);
   run('npm', ['install', tarballPath], consumerDir);
 
   run('npx', ['--no-install', 'tsc', '--pretty', 'false', '--noEmit', '-p', 'tsconfig.json'], consumerDir);

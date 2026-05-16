@@ -6,5 +6,8 @@
   "scripts": {
     "typecheck": "tsc --pretty false --noEmit",
     "build": "tsc --pretty false"
+  },
+  "dependencies": {
+    "@aoc/protocol": "^0.1.0"
   }
 }
