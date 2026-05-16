@@ -52,3 +52,8 @@ Consumer rules:
 3. Treat compatibility aliases as transitional and monitor release notes for migration windows.
 
 The repository validates these guarantees with publishability checks that run `npm pack`, install the tarball in an isolated fixture, and verify both positive and negative import resolution.
+
+## Stability Contract
+- Protocol contract authority lives in `@aoc/protocol/contracts`.
+- Enterprise runtime SDK exposes stable entrypoints only: `@aoc-enterprise/runtime`, `/authorization`, `/audit`, `/crypto`, `/adapters`.
+- PMFreak compatibility exports are preserved while runtime internals remain non-public.

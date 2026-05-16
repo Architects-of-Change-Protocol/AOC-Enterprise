@@ -22,9 +22,6 @@
       "./node_modules/@types"
     ],
     "paths": {
-      "@aoc/protocol/contracts": [
-        "types/aoc-protocol-contracts.d.ts"
-      ],
       "@aoc-enterprise/policy-runtime": [
         "types/policy-runtime-bridge.d.ts"
       ]

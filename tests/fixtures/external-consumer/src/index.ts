@@ -1,9 +1,11 @@
 import {
   enforceEnforcementPipeline,
   evaluateEnforcementPipeline,
+  type EnforcementEvaluationInput,
 } from '@aoc-enterprise/runtime';
 import { verifyCapabilityToken } from '@aoc-enterprise/runtime/crypto';
 import type { PolicyDecisionAdapter } from '@aoc-enterprise/runtime/adapters';
+import type { CapabilityToken, ConsentGrant, ScopedAccessRequest } from '@aoc/protocol/contracts';
 
 const policyDecisionAdapter: PolicyDecisionAdapter = {
   evaluatePolicy: async () => ({
@@ -12,7 +14,11 @@ const policyDecisionAdapter: PolicyDecisionAdapter = {
   }),
 };
 
-const input = {
+const input: EnforcementEvaluationInput & {
+  capability: CapabilityToken;
+  consentGrants: ConsentGrant[];
+  access: ScopedAccessRequest;
+} = {
   requestId: 'req-1',
   actorId: 'user-1',
   capability: { jti: 'jti-1', trust_domain: 'enterprise', exp: 4102444800 },

@@ -128,3 +128,9 @@ Compatibility note for current PMFreak consumers:
 
 - `evaluateEnforcementPipeline` and `enforceEnforcementPipeline` remain available from `@aoc-enterprise/runtime`.
 - Authorization and adapter types remain available through documented runtime entrypoints.
+
+## Canonical Protocol Consumption
+- Enterprise consumes protocol semantics exclusively from `@aoc/protocol/contracts`.
+- Do not define local protocol semantic contracts; use runtime composition wrappers for Enterprise metadata.
+- Local dev: prefer `@aoc/protocol` via `file:../Architects_of_Change_Protocol/packages/protocol` or protocol tarball install.
+- Registry target: publish `@aoc/protocol` and consume via semver from GitHub Packages or npm private registry.
