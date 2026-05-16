@@ -133,4 +133,5 @@ Compatibility note for current PMFreak consumers:
 - Enterprise consumes protocol semantics exclusively from `@aoc/protocol/contracts`.
 - Do not define local protocol semantic contracts; use runtime composition wrappers for Enterprise metadata.
 - Local dev: prefer `@aoc/protocol` via `file:../Architects_of_Change_Protocol/packages/protocol` or protocol tarball install.
+- Runtime TypeScript keeps `./types` in `typeRoots` only for non-protocol ambient bridges (`node-shims`, `@aoc-enterprise/policy-runtime`), never for protocol contract stubs.
 - Registry target: publish `@aoc/protocol` and consume via semver from GitHub Packages or npm private registry.
