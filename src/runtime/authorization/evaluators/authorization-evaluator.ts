@@ -1,4 +1,4 @@
-import type { AocIdentityClaims, CapabilityToken, ScopedAccessRequest } from '@aoc/protocol/contracts';
+import type { AocIdentityClaims, CapabilityToken, ScopedAccessRequest } from '@aoc/protocol';
 import type {
   AgentAccessEvaluatorAdapter,
   CapabilityRegistryAdapter,

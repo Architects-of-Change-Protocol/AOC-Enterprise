@@ -4,7 +4,7 @@
  * NOTE: Scoped access grammar is canonical in AOC-Protocol.
  */
 
-import type { ScopedAccessRequest } from '@aoc/protocol/contracts';
+import type { ScopedAccessRequest } from '@aoc/protocol';
 
 export interface OrgBoundary {
   orgId: string;

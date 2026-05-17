@@ -3,7 +3,7 @@ import type {
   CapabilityToken,
   ConsentGrant,
   ScopedAccessRequest,
-} from '@aoc/protocol/contracts';
+} from '@aoc/protocol';
 
 export type AccessRequestStatus = 'pending' | 'approved' | 'denied';
 

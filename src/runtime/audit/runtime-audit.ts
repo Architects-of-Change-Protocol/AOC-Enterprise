@@ -1,6 +1,6 @@
 import type { RuntimeAuditEmitter } from './emitters/runtime-audit-emitter';
 import { emitRuntimeAuditEvent } from './emitters/runtime-audit-emitter';
-import type { AuditEventEnvelope } from '@aoc/protocol/contracts';
+import type { AuditEventEnvelope } from '@aoc/protocol';
 
 export type { RuntimeAuditEmitter };
 

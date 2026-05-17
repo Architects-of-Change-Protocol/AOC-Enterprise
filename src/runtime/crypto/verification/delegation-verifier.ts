@@ -1,6 +1,6 @@
 import type { CapabilityVerificationContext, VerificationResult } from './capability-verifier';
 import { verifyCapabilityToken } from './capability-verifier';
-import type { CapabilityToken } from '@aoc/protocol/contracts';
+import type { CapabilityToken } from '@aoc/protocol';
 
 export type DelegationVerificationContext = CapabilityVerificationContext;
 

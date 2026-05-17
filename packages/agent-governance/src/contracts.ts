@@ -4,7 +4,7 @@
  * NOTE: Agent identity and delegated capability semantics come from AOC-Protocol.
  */
 
-import type { AocIdentityClaims, CapabilityToken } from '@aoc/protocol/contracts';
+import type { AocIdentityClaims, CapabilityToken } from '@aoc/protocol';
 
 export interface GovernedAgentProfile {
   agentId: string;

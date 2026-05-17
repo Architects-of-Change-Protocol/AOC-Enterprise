@@ -1,0 +1,62 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
+const roots = ['src', 'packages', 'tests'];
+const sourceExt = new Set(['.ts', '.mts', '.cts']);
+const violations = [];
+
+const relImport = /(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"](\.{1,2}\/[^'"?#]+)['"]/g;
+const dynImport = /import\(\s*['"](\.{1,2}\/[^'"?#]+)['"]\s*\)/g;
+const legacyAlias = /['"]@\//;
+const deepProtocol = /['"]@aoc\/protocol\/(?!$)/;
+
+function hasSourceExt(specifier) {
+  return ['.js', '.mjs', '.cjs', '.json'].some((ext) => specifier.endsWith(ext));
+}
+
+function walk(dir) {
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name);
+    const st = statSync(path);
+    if (st.isDirectory()) walk(path);
+    else if ([...sourceExt].some((ext) => path.endsWith(ext))) checkFile(path);
+  }
+}
+
+function checkMatches(path, text, pattern, check) {
+  pattern.lastIndex = 0;
+  for (const match of text.matchAll(pattern)) {
+    const spec = match[1];
+    check(spec, match.index ?? 0);
+  }
+}
+
+function checkFile(path) {
+  const text = readFileSync(path, 'utf8');
+
+  if (legacyAlias.test(text)) violations.push(`${path}: forbidden legacy alias '@/'.`);
+  if (deepProtocol.test(text)) violations.push(`${path}: forbidden deep import from @aoc/protocol.`);
+
+  const recordExt = (spec) => {
+    if (!hasSourceExt(spec)) violations.push(`${path}: relative import missing Node16 extension -> ${spec}`);
+  };
+
+  checkMatches(path, text, relImport, recordExt);
+  checkMatches(path, text, dynImport, recordExt);
+}
+
+for (const root of roots) {
+  try {
+    walk(root);
+  } catch {
+    // Optional trees (e.g., tests) can be absent in some package variants.
+  }
+}
+
+if (violations.length) {
+  console.error('Node16/import boundary violations:');
+  for (const v of violations) console.error(`- ${v}`);
+  process.exit(1);
+}
+
+console.log('Node16 import and boundary checks passed');

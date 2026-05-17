@@ -4,7 +4,7 @@
  * NOTE: Principal identity and capability semantics are owned by AOC-Protocol.
  */
 
-import type { AocIdentityClaims, CapabilityToken } from '@aoc/protocol/contracts';
+import type { AocIdentityClaims, CapabilityToken } from '@aoc/protocol';
 
 export interface TenantGovernanceContext {
   tenantId: string;

@@ -4,7 +4,7 @@ import type {
   CapabilityToken,
   ConsentGrant,
   ScopedAccessRequest,
-} from '@aoc/protocol/contracts';
+} from '@aoc/protocol';
 
 export interface PolicyDecisionAdapter {
   evaluatePolicy(input: {
