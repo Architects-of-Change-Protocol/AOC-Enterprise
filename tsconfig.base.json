@@ -26,10 +26,10 @@
         "types/policy-runtime-bridge.d.ts"
       ]
     },
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "types": [
       "node-shims"
-    ],
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0"
+    ]
   }
 }

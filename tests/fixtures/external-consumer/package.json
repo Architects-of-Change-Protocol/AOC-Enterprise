@@ -8,6 +8,6 @@
     "build": "tsc --pretty false"
   },
   "dependencies": {
-    "@aoc/protocol": "^0.1.0"
+    "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol"
   }
 }

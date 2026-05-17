@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -7,6 +7,15 @@ const root = process.cwd();
 const fixtureDir = resolve(root, 'tests/fixtures/external-consumer');
 const tmp = await mkdtemp(join(tmpdir(), 'aoc-publishability-'));
 const consumerDir = join(tmp, 'external-consumer');
+
+const rootPkg = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
+const protocolSpec = rootPkg.dependencies?.['@aoc/protocol'];
+if (!protocolSpec || !protocolSpec.startsWith('file:')) {
+  throw new Error('Root dependency @aoc/protocol must be a real file: dependency for publishability validation.');
+}
+const protocolPath = resolve(root, protocolSpec.slice('file:'.length));
+const protocolPkgJson = resolve(protocolPath, 'package.json');
+await stat(protocolPkgJson);
 
 const run = (cmd, args, cwd) => {
   const result = spawnSync(cmd, args, { cwd, stdio: 'pipe', encoding: 'utf8' });
@@ -29,6 +38,13 @@ try {
 
   const tarballPath = resolve(root, tarballName);
   await cp(fixtureDir, consumerDir, { recursive: true });
+
+
+  const fixturePkgPath = join(consumerDir, 'package.json');
+  const fixturePkg = JSON.parse(await readFile(fixturePkgPath, 'utf8'));
+  fixturePkg.dependencies = fixturePkg.dependencies ?? {};
+  fixturePkg.dependencies['@aoc/protocol'] = `file:${protocolPath}`;
+  await writeFile(fixturePkgPath, `${JSON.stringify(fixturePkg, null, 2)}\n`);
 
   run('npm', ['install'], consumerDir);
   run('npm', ['install', tarballPath], consumerDir);
