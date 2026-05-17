@@ -1,4 +1,4 @@
-import type { AuditEventEnvelope } from '@aoc/protocol/contracts';
+import type { AuditEventEnvelope } from '@aoc/protocol';
 
 export interface RuntimeAuditEmitter {
   emit(event: AuditEventEnvelope): Promise<void>;

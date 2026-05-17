@@ -1,4 +1,4 @@
-import type { CapabilityToken, ConsentGrant, ScopedAccessRequest } from '@aoc/protocol/contracts';
+import type { CapabilityToken, ConsentGrant, ScopedAccessRequest } from '@aoc/protocol';
 
 export interface AuthorizationGrantInput {
   requestId: string;

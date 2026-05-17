@@ -4,7 +4,7 @@
  * NOTE: Capability token constraints and identity claims originate in AOC-Protocol.
  */
 
-import type { AocIdentityClaims, CapabilityToken } from '@aoc/protocol/contracts';
+import type { AocIdentityClaims, CapabilityToken } from '@aoc/protocol';
 
 export interface IntegrationAdapterDescriptor {
   adapterId: string;

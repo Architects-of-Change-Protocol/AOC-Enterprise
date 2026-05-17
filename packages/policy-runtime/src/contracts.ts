@@ -13,7 +13,7 @@ import type {
   ConsentGrant,
   ScopedAccessRequest,
   AuditEventEnvelope,
-} from '@aoc/protocol/contracts';
+} from '@aoc/protocol';
 
 export interface EnterprisePolicyEvaluationRequest {
   requestId: string;

@@ -1,4 +1,4 @@
-import type { CapabilityToken } from '@aoc/protocol/contracts';
+import type { CapabilityToken } from '@aoc/protocol';
 
 export interface CapabilityVerificationContext {
   trustDomain: string;

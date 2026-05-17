@@ -5,7 +5,7 @@ import {
 } from '@aoc-enterprise/runtime';
 import { verifyCapabilityToken } from '@aoc-enterprise/runtime/crypto';
 import type { PolicyDecisionAdapter } from '@aoc-enterprise/runtime/adapters';
-import type { CapabilityToken, ConsentGrant, ScopedAccessRequest } from '@aoc/protocol/contracts';
+import type { CapabilityToken, ConsentGrant, ScopedAccessRequest } from '@aoc/protocol';
 
 const policyDecisionAdapter: PolicyDecisionAdapter = {
   evaluatePolicy: async () => ({
