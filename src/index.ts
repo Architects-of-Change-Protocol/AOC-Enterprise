@@ -1,4 +1,27 @@
 export type {
+  AocEnterpriseRuntime,
+  AocEnterpriseRuntimeHostPorts,
+  CapabilityClaim,
+  CapabilityClaimExpectedValues,
+  CapabilityClaimPayload,
+  CapabilityClaimVerificationResult,
+  DelegatedAccessEvaluationInput,
+  DelegatedAccessEvaluationResult,
+  DelegatedCapability,
+  DelegatedCapabilityPayload,
+  ExecutionGrant,
+  ExecutionGrantPayload,
+  ExecutionGrantValidationResult,
+  RuntimeContext,
+  RuntimeDecisionEnvelope,
+  RuntimeMetadata,
+  RuntimePortSet,
+  RuntimeSignedEnvelope,
+  RuntimeSignerPort,
+} from './runtime';
+
+export { createAocEnterpriseRuntime } from './runtime';
+export type {
   AuthorizationDecision,
   AuthorizationGrantInput,
   AuthorizationOrchestrationDeps,

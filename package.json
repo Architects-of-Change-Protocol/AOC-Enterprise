@@ -14,7 +14,8 @@
     "validate:invalid-imports": "node scripts/assert-invalid-imports.mjs",
     "validate:publishability": "node scripts/validate-publishability.mjs",
     "check:protocol-consumption": "node scripts/check-protocol-consumption.mjs",
-    "validate:release": "npm run typecheck && npm run build && npm run lint && npm test && npm run check:protocol-consumption && npm run validate:publishability"
+    "validate:release": "npm run typecheck && npm run build && npm run lint && npm test && npm run check:protocol-consumption && npm run validate:publishability",
+    "check:aoc-boundaries": "node scripts/check-aoc-boundaries.mjs"
   },
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
@@ -41,6 +42,14 @@
     "./adapters": {
       "types": "./dist/src/runtime/adapters/index.d.ts",
       "default": "./dist/src/runtime/adapters/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/src/runtime/index.d.ts",
+      "default": "./dist/src/runtime/index.js"
+    },
+    "./runtime-host": {
+      "types": "./dist/src/runtime/index.d.ts",
+      "default": "./dist/src/runtime/index.js"
     }
   },
   "dependencies": {
