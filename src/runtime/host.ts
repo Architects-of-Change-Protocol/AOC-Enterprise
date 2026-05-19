@@ -66,11 +66,15 @@ function containsExpectedScope(actual: string[] | undefined, expected: string | 
 
 async function signPayload<TPayload extends Record<string, unknown>>(
   context: RuntimeContext,
-  payload: TPayload
-): Promise<{ payload: TPayload; signature: string; issuedAt: string; metadata: RuntimeContext['metadata'] }> {
+  payload: TPayload,
+  verification: { verificationNotBefore?: string; verificationNotAfter?: string; trustedUntil?: string; trustDomain?: string } = {}
+) {
+  const signed = await context.signer.sign(payload, context.metadata);
   return {
     payload,
-    signature: await context.signer.sign(payload, context.metadata),
+    signature: signed.signature,
+    signer: signed.signer,
+    verification,
     issuedAt: nowIso(),
     metadata: context.metadata,
   };
@@ -108,6 +112,27 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     }
   }
 
+
+
+  const auditDeliveryPolicy = context.auditDeliveryPolicy ?? 'warn-only';
+
+  async function emitLifecycleAuditEnforced(event: Omit<LifecycleAuditEvent, 'runtimeId' | 'trustDomain' | 'timestamp'>): Promise<void> {
+    try {
+      await emitLifecycleAudit(event);
+    } catch (error) {
+      if (auditDeliveryPolicy === 'fail-closed') throw error;
+    }
+  }
+
+  function isWithinWindow(value: string | undefined, start?: string, end?: string): boolean {
+    if (!value) return true;
+    const ts = Date.parse(value);
+    if (Number.isNaN(ts)) return false;
+    if (start && ts < Date.parse(start)) return false;
+    if (end && ts > Date.parse(end)) return false;
+    return true;
+  }
+
   async function evaluate(input: AuthorizationGrantInput): Promise<RuntimeDecisionEnvelope> {
     const decision = await evaluateEnforcementPipeline(input, context);
     return { ...decision, metadata: context.metadata };
@@ -116,10 +141,19 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
   async function verifySignedPayload(
     payload: Record<string, unknown>,
     signature: string,
-    invalidReasonCode: string
+    keyId: string | undefined,
+    invalidReasonCode: string,
+    keyUntrustedReasonCode: string
   ): Promise<string[]> {
-    const signatureValid = await context.signer.verify(payload, signature, context.metadata);
-    return signatureValid ? [] : [invalidReasonCode];
+    const reasonCodes: string[] = [];
+    const trustedKeys = await context.signer.getTrustedVerificationKeys();
+    if (!keyId || !trustedKeys.some((key) => key.keyId === keyId && key.revoked !== true)) {
+      reasonCodes.push(keyUntrustedReasonCode);
+      return reasonCodes;
+    }
+    const signatureValid = await context.signer.verifyWithKeyId(payload, signature, keyId, context.metadata);
+    if (!signatureValid) reasonCodes.push(invalidReasonCode);
+    return reasonCodes;
   }
 
   const runtime: AocEnterpriseRuntime = {
@@ -160,7 +194,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     },
     async validateExecutionGrant(grant, options) {
       const reasonCodes: string[] = [];
-      reasonCodes.push(...(await verifySignedPayload(grant.payload, grant.signature, 'grant_signature_invalid')));
+      reasonCodes.push(...(await verifySignedPayload(grant.payload, grant.signature, grant.signer?.keyId, 'grant_signature_invalid', 'grant_key_untrusted')));
       if (isExpired(grant.payload.expiresAt)) reasonCodes.push('grant_expired');
       if (!(await context.executionGrantStore.getGrant(grant.payload.grantId))) reasonCodes.push('grant_unknown');
       if (await context.executionGrantStore.isGrantRevoked(grant.payload.grantId)) reasonCodes.push('grant_revoked');
@@ -247,7 +281,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     async evaluateDelegatedAccess(input) {
       const payload = input.delegatedCapability.payload;
       const reasonCodes: string[] = [];
-      reasonCodes.push(...(await verifySignedPayload(payload, input.delegatedCapability.signature, 'delegation_signature_invalid')));
+      reasonCodes.push(...(await verifySignedPayload(payload, input.delegatedCapability.signature, input.delegatedCapability.signer?.keyId, 'delegation_signature_invalid', 'delegation_key_untrusted')));
       if (!(await context.lifecycleDelegationStore.getDelegation(payload.delegationId))) reasonCodes.push('delegation_invalid');
       if (await context.lifecycleDelegationStore.isDelegationRevoked(payload.delegationId)) reasonCodes.push('delegation_revoked');
       if (isExpired(payload.expiresAt)) reasonCodes.push('delegation_expired');
@@ -302,8 +336,14 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
       };
       const nonceRecorded = await context.replayProtection.recordNonce(payload.nonce, scopeFor('claim'), payload.expiresAt);
       if (!nonceRecorded.recorded) throw new Error('claim nonce replay detected during issue');
-      const claim = await signPayload(context, payload);
-      await emitLifecycleAudit({
+      const claimVerification = {
+        verificationNotBefore: issuedAt,
+        trustDomain: payload.trustDomain,
+        ...(payload.expiresAt === undefined ? {} : { verificationNotAfter: payload.expiresAt, trustedUntil: payload.expiresAt }),
+      };
+      const claim = await signPayload(context, payload, claimVerification);
+      await context.capabilityClaimStore.persistClaim(claim);
+      await emitLifecycleAuditEnforced({
         eventType: 'claim_issued',
         actorId: payload.actorId,
         orgId: payload.orgId,
@@ -315,20 +355,31 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     },
     async verifyCapabilityClaim(claim, expected) {
       const reasonCodes: string[] = [];
-      reasonCodes.push(...(await verifySignedPayload(claim.payload, claim.signature, 'claim_signature_invalid')));
+      reasonCodes.push(...(await verifySignedPayload(claim.payload, claim.signature, claim.signer?.keyId, 'claim_signature_invalid', 'claim_key_untrusted')));
       if (isExpired(claim.payload.expiresAt)) reasonCodes.push('claim_expired');
-      if (expected?.actorId !== undefined && expected.actorId !== claim.payload.actorId) reasonCodes.push('actor_mismatch');
-      if (expected?.orgId !== undefined && expected.orgId !== claim.payload.orgId) reasonCodes.push('org_mismatch');
-      if (expected?.trustDomain !== undefined && expected.trustDomain !== claim.payload.trustDomain) reasonCodes.push('trust_domain_mismatch');
+      if (!(await context.capabilityClaimStore.getClaim(claim.payload.claimId))) reasonCodes.push('claim_unknown');
+      if (await context.capabilityClaimStore.isClaimRevoked(claim.payload.claimId)) reasonCodes.push('claim_revoked');
+      if (expected?.actorId !== undefined && expected.actorId !== claim.payload.actorId) reasonCodes.push('claim_actor_mismatch');
+      if (expected?.orgId !== undefined && expected.orgId !== claim.payload.orgId) reasonCodes.push('claim_org_mismatch');
+      if (expected?.trustDomain !== undefined && expected.trustDomain !== claim.payload.trustDomain) reasonCodes.push('claim_trust_domain_mismatch');
+      if (!isWithinWindow(claim.payload.issuedAt, claim.verification?.verificationNotBefore, claim.verification?.verificationNotAfter)) {
+        reasonCodes.push('claim_verification_window_invalid');
+      }
+      const storeValidation = await context.capabilityClaimStore.validateClaim(claim, expected);
+      if (!storeValidation.valid) reasonCodes.push(...(storeValidation.reasonCodes ?? ['claim_store_denied']));
       const valid = reasonCodes.length === 0;
-      await emitLifecycleAudit({
+      await emitLifecycleAuditEnforced({
         eventType: valid ? 'claim_verified' : 'claim_denied',
         actorId: claim.payload.actorId,
         orgId: claim.payload.orgId,
         claimId: claim.payload.claimId,
         reasonCodes,
         decision: valid ? 'allowed' : 'denied',
-        metadata: { claimRevocationStoreImplemented: false },
+        metadata: {
+          signerKeyId: claim.signer?.keyId,
+          trustAnchorVersion: claim.signer?.trustAnchorVersion,
+          verificationWindow: claim.verification,
+        },
       });
       return { valid, reasonCodes };
     },
