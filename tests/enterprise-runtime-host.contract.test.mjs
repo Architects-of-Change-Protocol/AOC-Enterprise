@@ -5,11 +5,20 @@ import { createAocEnterpriseRuntime } from '../dist/src/index.js';
 
 const calls = [];
 const signer = {
+  currentKeyId: 'kid-current',
+  trustedKeys: new Map([['kid-current', { revoked: false }], ['kid-rotated', { revoked: false }], ['kid-revoked', { revoked: true }]]),
   async sign(payload) {
-    return `sig:${JSON.stringify(payload)}`;
+    return { signature: `sig:${this.currentKeyId}:${JSON.stringify(payload)}`, signer: { signerId: 'test-signer', keyId: this.currentKeyId, algorithm: 'mock', issuedBy: 'tests', trustAnchorVersion: 'v2' } };
   },
   async verify(payload, signature) {
-    return signature === `sig:${JSON.stringify(payload)}`;
+    return signature.endsWith(JSON.stringify(payload));
+  },
+  async getCurrentKeyId() { return this.currentKeyId; },
+  async getTrustedVerificationKeys() { return [...this.trustedKeys.entries()].map(([keyId, state]) => ({ keyId, revoked: state.revoked })); },
+  async verifyWithKeyId(payload, signature, keyId) {
+    const state = this.trustedKeys.get(keyId);
+    if (!state || state.revoked) return false;
+    return signature === `sig:${keyId}:${JSON.stringify(payload)}`;
   },
 };
 
@@ -20,6 +29,8 @@ function createLifecycleStores(auditEvents = []) {
   const delegations = new Map();
   const revokedDelegations = new Set();
   const nonces = new Set();
+  const claims = new Map();
+  const revokedClaims = new Set();
   return {
     executionGrantStore: {
       async persistGrant(grant) {
@@ -59,6 +70,13 @@ function createLifecycleStores(auditEvents = []) {
       async isDelegationRevoked(delegationId) {
         return revokedDelegations.has(delegationId);
       },
+    },
+    capabilityClaimStore: {
+      async persistClaim(claim) { claims.set(claim.payload.claimId, claim); },
+      async getClaim(claimId) { return claims.get(claimId); },
+      async revokeClaim(claimId) { revokedClaims.add(claimId); },
+      async isClaimRevoked(claimId) { return revokedClaims.has(claimId); },
+      async validateClaim() { return { valid: true, reasonCodes: [] }; },
     },
     replayProtection: {
       async recordNonce(nonce, scope) {

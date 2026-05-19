@@ -24,11 +24,30 @@ export type RuntimeDecisionEnvelope = {
   metadata: RuntimeMetadata;
 };
 
+export interface RuntimeSigningMetadata {
+  signerId: string;
+  keyId: string;
+  algorithm: string;
+  issuedBy?: string;
+  trustAnchorVersion?: string;
+  signerValidFrom?: string;
+  signerValidUntil?: string;
+}
+
+export interface RuntimeVerificationMetadata {
+  verificationNotBefore?: string;
+  verificationNotAfter?: string;
+  trustedUntil?: string;
+  trustDomain?: string;
+}
+
 export interface RuntimeSignedEnvelope<TPayload extends Record<string, unknown>> {
   payload: TPayload;
   signature: string;
   issuedAt: string;
   metadata: RuntimeMetadata;
+  signer: RuntimeSigningMetadata;
+  verification?: RuntimeVerificationMetadata;
 }
 
 export type ExecutionGrantPayload = {
@@ -134,6 +153,20 @@ export interface CapabilityClaimVerificationResult {
   reasonCodes: string[];
 }
 
+
+export interface CapabilityClaimStorePort {
+  persistClaim(claim: CapabilityClaim): Promise<void>;
+  getClaim(claimId: string): Promise<CapabilityClaim | undefined>;
+  revokeClaim(claimId: string, reason?: string): Promise<void>;
+  isClaimRevoked(claimId: string): Promise<boolean>;
+  validateClaim(
+    claim: CapabilityClaim,
+    expectations?: CapabilityClaimExpectedValues
+  ): Promise<{ valid: boolean; reasonCodes?: string[] }>;
+}
+
+export type AuditDeliveryPolicy = 'fail-open' | 'fail-closed' | 'warn-only';
+
 export interface ReplayProtectionPort {
   /** Record a nonce/jti if unseen in scope until expiresAt. Return recorded=false for duplicates. */
   recordNonce(nonce: string, scope: string, expiresAt?: string): Promise<{ recorded: boolean }>;
@@ -179,8 +212,11 @@ export interface AuditSinkPort {
 }
 
 export interface RuntimeSignerPort {
-  sign(payload: Record<string, unknown>, metadata: RuntimeMetadata): Promise<string>;
+  sign(payload: Record<string, unknown>, metadata: RuntimeMetadata): Promise<{ signature: string; signer: RuntimeSigningMetadata }>;
   verify(payload: Record<string, unknown>, signature: string, metadata: RuntimeMetadata): Promise<boolean>;
+  getCurrentKeyId(): Promise<string>;
+  getTrustedVerificationKeys(): Promise<Array<{ keyId: string; trustedFrom?: string; trustedUntil?: string; revoked?: boolean }>>;
+  verifyWithKeyId(payload: Record<string, unknown>, signature: string, keyId: string, metadata: RuntimeMetadata): Promise<boolean>;
 }
 
 export interface RuntimeContext {
@@ -190,12 +226,14 @@ export interface RuntimeContext {
   delegationStore: DelegationStoreAdapter;
   lifecycleDelegationStore: DelegationStorePort;
   executionGrantStore: ExecutionGrantStorePort;
+  capabilityClaimStore: CapabilityClaimStorePort;
   replayProtection: ReplayProtectionPort;
   policyDecision: PolicyDecisionAdapter;
   agentAccess: AgentAccessEvaluatorAdapter;
   auditSink: AuditSinkAdapter;
   lifecycleAuditSink: AuditSinkPort;
   signer: RuntimeSignerPort;
+  auditDeliveryPolicy?: AuditDeliveryPolicy;
 }
 
 export type RuntimePortSet = Omit<RuntimeContext, 'metadata'> & {

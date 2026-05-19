@@ -6,11 +6,25 @@ import type {
 } from '@aoc-enterprise/runtime';
 
 const signer = {
-  async sign(payload: Record<string, unknown>): Promise<string> {
-    return `mock-signature:${JSON.stringify(payload)}`;
+  currentKeyId: 'key-2026',
+  trustedKeys: new Map([['key-2026', { revoked: false }], ['key-2025', { revoked: false }], ['key-old-revoked', { revoked: true }]]),
+  async sign(payload: Record<string, unknown>) {
+    return {
+      signature: `mock-signature:${this.currentKeyId}:${JSON.stringify(payload)}`,
+      signer: { signerId: 'demo-signer', keyId: this.currentKeyId, algorithm: 'mock-ed25519', issuedBy: 'demo-host', trustAnchorVersion: 'v2' },
+    };
   },
   async verify(payload: Record<string, unknown>, signature: string): Promise<boolean> {
-    return signature === `mock-signature:${JSON.stringify(payload)}`;
+    return signature.startsWith('mock-signature:') && signature.endsWith(JSON.stringify(payload));
+  },
+  async getCurrentKeyId() { return this.currentKeyId; },
+  async getTrustedVerificationKeys() {
+    return [...this.trustedKeys.entries()].map(([keyId, state]) => ({ keyId, revoked: state.revoked }));
+  },
+  async verifyWithKeyId(payload: Record<string, unknown>, signature: string, keyId: string): Promise<boolean> {
+    const state = this.trustedKeys.get(keyId);
+    if (!state || state.revoked) return false;
+    return signature === `mock-signature:${keyId}:${JSON.stringify(payload)}`;
   },
 };
 
@@ -66,6 +80,21 @@ function createDemoDelegationStore() {
   };
 }
 
+
+
+/** DEMO ONLY — not production durable. Replace with durable claim lifecycle storage. */
+function createDemoClaimStore() {
+  const claims = new Map<string, any>();
+  const revoked = new Set<string>();
+  return {
+    async persistClaim(claim: any) { claims.set(claim.payload.claimId, claim); },
+    async getClaim(claimId: string) { return claims.get(claimId); },
+    async revokeClaim(claimId: string) { revoked.add(claimId); },
+    async isClaimRevoked(claimId: string) { return revoked.has(claimId); },
+    async validateClaim() { return { valid: true, reasonCodes: [] }; },
+  };
+}
+
 /** DEMO ONLY — not production durable. Replace with a TTL-backed nonce/jti store. */
 function createDemoReplayProtection() {
   const nonces = new Set<string>();
@@ -116,6 +145,7 @@ export function createMockRuntimePorts(): AocEnterpriseRuntimeHostPorts {
     },
     lifecycleDelegationStore: createDemoDelegationStore(),
     executionGrantStore: createDemoExecutionGrantStore(),
+    capabilityClaimStore: createDemoClaimStore(),
     replayProtection: createDemoReplayProtection(),
     policyDecision: {
       async evaluatePolicy() {
