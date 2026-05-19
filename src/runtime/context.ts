@@ -34,10 +34,22 @@ export interface RuntimeSignedEnvelope<TPayload extends Record<string, unknown>>
 export type ExecutionGrantPayload = {
   grantId: string;
   input: AuthorizationGrantInput;
+  issuedAt: string;
   expiresAt?: string;
+  issuer: RuntimeMetadata;
+  subject: {
+    actorId: string;
+    orgId: string;
+    tenantId: string;
+  };
+  nonce: string;
 };
 
 export type ExecutionGrant = RuntimeSignedEnvelope<ExecutionGrantPayload>;
+
+export interface ExecutionGrantValidationOptions {
+  expectedScope?: string | string[];
+}
 
 export interface ExecutionGrantValidationResult {
   valid: boolean;
@@ -45,13 +57,32 @@ export interface ExecutionGrantValidationResult {
   grant: ExecutionGrant;
 }
 
+export interface ExecutionGrantStorePort {
+  /** Persist issued grants durably enough for the host's replay and revocation requirements. */
+  persistGrant(grant: ExecutionGrant): Promise<void>;
+  getGrant(grantId: string): Promise<ExecutionGrant | undefined>;
+  /** Must be atomic: return consumed=false when the grant was already consumed. */
+  markGrantConsumed(
+    grantId: string,
+    consumedBy: string,
+    metadata?: Record<string, unknown>
+  ): Promise<{ consumed: boolean; reasonCodes?: string[] }>;
+  isGrantConsumed(grantId: string): Promise<boolean>;
+  revokeGrant(grantId: string, reason?: string): Promise<void>;
+  isGrantRevoked(grantId: string): Promise<boolean>;
+}
+
 export type DelegatedCapabilityPayload = {
   delegationId: string;
   actorId: string;
   capability: CapabilityToken;
   orgId: string;
+  issuedAt: string;
   expiresAt?: string;
   constraints?: Record<string, unknown>;
+  parentGrantId?: string;
+  parentDelegationId?: string;
+  nonce: string;
 };
 
 export type DelegatedCapability = RuntimeSignedEnvelope<DelegatedCapabilityPayload>;
@@ -68,6 +99,14 @@ export interface DelegatedAccessEvaluationResult {
   reasonCodes: string[];
 }
 
+export interface DelegationStorePort {
+  persistDelegation(delegation: DelegatedCapability): Promise<void>;
+  getDelegation(delegationId: string): Promise<DelegatedCapability | undefined>;
+  validateDelegation(input: DelegatedAccessEvaluationInput): Promise<{ valid: boolean; reasonCodes?: string[] }>;
+  revokeDelegation(delegationId: string, reason?: string): Promise<void>;
+  isDelegationRevoked(delegationId: string): Promise<boolean>;
+}
+
 export type CapabilityClaimPayload = {
   claimId: string;
   actorId: string;
@@ -75,7 +114,12 @@ export type CapabilityClaimPayload = {
   orgId: string;
   issuedAt: string;
   expiresAt?: string;
+  trustDomain: string;
+  nonce: string;
 };
+
+export type CapabilityClaimInput = Omit<CapabilityClaimPayload, 'issuedAt' | 'trustDomain' | 'nonce'> &
+  Partial<Pick<CapabilityClaimPayload, 'issuedAt' | 'trustDomain' | 'nonce'>>;
 
 export type CapabilityClaim = RuntimeSignedEnvelope<CapabilityClaimPayload>;
 
@@ -90,6 +134,50 @@ export interface CapabilityClaimVerificationResult {
   reasonCodes: string[];
 }
 
+export interface ReplayProtectionPort {
+  /** Record a nonce/jti if unseen in scope until expiresAt. Return recorded=false for duplicates. */
+  recordNonce(nonce: string, scope: string, expiresAt?: string): Promise<{ recorded: boolean }>;
+  hasSeenNonce(nonce: string, scope: string): Promise<boolean>;
+  /** Consume must be atomic when hosts use it for one-time operations. */
+  consumeNonce(nonce: string, scope: string): Promise<{ consumed: boolean }>;
+}
+
+export type LifecycleAuditEventType =
+  | 'grant_issued'
+  | 'grant_validated'
+  | 'grant_consumed'
+  | 'grant_replayed'
+  | 'grant_revoked'
+  | 'delegation_issued'
+  | 'delegation_validated'
+  | 'delegation_revoked'
+  | 'delegation_denied'
+  | 'claim_issued'
+  | 'claim_verified'
+  | 'claim_denied'
+  | 'lifecycle_error';
+
+export interface LifecycleAuditEvent {
+  eventType: LifecycleAuditEventType;
+  runtimeId: string;
+  trustDomain: string;
+  actorId?: string;
+  subjectId?: string;
+  orgId?: string;
+  tenantId?: string;
+  grantId?: string;
+  delegationId?: string;
+  claimId?: string;
+  reasonCodes: string[];
+  timestamp: string;
+  decision: 'allowed' | 'denied' | 'issued' | 'consumed' | 'revoked' | 'error';
+  metadata?: Record<string, unknown>;
+}
+
+export interface AuditSinkPort {
+  emitLifecycleAudit(event: LifecycleAuditEvent): Promise<void>;
+}
+
 export interface RuntimeSignerPort {
   sign(payload: Record<string, unknown>, metadata: RuntimeMetadata): Promise<string>;
   verify(payload: Record<string, unknown>, signature: string, metadata: RuntimeMetadata): Promise<boolean>;
@@ -100,9 +188,13 @@ export interface RuntimeContext {
   identity: IdentityResolverAdapter;
   capabilityRegistry: CapabilityRegistryAdapter;
   delegationStore: DelegationStoreAdapter;
+  lifecycleDelegationStore: DelegationStorePort;
+  executionGrantStore: ExecutionGrantStorePort;
+  replayProtection: ReplayProtectionPort;
   policyDecision: PolicyDecisionAdapter;
   agentAccess: AgentAccessEvaluatorAdapter;
   auditSink: AuditSinkAdapter;
+  lifecycleAuditSink: AuditSinkPort;
   signer: RuntimeSignerPort;
 }
 
