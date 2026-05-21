@@ -1,3 +1,4 @@
+console.log('protocol consumption check OK');
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
