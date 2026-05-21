@@ -4,8 +4,8 @@ import type {
   CapabilityRegistryAdapter,
   DelegationStoreAdapter,
   PolicyDecisionAdapter,
-} from '../../../adapters/protocol-adapters';
-import type { AuthorizationGrantInput } from '../grants/grant-input';
+} from '../../../adapters/protocol-adapters.js';
+import type { AuthorizationGrantInput } from '../grants/grant-input.js';
 
 export interface AuthorizationEvaluationContext {
   actor: AocIdentityClaims;

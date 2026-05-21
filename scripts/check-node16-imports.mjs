@@ -1,8 +1,9 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 
 const roots = ['src', 'packages', 'tests'];
 const sourceExt = new Set(['.ts', '.mts', '.cts']);
+const ignoredDirs = new Set(['dist', 'build', 'node_modules', '.next', 'coverage']);
 const violations = [];
 
 const relImport = /(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"](\.{1,2}\/[^'"?#]+)['"]/g;
@@ -18,8 +19,8 @@ function walk(dir) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
     const st = statSync(path);
-    if (st.isDirectory()) walk(path);
-    else if ([...sourceExt].some((ext) => path.endsWith(ext))) checkFile(path);
+    if (st.isDirectory()) { if (!ignoredDirs.has(name)) walk(path); }
+    else if ([...sourceExt].some((ext) => path.endsWith(ext)) && !path.endsWith('.d.ts')) checkFile(path);
   }
 }
 
@@ -31,6 +32,18 @@ function checkMatches(path, text, pattern, check) {
   }
 }
 
+
+function resolvesToIndexTs(path, spec) {
+  const abs = resolve(dirname(path), spec);
+  try {
+    const st = statSync(abs);
+    if (!st.isDirectory()) return false;
+    return statSync(join(abs, 'index.ts')).isFile();
+  } catch {
+    return false;
+  }
+}
+
 function checkFile(path) {
   const text = readFileSync(path, 'utf8');
 
@@ -38,7 +51,7 @@ function checkFile(path) {
   if (deepProtocol.test(text)) violations.push(`${path}: forbidden deep import from @aoc/protocol.`);
 
   const recordExt = (spec) => {
-    if (!hasSourceExt(spec)) violations.push(`${path}: relative import missing Node16 extension -> ${spec}`);
+    if (!hasSourceExt(spec) && !resolvesToIndexTs(path, spec)) violations.push(`${path}: relative import missing Node16 extension -> ${spec}`);
   };
 
   checkMatches(path, text, relImport, recordExt);

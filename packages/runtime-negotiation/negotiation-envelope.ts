@@ -1,4 +1,4 @@
-import { NegotiationEnvelope } from './types';
+import { NegotiationEnvelope } from './types.js';
 
 export function createNegotiationEnvelope(input: NegotiationEnvelope): NegotiationEnvelope {
   const validation = validateNegotiationEnvelope(input);

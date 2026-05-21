@@ -5,10 +5,10 @@ import type {
   DelegationStoreAdapter,
   IdentityResolverAdapter,
   PolicyDecisionAdapter,
-} from '../../../adapters/protocol-adapters';
-import { evaluateAuthorization } from '../../authorization/evaluators/authorization-evaluator';
-import type { AuthorizationDecision } from '../../authorization/decisions/authorization-decision';
-import type { AuthorizationGrantInput } from '../../authorization/grants/grant-input';
+} from '../../../adapters/protocol-adapters.js';
+import { evaluateAuthorization } from '../../authorization/evaluators/authorization-evaluator.js';
+import type { AuthorizationDecision } from '../../authorization/decisions/authorization-decision.js';
+import type { AuthorizationGrantInput } from '../../authorization/grants/grant-input.js';
 
 export interface AuthorizationOrchestrationDeps {
   identity: IdentityResolverAdapter;

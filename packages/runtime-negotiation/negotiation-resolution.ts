@@ -1,4 +1,4 @@
-import { NegotiationIntegrationDecision, RuntimeNegotiation } from './types';
+import { NegotiationIntegrationDecision, RuntimeNegotiation } from './types.js';
 
 export function resolveNegotiationIntegrationSeams(
   negotiation: RuntimeNegotiation,

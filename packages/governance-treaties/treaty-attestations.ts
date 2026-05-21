@@ -1,4 +1,4 @@
-import { TreatyAttestationPurpose, TreatyAttestationRef } from './types';
+import { TreatyAttestationPurpose, TreatyAttestationRef } from './types.js';
 
 export function createTreatyAttestationRef(treatyId: string, purpose: TreatyAttestationPurpose, attestationRef: string): TreatyAttestationRef {
   return { treatyAttestationId: `${treatyId}:${purpose}:${attestationRef}`, treatyId, purpose, attestationRef, createdAt: new Date().toISOString() };
