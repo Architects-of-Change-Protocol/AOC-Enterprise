@@ -9,12 +9,12 @@ import type {
   CapabilityToken,
   ConsentGrant,
   ScopedAccessRequest,
-} from '@aoc/protocol/contracts';
+} from '@aoc/protocol';
 
 import type {
   EnterprisePolicyEvaluationRequest,
   EnterprisePolicyEvaluationResponse,
-} from '../../policy-runtime/src/contracts';
+} from '@aoc-enterprise/policy-runtime';
 
 export interface ControlPlaneEvaluationInput {
   caller: AocIdentityClaims;

@@ -1,13 +1,17 @@
 {
-  "extends": "./tsconfig.base.json",
-  "include": [
-    "src/**/*.ts",
-    "packages/**/*.ts",
-    "apps/**/*.ts",
-    "scripts/**/*.mjs"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.src.json" },
+    { "path": "./packages/canonical-runtime-contracts" },
+    { "path": "./packages/agent-governance" },
+    { "path": "./packages/control-plane" },
+    { "path": "./packages/control-plane-sdk" },
+    { "path": "./packages/enterprise-audit" },
+    { "path": "./packages/governance-treaties" },
+    { "path": "./packages/integration-runtime" },
+    { "path": "./packages/org-boundary" },
+    { "path": "./packages/policy-runtime" },
+    { "path": "./packages/runtime-negotiation" },
+    { "path": "./packages/tenant-governance" }
   ]
 }

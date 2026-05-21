@@ -19,7 +19,7 @@ export function evaluateTreatyQuorum(rule: TreatyQuorumRule, participants: Treat
 }
 
 export const validateQuorumForAmendment = (rule: TreatyQuorumRule, participants: TreatyParticipant[], emergencyOverride?: boolean): QuorumEvaluationResult =>
-  evaluateTreatyQuorum(rule, participants, { emergencyOverride });
+  evaluateTreatyQuorum(rule, participants, emergencyOverride === undefined ? undefined : { emergencyOverride });
 
 export const validateQuorumForAuthorityDecision = (rule: TreatyQuorumRule, participants: TreatyParticipant[], includeObserversForAuthority?: boolean): QuorumEvaluationResult =>
-  evaluateTreatyQuorum(rule, participants, { includeObserversForAuthority });
+  evaluateTreatyQuorum(rule, participants, includeObserversForAuthority === undefined ? undefined : { includeObserversForAuthority });

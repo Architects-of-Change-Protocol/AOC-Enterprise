@@ -71,3 +71,26 @@ All transitions are correlation-ID bound and replay-reconstructable from audit e
 - JIT (just-in-time) access requests trigger elevated policy path.
 - Temporary capabilities include absolute expiry and non-renewable nonce constraints by default.
 - Elevated sessions require stronger audit granularity and optional human approval gates.
+
+## Public runtime surface policy
+
+Runtime consumers must import from stable SDK entrypoints only:
+
+- `@aoc-enterprise/runtime`
+- `@aoc-enterprise/runtime/authorization`
+- `@aoc-enterprise/runtime/audit`
+- `@aoc-enterprise/runtime/crypto`
+- `@aoc-enterprise/runtime/adapters`
+
+Internal runtime modules remain implementation details and are not a compatibility contract.
+
+## External consumer boundary
+
+The runtime is validated as a publishable package artifact, not only as a workspace module. CI and local validation run against packed tarballs to ensure external consumers can resolve declarations and runtime entrypoints through export maps alone.
+
+This boundary is enforced with negative checks for deep import paths so internal runtime layering can evolve without creating accidental API commitments.
+
+## Ownership Boundary
+- Protocol defines semantic language and contract types.
+- Enterprise executes authorization, enforcement, crypto verification, and auditing against canonical protocol types.
+- Cross-repo validation flow: protocol validate+pack, enterprise install+validate, PMFreak install+validate.

@@ -1,0 +1,13 @@
+{
+  "name": "external-consumer-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --pretty false --noEmit",
+    "build": "tsc --pretty false"
+  },
+  "dependencies": {
+    "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol"
+  }
+}

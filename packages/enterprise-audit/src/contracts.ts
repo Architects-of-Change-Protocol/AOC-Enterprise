@@ -4,7 +4,7 @@
  * NOTE: Audit envelope shape is canonical in AOC-Protocol.
  */
 
-import type { AuditEventEnvelope, CapabilityToken } from '@aoc/protocol/contracts';
+import type { AuditEventEnvelope, CapabilityToken } from '@aoc/protocol';
 
 export interface EnterpriseAuditRoute {
   routeId: string;

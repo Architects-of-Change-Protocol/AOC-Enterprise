@@ -1,0 +1,24 @@
+{
+  "name": "@aoc-enterprise/canonical-runtime-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./reason-codes": "./src/reason-codes/index.ts",
+    "./envelopes": "./src/envelopes/index.ts",
+    "./events": "./src/events/index.ts",
+    "./governance": "./src/governance/index.ts",
+    "./identity": "./src/identity/index.ts",
+    "./entitlements": "./src/entitlements/index.ts",
+    "./scoping": "./src/scoping/index.ts",
+    "./errors": "./src/errors/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json"
+  },
+  "files": [
+    "src"
+  ]
+}

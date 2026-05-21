@@ -1,14 +1,14 @@
 export { ControlPlaneService } from './service';
 export { FileControlPlaneStore } from './store';
 export type {
-  AccessRequest,
+  AccessRequestRecord,
   AccessRequestStatus,
-  ConsentDecision,
+  ConsentDecisionRecord,
   ControlPlaneAuditEvent,
   ControlPlaneState,
   CreateAccessRequestInput,
   DecideAccessRequestInput,
-  GrantedAccess,
+  GrantedAccessRecord,
   ListActiveGrantsInput,
   ListRequestsInput,
   RevokeGrantInput,

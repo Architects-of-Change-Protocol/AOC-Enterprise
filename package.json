@@ -1,31 +1,58 @@
 {
-  "name": "aoc-enterprise",
-  "version": "0.1.0",
+  "name": "@aoc-enterprise/runtime",
   "private": true,
-
-  "type": "module",
-
+  "version": "0.1.0",
   "workspaces": [
-    "packages/*",
-    "apps/*"
+    "packages/*"
   ],
-
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "build": "tsc -p tsconfig.base.json",
-    "lint": "npm run check:protocol-consumption",
-    "test": "node --test",
-    "check:protocol-consumption": "node scripts/check-protocol-consumption.mjs",
+    "typecheck": "tsc -b --pretty false",
+    "build": "tsc -b --pretty false",
+    "lint": "node scripts/check-node16-imports.mjs && node scripts/lint-architecture.mjs && node scripts/lint-public-surface.mjs",
+    "test": "npm run build && node --test",
+    "clean": "node scripts/clean.mjs",
+    "validate:invalid-imports": "node scripts/assert-invalid-imports.mjs",
     "validate:publishability": "node scripts/validate-publishability.mjs",
-    "validate:release": "npm run typecheck && npm run build && npm run lint && npm test && npm run validate:publishability"
+    "check:protocol-consumption": "node scripts/check-protocol-consumption.mjs",
+    "validate:release": "npm run typecheck && npm run build && npm run lint && npm test && npm run check:protocol-consumption && npm run validate:publishability",
+    "check:aoc-boundaries": "node scripts/check-aoc-boundaries.mjs"
   },
-
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./authorization": {
+      "types": "./dist/src/runtime/authorization/index.d.ts",
+      "default": "./dist/src/runtime/authorization/index.js"
+    },
+    "./audit": {
+      "types": "./dist/src/runtime/audit/index.d.ts",
+      "default": "./dist/src/runtime/audit/index.js"
+    },
+    "./crypto": {
+      "types": "./dist/src/runtime/crypto/index.d.ts",
+      "default": "./dist/src/runtime/crypto/index.js"
+    },
+    "./adapters": {
+      "types": "./dist/src/runtime/adapters/index.d.ts",
+      "default": "./dist/src/runtime/adapters/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/src/runtime/index.d.ts",
+      "default": "./dist/src/runtime/index.js"
+    },
+    "./runtime-host": {
+      "types": "./dist/src/runtime/index.d.ts",
+      "default": "./dist/src/runtime/index.js"
+    }
+  },
   "dependencies": {
     "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol"
-  },
-
-  "devDependencies": {
-    "@types/node": "^24.0.0",
-    "typescript": "^5.9.3"
   }
 }
