@@ -1,4 +1,6 @@
 import type { AuthorizationGrantInput } from './authorization/grants/grant-input';
+import { createRuntimeOperationalStateManager } from './state';
+import type { RuntimeOperationalSnapshot } from './state';
 import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline';
 import type {
   CapabilityClaim,
@@ -36,6 +38,9 @@ export interface AocEnterpriseRuntime {
     claim: CapabilityClaim,
     expected?: CapabilityClaimExpectedValues
   ): Promise<CapabilityClaimVerificationResult>;
+  snapshotOperationalState(): RuntimeOperationalSnapshot;
+  hydrateOperationalState(snapshot: RuntimeOperationalSnapshot): RuntimeOperationalSnapshot;
+  resetOperationalState(now?: string): RuntimeOperationalSnapshot;
 }
 
 export type AocEnterpriseRuntimeHostPorts = RuntimePortSet;
@@ -86,6 +91,7 @@ function scopeFor(entity: LifecycleEntity): string {
 
 export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts): AocEnterpriseRuntime {
   const context: RuntimeContext = { ...ports };
+  const operationalState = createRuntimeOperationalStateManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, now: nowIso() });
 
   async function emitLifecycleAudit(event: Omit<LifecycleAuditEvent, 'runtimeId' | 'trustDomain' | 'timestamp'>): Promise<void> {
     const auditEvent: LifecycleAuditEvent = {
@@ -96,6 +102,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     };
 
     try {
+      operationalState.updateRuntimeOperationalState({ eventType: 'audit_emitted', occurredAt: auditEvent.timestamp, reasonCodes: [auditEvent.eventType] });
       await context.lifecycleAuditSink.emitLifecycleAudit(auditEvent);
     } catch (error) {
       if (event.eventType !== 'lifecycle_error') {
@@ -135,6 +142,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
 
   async function evaluate(input: AuthorizationGrantInput): Promise<RuntimeDecisionEnvelope> {
     const decision = await evaluateEnforcementPipeline(input, context);
+    operationalState.updateRuntimeOperationalState({ eventType: 'authorization_enforced', occurredAt: nowIso(), reasonCodes: decision.reasonCodes });
     return { ...decision, metadata: context.metadata };
   }
 
@@ -177,9 +185,10 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
         nonce: makeId('nonce', [authorizationInput.requestId]),
       };
       const nonceRecorded = await context.replayProtection.recordNonce(payload.nonce, scopeFor('grant'), expiresAt);
-      if (!nonceRecorded.recorded) throw new Error('grant nonce replay detected during issue');
+      if (!nonceRecorded.recorded) { operationalState.updateRuntimeOperationalState({ eventType: 'replay_denied', occurredAt: nowIso(), nonce: payload.nonce, reasonCodes: ['grant_nonce_replay'] }); throw new Error('grant nonce replay detected during issue'); }
       const grant = await signPayload(context, payload);
       await context.executionGrantStore.persistGrant(grant);
+      operationalState.updateRuntimeOperationalState({ eventType: 'grant_issued', occurredAt: nowIso(), entityId: payload.grantId });
       await emitLifecycleAudit({
         eventType: 'grant_issued',
         actorId: authorizationInput.actorId,
@@ -201,6 +210,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
       if (await context.executionGrantStore.isGrantConsumed(grant.payload.grantId)) reasonCodes.push('grant_replayed');
       if (!containsExpectedScope(grant.payload.input.access.scope, options?.expectedScope)) reasonCodes.push('grant_scope_mismatch');
       const valid = reasonCodes.length === 0;
+      operationalState.updateRuntimeOperationalState({ eventType: 'grant_validated', occurredAt: nowIso(), entityId: grant.payload.grantId, reasonCodes });
       await emitLifecycleAudit({
         eventType: 'grant_validated',
         actorId: grant.payload.input.actorId,
@@ -233,6 +243,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
         consumedAt: nowIso(),
       });
       const reasonCodes = consumed.consumed ? [] : consumed.reasonCodes?.length ? consumed.reasonCodes : ['grant_replayed'];
+      operationalState.updateRuntimeOperationalState({ eventType: consumed.consumed ? 'grant_consumed' : 'replay_denied', occurredAt: nowIso(), entityId: grant.payload.grantId, reasonCodes });
       await emitLifecycleAudit({
         eventType: consumed.consumed ? 'grant_consumed' : 'grant_replayed',
         actorId: consumedBy,
@@ -247,6 +258,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     },
     async revokeExecutionGrant(input) {
       await context.executionGrantStore.revokeGrant(input.grantId, input.reasonCode);
+      operationalState.updateRuntimeOperationalState({ eventType: 'grant_revoked', occurredAt: nowIso(), entityId: input.grantId, reasonCodes: input.reasonCode ? [input.reasonCode] : [] });
       await emitLifecycleAudit({
         eventType: 'grant_revoked',
         grantId: input.grantId,
@@ -264,9 +276,10 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
         nonce: input.nonce ?? makeId('nonce', [input.delegationId]),
       };
       const nonceRecorded = await context.replayProtection.recordNonce(payload.nonce, scopeFor('delegation'), payload.expiresAt);
-      if (!nonceRecorded.recorded) throw new Error('delegation nonce replay detected during issue');
+      if (!nonceRecorded.recorded) { operationalState.updateRuntimeOperationalState({ eventType: 'replay_denied', occurredAt: nowIso(), nonce: payload.nonce, reasonCodes: ['delegation_nonce_replay'] }); throw new Error('delegation nonce replay detected during issue'); }
       const delegation = await signPayload(context, payload);
       await context.lifecycleDelegationStore.persistDelegation(delegation);
+      operationalState.updateRuntimeOperationalState({ eventType: 'delegation_issued', occurredAt: nowIso(), entityId: payload.delegationId });
       await emitLifecycleAudit({
         eventType: 'delegation_issued',
         actorId: payload.actorId,
@@ -305,6 +318,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
       if (!accessAllowed) reasonCodes.push('delegation_policy_denied');
       const uniqueReasonCodes = [...new Set(reasonCodes)];
       const allowed = uniqueReasonCodes.length === 0;
+      operationalState.updateRuntimeOperationalState({ eventType: 'delegation_validated', occurredAt: nowIso(), entityId: payload.delegationId, reasonCodes: uniqueReasonCodes });
       await emitLifecycleAudit({
         eventType: allowed ? 'delegation_validated' : 'delegation_denied',
         actorId: payload.actorId,
@@ -318,6 +332,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     },
     async revokeDelegatedCapability(input) {
       await context.lifecycleDelegationStore.revokeDelegation(input.delegationId, input.reasonCode);
+      operationalState.updateRuntimeOperationalState({ eventType: 'delegation_revoked', occurredAt: nowIso(), entityId: input.delegationId, reasonCodes: input.reasonCode ? [input.reasonCode] : [] });
       await emitLifecycleAudit({
         eventType: 'delegation_revoked',
         delegationId: input.delegationId,
@@ -335,7 +350,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
         nonce: input.nonce ?? makeId('nonce', [input.claimId]),
       };
       const nonceRecorded = await context.replayProtection.recordNonce(payload.nonce, scopeFor('claim'), payload.expiresAt);
-      if (!nonceRecorded.recorded) throw new Error('claim nonce replay detected during issue');
+      if (!nonceRecorded.recorded) { operationalState.updateRuntimeOperationalState({ eventType: 'replay_denied', occurredAt: nowIso(), nonce: payload.nonce, reasonCodes: ['claim_nonce_replay'] }); throw new Error('claim nonce replay detected during issue'); }
       const claimVerification = {
         verificationNotBefore: issuedAt,
         trustDomain: payload.trustDomain,
@@ -383,6 +398,9 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
       });
       return { valid, reasonCodes };
     },
+    snapshotOperationalState() { return operationalState.snapshotRuntimeOperationalState(); },
+    hydrateOperationalState(snapshot) { return operationalState.hydrateRuntimeOperationalState(snapshot); },
+    resetOperationalState(now) { return operationalState.resetRuntimeOperationalState(now); },
   };
 
   return runtime;

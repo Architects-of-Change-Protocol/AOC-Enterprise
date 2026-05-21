@@ -56,3 +56,4 @@ export {
   verifyCapabilityToken,
   verifyDelegatedCapability,
 } from './runtime';
+export * from './runtime/state';

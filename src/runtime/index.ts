@@ -61,3 +61,4 @@ export {
 } from './authorization';
 export { emitRuntimeAuditEvent } from './audit';
 export { verifyCapabilityToken, verifyDelegatedCapability } from './crypto';
+export * from './state';
