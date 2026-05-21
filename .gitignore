@@ -10,3 +10,4 @@ coverage
 turbo
 .DS_Store
 *.log
+*.tsbuildinfo
