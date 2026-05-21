@@ -1,6 +1,7 @@
 import type { AuthorizationGrantInput } from './authorization/grants/grant-input';
 import { createRuntimeOperationalStateManager } from './state';
 import { createRuntimePersistenceManager } from './persistence';
+import { createRuntimeFederationManager } from './federation';
 import type { RuntimeOperationalSnapshot } from './state';
 import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline';
 import type {
@@ -45,6 +46,11 @@ export interface AocEnterpriseRuntime {
   createPersistenceCheckpoint(now?: string): import('./persistence').RuntimePersistenceEnvelope;
   hydratePersistenceCheckpoint(envelope: import('./persistence').RuntimePersistenceEnvelope): RuntimeOperationalSnapshot;
   exportPersistenceEnvelope(now?: string): string;
+  createFederationEnvelope(now?: string): import('./federation').RuntimeFederationEnvelope;
+  validateFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationValidationReport;
+  reconcileFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationReconciliationResult;
+  attestFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationAttestation;
+  importFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationValidationReport;
 }
 
 export type AocEnterpriseRuntimeHostPorts = RuntimePortSet;
@@ -97,6 +103,8 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
   const context: RuntimeContext = { ...ports };
   const operationalState = createRuntimeOperationalStateManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, now: nowIso() });
   const persistenceManager = createRuntimePersistenceManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain });
+
+  const federationManager = createRuntimeFederationManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, federationNodeId: `${context.metadata.runtimeId}-node`, sovereignVaultId: `${context.metadata.trustDomain}:vault`, getSnapshot: () => operationalState.snapshotRuntimeOperationalState(), createPersistenceCheckpoint: (ts) => persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), ts) });
 
   async function emitLifecycleAudit(event: Omit<LifecycleAuditEvent, 'runtimeId' | 'trustDomain' | 'timestamp'>): Promise<void> {
     const auditEvent: LifecycleAuditEvent = {
@@ -406,6 +414,14 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     snapshotOperationalState() { return operationalState.snapshotRuntimeOperationalState(); },
     hydrateOperationalState(snapshot) { return operationalState.hydrateRuntimeOperationalState(snapshot); },
     resetOperationalState(now) { return operationalState.resetRuntimeOperationalState(now); },
+    createPersistenceCheckpoint(now) { return persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), now); },
+    hydratePersistenceCheckpoint(envelope) { return persistenceManager.hydratePersistenceCheckpoint(envelope).hydratedSnapshot; },
+    exportPersistenceEnvelope(now) { return persistenceManager.serializePersistenceEnvelope(runtime.createPersistenceCheckpoint(now)); },
+    createFederationEnvelope(now) { return federationManager.exportFederationEnvelope(now); },
+    validateFederationEnvelope(envelope) { return federationManager.validateFederationEnvelope(envelope); },
+    reconcileFederationEnvelope(envelope) { return federationManager.reconcileFederationState(envelope); },
+    attestFederationEnvelope(envelope) { return federationManager.attestFederationIntegrity(envelope); },
+    importFederationEnvelope(envelope) { return federationManager.importFederationEnvelope(envelope); },
   };
 
   return runtime;

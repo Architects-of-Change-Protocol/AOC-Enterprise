@@ -64,3 +64,5 @@ export { verifyCapabilityToken, verifyDelegatedCapability } from './crypto';
 export * from './state';
 
 export * from './persistence';
+
+export * from './federation';
