@@ -1,5 +1,5 @@
-import { GovernanceTreaty, TreatyAmendment, TreatyParticipant, TreatyQuorumRule } from './types';
-import { validateQuorumForAmendment } from './treaty-quorum';
+import { GovernanceTreaty, TreatyAmendment, TreatyParticipant, TreatyQuorumRule } from './types.js';
+import { validateQuorumForAmendment } from './treaty-quorum.js';
 
 export const proposeTreatyAmendment = (amendment: Omit<TreatyAmendment, 'status' | 'proposedAt' | 'resolvedAt'>): TreatyAmendment => ({ ...amendment, status: 'proposed', proposedAt: new Date().toISOString() });
 export const approveTreatyAmendment = (amendment: TreatyAmendment): TreatyAmendment => ({ ...amendment, status: 'approved', resolvedAt: new Date().toISOString() });

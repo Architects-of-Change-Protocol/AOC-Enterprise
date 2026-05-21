@@ -1,6 +1,6 @@
-import { GovernanceTreaty, TreatyAuthorityDecision, TreatyParticipant, TreatyQuorumRule } from './types';
-import { validateTreatyParticipantEligibility } from './treaty-participants';
-import { validateQuorumForAuthorityDecision } from './treaty-quorum';
+import { GovernanceTreaty, TreatyAuthorityDecision, TreatyParticipant, TreatyQuorumRule } from './types.js';
+import { validateTreatyParticipantEligibility } from './treaty-participants.js';
+import { validateQuorumForAuthorityDecision } from './treaty-quorum.js';
 
 export function evaluateTreatyCapabilityBoundary(treaty: GovernanceTreaty, capabilityRef: string): boolean {
   return treaty.capabilityBoundaryRefs.includes(capabilityRef);

@@ -1,8 +1,9 @@
-import type { AuthorizationGrantInput } from './authorization/grants/grant-input';
+import type { AuthorizationGrantInput } from './authorization/grants/grant-input.js';
 import { createRuntimeOperationalStateManager } from './state';
 import { createRuntimePersistenceManager } from './persistence';
+import { createRuntimeVaultManager, type RuntimeVaultBoundary, type RuntimeVaultHydrationContext, type RuntimeVaultIsolationContext, type RuntimeVaultContinuityContext } from './vault';
 import type { RuntimeOperationalSnapshot } from './state';
-import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline';
+import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline.js';
 import type {
   CapabilityClaim,
   CapabilityClaimExpectedValues,
@@ -21,7 +22,7 @@ import type {
   RuntimeContext,
   RuntimeDecisionEnvelope,
   RuntimePortSet,
-} from './context';
+} from './context.js';
 
 export interface AocEnterpriseRuntime {
   readonly context: RuntimeContext;
@@ -45,6 +46,11 @@ export interface AocEnterpriseRuntime {
   createPersistenceCheckpoint(now?: string): import('./persistence').RuntimePersistenceEnvelope;
   hydratePersistenceCheckpoint(envelope: import('./persistence').RuntimePersistenceEnvelope): RuntimeOperationalSnapshot;
   exportPersistenceEnvelope(now?: string): string;
+  createVaultBoundary(input: { tenantId: string; workspaceId: string; vaultOwnerId: string; sovereignScope?: import('./vault').RuntimeVaultSovereignScope; federationCompatibilityVersion?: string; now?: string }): RuntimeVaultBoundary;
+  validateVaultBoundary(boundary: RuntimeVaultBoundary, isolation: RuntimeVaultIsolationContext, continuity?: RuntimeVaultContinuityContext): import('./vault').RuntimeVaultValidationReport;
+  exportVaultBoundary(boundary: RuntimeVaultBoundary): string;
+  hydrateVaultBoundary(boundary: RuntimeVaultBoundary, context: RuntimeVaultHydrationContext): RuntimeOperationalSnapshot;
+  attestVaultBoundary(boundary: RuntimeVaultBoundary, now?: string): import('./vault').RuntimeVaultAttestation;
 }
 
 export type AocEnterpriseRuntimeHostPorts = RuntimePortSet;
@@ -97,6 +103,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
   const context: RuntimeContext = { ...ports };
   const operationalState = createRuntimeOperationalStateManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, now: nowIso() });
   const persistenceManager = createRuntimePersistenceManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain });
+  const vaultManager = createRuntimeVaultManager();
 
   async function emitLifecycleAudit(event: Omit<LifecycleAuditEvent, 'runtimeId' | 'trustDomain' | 'timestamp'>): Promise<void> {
     const auditEvent: LifecycleAuditEvent = {
@@ -406,6 +413,31 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     snapshotOperationalState() { return operationalState.snapshotRuntimeOperationalState(); },
     hydrateOperationalState(snapshot) { return operationalState.hydrateRuntimeOperationalState(snapshot); },
     resetOperationalState(now) { return operationalState.resetRuntimeOperationalState(now); },
+    createPersistenceCheckpoint(now) { return persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), now); },
+    hydratePersistenceCheckpoint(envelope) {
+      const hydrated = persistenceManager.hydratePersistenceCheckpoint(envelope);
+      operationalState.hydrateRuntimeOperationalState(hydrated.hydratedSnapshot);
+      return operationalState.snapshotRuntimeOperationalState();
+    },
+    exportPersistenceEnvelope(now) {
+      const envelope = persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), now);
+      return persistenceManager.exportPersistenceEnvelope(envelope);
+    },
+    createVaultBoundary(input) {
+      const envelope = persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), input.now);
+      return vaultManager.createVaultBoundary({ ...input, envelope });
+    },
+    validateVaultBoundary(boundary, isolation, continuity) {
+      return vaultManager.validateVaultBoundary(boundary, isolation, continuity);
+    },
+    exportVaultBoundary(boundary) { return vaultManager.exportVaultBoundary(boundary); },
+    hydrateVaultBoundary(boundary, context) {
+      const envelope = vaultManager.hydrateVaultBoundary(boundary, context);
+      const hydrated = persistenceManager.hydratePersistenceCheckpoint(envelope);
+      operationalState.hydrateRuntimeOperationalState(hydrated.hydratedSnapshot);
+      return operationalState.snapshotRuntimeOperationalState();
+    },
+    attestVaultBoundary(boundary, now) { return vaultManager.attestVaultBoundary(boundary, now); },
   };
 
   return runtime;

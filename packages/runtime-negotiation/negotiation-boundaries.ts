@@ -1,4 +1,4 @@
-import { NegotiationBoundaryDecision, RuntimeBoundaryContext, RuntimeNegotiation } from './types';
+import { NegotiationBoundaryDecision, RuntimeBoundaryContext, RuntimeNegotiation } from './types.js';
 
 export function validateIsolationExceptions(negotiation: RuntimeNegotiation, context: RuntimeBoundaryContext): string[] {
   const reasons: string[] = [];

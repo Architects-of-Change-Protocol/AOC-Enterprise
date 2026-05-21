@@ -1,5 +1,5 @@
-export { ControlPlaneService } from './service';
-export { FileControlPlaneStore } from './store';
+export { ControlPlaneService } from './service.js';
+export { FileControlPlaneStore } from './store.js';
 export type {
   AccessRequestRecord,
   AccessRequestStatus,
@@ -12,4 +12,4 @@ export type {
   ListActiveGrantsInput,
   ListRequestsInput,
   RevokeGrantInput,
-} from './types';
+} from './types.js';

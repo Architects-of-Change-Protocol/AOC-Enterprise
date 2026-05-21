@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
-import type { ControlPlaneState } from './types';
+import type { ControlPlaneState } from './types.js';
 
 const EMPTY_STATE: ControlPlaneState = {
   requests: [],

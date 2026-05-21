@@ -57,3 +57,6 @@ export {
   verifyDelegatedCapability,
 } from './runtime';
 export * from './runtime/state';
+
+export * from './runtime/persistence';
+export * from './runtime/vault';

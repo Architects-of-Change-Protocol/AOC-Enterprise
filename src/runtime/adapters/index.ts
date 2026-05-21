@@ -5,4 +5,4 @@ export type {
   DelegationStoreAdapter,
   IdentityResolverAdapter,
   PolicyDecisionAdapter,
-} from '../../adapters/protocol-adapters';
+} from '../../adapters/protocol-adapters.js';

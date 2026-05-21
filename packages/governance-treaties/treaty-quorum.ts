@@ -1,4 +1,4 @@
-import { TreatyParticipant, TreatyQuorumRule } from './types';
+import { TreatyParticipant, TreatyQuorumRule } from './types.js';
 
 export interface QuorumEvaluationResult { satisfied: boolean; reasons: string[]; }
 

@@ -1,4 +1,4 @@
-import { TreatyDispute, TreatyParticipant } from './types';
+import { TreatyDispute, TreatyParticipant } from './types.js';
 
 export const raiseTreatyDispute = (dispute: Omit<TreatyDispute, 'status' | 'raisedAt' | 'resolvedAt'>): TreatyDispute => ({ ...dispute, status: 'open', raisedAt: new Date().toISOString() });
 

@@ -1,2 +1,2 @@
-export { snapshotRuntimeOperationalState } from './runtime-operational-state';
-export { hydrateRuntimeOperationalState, dehydrateRuntimeOperationalState, validateRuntimeOperationalState } from './runtime-operational-state-hydration';
+export { snapshotRuntimeOperationalState } from './runtime-operational-state.js';
+export { hydrateRuntimeOperationalState, dehydrateRuntimeOperationalState, validateRuntimeOperationalState } from './runtime-operational-state-hydration.js';

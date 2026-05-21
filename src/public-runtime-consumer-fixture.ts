@@ -3,7 +3,7 @@ import {
   enforceEnforcementPipeline,
   type EnforcementEvaluationInput,
   type PolicyDecisionAdapter,
-} from './index';
+} from './index.js';
 import { verifyCapabilityToken } from './runtime/crypto';
 
 export type PublicRuntimeConsumerFixture = {

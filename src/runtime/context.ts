@@ -1,5 +1,5 @@
 import type { AocIdentityClaims, AuditEventEnvelope, CapabilityToken, ScopedAccessRequest } from '@aoc/protocol';
-import type { AuthorizationGrantInput } from './authorization/grants/grant-input';
+import type { AuthorizationGrantInput } from './authorization/grants/grant-input.js';
 import type {
   AgentAccessEvaluatorAdapter,
   AuditSinkAdapter,

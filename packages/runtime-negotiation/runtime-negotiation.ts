@@ -1,5 +1,5 @@
-import { submitNegotiationProposal } from './negotiation-proposal';
-import { NegotiationEnvelope, NegotiationProposal, RuntimeNegotiation } from './types';
+import { submitNegotiationProposal } from './negotiation-proposal.js';
+import { NegotiationEnvelope, NegotiationProposal, RuntimeNegotiation } from './types.js';
 
 export function createRuntimeNegotiation(input: Omit<RuntimeNegotiation, 'status' | 'createdAt' | 'resolvedAt'>): RuntimeNegotiation {
   return {

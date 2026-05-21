@@ -1,0 +1,14 @@
+import runtimePkg from '../dist/src/index.js';
+const { createRuntimeOperationalStateManager, createRuntimePersistenceManager, createRuntimeVaultManager } = runtimePkg;
+const manager = createRuntimeOperationalStateManager({ runtimeId: 'check-runtime', trustDomain: 'check-domain', now: '2026-01-01T00:00:00.000Z' });
+manager.updateRuntimeOperationalState({ eventType: 'replay_denied', nonce: 'nonce-check', occurredAt: '2026-01-01T00:00:01.000Z' });
+const envelope = createRuntimePersistenceManager({ runtimeId: 'check-runtime', trustDomain: 'check-domain' }).createPersistenceCheckpoint(manager.snapshotRuntimeOperationalState(), '2026-01-01T00:00:02.000Z');
+const vault = createRuntimeVaultManager();
+const boundary = vault.createVaultBoundary({ envelope, tenantId: 'tenant-check', workspaceId: 'workspace-check', vaultOwnerId: 'owner-check' });
+const report = vault.validateVaultBoundary(boundary, { tenantId: 'tenant-check', workspaceId: 'workspace-check', runtimeId: 'check-runtime', trustDomain: 'check-domain', vaultOwnerId: 'owner-check' });
+if (!report.valid) throw new Error(`vault boundary invalid: ${report.errors.join(',')}`);
+const imported = vault.importVaultBoundary(vault.exportVaultBoundary(boundary));
+if (imported.identity.continuityLineageId !== boundary.identity.continuityLineageId) throw new Error('continuity portability failure');
+if (imported.continuity.replayLineageId !== boundary.continuity.replayLineageId) throw new Error('replay lineage portability failure');
+if (!vault.attestVaultBoundary(boundary).continuityFingerprint) throw new Error('attestation generation failure');
+console.log('runtime vault boundary check passed');

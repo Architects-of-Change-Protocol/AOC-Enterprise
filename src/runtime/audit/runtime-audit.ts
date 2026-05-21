@@ -1,5 +1,5 @@
-import type { RuntimeAuditEmitter } from './emitters/runtime-audit-emitter';
-import { emitRuntimeAuditEvent } from './emitters/runtime-audit-emitter';
+import type { RuntimeAuditEmitter } from './emitters/runtime-audit-emitter.js';
+import { emitRuntimeAuditEvent } from './emitters/runtime-audit-emitter.js';
 import type { AuditEventEnvelope } from '@aoc/protocol';
 
 export type { RuntimeAuditEmitter };

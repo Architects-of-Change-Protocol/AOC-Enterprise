@@ -10,7 +10,7 @@ export type {
   RuntimeTrustContext,
   NegotiationAttestation,
   NegotiationIntegrationDecision,
-} from './types';
+} from './types.js';
 
 export {
   createRuntimeNegotiation,
@@ -19,10 +19,10 @@ export {
   denyRuntimeNegotiation,
   revokeRuntimeNegotiation,
   expireRuntimeNegotiation,
-} from './runtime-negotiation';
-export { createNegotiationEnvelope, validateNegotiationEnvelope, resolveNegotiationEnvelope } from './negotiation-envelope';
-export { submitNegotiationProposal } from './negotiation-proposal';
-export { evaluateNegotiationBoundaries, validateIsolationExceptions, validateNegotiationCompatibility } from './negotiation-boundaries';
-export { evaluateTrustRecoveryEligibility, evaluateNegotiationTrust, degradeNegotiationTrust, recoverNegotiationTrust } from './negotiation-trust';
-export { createNegotiationAttestation, validateNegotiationAttestation } from './negotiation-attestation';
-export { resolveNegotiationIntegrationSeams } from './negotiation-resolution';
+} from './runtime-negotiation.js';
+export { createNegotiationEnvelope, validateNegotiationEnvelope, resolveNegotiationEnvelope } from './negotiation-envelope.js';
+export { submitNegotiationProposal } from './negotiation-proposal.js';
+export { evaluateNegotiationBoundaries, validateIsolationExceptions, validateNegotiationCompatibility } from './negotiation-boundaries.js';
+export { evaluateTrustRecoveryEligibility, evaluateNegotiationTrust, degradeNegotiationTrust, recoverNegotiationTrust } from './negotiation-trust.js';
+export { createNegotiationAttestation, validateNegotiationAttestation } from './negotiation-attestation.js';
+export { resolveNegotiationIntegrationSeams } from './negotiation-resolution.js';
