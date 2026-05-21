@@ -30,7 +30,6 @@
       ]
     },
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "types": [
       "node-shims"
     ]

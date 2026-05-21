@@ -1,10 +1,10 @@
-import { activateGovernanceTreaty, createGovernanceTreaty, disputeGovernanceTreaty, revokeGovernanceTreaty, suspendGovernanceTreaty } from '../governance-treaty';
-import { addTreatyParticipant, validateTreatyParticipantEligibility } from '../treaty-participants';
-import { createTreatyQuorumRule, evaluateTreatyQuorum } from '../treaty-quorum';
-import { evaluateTreatyAuthority } from '../treaty-authority';
-import { approveTreatyAmendment, applyTreatyAmendment, proposeTreatyAmendment } from '../treaty-amendments';
-import { assignTreatyArbitrator, raiseTreatyDispute, resolveTreatyDispute } from '../treaty-disputes';
-import { createTreatyAttestationRef, validateTreatyAttestationContinuity } from '../treaty-attestations';
+import { activateGovernanceTreaty, createGovernanceTreaty, disputeGovernanceTreaty, revokeGovernanceTreaty, suspendGovernanceTreaty } from '../governance-treaty.js';
+import { addTreatyParticipant, validateTreatyParticipantEligibility } from '../treaty-participants.js';
+import { createTreatyQuorumRule, evaluateTreatyQuorum } from '../treaty-quorum.js';
+import { evaluateTreatyAuthority } from '../treaty-authority.js';
+import { approveTreatyAmendment, applyTreatyAmendment, proposeTreatyAmendment } from '../treaty-amendments.js';
+import { assignTreatyArbitrator, raiseTreatyDispute, resolveTreatyDispute } from '../treaty-disputes.js';
+import { createTreatyAttestationRef, validateTreatyAttestationContinuity } from '../treaty-attestations.js';
 
 const treatyBase = createGovernanceTreaty({ treatyId: 't1', treatyType: 'coalition', title: 'Coalition', participantRuntimeIds: ['r1', 'r2'], trustDomainRefs: ['td1'], authorityScopeRefs: ['a.read'], capabilityBoundaryRefs: ['cap1'], executionBoundaryRefs: ['exec1'], quorumRulesRef: 'q1', attestationRefs: ['att-core'] });
 const p1 = { participantId: 'p1', treatyId: 't1', runtimeId: 'r1', participantRole: 'signatory' as const, votingWeight: 1, joinedAt: new Date().toISOString() };

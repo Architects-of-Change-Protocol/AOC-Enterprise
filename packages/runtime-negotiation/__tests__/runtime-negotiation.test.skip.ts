@@ -12,7 +12,7 @@ import {
   validateIsolationExceptions,
   validateNegotiationAttestation,
   validateNegotiationEnvelope,
-} from '../index';
+} from '../index.js';
 
 describe('runtime negotiation layer', () => {
   const baseNegotiation = createRuntimeNegotiation({
