@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "composite": true,
+    "incremental": true,
+
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
+
+    "paths": {
+      "@aoc-enterprise/policy-runtime": [
+        "types/policy-runtime-bridge.d.ts"
+      ]
+    },
+
+    "baseUrl": ".",
+
+    "ignoreDeprecations": "5.0",
+
+    "types": [
+      "node-shims"
+    ]
+  }
+}

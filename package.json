@@ -1,0 +1,31 @@
+{
+  "name": "aoc-enterprise",
+  "version": "0.1.0",
+  "private": true,
+
+  "type": "module",
+
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.base.json",
+    "lint": "npm run check:protocol-consumption",
+    "test": "node --test",
+    "check:protocol-consumption": "node scripts/check-protocol-consumption.mjs",
+    "validate:publishability": "node scripts/validate-publishability.mjs",
+    "validate:release": "npm run typecheck && npm run build && npm run lint && npm test && npm run validate:publishability"
+  },
+
+  "dependencies": {
+    "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol"
+  },
+
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3"
+  }
+}
