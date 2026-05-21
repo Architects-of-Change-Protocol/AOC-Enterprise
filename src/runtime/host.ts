@@ -1,5 +1,6 @@
 import type { AuthorizationGrantInput } from './authorization/grants/grant-input';
 import { createRuntimeOperationalStateManager } from './state';
+import { createRuntimePersistenceManager } from './persistence';
 import type { RuntimeOperationalSnapshot } from './state';
 import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline';
 import type {
@@ -41,6 +42,9 @@ export interface AocEnterpriseRuntime {
   snapshotOperationalState(): RuntimeOperationalSnapshot;
   hydrateOperationalState(snapshot: RuntimeOperationalSnapshot): RuntimeOperationalSnapshot;
   resetOperationalState(now?: string): RuntimeOperationalSnapshot;
+  createPersistenceCheckpoint(now?: string): import('./persistence').RuntimePersistenceEnvelope;
+  hydratePersistenceCheckpoint(envelope: import('./persistence').RuntimePersistenceEnvelope): RuntimeOperationalSnapshot;
+  exportPersistenceEnvelope(now?: string): string;
 }
 
 export type AocEnterpriseRuntimeHostPorts = RuntimePortSet;
@@ -92,6 +96,7 @@ function scopeFor(entity: LifecycleEntity): string {
 export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts): AocEnterpriseRuntime {
   const context: RuntimeContext = { ...ports };
   const operationalState = createRuntimeOperationalStateManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, now: nowIso() });
+  const persistenceManager = createRuntimePersistenceManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain });
 
   async function emitLifecycleAudit(event: Omit<LifecycleAuditEvent, 'runtimeId' | 'trustDomain' | 'timestamp'>): Promise<void> {
     const auditEvent: LifecycleAuditEvent = {
