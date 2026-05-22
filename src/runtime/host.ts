@@ -1,6 +1,7 @@
 import type { AuthorizationGrantInput } from './authorization/grants/grant-input.js';
 import { createRuntimeOperationalStateManager } from './state';
 import { createRuntimePersistenceManager } from './persistence';
+import { createRuntimeFederationManager } from './federation';
 import { createRuntimeVaultManager, type RuntimeVaultBoundary, type RuntimeVaultHydrationContext, type RuntimeVaultIsolationContext, type RuntimeVaultContinuityContext } from './vault';
 import type { RuntimeOperationalSnapshot } from './state';
 import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline.js';
@@ -46,6 +47,11 @@ export interface AocEnterpriseRuntime {
   createPersistenceCheckpoint(now?: string): import('./persistence').RuntimePersistenceEnvelope;
   hydratePersistenceCheckpoint(envelope: import('./persistence').RuntimePersistenceEnvelope): RuntimeOperationalSnapshot;
   exportPersistenceEnvelope(now?: string): string;
+  createFederationEnvelope(now?: string): import('./federation').RuntimeFederationEnvelope;
+  validateFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationValidationReport;
+  reconcileFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationReconciliationResult;
+  attestFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationAttestation;
+  importFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationValidationReport;
   createVaultBoundary(input: { tenantId: string; workspaceId: string; vaultOwnerId: string; sovereignScope?: import('./vault').RuntimeVaultSovereignScope; federationCompatibilityVersion?: string; now?: string }): RuntimeVaultBoundary;
   validateVaultBoundary(boundary: RuntimeVaultBoundary, isolation: RuntimeVaultIsolationContext, continuity?: RuntimeVaultContinuityContext): import('./vault').RuntimeVaultValidationReport;
   exportVaultBoundary(boundary: RuntimeVaultBoundary): string;
@@ -104,6 +110,8 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
   const operationalState = createRuntimeOperationalStateManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, now: nowIso() });
   const persistenceManager = createRuntimePersistenceManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain });
   const vaultManager = createRuntimeVaultManager();
+
+  const federationManager = createRuntimeFederationManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, federationNodeId: `${context.metadata.runtimeId}-node`, sovereignVaultId: `${context.metadata.trustDomain}:vault`, getSnapshot: () => operationalState.snapshotRuntimeOperationalState(), createPersistenceCheckpoint: (ts) => persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), ts) });
 
   async function emitLifecycleAudit(event: Omit<LifecycleAuditEvent, 'runtimeId' | 'trustDomain' | 'timestamp'>): Promise<void> {
     const auditEvent: LifecycleAuditEvent = {

@@ -65,4 +65,5 @@ export * from './state';
 
 export * from './persistence';
 
+export * from './federation';
 export * from './vault';

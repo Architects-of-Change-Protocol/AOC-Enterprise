@@ -1,0 +1,14 @@
+import runtimePkg from '../dist/src/index.js';
+const { createRuntimeOperationalStateManager, createRuntimePersistenceManager, createRuntimeFederationEnvelope, validateRuntimeFederationEnvelope, reconcileRuntimeFederationEnvelopes } = runtimePkg;
+const m = createRuntimeOperationalStateManager({ runtimeId: 'check-fed', trustDomain: 'check-domain', now: '2026-01-01T00:00:00.000Z' });
+m.updateRuntimeOperationalState({ eventType: 'replay_denied', nonce: 'denied-1', occurredAt: '2026-01-01T00:00:01.000Z' });
+const snap = m.snapshotRuntimeOperationalState();
+const p = createRuntimePersistenceManager({ runtimeId: 'check-fed', trustDomain: 'check-domain' });
+const persistence = p.createPersistenceCheckpoint(snap, '2026-01-01T00:00:02.000Z');
+const env = createRuntimeFederationEnvelope({ snapshot: snap, persistence, now: '2026-01-01T00:00:02.000Z', identity: { federationRuntimeId: 'check-fed', federationNodeId: 'node-1', sovereignVaultId: 'vault-1', trustDomain: 'check-domain', federationEpoch: 1, federationSequence: 1 } });
+const valid = validateRuntimeFederationEnvelope(env, 'check-domain');
+if (!valid.valid) throw new Error(`validation_failed:${valid.errors.join(',')}`);
+const rec = reconcileRuntimeFederationEnvelopes(env, { ...env, federationMetadata: { ...env.federationMetadata, federationSequence: 2 }, lineage: { ...env.lineage, lineageId: `${env.lineage.lineageId}:remote`, federationAncestry: [...env.lineage.federationAncestry, 'remote'] } });
+if (!['accepted','partially_merged'].includes(rec.status)) throw new Error(`reconciliation_failed:${rec.status}`);
+if (!env.attestation.federationIntegrityFingerprint) throw new Error('attestation_missing');
+console.log('runtime federation check passed');
