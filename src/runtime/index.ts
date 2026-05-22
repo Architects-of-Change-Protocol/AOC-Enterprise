@@ -1,7 +1,7 @@
 export type {
   AocEnterpriseRuntime,
   AocEnterpriseRuntimeHostPorts,
-} from './host';
+} from './host.js';
 export type {
   CapabilityClaim,
   CapabilityClaimExpectedValues,
@@ -28,9 +28,9 @@ export type {
   RuntimePortSet,
   RuntimeSignedEnvelope,
   RuntimeSignerPort,
-} from './context';
+} from './context.js';
 
-export { createAocEnterpriseRuntime } from './host';
+export { createAocEnterpriseRuntime } from './host.js';
 export type {
   AuthorizationDecision,
   AuthorizationGrantInput,
@@ -66,3 +66,4 @@ export * from './state';
 export * from './persistence';
 
 export * from './federation';
+export * from './vault';

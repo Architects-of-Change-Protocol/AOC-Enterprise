@@ -1,4 +1,4 @@
-import { NegotiationTrustDecision, RuntimeTrustContext } from './types';
+import { NegotiationTrustDecision, RuntimeTrustContext } from './types.js';
 
 export function evaluateTrustRecoveryEligibility(context: RuntimeTrustContext): boolean {
   return context.attestationContinuity && context.unresolvedFailures === 0 && context.escalationHistoryCount < 3;

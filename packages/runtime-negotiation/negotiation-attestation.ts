@@ -1,4 +1,4 @@
-import { NegotiationAttestation } from './types';
+import { NegotiationAttestation } from './types.js';
 
 export function createNegotiationAttestation(attestation: NegotiationAttestation): NegotiationAttestation {
   const result = validateNegotiationAttestation(attestation);

@@ -1,4 +1,4 @@
-import { NegotiationProposal } from './types';
+import { NegotiationProposal } from './types.js';
 
 export function submitNegotiationProposal(proposal: NegotiationProposal): NegotiationProposal {
   if (!proposal.explainabilityRefs.length) {

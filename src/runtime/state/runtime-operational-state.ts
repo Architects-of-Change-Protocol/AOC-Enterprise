@@ -1,4 +1,4 @@
-import type { RuntimeOperationalCounters, RuntimeOperationalMetadata, RuntimeOperationalSession, RuntimeOperationalSnapshot, RuntimeOperationalState } from './runtime-operational-state-types';
+import type { RuntimeOperationalCounters, RuntimeOperationalMetadata, RuntimeOperationalSession, RuntimeOperationalSnapshot, RuntimeOperationalState } from './runtime-operational-state-types.js';
 const deterministicId = (prefix: string, parts: string[]) => `${prefix}:${parts.join(':')}`;
 export function createRuntimeOperationalState(input: { runtimeId: string; trustDomain: string; now?: string; continuityEpoch?: number }): RuntimeOperationalState {
   const now = input.now ?? new Date(0).toISOString();

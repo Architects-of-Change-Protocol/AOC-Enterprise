@@ -1,5 +1,5 @@
-import type { CapabilityVerificationContext, VerificationResult } from './capability-verifier';
-import { verifyCapabilityToken } from './capability-verifier';
+import type { CapabilityVerificationContext, VerificationResult } from './capability-verifier.js';
+import { verifyCapabilityToken } from './capability-verifier.js';
 import type { CapabilityToken } from '@aoc/protocol';
 
 export type DelegationVerificationContext = CapabilityVerificationContext;

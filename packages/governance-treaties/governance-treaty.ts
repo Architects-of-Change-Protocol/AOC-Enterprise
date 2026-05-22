@@ -1,4 +1,4 @@
-import { GovernanceTreaty } from './types';
+import { GovernanceTreaty } from './types.js';
 
 export function createGovernanceTreaty(input: Omit<GovernanceTreaty, 'status' | 'createdAt' | 'effectiveAt' | 'revokedAt'>): GovernanceTreaty {
   return { ...input, status: 'proposed', createdAt: new Date().toISOString() };

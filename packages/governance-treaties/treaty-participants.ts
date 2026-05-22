@@ -1,4 +1,4 @@
-import { GovernanceTreaty, TreatyParticipant } from './types';
+import { GovernanceTreaty, TreatyParticipant } from './types.js';
 
 export function validateTreatyParticipantEligibility(treaty: GovernanceTreaty, runtimeId: string): boolean {
   return treaty.participantRuntimeIds.includes(runtimeId);

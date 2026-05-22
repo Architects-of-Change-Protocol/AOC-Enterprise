@@ -9,8 +9,8 @@ import type {
   ListActiveGrantsInput,
   ListRequestsInput,
   RevokeGrantInput,
-} from './types';
-import { FileControlPlaneStore } from './store';
+} from './types.js';
+import { FileControlPlaneStore } from './store.js';
 
 function nowIso(): string {
   return new Date().toISOString();

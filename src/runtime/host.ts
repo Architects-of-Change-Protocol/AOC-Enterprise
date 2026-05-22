@@ -1,9 +1,10 @@
-import type { AuthorizationGrantInput } from './authorization/grants/grant-input';
+import type { AuthorizationGrantInput } from './authorization/grants/grant-input.js';
 import { createRuntimeOperationalStateManager } from './state';
 import { createRuntimePersistenceManager } from './persistence';
 import { createRuntimeFederationManager } from './federation';
+import { createRuntimeVaultManager, type RuntimeVaultBoundary, type RuntimeVaultHydrationContext, type RuntimeVaultIsolationContext, type RuntimeVaultContinuityContext } from './vault';
 import type { RuntimeOperationalSnapshot } from './state';
-import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline';
+import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline.js';
 import type {
   CapabilityClaim,
   CapabilityClaimExpectedValues,
@@ -22,7 +23,7 @@ import type {
   RuntimeContext,
   RuntimeDecisionEnvelope,
   RuntimePortSet,
-} from './context';
+} from './context.js';
 
 export interface AocEnterpriseRuntime {
   readonly context: RuntimeContext;
@@ -51,6 +52,11 @@ export interface AocEnterpriseRuntime {
   reconcileFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationReconciliationResult;
   attestFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationAttestation;
   importFederationEnvelope(envelope: import('./federation').RuntimeFederationEnvelope): import('./federation').RuntimeFederationValidationReport;
+  createVaultBoundary(input: { tenantId: string; workspaceId: string; vaultOwnerId: string; sovereignScope?: import('./vault').RuntimeVaultSovereignScope; federationCompatibilityVersion?: string; now?: string }): RuntimeVaultBoundary;
+  validateVaultBoundary(boundary: RuntimeVaultBoundary, isolation: RuntimeVaultIsolationContext, continuity?: RuntimeVaultContinuityContext): import('./vault').RuntimeVaultValidationReport;
+  exportVaultBoundary(boundary: RuntimeVaultBoundary): string;
+  hydrateVaultBoundary(boundary: RuntimeVaultBoundary, context: RuntimeVaultHydrationContext): RuntimeOperationalSnapshot;
+  attestVaultBoundary(boundary: RuntimeVaultBoundary, now?: string): import('./vault').RuntimeVaultAttestation;
 }
 
 export type AocEnterpriseRuntimeHostPorts = RuntimePortSet;
@@ -103,6 +109,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
   const context: RuntimeContext = { ...ports };
   const operationalState = createRuntimeOperationalStateManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, now: nowIso() });
   const persistenceManager = createRuntimePersistenceManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain });
+  const vaultManager = createRuntimeVaultManager();
 
   const federationManager = createRuntimeFederationManager({ runtimeId: context.metadata.runtimeId, trustDomain: context.metadata.trustDomain, federationNodeId: `${context.metadata.runtimeId}-node`, sovereignVaultId: `${context.metadata.trustDomain}:vault`, getSnapshot: () => operationalState.snapshotRuntimeOperationalState(), createPersistenceCheckpoint: (ts) => persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), ts) });
 
@@ -415,13 +422,30 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     hydrateOperationalState(snapshot) { return operationalState.hydrateRuntimeOperationalState(snapshot); },
     resetOperationalState(now) { return operationalState.resetRuntimeOperationalState(now); },
     createPersistenceCheckpoint(now) { return persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), now); },
-    hydratePersistenceCheckpoint(envelope) { return persistenceManager.hydratePersistenceCheckpoint(envelope).hydratedSnapshot; },
-    exportPersistenceEnvelope(now) { return persistenceManager.serializePersistenceEnvelope(runtime.createPersistenceCheckpoint(now)); },
-    createFederationEnvelope(now) { return federationManager.exportFederationEnvelope(now); },
-    validateFederationEnvelope(envelope) { return federationManager.validateFederationEnvelope(envelope); },
-    reconcileFederationEnvelope(envelope) { return federationManager.reconcileFederationState(envelope); },
-    attestFederationEnvelope(envelope) { return federationManager.attestFederationIntegrity(envelope); },
-    importFederationEnvelope(envelope) { return federationManager.importFederationEnvelope(envelope); },
+    hydratePersistenceCheckpoint(envelope) {
+      const hydrated = persistenceManager.hydratePersistenceCheckpoint(envelope);
+      operationalState.hydrateRuntimeOperationalState(hydrated.hydratedSnapshot);
+      return operationalState.snapshotRuntimeOperationalState();
+    },
+    exportPersistenceEnvelope(now) {
+      const envelope = persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), now);
+      return persistenceManager.exportPersistenceEnvelope(envelope);
+    },
+    createVaultBoundary(input) {
+      const envelope = persistenceManager.createPersistenceCheckpoint(operationalState.snapshotRuntimeOperationalState(), input.now);
+      return vaultManager.createVaultBoundary({ ...input, envelope });
+    },
+    validateVaultBoundary(boundary, isolation, continuity) {
+      return vaultManager.validateVaultBoundary(boundary, isolation, continuity);
+    },
+    exportVaultBoundary(boundary) { return vaultManager.exportVaultBoundary(boundary); },
+    hydrateVaultBoundary(boundary, context) {
+      const envelope = vaultManager.hydrateVaultBoundary(boundary, context);
+      const hydrated = persistenceManager.hydratePersistenceCheckpoint(envelope);
+      operationalState.hydrateRuntimeOperationalState(hydrated.hydratedSnapshot);
+      return operationalState.snapshotRuntimeOperationalState();
+    },
+    attestVaultBoundary(boundary, now) { return vaultManager.attestVaultBoundary(boundary, now); },
   };
 
   return runtime;
