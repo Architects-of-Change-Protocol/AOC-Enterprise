@@ -12,6 +12,7 @@
     "outDir": "dist-test",
     "rootDir": ".",
     "typeRoots": ["../../node_modules/@types", "./node_modules/@types"],
+    "types": ["node"],
     "paths": {
       "@aoc-enterprise/agent-governance": ["../../packages/agent-governance/dist/index.d.ts"]
     }
