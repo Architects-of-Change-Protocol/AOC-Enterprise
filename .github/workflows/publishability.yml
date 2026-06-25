@@ -11,10 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Checkout AOC Protocol (peer dependency)
-        uses: actions/checkout@v4
-        with:
-          repository: Architects-of-Change-Protocol/Architects_of_Change_Protocol
-          path: ../Architects_of_Change_Protocol
+        run: git clone --depth=1 https://github.com/Architects-of-Change-Protocol/Architects_of_Change_Protocol.git $GITHUB_WORKSPACE/../Architects_of_Change_Protocol
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
