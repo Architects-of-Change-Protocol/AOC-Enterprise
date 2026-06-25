@@ -31,7 +31,7 @@ const input: EnforcementEvaluationInput & {
 const deps = {
   policyDecision: policyDecisionAdapter,
   delegationStore: { validateDelegation: async () => true },
-  auditSink: { emitAuthorizationAudit: async () => ({}) },
+  auditSink: { emitAuthorizationAudit: async () => ({ occurred_at: new Date().toISOString() }) },
   identity: { resolveIdentity: async () => ({ sub: 'user-1' }) },
   capabilityRegistry: { hasCapability: async () => true },
   agentAccess: { evaluateAgentAccess: async () => true },
