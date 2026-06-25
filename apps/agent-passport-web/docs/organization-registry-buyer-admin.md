@@ -311,3 +311,10 @@ Once buyers can manage a registry, the next commercial value is exportable gover
 - JSON governance export (full passport data per agent)
 - Buyer-ready governance report pack for internal audits, procurement, and compliance reviews
 - Optional: signed export with AOC issuer metadata for external verification
+
+---
+
+## Registry Export + Governance Report Pack (Current Sprint)
+
+Buyers can now generate downloadable registry exports and governance report packs directly from the buyer admin view.
+See: [Registry Export + Governance Report Pack](./registry-export-governance-report-pack.md)
