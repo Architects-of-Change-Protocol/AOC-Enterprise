@@ -65,6 +65,20 @@ export { createPassportEvent } from './events/passport-events.js';
 export type * from './store/store-port.js';
 export { createInMemoryAgentPassportStore } from './store/store-port.js';
 
+// Runtime Guard Lite
+export type * from './runtime-guard/runtime-action.js';
+export type * from './runtime-guard/runtime-decision.js';
+export type * from './runtime-guard/runtime-context.js';
+export type * from './runtime-guard/runtime-guard-events.js';
+export type * from './runtime-guard/runtime-guard-contracts.js';
+export { createRuntimeGuardEvent } from './runtime-guard/runtime-guard-events.js';
+export { createHumanApprovalRequest } from './runtime-guard/runtime-guard-contracts.js';
+export type { EvaluateAgentRuntimeGuardDeps } from './runtime-guard/runtime-guard.js';
+export {
+  evaluateAgentRuntimeGuard,
+  enforceAgentRuntimeGuard,
+} from './runtime-guard/runtime-guard.js';
+
 // Test utilities — for use in tests; not for production use
 export type { TestSignerOptions } from './signing/test-signer.js';
 export { createTestSigner } from './signing/test-signer.js';
