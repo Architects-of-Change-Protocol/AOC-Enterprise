@@ -11,3 +11,4 @@ turbo
 .DS_Store
 *.log
 *.tsbuildinfo
+.claude/worktrees/
