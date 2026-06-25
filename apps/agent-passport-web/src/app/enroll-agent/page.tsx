@@ -1,10 +1,33 @@
+import Link from 'next/link';
 import { enrollAgentAction } from './actions';
 
 export const metadata = {
   title: 'Enroll Agent — AOC Agent Passport',
 };
 
-export default function EnrollAgentPage() {
+interface Props {
+  searchParams: { checkout?: string; tier?: string; session_id?: string };
+}
+
+export default function EnrollAgentPage({ searchParams }: Props) {
+  if (searchParams.checkout !== 'success') {
+    return (
+      <div className="page-header">
+        <div className="container" style={{ maxWidth: 600, textAlign: 'center', paddingTop: 80 }}>
+          <div className="section-label">Access Required</div>
+          <h1 style={{ fontSize: 28, marginBottom: 16 }}>Payment required to enroll an agent.</h1>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 40 }}>
+            Agent enrollment requires a paid plan. Choose a plan to get started, then return here to enroll your AI agent.
+          </p>
+          <div className="hero-actions" style={{ justifyContent: 'center' }}>
+            <Link href="/pricing" className="btn btn-primary">View Pricing</Link>
+            <Link href="/sample-passport" className="btn btn-secondary">View Sample Passport</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container" style={{ paddingTop: 40, paddingBottom: 80 }}>
       <div className="page-header">
