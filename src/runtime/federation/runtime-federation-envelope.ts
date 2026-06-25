@@ -9,7 +9,7 @@ export function createRuntimeFederationEnvelope(input: { snapshot: RuntimeOperat
   const federationMetadata = {
     ...input.identity,
     continuityLineageId: lineage.lineageId,
-    restorationLineageId: lineage.restorationAncestry[0],
+    restorationLineageId: lineage.restorationAncestry[0] ?? lineage.lineageId,
     federationCompatibilityVersion: RUNTIME_FEDERATION_COMPATIBILITY_VERSION,
   };
   const base = {
@@ -27,7 +27,7 @@ export function createRuntimeFederationEnvelope(input: { snapshot: RuntimeOperat
     replay: {
       deniedNonces: [...input.snapshot.replay.deniedNonces],
       deniedNonceLineageId: `${lineage.lineageId}:replay`,
-      lastDeniedAt: input.snapshot.replay.lastDeniedAt,
+      ...(input.snapshot.replay.lastDeniedAt !== undefined ? { lastDeniedAt: input.snapshot.replay.lastDeniedAt } : {}),
       replayDenialCount: input.snapshot.replay.deniedNonces.length,
     },
     lineage,

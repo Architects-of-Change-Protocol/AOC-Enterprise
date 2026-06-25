@@ -446,6 +446,11 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
       return operationalState.snapshotRuntimeOperationalState();
     },
     attestVaultBoundary(boundary, now) { return vaultManager.attestVaultBoundary(boundary, now); },
+    createFederationEnvelope(now) { return federationManager.exportFederationEnvelope(now); },
+    validateFederationEnvelope(envelope) { return federationManager.validateFederationEnvelope(envelope); },
+    reconcileFederationEnvelope(envelope) { return federationManager.reconcileFederationState(envelope); },
+    attestFederationEnvelope(envelope) { return federationManager.attestFederationIntegrity(envelope); },
+    importFederationEnvelope(envelope) { return federationManager.importFederationEnvelope(envelope); },
   };
 
   return runtime;
