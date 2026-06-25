@@ -37,6 +37,21 @@ function openDb(dbPath?: string): Database.Database {
   return db;
 }
 
+/**
+ * Safe ALTER TABLE helper — no-ops if column already exists (SQLite <3.37 compat).
+ */
+function ensureColumn(
+  db: Database.Database,
+  table: string,
+  column: string,
+  definition: string,
+): void {
+  const cols = db.pragma(`table_info(${table})`) as Array<{ name: string }>;
+  if (!cols.some(c => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
 function initSchema(db: Database.Database): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS purchases (
@@ -178,7 +193,62 @@ function initSchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS registry_export_artifacts_generated_at_idx
       ON registry_export_artifacts(generated_at);
+
+    CREATE TABLE IF NOT EXISTS registry_admin_sessions (
+      id                TEXT PRIMARY KEY,
+      session_id        TEXT NOT NULL UNIQUE,
+      session_token_hash TEXT NOT NULL,
+      registry_id       TEXT NOT NULL,
+      created_at        TEXT NOT NULL,
+      expires_at        TEXT NOT NULL,
+      revoked_at        TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS registry_admin_sessions_registry_idx
+      ON registry_admin_sessions(registry_id);
+    CREATE INDEX IF NOT EXISTS registry_admin_sessions_expires_idx
+      ON registry_admin_sessions(expires_at);
+
+    CREATE TABLE IF NOT EXISTS registry_admin_access_events (
+      id            TEXT PRIMARY KEY,
+      registry_id   TEXT NOT NULL,
+      event_type    TEXT NOT NULL,
+      event_reason  TEXT,
+      actor_hint    TEXT,
+      created_at    TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS registry_admin_access_events_registry_idx
+      ON registry_admin_access_events(registry_id);
+    CREATE INDEX IF NOT EXISTS registry_admin_access_events_type_idx
+      ON registry_admin_access_events(registry_id, event_type);
   `);
+
+  // Migrate existing organization_registries with new columns (safe for existing DBs)
+  const orgRegCols: [string, string][] = [
+    ['organization_website', 'TEXT'],
+    ['organization_country', 'TEXT'],
+    ['organization_industry', 'TEXT'],
+    ['organization_size', 'TEXT'],
+    ['organization_use_case', 'TEXT'],
+    ['buyer_contact_name', 'TEXT'],
+    ['buyer_contact_email', 'TEXT'],
+    ['buyer_contact_role', 'TEXT'],
+    ['admin_access_token_rotated_at', 'TEXT'],
+    ['admin_access_token_last_used_at', 'TEXT'],
+    ['recovery_code_hash', 'TEXT'],
+    ['recovery_code_created_at', 'TEXT'],
+    ['recovery_code_used_at', 'TEXT'],
+    ['recovery_code_rotated_at', 'TEXT'],
+    ['profile_completed_at', 'TEXT'],
+    ['profile_updated_at', 'TEXT'],
+  ];
+  for (const [col, def] of orgRegCols) {
+    ensureColumn(db, 'organization_registries', col, def);
+  }
+
+  // Migrate purchases table with metadata column
+  ensureColumn(db, 'purchases', 'metadata', 'TEXT');
 }
 
 // Singleton

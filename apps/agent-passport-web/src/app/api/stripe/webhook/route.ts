@@ -24,6 +24,7 @@ import {
   markPurchaseExpired,
   markPurchaseFailed,
 } from '@/lib/purchase-repository';
+import type { OrganizationProfile } from '@/lib/organization-registry-types';
 import { ensureOrganizationRegistry } from '@/lib/organization-registry-service';
 
 export const dynamic = 'force-dynamic';
@@ -117,6 +118,8 @@ async function handleStripeEvent(
         typeof session['payment_intent'] === 'string' ? session['payment_intent'] : undefined;
       const updatedPurchase = markPurchaseCompleted(purchase.id, { buyerEmail, stripePaymentIntent: paymentIntent });
       if (updatedPurchase) {
+        // Read org profile from purchase metadata
+        const orgProfile = updatedPurchase.metadata?.organization_profile as OrganizationProfile | undefined;
         ensureOrganizationRegistry({
           purchaseId: updatedPurchase.id,
           tier: updatedPurchase.tier,
@@ -125,6 +128,7 @@ async function handleStripeEvent(
             typeof session['customer'] === 'string' ? session['customer'] : undefined,
           stripeSubscriptionId:
             typeof session['subscription'] === 'string' ? session['subscription'] : undefined,
+          organizationProfile: orgProfile ?? null,
         });
       }
       break;

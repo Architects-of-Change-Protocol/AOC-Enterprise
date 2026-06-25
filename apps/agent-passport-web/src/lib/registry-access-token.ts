@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 const TOKEN_BYTE_LENGTH = 32;
 
@@ -15,11 +15,26 @@ export function verifyRegistryAdminAccessToken(
   storedHash: string,
 ): boolean {
   const hash = hashRegistryAdminAccessToken(token);
-  // Constant-time comparison to prevent timing attacks
   if (hash.length !== storedHash.length) return false;
-  let diff = 0;
-  for (let i = 0; i < hash.length; i++) {
-    diff |= hash.charCodeAt(i) ^ storedHash.charCodeAt(i);
-  }
-  return diff === 0;
+  return timingSafeEqual(Buffer.from(hash), Buffer.from(storedHash));
+}
+
+// ---------------------------------------------------------------------------
+// Recovery codes
+// ---------------------------------------------------------------------------
+
+export function createRegistryRecoveryCode(): string {
+  const bytes = randomBytes(8);
+  const hex = bytes.toString('hex').toUpperCase();
+  return `AOC-RECOVERY-${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+}
+
+export function hashRegistryRecoveryCode(code: string): string {
+  return createHash('sha256').update(code).digest('hex');
+}
+
+export function verifyRegistryRecoveryCode(code: string, storedHash: string): boolean {
+  const hash = hashRegistryRecoveryCode(code);
+  if (hash.length !== storedHash.length) return false;
+  return timingSafeEqual(Buffer.from(hash), Buffer.from(storedHash));
 }

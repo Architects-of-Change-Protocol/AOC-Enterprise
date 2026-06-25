@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPurchaseByStripeSessionId } from '@/lib/purchase-repository';
 import { getRegistryByPurchaseId, getEntitlementByRegistryId } from '@/lib/organization-registry-repository';
+import type { OrganizationProfile } from '@/lib/organization-registry-types';
+import { ensureOrganizationRegistry } from '@/lib/organization-registry-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,12 +49,52 @@ export async function GET(
   };
 
   if (purchase.tier === 'organization_agent_registry') {
-    const registry = getRegistryByPurchaseId(purchase.id);
+    let registry = getRegistryByPurchaseId(purchase.id);
+
+    // If registry not yet created (webhook may be delayed), try to create it now
+    if (!registry && purchase.status === 'completed') {
+      const orgProfile = purchase.metadata?.organization_profile as OrganizationProfile | undefined;
+      const result = ensureOrganizationRegistry({
+        purchaseId: purchase.id,
+        tier: purchase.tier,
+        buyerEmail: purchase.buyerEmail ?? undefined,
+        organizationProfile: orgProfile ?? null,
+      });
+      if (result) {
+        registry = result.registry;
+        // Expose recovery code and token only on first creation
+        if (result.wasCreated && result.adminAccessToken && result.recoveryCode) {
+          const entitlement = getEntitlementByRegistryId(registry.registryId);
+          const baseUrl = process.env.NEXT_PUBLIC_AGENT_PASSPORT_BASE_URL || 'http://localhost:3000';
+          const adminUrl = `/registry/admin?registry_id=${encodeURIComponent(registry.registryId)}&access_token=${encodeURIComponent(result.adminAccessToken)}`;
+          return NextResponse.json({
+            ...base,
+            canEnroll: false,
+            registry: {
+              registryId: registry.registryId,
+              organizationName: registry.organizationName,
+              registryStatus: registry.registryStatus,
+              maxPassports: registry.maxPassports,
+              issuedPassports: registry.issuedPassports,
+              remainingPassports: registry.remainingPassports,
+              entitlementStatus: entitlement?.status ?? null,
+              adminAccessToken: result.adminAccessToken,
+              recoveryCode: result.recoveryCode,
+              adminUrl,
+              baseUrl,
+              profileCompleted: Boolean(registry.profileCompletedAt),
+              message: 'Registry created. Save your admin URL and recovery code securely.',
+            },
+          });
+        }
+      }
+    }
+
     if (registry) {
       const entitlement = getEntitlementByRegistryId(registry.registryId);
       return NextResponse.json({
         ...base,
-        canEnroll: false, // org tier uses registry enrollment, not single-session enrollment
+        canEnroll: false,
         registry: {
           registryId: registry.registryId,
           organizationName: registry.organizationName,
@@ -62,6 +104,7 @@ export async function GET(
           remainingPassports: registry.remainingPassports,
           entitlementStatus: entitlement?.status ?? null,
           adminAccessAvailable: false,
+          profileCompleted: Boolean(registry.profileCompletedAt),
           message: 'Registry exists. Use the admin URL from your checkout confirmation to access the registry.',
         },
       });

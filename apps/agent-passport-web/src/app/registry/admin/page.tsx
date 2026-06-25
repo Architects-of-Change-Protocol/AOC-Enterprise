@@ -220,6 +220,93 @@ export default function RegistryAdminPage({ searchParams }: Props) {
         )}
       </div>
 
+      {/* Organization Profile */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Organization Profile</h2>
+        {!registry.profileCompletedAt && (
+          <div className="alert alert-warning" style={{ marginBottom: 16, fontSize: 13 }}>
+            Organization profile incomplete. Complete your profile to ensure accurate governance evidence.
+          </div>
+        )}
+        <div className="form-grid form-grid-2" style={{ gap: 12, marginBottom: 16 }}>
+          <Info label="Organization Name" value={registry.organizationName} />
+          {registry.organizationWebsite && <Info label="Website" value={registry.organizationWebsite} />}
+          {registry.organizationCountry && <Info label="Country" value={registry.organizationCountry} />}
+          {registry.organizationIndustry && <Info label="Industry" value={registry.organizationIndustry} />}
+          {registry.organizationSize && <Info label="Size" value={registry.organizationSize} />}
+          {registry.buyerContactName && <Info label="Contact Name" value={registry.buyerContactName} />}
+          {registry.buyerContactEmail && <Info label="Contact Email" value={registry.buyerContactEmail} />}
+          {registry.buyerContactRole && <Info label="Contact Role" value={registry.buyerContactRole} />}
+        </div>
+        {registry.organizationUseCase && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Primary AI Agent Use Case</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{registry.organizationUseCase}</div>
+          </div>
+        )}
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-dim)' }}>
+          {registry.profileCompletedAt
+            ? `Profile completed ${new Date(registry.profileCompletedAt).toLocaleDateString()}`
+            : 'Profile incomplete — update via the profile API or re-enroll with a complete profile.'}
+          {registry.profileUpdatedAt && ` · Last updated ${new Date(registry.profileUpdatedAt).toLocaleDateString()}`}
+        </div>
+      </div>
+
+      {/* Admin Access & Recovery */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Admin Access &amp; Recovery</h2>
+        <div className="form-grid form-grid-2" style={{ gap: 12, marginBottom: 20 }}>
+          <Info label="Access Token Status" value={registry.adminAccessTokenHash ? 'Active' : 'Not set'} />
+          <Info label="Recovery Code" value={registry.recoveryCodeHash ? 'Generated' : 'Not generated'} />
+          {registry.adminAccessTokenRotatedAt && (
+            <Info label="Last Rotated" value={new Date(registry.adminAccessTokenRotatedAt).toLocaleString()} />
+          )}
+          {registry.recoveryCodeCreatedAt && (
+            <Info label="Recovery Code Created" value={new Date(registry.recoveryCodeCreatedAt).toLocaleDateString()} />
+          )}
+          {registry.recoveryCodeUsedAt && (
+            <Info label="Recovery Code Used" value={new Date(registry.recoveryCodeUsedAt).toLocaleString()} />
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          <a
+            href={`/api/organization-registry/${encodeURIComponent(registry_id)}/admin-access/rotate`}
+            style={{
+              display: 'inline-block', padding: '8px 16px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+              borderRadius: 4, fontSize: 13, fontWeight: 600, textDecoration: 'none', color: 'inherit',
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              if (!confirm('Rotate admin access token? Your current admin URL will stop working and you will receive a new one.')) return;
+              fetch(`/api/organization-registry/${encodeURIComponent(registry_id)}/admin-access/rotate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_token: access_token, reason: 'buyer_requested_rotation' }),
+              })
+                .then(r => r.json())
+                .then((d: { ok?: boolean; data?: { adminUrl?: string; newRecoveryCode?: string } }) => {
+                  if (d.ok && d.data?.adminUrl) {
+                    alert(`Token rotated.\n\nNew admin URL:\n${d.data.adminUrl}\n\nNew recovery code:\n${d.data.newRecoveryCode ?? ''}\n\nSave both securely!`);
+                    window.location.href = d.data.adminUrl;
+                  } else {
+                    alert('Rotation failed. Use the recovery page if you have lost your access token.');
+                  }
+                });
+            }}
+          >
+            Rotate Admin Access Token
+          </a>
+          <Link href="/registry/recover" className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 16px' }}>
+            Recover Lost Access
+          </Link>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+          Store your recovery code in a secure location. If you lose access, you can use it at{' '}
+          <Link href="/registry/recover">/registry/recover</Link> to rotate your admin link.
+        </div>
+      </div>
+
       {/* MVP note */}
       <div style={{ padding: '16px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-muted)' }}>
         <strong>MVP Registry View:</strong> This buyer admin view is an MVP registry surface. Full user accounts, team permissions, and billing portal are planned for future sprints. Governance exports are now available above.
