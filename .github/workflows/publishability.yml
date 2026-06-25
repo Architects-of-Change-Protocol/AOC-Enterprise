@@ -10,9 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout AOC Protocol (peer dependency)
+        run: git clone --depth=1 https://github.com/Architects-of-Change-Protocol/Architects_of_Change_Protocol.git $GITHUB_WORKSPACE/../Architects_of_Change_Protocol
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+      - name: Build AOC Protocol
+        run: npm install && npm run build
+        working-directory: ${{ github.workspace }}/../Architects_of_Change_Protocol/packages/protocol
       - run: npm ci
       - run: npm run validate:publishability

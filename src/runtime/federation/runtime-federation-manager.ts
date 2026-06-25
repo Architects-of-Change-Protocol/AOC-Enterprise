@@ -1,8 +1,8 @@
-import { createRuntimeFederationEnvelope } from './runtime-federation-envelope';
-import { createRuntimeFederationAttestation } from './runtime-federation-attestation';
-import { reconcileRuntimeFederationEnvelopes } from './runtime-federation-reconciliation';
-import { validateRuntimeFederationEnvelope } from './runtime-federation-validation';
-import type { RuntimeFederationEnvelope, RuntimeFederationManager, RuntimeFederationValidationReport } from './runtime-federation-types';
+import { createRuntimeFederationEnvelope } from './runtime-federation-envelope.js';
+import { createRuntimeFederationAttestation } from './runtime-federation-attestation.js';
+import { reconcileRuntimeFederationEnvelopes } from './runtime-federation-reconciliation.js';
+import { validateRuntimeFederationEnvelope } from './runtime-federation-validation.js';
+import type { RuntimeFederationEnvelope, RuntimeFederationManager, RuntimeFederationValidationReport } from './runtime-federation-types.js';
 import type { RuntimeOperationalSnapshot } from '../state';
 import type { RuntimePersistenceEnvelope } from '../persistence';
 

@@ -59,4 +59,5 @@ export {
 export * from './runtime/state';
 
 export * from './runtime/persistence';
+export * from './runtime/federation';
 export * from './runtime/vault';

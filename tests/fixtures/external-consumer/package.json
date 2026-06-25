@@ -7,6 +7,9 @@
     "typecheck": "tsc --pretty false --noEmit",
     "build": "tsc --pretty false"
   },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
   "dependencies": {
     "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol"
   }

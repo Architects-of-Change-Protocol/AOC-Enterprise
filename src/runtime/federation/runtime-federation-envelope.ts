@@ -1,15 +1,15 @@
 import type { RuntimePersistenceEnvelope } from '../persistence';
 import type { RuntimeOperationalSnapshot } from '../state';
-import { createRuntimeFederationAttestation } from './runtime-federation-attestation';
-import { createRuntimeFederationLineage } from './runtime-federation-lineage';
-import { RUNTIME_FEDERATION_COMPATIBILITY_VERSION, type RuntimeFederationEnvelope, type RuntimeFederationIdentity } from './runtime-federation-types';
+import { createRuntimeFederationAttestation } from './runtime-federation-attestation.js';
+import { createRuntimeFederationLineage } from './runtime-federation-lineage.js';
+import { RUNTIME_FEDERATION_COMPATIBILITY_VERSION, type RuntimeFederationEnvelope, type RuntimeFederationIdentity } from './runtime-federation-types.js';
 
 export function createRuntimeFederationEnvelope(input: { snapshot: RuntimeOperationalSnapshot; persistence: RuntimePersistenceEnvelope; identity: Omit<RuntimeFederationIdentity, 'continuityLineageId' | 'restorationLineageId' | 'federationCompatibilityVersion'>; now: string; }): RuntimeFederationEnvelope {
   const lineage = createRuntimeFederationLineage(input.snapshot);
   const federationMetadata = {
     ...input.identity,
     continuityLineageId: lineage.lineageId,
-    restorationLineageId: lineage.restorationAncestry[0],
+    restorationLineageId: lineage.restorationAncestry[0] ?? lineage.lineageId,
     federationCompatibilityVersion: RUNTIME_FEDERATION_COMPATIBILITY_VERSION,
   };
   const base = {
@@ -27,7 +27,7 @@ export function createRuntimeFederationEnvelope(input: { snapshot: RuntimeOperat
     replay: {
       deniedNonces: [...input.snapshot.replay.deniedNonces],
       deniedNonceLineageId: `${lineage.lineageId}:replay`,
-      lastDeniedAt: input.snapshot.replay.lastDeniedAt,
+      ...(input.snapshot.replay.lastDeniedAt !== undefined ? { lastDeniedAt: input.snapshot.replay.lastDeniedAt } : {}),
       replayDenialCount: input.snapshot.replay.deniedNonces.length,
     },
     lineage,

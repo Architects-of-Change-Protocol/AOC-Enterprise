@@ -16,7 +16,7 @@
     "check:protocol-consumption": "node scripts/check-protocol-consumption.mjs",
     "check:runtime-state": "node scripts/check-runtime-operational-state.mjs",
     "check:runtime-persistence": "node scripts/check-runtime-persistence.mjs",
-    "check:runtime-federation": "npm run build --silent && node scripts/check-runtime-federation.mjs"
+    "check:runtime-federation": "npm run build --silent && node scripts/check-runtime-federation.mjs",
     "check:runtime-vault": "node scripts/check-runtime-vault-boundary.mjs",
     "check:aoc-boundaries": "node scripts/check-aoc-boundaries.mjs",
     "check:release-integrity": "node scripts/check-runtime-release-integrity.mjs",
@@ -57,7 +57,10 @@
       "default": "./dist/src/runtime/index.js"
     }
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@aoc/protocol": ">=0.1.0"
+  },
+  "devDependencies": {
     "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol"
   }
 }

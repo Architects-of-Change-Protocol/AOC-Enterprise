@@ -9,9 +9,9 @@ const tmp = await mkdtemp(join(tmpdir(), 'aoc-publishability-'));
 const consumerDir = join(tmp, 'external-consumer');
 
 const rootPkg = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-const protocolSpec = rootPkg.dependencies?.['@aoc/protocol'];
+const protocolSpec = rootPkg.devDependencies?.['@aoc/protocol'] ?? rootPkg.dependencies?.['@aoc/protocol'];
 if (!protocolSpec || !protocolSpec.startsWith('file:')) {
-  throw new Error('Root dependency @aoc/protocol must be a real file: dependency for publishability validation.');
+  throw new Error('Root devDependency (or dependency) @aoc/protocol must be a real file: dependency for publishability validation.');
 }
 const protocolPath = resolve(root, protocolSpec.slice('file:'.length));
 const protocolPkgJson = resolve(protocolPath, 'package.json');
@@ -39,15 +39,14 @@ try {
   const tarballPath = resolve(root, tarballName);
   await cp(fixtureDir, consumerDir, { recursive: true });
 
-
   const fixturePkgPath = join(consumerDir, 'package.json');
   const fixturePkg = JSON.parse(await readFile(fixturePkgPath, 'utf8'));
   fixturePkg.dependencies = fixturePkg.dependencies ?? {};
   fixturePkg.dependencies['@aoc/protocol'] = `file:${protocolPath}`;
+  fixturePkg.dependencies['@aoc-enterprise/runtime'] = `file:${tarballPath}`;
   await writeFile(fixturePkgPath, `${JSON.stringify(fixturePkg, null, 2)}\n`);
 
-  run('npm', ['install'], consumerDir);
-  run('npm', ['install', tarballPath], consumerDir);
+  run('npm', ['install', '--prefer-offline'], consumerDir);
 
   run('npx', ['--no-install', 'tsc', '--pretty', 'false', '--noEmit', '-p', 'tsconfig.json'], consumerDir);
   run('npx', ['--no-install', 'tsc', '--pretty', 'false', '-p', 'tsconfig.json'], consumerDir);

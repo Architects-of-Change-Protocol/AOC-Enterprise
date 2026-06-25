@@ -1,7 +1,7 @@
-export type * from './runtime-federation-types';
-export { createRuntimeFederationEnvelope } from './runtime-federation-envelope';
-export { createRuntimeFederationManager } from './runtime-federation-manager';
-export { reconcileRuntimeFederationEnvelopes } from './runtime-federation-reconciliation';
-export { validateRuntimeFederationEnvelope } from './runtime-federation-validation';
-export { createRuntimeFederationAttestation } from './runtime-federation-attestation';
-export { createRuntimeFederationLineage } from './runtime-federation-lineage';
+export type * from './runtime-federation-types.js';
+export { createRuntimeFederationEnvelope } from './runtime-federation-envelope.js';
+export { createRuntimeFederationManager } from './runtime-federation-manager.js';
+export { reconcileRuntimeFederationEnvelopes } from './runtime-federation-reconciliation.js';
+export { validateRuntimeFederationEnvelope } from './runtime-federation-validation.js';
+export { createRuntimeFederationAttestation } from './runtime-federation-attestation.js';
+export { createRuntimeFederationLineage } from './runtime-federation-lineage.js';

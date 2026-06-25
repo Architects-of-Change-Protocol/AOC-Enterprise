@@ -1,3 +1,3 @@
 import type { RuntimeOperationalSnapshot } from '../state';
-import type { RuntimeFederationLineage } from './runtime-federation-types';
+import type { RuntimeFederationLineage } from './runtime-federation-types.js';
 export function createRuntimeFederationLineage(snapshot: RuntimeOperationalSnapshot): RuntimeFederationLineage { const lineageId = `${snapshot.continuity.runtimeSessionId}:${snapshot.continuity.continuityEpoch}:${snapshot.continuity.operationalSequenceNumber}`; return { lineageId, continuityAncestry: [snapshot.continuity.runtimeSessionId, `${snapshot.continuity.continuityEpoch}`], restorationAncestry: [`${snapshot.continuity.orchestrationSessionId}:${snapshot.continuity.continuityEpoch}`], federationAncestry: [lineageId], lastOperationalSequenceNumber: snapshot.continuity.operationalSequenceNumber, continuityEpoch: snapshot.continuity.continuityEpoch, continuityVersion: snapshot.continuity.continuityVersion }; }
