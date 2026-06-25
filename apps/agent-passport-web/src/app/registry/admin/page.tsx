@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getRegistryByRegistryId, getEntitlementByRegistryId, listRegistryPassports } from '@/lib/organization-registry-repository';
 import { verifyRegistryAdminAccessToken } from '@/lib/registry-access-token';
+import { listRegistryExportArtifactsByRegistryId } from '@/lib/registry-export-repository';
+import type { RegistryExportArtifactMeta } from '@/lib/registry-export-types';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +33,7 @@ export default function RegistryAdminPage({ searchParams }: Props) {
 
   const entitlement = getEntitlementByRegistryId(registry_id);
   const passports = listRegistryPassports(registry_id);
+  const exportHistory = listRegistryExportArtifactsByRegistryId(registry_id, 20);
 
   const activeCount = passports.filter(p => p.status === 'active').length;
   const revokedCount = passports.filter(p => p.status === 'revoked').length;
@@ -153,9 +156,73 @@ export default function RegistryAdminPage({ searchParams }: Props) {
         )}
       </div>
 
+      {/* Governance Exports */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Governance Exports</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
+          Download registry inventory and governance evidence for internal review, procurement, compliance, and executive reporting.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12, marginBottom: 24 }}>
+          <ExportCard
+            title="Registry Inventory CSV"
+            description="Spreadsheet-friendly list of all registered agent passports."
+            ctaLabel="Generate CSV"
+            registryId={registry_id}
+            accessToken={access_token}
+            exportType="registry_inventory_csv"
+          />
+          <ExportCard
+            title="Governance JSON"
+            description="Machine-readable governance summary for security and compliance systems."
+            ctaLabel="Generate JSON"
+            registryId={registry_id}
+            accessToken={access_token}
+            exportType="registry_governance_json"
+          />
+          <ExportCard
+            title="Evidence Bundle JSON"
+            description="Evidence package with issuer metadata, verification links, capacity and Runtime Guard readiness."
+            ctaLabel="Generate Evidence Bundle"
+            registryId={registry_id}
+            accessToken={access_token}
+            exportType="registry_evidence_bundle_json"
+          />
+          <ExportCard
+            title="Governance Report"
+            description="Buyer-ready markdown report for internal audit, procurement and leadership review."
+            ctaLabel="Generate Report"
+            registryId={registry_id}
+            accessToken={access_token}
+            exportType="registry_governance_report_markdown"
+          />
+        </div>
+
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Export History</h3>
+        {exportHistory.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No registry exports have been generated yet.</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  {['Export Type', 'Filename', 'Generated At', 'Checksum', 'Download'].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 600, color: 'var(--text-muted)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {exportHistory.map(exp => (
+                  <ExportHistoryRow key={exp.exportId} exp={exp} registryId={registry_id} accessToken={access_token} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* MVP note */}
       <div style={{ padding: '16px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-muted)' }}>
-        <strong>MVP Registry View:</strong> This buyer admin view is an MVP registry surface. Full user accounts, team permissions, billing portal, and registry exports are planned for a future sprint.
+        <strong>MVP Registry View:</strong> This buyer admin view is an MVP registry surface. Full user accounts, team permissions, and billing portal are planned for future sprints. Governance exports are now available above.
       </div>
     </div>
   );
@@ -180,6 +247,74 @@ function Info({ label, value, mono }: { label: string; value: React.ReactNode; m
       <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
       <div style={{ fontFamily: mono ? 'monospace' : undefined, fontSize: mono ? 12 : 14 }}>{value}</div>
     </div>
+  );
+}
+
+function ExportCard({
+  title,
+  description,
+  ctaLabel,
+  registryId,
+  accessToken,
+  exportType,
+}: {
+  title: string;
+  description: string;
+  ctaLabel: string;
+  registryId: string;
+  accessToken: string;
+  exportType: string;
+}) {
+  const href = `/api/organization-registry/${encodeURIComponent(registryId)}/exports?_generate=1&access_token=${encodeURIComponent(accessToken)}&export_type=${encodeURIComponent(exportType)}`;
+  return (
+    <div style={{ padding: '16px', border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontWeight: 700, fontSize: 13 }}>{title}</div>
+      <div style={{ color: 'var(--text-muted)', fontSize: 12, flex: 1 }}>{description}</div>
+      <form method="POST" action={`/api/organization-registry/${encodeURIComponent(registryId)}/exports`} style={{ marginTop: 4 }}>
+        <input type="hidden" name="access_token" value={accessToken} />
+        <input type="hidden" name="export_type" value={exportType} />
+        <a
+          href={href}
+          style={{
+            display: 'inline-block',
+            padding: '6px 12px',
+            background: 'var(--accent, rgba(255,255,255,0.08))',
+            border: '1px solid var(--border)',
+            borderRadius: 4,
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'none',
+            color: 'inherit',
+          }}
+        >
+          {ctaLabel}
+        </a>
+      </form>
+    </div>
+  );
+}
+
+function ExportHistoryRow({
+  exp,
+  registryId,
+  accessToken,
+}: {
+  exp: RegistryExportArtifactMeta;
+  registryId: string;
+  accessToken: string;
+}) {
+  const downloadHref = `/api/organization-registry/${encodeURIComponent(registryId)}/exports/${encodeURIComponent(exp.exportId)}?access_token=${encodeURIComponent(accessToken)}`;
+  return (
+    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+      <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>{exp.exportType.replace(/_/g, ' ')}</td>
+      <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11 }}>{exp.filename}</td>
+      <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>{new Date(exp.generatedAt).toLocaleString()}</td>
+      <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 10 }}>{exp.checksumSha256.slice(0, 16)}…</td>
+      <td style={{ padding: '8px 10px' }}>
+        <a href={downloadHref} download={exp.filename} style={{ fontSize: 12 }}>Download</a>
+      </td>
+    </tr>
   );
 }
 

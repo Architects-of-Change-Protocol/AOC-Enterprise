@@ -154,6 +154,30 @@ function initSchema(db: Database.Database): void {
       ON organization_registry_passports(registry_id);
     CREATE INDEX IF NOT EXISTS organization_registry_passports_passport_idx
       ON organization_registry_passports(passport_id);
+
+    CREATE TABLE IF NOT EXISTS registry_export_artifacts (
+      id                TEXT PRIMARY KEY,
+      export_id         TEXT NOT NULL UNIQUE,
+      registry_id       TEXT NOT NULL,
+      export_type       TEXT NOT NULL,
+      format            TEXT NOT NULL,
+      filename          TEXT NOT NULL,
+      content_type      TEXT NOT NULL,
+      content_text      TEXT NOT NULL,
+      checksum_sha256   TEXT NOT NULL,
+      generated_by      TEXT NOT NULL,
+      generated_at      TEXT NOT NULL,
+      created_at        TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS registry_export_artifacts_registry_idx
+      ON registry_export_artifacts(registry_id);
+
+    CREATE INDEX IF NOT EXISTS registry_export_artifacts_export_type_idx
+      ON registry_export_artifacts(registry_id, export_type);
+
+    CREATE INDEX IF NOT EXISTS registry_export_artifacts_generated_at_idx
+      ON registry_export_artifacts(generated_at);
   `);
 }
 
