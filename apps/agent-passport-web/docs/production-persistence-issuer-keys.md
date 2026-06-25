@@ -83,3 +83,9 @@ No migration tool is used currently. The schema is applied with `CREATE TABLE IF
 - `.data/` directory is gitignored — never commit the SQLite file
 - The webhook endpoint returns HTTP 200 even on business logic failures (to prevent Stripe retry storms); internal errors are logged and recorded in `stripe_webhook_events`
 - Passport issuance is idempotent-protected: a purchase can only issue one passport (`canEnrollWithPurchase` returns false after `passport_issued`)
+
+## Organization Registry Update (Sprint 3)
+
+Three new tables were added to the same SQLite database: `organization_registries`, `organization_registry_entitlements`, and `organization_registry_passports`. These are created automatically on startup via `CREATE TABLE IF NOT EXISTS`. The `passports` table now allows `purchase_id = NULL` to support registry-issued passports (which link via `registry_id` instead). Organization registry buyers now have a buyer admin view at `/registry/admin` and can enroll up to 10 governed agent passports from their registry.
+
+See `docs/organization-registry-buyer-admin.md` for full details.

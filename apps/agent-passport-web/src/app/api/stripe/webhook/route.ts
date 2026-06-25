@@ -24,13 +24,11 @@ import {
   markPurchaseExpired,
   markPurchaseFailed,
 } from '@/lib/purchase-repository';
+import { ensureOrganizationRegistry } from '@/lib/organization-registry-service';
 
 export const dynamic = 'force-dynamic';
 
-// Disable automatic body parsing — we need raw bytes for Stripe signature
-export const config = {
-  api: { bodyParser: false },
-};
+// Body parsing is handled manually via req.text() for Stripe signature verification
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -117,7 +115,18 @@ async function handleStripeEvent(
         typeof session['customer_email'] === 'string' ? session['customer_email'] : undefined;
       const paymentIntent =
         typeof session['payment_intent'] === 'string' ? session['payment_intent'] : undefined;
-      markPurchaseCompleted(purchase.id, { buyerEmail, stripePaymentIntent: paymentIntent });
+      const updatedPurchase = markPurchaseCompleted(purchase.id, { buyerEmail, stripePaymentIntent: paymentIntent });
+      if (updatedPurchase) {
+        ensureOrganizationRegistry({
+          purchaseId: updatedPurchase.id,
+          tier: updatedPurchase.tier,
+          buyerEmail: buyerEmail,
+          stripeCustomerId:
+            typeof session['customer'] === 'string' ? session['customer'] : undefined,
+          stripeSubscriptionId:
+            typeof session['subscription'] === 'string' ? session['subscription'] : undefined,
+        });
+      }
       break;
     }
     case 'checkout.session.expired': {

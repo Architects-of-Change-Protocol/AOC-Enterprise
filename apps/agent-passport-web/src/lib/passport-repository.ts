@@ -12,7 +12,8 @@ export type PassportRecordStatus = 'active' | 'revoked' | 'suspended';
 
 export interface PassportRecord {
   id: string;
-  purchaseId: string;
+  purchaseId: string | null;
+  registryId: string | null;
   passportData: string; // JSON string
   status: PassportRecordStatus;
   issuedAt: string;
@@ -23,7 +24,8 @@ export interface PassportRecord {
 
 interface PassportRow {
   id: string;
-  purchase_id: string;
+  purchase_id: string | null;
+  registry_id: string | null;
   passport_data: string;
   status: string;
   issued_at: string;
@@ -36,6 +38,7 @@ function rowToRecord(row: PassportRow): PassportRecord {
   return {
     id: row.id,
     purchaseId: row.purchase_id,
+    registryId: row.registry_id,
     passportData: row.passport_data,
     status: row.status as PassportRecordStatus,
     issuedAt: row.issued_at,
@@ -47,19 +50,20 @@ function rowToRecord(row: PassportRow): PassportRecord {
 
 export function createPassportRecord(
   passportId: string,
-  purchaseId: string,
+  purchaseId: string | null,
   passportData: string,
   db?: Database.Database,
+  registryId?: string,
 ): PassportRecord {
   const database = db ?? getDb();
   const now = new Date().toISOString();
 
   database
     .prepare(
-      `INSERT INTO passports (id, purchase_id, passport_data, status, issued_at, updated_at)
-       VALUES (?, ?, ?, 'active', ?, ?)`,
+      `INSERT INTO passports (id, purchase_id, registry_id, passport_data, status, issued_at, updated_at)
+       VALUES (?, ?, ?, ?, 'active', ?, ?)`,
     )
-    .run(passportId, purchaseId, passportData, now, now);
+    .run(passportId, purchaseId, registryId ?? null, passportData, now, now);
 
   return getPassportByPassportId(passportId, database)!;
 }

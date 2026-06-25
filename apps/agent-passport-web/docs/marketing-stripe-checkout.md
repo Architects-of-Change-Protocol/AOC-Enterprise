@@ -201,3 +201,9 @@ The enrollment gating has been updated from client-side URL parameter trust to s
 The checkout success page now redirects to `/enroll-agent?session_id={CHECKOUT_SESSION_ID}` instead of `/enroll-agent?checkout=success`.
 
 See `docs/production-persistence-issuer-keys.md` for full details.
+
+## Organization Registry Update (Sprint 3)
+
+Buyers purchasing the `organization_agent_registry` tier now receive a buyer admin registry view instead of a single enrollment flow. The checkout success page shows an 'Open Organization Registry' button when `registry_id` and `access_token` are present in the URL. Organization registry buyers can enroll up to 10 governed agent passports from the admin view at `/registry/admin`.
+
+See `docs/organization-registry-buyer-admin.md` for full details.
