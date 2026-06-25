@@ -2,7 +2,7 @@
 const nextConfig = {
   transpilePackages: ['@aoc-enterprise/agent-governance'],
   experimental: {
-    serverComponentsExternalPackages: [],
+    serverComponentsExternalPackages: ['better-sqlite3'],
   },
 };
 

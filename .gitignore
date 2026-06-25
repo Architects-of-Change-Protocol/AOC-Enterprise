@@ -11,3 +11,7 @@ turbo
 .DS_Store
 *.log
 *.tsbuildinfo
+.claude/worktrees/
+
+# Agent Passport SQLite data directory
+apps/agent-passport-web/.data/

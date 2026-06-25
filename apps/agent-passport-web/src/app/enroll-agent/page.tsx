@@ -6,18 +6,22 @@ export const metadata = {
 };
 
 interface Props {
-  searchParams: { checkout?: string; tier?: string; session_id?: string };
+  searchParams: { session_id?: string; tier?: string };
 }
 
 export default function EnrollAgentPage({ searchParams }: Props) {
-  if (searchParams.checkout !== 'success') {
+  const { session_id } = searchParams;
+
+  // Gate: session_id required (server-side verification happens in the action)
+  if (!session_id) {
     return (
       <div className="page-header">
         <div className="container" style={{ maxWidth: 600, textAlign: 'center', paddingTop: 80 }}>
           <div className="section-label">Access Required</div>
           <h1 style={{ fontSize: 28, marginBottom: 16 }}>Payment required to enroll an agent.</h1>
           <p style={{ color: 'var(--text-muted)', marginBottom: 40 }}>
-            Agent enrollment requires a paid plan. Choose a plan to get started, then return here to enroll your AI agent.
+            Agent enrollment requires a completed purchase. Choose a plan to get started,
+            then return here to enroll your AI agent.
           </p>
           <div className="hero-actions" style={{ justifyContent: 'center' }}>
             <Link href="/pricing" className="btn btn-primary">View Pricing</Link>
@@ -39,11 +43,9 @@ export default function EnrollAgentPage({ searchParams }: Props) {
         </p>
       </div>
 
-      <div className="alert alert-warning">
-        MVP build — passport stored in-memory only. Data is lost on server restart.
-      </div>
-
       <form action={enrollAgentAction} style={{ display: 'grid', gap: 32 }}>
+        {/* Hidden field: session_id for server-side purchase verification */}
+        <input type="hidden" name="session_id" value={session_id} />
 
         {/* Identity */}
         <div className="card">
