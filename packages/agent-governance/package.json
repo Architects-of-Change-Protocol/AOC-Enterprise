@@ -12,12 +12,20 @@
     "./contracts": {
       "types": "./dist/contracts.d.ts",
       "default": "./dist/contracts.js"
+    },
+    "./passport": {
+      "types": "./dist/passport/passport-contracts.d.ts",
+      "default": "./dist/passport/passport-contracts.js"
+    },
+    "./crypto": {
+      "types": "./dist/crypto/canonical-json.d.ts",
+      "default": "./dist/crypto/canonical-json.js"
     }
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test"
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
   },
   "files": [
     "dist"
