@@ -17,7 +17,8 @@ const protectedSymbols = [
 ];
 
 const allowFiles = new Set([
-  'scripts/check-protocol-consumption.mjs'
+  'scripts/check-protocol-consumption.mjs',
+  'tests/fixtures/external-consumer/types/aoc-protocol/index.d.ts',
 ]);
 
 async function walk(dir) {
