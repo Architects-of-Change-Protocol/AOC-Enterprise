@@ -16,5 +16,8 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+      - name: Build AOC Protocol
+        run: npm install && npm run build
+        working-directory: ${{ github.workspace }}/../Architects_of_Change_Protocol/packages/protocol
       - run: npm ci
       - run: npm run validate:publishability
