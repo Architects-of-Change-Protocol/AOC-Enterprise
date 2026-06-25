@@ -222,6 +222,92 @@ function initSchema(db: Database.Database): void {
       ON registry_admin_access_events(registry_id);
     CREATE INDEX IF NOT EXISTS registry_admin_access_events_type_idx
       ON registry_admin_access_events(registry_id, event_type);
+
+    CREATE TABLE IF NOT EXISTS buyer_accounts (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL UNIQUE,
+      display_name TEXT,
+      password_hash TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_login_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS buyer_accounts_email_idx
+      ON buyer_accounts(email);
+
+    CREATE TABLE IF NOT EXISTS buyer_account_sessions (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL UNIQUE,
+      session_token_hash TEXT NOT NULL,
+      account_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      revoked_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS buyer_account_sessions_account_idx
+      ON buyer_account_sessions(account_id);
+
+    CREATE INDEX IF NOT EXISTS buyer_account_sessions_expires_idx
+      ON buyer_account_sessions(expires_at);
+
+    CREATE TABLE IF NOT EXISTS registry_account_memberships (
+      id TEXT PRIMARY KEY,
+      registry_id TEXT NOT NULL,
+      account_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      status TEXT NOT NULL,
+      invited_by_account_id TEXT,
+      accepted_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(registry_id, account_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS registry_account_memberships_registry_idx
+      ON registry_account_memberships(registry_id);
+
+    CREATE INDEX IF NOT EXISTS registry_account_memberships_account_idx
+      ON registry_account_memberships(account_id);
+
+    CREATE INDEX IF NOT EXISTS registry_account_memberships_role_idx
+      ON registry_account_memberships(registry_id, role);
+
+    CREATE TABLE IF NOT EXISTS registry_team_invitations (
+      id TEXT PRIMARY KEY,
+      invitation_id TEXT NOT NULL UNIQUE,
+      registry_id TEXT NOT NULL,
+      invited_email TEXT NOT NULL,
+      role TEXT NOT NULL,
+      invitation_token_hash TEXT NOT NULL,
+      invited_by_account_id TEXT,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      accepted_at TEXT,
+      revoked_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS registry_team_invitations_registry_idx
+      ON registry_team_invitations(registry_id);
+
+    CREATE INDEX IF NOT EXISTS registry_team_invitations_email_idx
+      ON registry_team_invitations(invited_email);
+
+    CREATE INDEX IF NOT EXISTS registry_team_invitations_status_idx
+      ON registry_team_invitations(registry_id, status);
+
+    CREATE TABLE IF NOT EXISTS registry_account_events (
+      id TEXT PRIMARY KEY,
+      registry_id TEXT,
+      account_id TEXT,
+      event_type TEXT NOT NULL,
+      event_payload TEXT,
+      created_at TEXT NOT NULL
+    );
   `);
 
   // Migrate existing organization_registries with new columns (safe for existing DBs)

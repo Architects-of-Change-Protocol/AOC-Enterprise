@@ -307,13 +307,57 @@ export default function RegistryAdminPage({ searchParams }: Props) {
         </div>
       </div>
 
+      {/* Team Access */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Team Access</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+          Access mode: <strong>legacy admin token</strong>. Create a buyer account to invite team members and manage roles.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <TeamSection registryId={registry_id} accessToken={access_token} />
+        </div>
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
+            Claim this registry with a buyer account to enable full team management.
+          </p>
+          <Link
+            href={`/account/claim-registry?registry_id=${encodeURIComponent(registry_id)}`}
+            className="btn btn-secondary"
+            style={{ fontSize: 13 }}
+          >
+            Claim this registry with a buyer account
+          </Link>
+        </div>
+      </div>
+
       {/* MVP note */}
       <div style={{ padding: '16px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-muted)' }}>
-        <strong>MVP Registry View:</strong> This buyer admin view is an MVP registry surface. Full user accounts, team permissions, and billing portal are planned for future sprints. Governance exports are now available above.
+        <strong>Buyer accounts are now available.</strong> Create a buyer account at{' '}
+        <Link href="/account/signup">/account/signup</Link> to claim this registry, invite teammates, and manage roles without depending on raw admin links.
       </div>
     </div>
   );
 }
+
+function TeamSection({ registryId }: { registryId: string; accessToken: string }) {
+  return (
+    <div>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+        Team members with buyer accounts will appear here once you claim this registry.
+      </p>
+      <div style={{ marginTop: 12 }}>
+        <Link
+          href={`/account/signup?claim_registry_id=${encodeURIComponent(registryId)}`}
+          className="btn btn-secondary"
+          style={{ fontSize: 13 }}
+        >
+          Create account &amp; claim registry
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 
 function AccessDenied() {
   return (
