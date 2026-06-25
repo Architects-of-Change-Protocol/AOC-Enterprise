@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isValidTierKey } from '@/lib/pricing';
+import {
+  createPurchaseRecord,
+  updatePurchaseWithStripeSession,
+} from '@/lib/purchase-repository';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   let body: { tier?: string };
@@ -13,8 +19,10 @@ export async function POST(request: NextRequest) {
 
   if (!tier || !isValidTierKey(tier)) {
     return NextResponse.json(
-      { error: `Invalid tier. Must be one of: agent_passport_single, governed_agent, organization_agent_registry` },
-      { status: 400 }
+      {
+        error: `Invalid tier. Must be one of: agent_passport_single, governed_agent, organization_agent_registry`,
+      },
+      { status: 400 },
     );
   }
 
@@ -23,7 +31,7 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV === 'development') {
       return NextResponse.json(
         { error: 'Stripe is not configured. Set STRIPE_SECRET_KEY to enable checkout.' },
-        { status: 503 }
+        { status: 503 },
       );
     }
     return NextResponse.json({ error: 'Checkout not available.' }, { status: 503 });
@@ -41,12 +49,16 @@ export async function POST(request: NextRequest) {
   if (!priceId) {
     return NextResponse.json(
       { error: `Stripe price not configured. Set ${priceEnvVar} environment variable.` },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_AGENT_PASSPORT_BASE_URL || 'http://localhost:3000';
-  const successUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&tier=${tier}`;
+  // Create a pending purchase record first so we have a purchaseId for metadata
+  const purchase = createPurchaseRecord(tier);
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_AGENT_PASSPORT_BASE_URL || 'http://localhost:3000';
+  const successUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&purchase_id=${purchase.id}`;
   const cancelUrl = `${baseUrl}/checkout/cancel?tier=${tier}`;
 
   try {
@@ -59,10 +71,17 @@ export async function POST(request: NextRequest) {
       mode: tier === 'organization_agent_registry' ? 'subscription' : 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: { tier },
+      metadata: { tier, purchase_id: purchase.id },
     });
 
-    return NextResponse.json({ url: session.url, sessionId: session.id });
+    // Link the Stripe session ID to the purchase record
+    updatePurchaseWithStripeSession(purchase.id, session.id);
+
+    return NextResponse.json({
+      url: session.url,
+      sessionId: session.id,
+      purchaseId: purchase.id,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Stripe checkout failed';
     return NextResponse.json({ error: message }, { status: 500 });

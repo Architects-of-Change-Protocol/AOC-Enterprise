@@ -190,3 +190,14 @@ canEnrollWithPurchase(sessionId)  // Check if enrollment is allowed
 **Production Persistence + Passport Issuer Key Management**
 
 Once checkout exists, the biggest risk is selling passports that disappear after server restart or are signed with a development/test signer. Production persistence (database) and issuer key management (production signing key) are the next required hardening layers.
+
+## Update: Server-Side Enrollment Verification (Production Persistence Sprint)
+
+The enrollment gating has been updated from client-side URL parameter trust to server-side purchase verification:
+
+- **Old:** `/enroll-agent?checkout=success` — any user could bypass by adding the query param
+- **New:** `/enroll-agent?session_id=<stripeSessionId>` — server looks up the purchase record in SQLite and verifies `status=completed` before allowing enrollment
+
+The checkout success page now redirects to `/enroll-agent?session_id={CHECKOUT_SESSION_ID}` instead of `/enroll-agent?checkout=success`.
+
+See `docs/production-persistence-issuer-keys.md` for full details.

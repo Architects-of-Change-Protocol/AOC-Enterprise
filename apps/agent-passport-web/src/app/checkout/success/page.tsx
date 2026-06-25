@@ -5,7 +5,7 @@ export const metadata = {
 };
 
 interface Props {
-  searchParams: { session_id?: string; tier?: string };
+  searchParams: { session_id?: string; purchase_id?: string; tier?: string };
 }
 
 const tierNames: Record<string, string> = {
@@ -15,12 +15,15 @@ const tierNames: Record<string, string> = {
 };
 
 export default function CheckoutSuccessPage({ searchParams }: Props) {
-  const { session_id, tier } = searchParams;
+  const { session_id, purchase_id, tier } = searchParams;
   const tierName = tier ? (tierNames[tier] ?? tier) : null;
 
-  const enrollHref = tier
-    ? `/enroll-agent?tier=${encodeURIComponent(tier)}&checkout=success${session_id ? `&session_id=${encodeURIComponent(session_id)}` : ''}`
-    : '/enroll-agent?checkout=success';
+  // Enroll link uses session_id for server-side verification
+  const enrollHref = session_id
+    ? `/enroll-agent?session_id=${encodeURIComponent(session_id)}${purchase_id ? `&purchase_id=${encodeURIComponent(purchase_id)}` : ''}`
+    : '/pricing';
+
+  const hasSession = Boolean(session_id);
 
   return (
     <div>
@@ -36,14 +39,30 @@ export default function CheckoutSuccessPage({ searchParams }: Props) {
               <span className="badge badge-active">{tierName}</span>
             </div>
           )}
-          <p style={{ color: 'var(--text-muted)', marginBottom: 40 }}>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
             Your payment has been processed. The next step is to enroll your AI agent and generate its
             passport, constitution, and governance evidence layer.
           </p>
+          {!hasSession && (
+            <div className="alert alert-warning" style={{ marginBottom: 24, textAlign: 'left' }}>
+              Payment session ID not found in URL. If you completed payment, check your email or contact support.
+            </div>
+          )}
+          {hasSession && (
+            <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-muted)' }}>
+              Your payment is being verified. The enrollment button will confirm eligibility on the next page.
+            </div>
+          )}
           <div className="hero-actions" style={{ justifyContent: 'center' }}>
-            <Link href={enrollHref} className="btn btn-primary">
-              Enroll Agent
-            </Link>
+            {hasSession ? (
+              <Link href={enrollHref} className="btn btn-primary">
+                Enroll Agent →
+              </Link>
+            ) : (
+              <Link href="/pricing" className="btn btn-primary">
+                View Pricing
+              </Link>
+            )}
             <Link href="/sample-passport" className="btn btn-secondary">
               View Sample Passport
             </Link>
