@@ -64,7 +64,8 @@ function initSchema(db: Database.Database): void {
 
     CREATE TABLE IF NOT EXISTS passports (
       id                  TEXT PRIMARY KEY,
-      purchase_id         TEXT NOT NULL REFERENCES purchases(id),
+      purchase_id         TEXT,
+      registry_id         TEXT,
       passport_data       TEXT NOT NULL,
       status              TEXT NOT NULL DEFAULT 'active',
       issued_at           TEXT NOT NULL,
@@ -90,6 +91,69 @@ function initSchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_webhook_stripe_event_id
       ON stripe_webhook_events(stripe_event_id);
+
+    CREATE TABLE IF NOT EXISTS organization_registries (
+      id                          TEXT PRIMARY KEY,
+      registry_id                 TEXT NOT NULL UNIQUE,
+      purchase_id                 TEXT NOT NULL,
+      tier                        TEXT NOT NULL,
+      organization_name           TEXT NOT NULL,
+      buyer_email                 TEXT,
+      owner_name                  TEXT,
+      owner_role                  TEXT,
+      registry_status             TEXT NOT NULL,
+      governance_level            TEXT NOT NULL,
+      max_passports               INTEGER NOT NULL,
+      issued_passports            INTEGER NOT NULL,
+      remaining_passports         INTEGER NOT NULL,
+      stripe_customer_id          TEXT,
+      stripe_subscription_id      TEXT,
+      admin_access_token_hash     TEXT,
+      admin_access_token_created_at TEXT,
+      created_at                  TEXT NOT NULL,
+      updated_at                  TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS organization_registries_purchase_idx
+      ON organization_registries(purchase_id);
+    CREATE INDEX IF NOT EXISTS organization_registries_buyer_email_idx
+      ON organization_registries(buyer_email);
+
+    CREATE TABLE IF NOT EXISTS organization_registry_entitlements (
+      id                TEXT PRIMARY KEY,
+      registry_id       TEXT NOT NULL,
+      purchase_id       TEXT NOT NULL,
+      entitlement_type  TEXT NOT NULL,
+      max_quantity      INTEGER NOT NULL,
+      used_quantity     INTEGER NOT NULL,
+      remaining_quantity INTEGER NOT NULL,
+      status            TEXT NOT NULL,
+      created_at        TEXT NOT NULL,
+      updated_at        TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS organization_registry_entitlements_registry_idx
+      ON organization_registry_entitlements(registry_id);
+
+    CREATE TABLE IF NOT EXISTS organization_registry_passports (
+      id                  TEXT PRIMARY KEY,
+      registry_id         TEXT NOT NULL,
+      passport_id         TEXT NOT NULL,
+      purchase_id         TEXT,
+      agent_name          TEXT NOT NULL,
+      agent_owner         TEXT,
+      status              TEXT NOT NULL,
+      governance_status   TEXT,
+      runtime_guard_ready INTEGER NOT NULL DEFAULT 0,
+      created_at          TEXT NOT NULL,
+      updated_at          TEXT NOT NULL,
+      UNIQUE(registry_id, passport_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS organization_registry_passports_registry_idx
+      ON organization_registry_passports(registry_id);
+    CREATE INDEX IF NOT EXISTS organization_registry_passports_passport_idx
+      ON organization_registry_passports(passport_id);
   `);
 }
 

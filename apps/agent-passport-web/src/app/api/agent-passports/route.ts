@@ -8,18 +8,83 @@ import {
   markPurchaseEnrollmentStarted,
   markPurchasePassportIssued,
 } from '@/lib/purchase-repository';
+import { verifyRegistryAccess } from '@/lib/organization-registry-service';
+import {
+  getEntitlementByRegistryId,
+  addPassportToRegistry,
+} from '@/lib/organization-registry-repository';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json() as Record<string, unknown>;
 
-    // --- Purchase verification gate ---
-    const sessionId: string | undefined = body.session_id;
+    const registryId = typeof body['registry_id'] === 'string' ? body['registry_id'] : undefined;
+    const accessToken = typeof body['access_token'] === 'string' ? body['access_token'] : undefined;
+    const sessionId = typeof body['session_id'] === 'string' ? body['session_id'] : undefined;
+
+    // -----------------------------------------------------------------------
+    // Path 2: Organization registry enrollment
+    // -----------------------------------------------------------------------
+    if (registryId && accessToken) {
+      const registryResult = verifyRegistryAccess(registryId, accessToken);
+      if (!registryResult.ok || !registryResult.registry) {
+        return NextResponse.json(
+          { error: registryResult.errorCode ?? 'REGISTRY_ACCESS_DENIED' },
+          { status: 403 },
+        );
+      }
+
+      const registry = registryResult.registry;
+      if (registry.registryStatus !== 'active') {
+        return NextResponse.json({ error: 'REGISTRY_INACTIVE' }, { status: 403 });
+      }
+
+      const entitlement = getEntitlementByRegistryId(registryId);
+      if (!entitlement || entitlement.status !== 'active' || entitlement.remainingQuantity <= 0) {
+        return NextResponse.json({ error: 'REGISTRY_CAPACITY_EXHAUSTED' }, { status: 403 });
+      }
+
+      const bundle = await enrollAgent(body as unknown as Parameters<typeof enrollAgent>[0]);
+      const passportId = bundle.passport.passportId;
+
+      // Persist passport linked to registry (no purchase_id for registry passports)
+      createPassportRecord(passportId, null, JSON.stringify(bundle), undefined, registryId);
+
+      // Atomically add to registry and decrement capacity
+      try {
+        addPassportToRegistry({
+          registryId,
+          passportId,
+          agentName: typeof body['agentName'] === 'string' ? body['agentName'] : 'Unknown Agent',
+          agentOwner: typeof body['ownerName'] === 'string' ? body['ownerName'] : undefined,
+          governanceStatus: 'active',
+          runtimeGuardReady: false,
+        });
+      } catch (err) {
+        const code = err instanceof Error ? err.message : 'REGISTRY_PASSPORT_ISSUANCE_FAILED';
+        return NextResponse.json({ error: code }, { status: 403 });
+      }
+
+      const publicPayload = createAgentPassportPublicVerificationPayload(bundle.passport);
+      return NextResponse.json(
+        {
+          passport: publicPayload,
+          passportId,
+          registryId,
+          adminUrl: `/registry/admin?registry_id=${encodeURIComponent(registryId)}&access_token=${encodeURIComponent(accessToken)}`,
+        },
+        { status: 201 },
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // Path 1: Individual purchase enrollment
+    // -----------------------------------------------------------------------
     if (!sessionId) {
       return NextResponse.json(
-        { error: 'session_id is required. Complete a purchase before enrolling.' },
+        { error: 'session_id or registry credentials are required.' },
         { status: 400 },
       );
     }
@@ -50,20 +115,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Mark enrollment as started to prevent race conditions
     markPurchaseEnrollmentStarted(purchase.id);
 
-    // Use tier from the verified purchase record (not from request body)
-    const tier = purchase.tier;
-
-    // Enroll the agent
-    const bundle = await enrollAgent({ ...body, tier });
+    const bundle = await enrollAgent(body as unknown as Parameters<typeof enrollAgent>[0]);
     const passportId = bundle.passport.passportId;
 
-    // Persist passport record linked to purchase
     createPassportRecord(passportId, purchase.id, JSON.stringify(bundle));
-
-    // Mark purchase as passport issued (prevents double issuance)
     markPurchasePassportIssued(purchase.id, passportId);
 
     const publicPayload = createAgentPassportPublicVerificationPayload(bundle.passport);

@@ -5,7 +5,13 @@ export const metadata = {
 };
 
 interface Props {
-  searchParams: { session_id?: string; purchase_id?: string; tier?: string };
+  searchParams: {
+    session_id?: string;
+    purchase_id?: string;
+    tier?: string;
+    registry_id?: string;
+    access_token?: string;
+  };
 }
 
 const tierNames: Record<string, string> = {
@@ -15,13 +21,18 @@ const tierNames: Record<string, string> = {
 };
 
 export default function CheckoutSuccessPage({ searchParams }: Props) {
-  const { session_id, purchase_id, tier } = searchParams;
+  const { session_id, purchase_id, tier, registry_id, access_token } = searchParams;
   const tierName = tier ? (tierNames[tier] ?? tier) : null;
+  const isOrgTier = tier === 'organization_agent_registry';
 
-  // Enroll link uses session_id for server-side verification
   const enrollHref = session_id
     ? `/enroll-agent?session_id=${encodeURIComponent(session_id)}${purchase_id ? `&purchase_id=${encodeURIComponent(purchase_id)}` : ''}`
     : '/pricing';
+
+  const adminHref =
+    registry_id && access_token
+      ? `/registry/admin?registry_id=${encodeURIComponent(registry_id)}&access_token=${encodeURIComponent(access_token)}`
+      : null;
 
   const hasSession = Boolean(session_id);
 
@@ -33,35 +44,65 @@ export default function CheckoutSuccessPage({ searchParams }: Props) {
             ✓
           </div>
           <div className="section-label">Payment Received</div>
-          <h1 style={{ fontSize: 28, marginBottom: 16 }}>Payment received. Now enroll your AI agent.</h1>
+          {isOrgTier ? (
+            <h1 style={{ fontSize: 28, marginBottom: 16 }}>Payment received. Your Organization Registry is ready.</h1>
+          ) : (
+            <h1 style={{ fontSize: 28, marginBottom: 16 }}>Payment received. Now enroll your AI agent.</h1>
+          )}
           {tierName && (
             <div style={{ marginBottom: 16 }}>
               <span className="badge badge-active">{tierName}</span>
             </div>
           )}
-          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
-            Your payment has been processed. The next step is to enroll your AI agent and generate its
-            passport, constitution, and governance evidence layer.
-          </p>
+          {isOrgTier ? (
+            <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
+              Your Organization Agent Registry has been created. Access your buyer admin view to enroll
+              up to 10 governed AI agents and manage your registry.
+            </p>
+          ) : (
+            <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
+              Your payment has been processed. The next step is to enroll your AI agent and generate its
+              passport, constitution, and governance evidence layer.
+            </p>
+          )}
           {!hasSession && (
             <div className="alert alert-warning" style={{ marginBottom: 24, textAlign: 'left' }}>
               Payment session ID not found in URL. If you completed payment, check your email or contact support.
             </div>
           )}
-          {hasSession && (
+          {hasSession && !isOrgTier && (
             <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-muted)' }}>
               Your payment is being verified. The enrollment button will confirm eligibility on the next page.
             </div>
           )}
+          {isOrgTier && !adminHref && hasSession && (
+            <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-muted)' }}>
+              Your registry is being prepared. This may take a moment if the webhook is still processing.
+            </div>
+          )}
           <div className="hero-actions" style={{ justifyContent: 'center' }}>
-            {hasSession ? (
-              <Link href={enrollHref} className="btn btn-primary">
-                Enroll Agent →
-              </Link>
+            {isOrgTier ? (
+              adminHref ? (
+                <Link href={adminHref} className="btn btn-primary">
+                  Open Organization Registry →
+                </Link>
+              ) : (
+                hasSession ? (
+                  <Link href={`/api/checkout/session/${session_id}`} className="btn btn-secondary">
+                    Check Registry Status
+                  </Link>
+                ) : (
+                  <Link href="/pricing" className="btn btn-primary">View Pricing</Link>
+                )
+              )
             ) : (
-              <Link href="/pricing" className="btn btn-primary">
-                View Pricing
-              </Link>
+              hasSession ? (
+                <Link href={enrollHref} className="btn btn-primary">
+                  Enroll Agent →
+                </Link>
+              ) : (
+                <Link href="/pricing" className="btn btn-primary">View Pricing</Link>
+              )
             )}
             <Link href="/sample-passport" className="btn btn-secondary">
               View Sample Passport

@@ -6,22 +6,29 @@ export const metadata = {
 };
 
 interface Props {
-  searchParams: { session_id?: string; tier?: string };
+  searchParams: {
+    session_id?: string;
+    tier?: string;
+    registry_id?: string;
+    access_token?: string;
+  };
 }
 
 export default function EnrollAgentPage({ searchParams }: Props) {
-  const { session_id } = searchParams;
+  const { session_id, registry_id, access_token } = searchParams;
 
-  // Gate: session_id required (server-side verification happens in the action)
-  if (!session_id) {
+  const isRegistryMode = Boolean(registry_id && access_token);
+  const isIndividualMode = Boolean(session_id);
+
+  if (!isRegistryMode && !isIndividualMode) {
     return (
       <div className="page-header">
         <div className="container" style={{ maxWidth: 600, textAlign: 'center', paddingTop: 80 }}>
           <div className="section-label">Access Required</div>
           <h1 style={{ fontSize: 28, marginBottom: 16 }}>Payment required to enroll an agent.</h1>
           <p style={{ color: 'var(--text-muted)', marginBottom: 40 }}>
-            Agent enrollment requires a completed purchase. Choose a plan to get started,
-            then return here to enroll your AI agent.
+            Agent enrollment requires a completed purchase or valid registry access.
+            Choose a plan to get started, then return here to enroll your AI agent.
           </p>
           <div className="hero-actions" style={{ justifyContent: 'center' }}>
             <Link href="/pricing" className="btn btn-primary">View Pricing</Link>
@@ -32,20 +39,24 @@ export default function EnrollAgentPage({ searchParams }: Props) {
     );
   }
 
+  const modeLabel = isRegistryMode ? 'Organization Registry Enrollment' : 'Individual Enrollment';
+  const modeNote = isRegistryMode
+    ? 'This agent will be added to your organization registry and linked to your registry entitlement.'
+    : 'This agent will be issued a passport linked to your purchase.';
+
   return (
     <div className="container" style={{ paddingTop: 40, paddingBottom: 80 }}>
       <div className="page-header">
-        <div className="section-label">Step 1</div>
+        <div className="section-label">{modeLabel}</div>
         <h1>Enroll an AI Agent</h1>
-        <p>
-          Define the agent's identity, authority limits, data access, and human oversight
-          requirements. A signed passport and constitution will be generated on submission.
-        </p>
+        <p>{modeNote}</p>
       </div>
 
       <form action={enrollAgentAction} style={{ display: 'grid', gap: 32 }}>
-        {/* Hidden field: session_id for server-side purchase verification */}
-        <input type="hidden" name="session_id" value={session_id} />
+        {/* Hidden access fields */}
+        {session_id && <input type="hidden" name="session_id" value={session_id} />}
+        {registry_id && <input type="hidden" name="registry_id" value={registry_id} />}
+        {access_token && <input type="hidden" name="access_token" value={access_token} />}
 
         {/* Identity */}
         <div className="card">
@@ -127,7 +138,7 @@ export default function EnrollAgentPage({ searchParams }: Props) {
             <div className="field">
               <label htmlFor="humanApprovalRequired">Human Approval Required For</label>
               <textarea id="humanApprovalRequired" name="humanApprovalRequired" placeholder="discount_above_10_percent&#10;contract_language&#10;refund_commitment" />
-              <span className="field-hint">One per line or comma-separated. If any actions listed, oversight is set to required.</span>
+              <span className="field-hint">One per line or comma-separated.</span>
             </div>
             <div className="field">
               <label htmlFor="escalationRules">Escalation Rules</label>
@@ -165,7 +176,13 @@ export default function EnrollAgentPage({ searchParams }: Props) {
           <button type="submit" className="btn btn-primary">
             Issue Agent Passport →
           </button>
-          <a href="/agent-passport" className="btn btn-secondary">Cancel</a>
+          {isRegistryMode ? (
+            <Link href={`/registry/admin?registry_id=${encodeURIComponent(registry_id!)}&access_token=${encodeURIComponent(access_token!)}`} className="btn btn-secondary">
+              Back to Registry
+            </Link>
+          ) : (
+            <Link href="/agent-passport" className="btn btn-secondary">Cancel</Link>
+          )}
         </div>
       </form>
     </div>

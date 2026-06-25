@@ -10,7 +10,11 @@
     "isolatedModules": true,
     "incremental": false,
     "outDir": "dist-test",
-    "rootDir": "."
+    "rootDir": ".",
+    "typeRoots": ["../../node_modules/@types", "./node_modules/@types"],
+    "paths": {
+      "@aoc-enterprise/agent-governance": ["../../packages/agent-governance/dist/index.d.ts"]
+    }
   },
   "include": ["src/lib/**/*.ts", "__tests__/**/*.ts"]
 }

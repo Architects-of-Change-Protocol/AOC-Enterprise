@@ -2,11 +2,12 @@
  * GET /api/checkout/session/[sessionId]
  *
  * Verifies a Stripe session and returns the associated purchase status.
- * Used by the enroll-agent page to gate access without trusting URL params.
+ * For organization_agent_registry tier, also returns registry summary.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getPurchaseByStripeSessionId } from '@/lib/purchase-repository';
+import { getRegistryByPurchaseId, getEntitlementByRegistryId } from '@/lib/organization-registry-repository';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export async function GET(
     purchase.status === 'completed' &&
     purchase.enrollmentStatus !== 'passport_issued';
 
-  return NextResponse.json({
+  const base = {
     ok: true,
     purchase: {
       id: purchase.id,
@@ -43,5 +44,37 @@ export async function GET(
       passportId: purchase.passportId,
     },
     canEnroll,
-  });
+  };
+
+  if (purchase.tier === 'organization_agent_registry') {
+    const registry = getRegistryByPurchaseId(purchase.id);
+    if (registry) {
+      const entitlement = getEntitlementByRegistryId(registry.registryId);
+      return NextResponse.json({
+        ...base,
+        canEnroll: false, // org tier uses registry enrollment, not single-session enrollment
+        registry: {
+          registryId: registry.registryId,
+          organizationName: registry.organizationName,
+          registryStatus: registry.registryStatus,
+          maxPassports: registry.maxPassports,
+          issuedPassports: registry.issuedPassports,
+          remainingPassports: registry.remainingPassports,
+          entitlementStatus: entitlement?.status ?? null,
+          adminAccessAvailable: false,
+          message: 'Registry exists. Use the admin URL from your checkout confirmation to access the registry.',
+        },
+      });
+    }
+
+    return NextResponse.json({
+      ...base,
+      canEnroll: false,
+      registry: null,
+      registryPending: true,
+      message: 'Registry is being prepared. If this persists, contact support.',
+    });
+  }
+
+  return NextResponse.json(base);
 }
