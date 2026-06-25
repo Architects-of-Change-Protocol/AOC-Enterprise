@@ -95,15 +95,12 @@ async function runRuntimeGuardDemo(passportId, requestedAction, actionCategory, 
     };
     return (0, agent_governance_1.evaluateAgentRuntimeGuard)(input, { signer });
 }
+// Module-level cache for the sample passport — immune to user-enrolled agents with the same name.
+let _samplePassportBundle;
 async function createSampleAgentPassport() {
-    // Check if sample already exists to keep it stable across requests.
-    const existing = (0, store_js_1.getAllPassportIds)()
-        .map(store_js_1.getPassportBundle)
-        .filter((b) => b !== undefined)
-        .find((b) => b.passport.agentName === 'SalesBot CR');
-    if (existing)
-        return existing;
-    return enrollAgent({
+    if (_samplePassportBundle)
+        return _samplePassportBundle;
+    const bundle = await enrollAgent({
         agentName: 'SalesBot CR',
         ownerId: 'aoc-demo-company',
         ownerName: 'AOC Demo Company',
@@ -134,4 +131,6 @@ async function createSampleAgentPassport() {
         runtimeEnvironment: 'production',
         tags: ['sales', 'crm', 'demo'],
     });
+    _samplePassportBundle = bundle;
+    return bundle;
 }

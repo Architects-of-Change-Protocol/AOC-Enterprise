@@ -20,7 +20,7 @@ import type {
   AgentRuntimeGuardDecision,
 } from '@aoc-enterprise/agent-governance';
 import { createDevSigner } from './dev-signer.js';
-import { storePassportBundle, getPassportBundle, getAllPassportIds } from './store.js';
+import { storePassportBundle, getPassportBundle } from './store.js';
 
 const BASE_VERIFICATION_URL =
   process.env.NEXT_PUBLIC_BASE_URL
@@ -156,16 +156,13 @@ export async function runRuntimeGuardDemo(
   return evaluateAgentRuntimeGuard(input, { signer });
 }
 
+// Module-level cache for the sample passport — immune to user-enrolled agents with the same name.
+let _samplePassportBundle: IssuedAgentPassportBundle | undefined;
+
 export async function createSampleAgentPassport(): Promise<IssuedAgentPassportBundle> {
-  // Check if sample already exists to keep it stable across requests.
-  const existing = getAllPassportIds()
-    .map(getPassportBundle)
-    .filter((b): b is IssuedAgentPassportBundle => b !== undefined)
-    .find((b) => b.passport.agentName === 'SalesBot CR');
+  if (_samplePassportBundle) return _samplePassportBundle;
 
-  if (existing) return existing;
-
-  return enrollAgent({
+  const bundle = await enrollAgent({
     agentName: 'SalesBot CR',
     ownerId: 'aoc-demo-company',
     ownerName: 'AOC Demo Company',
@@ -197,4 +194,7 @@ export async function createSampleAgentPassport(): Promise<IssuedAgentPassportBu
     runtimeEnvironment: 'production',
     tags: ['sales', 'crm', 'demo'],
   });
+
+  _samplePassportBundle = bundle;
+  return bundle;
 }
