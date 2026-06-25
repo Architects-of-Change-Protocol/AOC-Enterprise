@@ -4,10 +4,12 @@ import type {
   AgentOrganizationRegistryRecord,
   AgentRegistryEntitlementRecord,
   AgentRegistryPassportRecord,
+  RegistryAdminAccessStatus,
   RegistryStatus,
   EntitlementStatus,
   RegistryPassportStatus,
 } from './organization-registry-types.js';
+import type { SanitizedProfile } from './organization-profile-validation.js';
 
 // ---------------------------------------------------------------------------
 // Row types (SQLite raw)
@@ -31,8 +33,37 @@ interface RegistryRow {
   stripe_subscription_id: string | null;
   admin_access_token_hash: string | null;
   admin_access_token_created_at: string | null;
+  // Profile fields
+  organization_website: string | null;
+  organization_country: string | null;
+  organization_industry: string | null;
+  organization_size: string | null;
+  organization_use_case: string | null;
+  buyer_contact_name: string | null;
+  buyer_contact_email: string | null;
+  buyer_contact_role: string | null;
+  // Token/recovery metadata
+  admin_access_token_rotated_at: string | null;
+  admin_access_token_last_used_at: string | null;
+  recovery_code_hash: string | null;
+  recovery_code_created_at: string | null;
+  recovery_code_used_at: string | null;
+  recovery_code_rotated_at: string | null;
+  // Profile timestamps
+  profile_completed_at: string | null;
+  profile_updated_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface AdminSessionRow {
+  id: string;
+  session_id: string;
+  session_token_hash: string;
+  registry_id: string;
+  created_at: string;
+  expires_at: string;
+  revoked_at: string | null;
 }
 
 interface EntitlementRow {
@@ -85,6 +116,22 @@ function rowToRegistry(row: RegistryRow): AgentOrganizationRegistryRecord {
     stripeSubscriptionId: row.stripe_subscription_id,
     adminAccessTokenHash: row.admin_access_token_hash,
     adminAccessTokenCreatedAt: row.admin_access_token_created_at,
+    organizationWebsite: row.organization_website ?? null,
+    organizationCountry: row.organization_country ?? null,
+    organizationIndustry: row.organization_industry ?? null,
+    organizationSize: row.organization_size ?? null,
+    organizationUseCase: row.organization_use_case ?? null,
+    buyerContactName: row.buyer_contact_name ?? null,
+    buyerContactEmail: row.buyer_contact_email ?? null,
+    buyerContactRole: row.buyer_contact_role ?? null,
+    adminAccessTokenRotatedAt: row.admin_access_token_rotated_at ?? null,
+    adminAccessTokenLastUsedAt: row.admin_access_token_last_used_at ?? null,
+    recoveryCodeHash: row.recovery_code_hash ?? null,
+    recoveryCodeCreatedAt: row.recovery_code_created_at ?? null,
+    recoveryCodeUsedAt: row.recovery_code_used_at ?? null,
+    recoveryCodeRotatedAt: row.recovery_code_rotated_at ?? null,
+    profileCompletedAt: row.profile_completed_at ?? null,
+    profileUpdatedAt: row.profile_updated_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -140,9 +187,20 @@ export interface CreateRegistryOptions {
   ownerName?: string;
   ownerRole?: string;
   adminAccessTokenHash?: string;
+  recoveryCodeHash?: string;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   maxPassports?: number;
+  // Profile fields
+  organizationWebsite?: string | null;
+  organizationCountry?: string | null;
+  organizationIndustry?: string | null;
+  organizationSize?: string | null;
+  organizationUseCase?: string | null;
+  buyerContactName?: string | null;
+  buyerContactEmail?: string | null;
+  buyerContactRole?: string | null;
+  profileCompletedAt?: string | null;
 }
 
 export function createOrganizationRegistry(
@@ -163,8 +221,13 @@ export function createOrganizationRegistry(
          max_passports, issued_passports, remaining_passports,
          stripe_customer_id, stripe_subscription_id,
          admin_access_token_hash, admin_access_token_created_at,
+         recovery_code_hash, recovery_code_created_at,
+         organization_website, organization_country, organization_industry,
+         organization_size, organization_use_case,
+         buyer_contact_name, buyer_contact_email, buyer_contact_role,
+         profile_completed_at,
          created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     )
     .run(
       id,
@@ -184,6 +247,17 @@ export function createOrganizationRegistry(
       opts.stripeSubscriptionId ?? null,
       opts.adminAccessTokenHash ?? null,
       opts.adminAccessTokenHash ? now : null,
+      opts.recoveryCodeHash ?? null,
+      opts.recoveryCodeHash ? now : null,
+      opts.organizationWebsite ?? null,
+      opts.organizationCountry ?? null,
+      opts.organizationIndustry ?? null,
+      opts.organizationSize ?? null,
+      opts.organizationUseCase ?? null,
+      opts.buyerContactName ?? null,
+      opts.buyerContactEmail ?? null,
+      opts.buyerContactRole ?? null,
+      opts.profileCompletedAt ?? null,
       now,
       now,
     );
@@ -396,4 +470,205 @@ export function listRegistryPassports(
     )
     .all(registryId) as RegistryPassportRow[];
   return rows.map(rowToRegistryPassport);
+}
+
+// ---------------------------------------------------------------------------
+// Admin token + recovery code updates
+// ---------------------------------------------------------------------------
+
+export function updateRegistryAdminToken(
+  registryId: string,
+  tokenHash: string,
+  db?: Database.Database,
+): void {
+  const database = db ?? getDb();
+  const now = new Date().toISOString();
+  database
+    .prepare(
+      `UPDATE organization_registries
+       SET admin_access_token_hash = ?,
+           admin_access_token_created_at = ?,
+           admin_access_token_rotated_at = ?,
+           updated_at = ?
+       WHERE registry_id = ?`,
+    )
+    .run(tokenHash, now, now, now, registryId);
+}
+
+export function updateRegistryRecoveryCode(
+  registryId: string,
+  codeHash: string,
+  db?: Database.Database,
+): void {
+  const database = db ?? getDb();
+  const now = new Date().toISOString();
+  database
+    .prepare(
+      `UPDATE organization_registries
+       SET recovery_code_hash = ?,
+           recovery_code_created_at = ?,
+           recovery_code_used_at = NULL,
+           recovery_code_rotated_at = ?,
+           updated_at = ?
+       WHERE registry_id = ?`,
+    )
+    .run(codeHash, now, now, now, registryId);
+}
+
+export function markRecoveryCodeUsed(
+  registryId: string,
+  db?: Database.Database,
+): void {
+  const database = db ?? getDb();
+  const now = new Date().toISOString();
+  database
+    .prepare(
+      `UPDATE organization_registries
+       SET recovery_code_used_at = ?, updated_at = ?
+       WHERE registry_id = ?`,
+    )
+    .run(now, now, registryId);
+}
+
+export function updateRegistryProfile(
+  registryId: string,
+  profile: SanitizedProfile,
+  db?: Database.Database,
+): void {
+  const database = db ?? getDb();
+  const now = new Date().toISOString();
+  const profileCompleted =
+    profile.organizationName && profile.buyerContactEmail ? now : null;
+
+  database
+    .prepare(
+      `UPDATE organization_registries
+       SET organization_name = ?,
+           organization_website = ?,
+           organization_country = ?,
+           organization_industry = ?,
+           organization_size = ?,
+           organization_use_case = ?,
+           buyer_contact_name = ?,
+           buyer_contact_email = ?,
+           buyer_contact_role = ?,
+           profile_updated_at = ?,
+           profile_completed_at = COALESCE(profile_completed_at, ?),
+           updated_at = ?
+       WHERE registry_id = ?`,
+    )
+    .run(
+      profile.organizationName,
+      profile.organizationWebsite ?? null,
+      profile.organizationCountry ?? null,
+      profile.organizationIndustry ?? null,
+      profile.organizationSize ?? null,
+      profile.organizationUseCase ?? null,
+      profile.buyerContactName ?? null,
+      profile.buyerContactEmail ?? null,
+      profile.buyerContactRole ?? null,
+      now,
+      profileCompleted,
+      now,
+      registryId,
+    );
+}
+
+export function getRegistryAdminAccessStatus(
+  registryId: string,
+  db?: Database.Database,
+): RegistryAdminAccessStatus | null {
+  const registry = getRegistryByRegistryId(registryId, db);
+  if (!registry) return null;
+  return {
+    registryId,
+    hasRecoveryCode: Boolean(registry.recoveryCodeHash),
+    recoveryCodeCreatedAt: registry.recoveryCodeCreatedAt,
+    recoveryCodeUsedAt: registry.recoveryCodeUsedAt,
+    adminAccessTokenRotatedAt: registry.adminAccessTokenRotatedAt,
+    adminAccessTokenLastUsedAt: registry.adminAccessTokenLastUsedAt,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Admin sessions
+// ---------------------------------------------------------------------------
+
+function sessionRowToObject(row: AdminSessionRow) {
+  return {
+    id: row.id,
+    session_id: row.session_id,
+    session_token_hash: row.session_token_hash,
+    registry_id: row.registry_id,
+    created_at: row.created_at,
+    expires_at: row.expires_at,
+    revoked_at: row.revoked_at,
+  };
+}
+
+export function createRegistryAdminSession(
+  registryId: string,
+  sessionId: string,
+  sessionTokenHash: string,
+  expiresAt: string,
+  db?: Database.Database,
+): void {
+  const database = db ?? getDb();
+  const now = new Date().toISOString();
+  const id = nanoid('sess');
+  database
+    .prepare(
+      `INSERT INTO registry_admin_sessions
+        (id, session_id, session_token_hash, registry_id, created_at, expires_at)
+       VALUES (?,?,?,?,?,?)`,
+    )
+    .run(id, sessionId, sessionTokenHash, registryId, now, expiresAt);
+}
+
+export function getRegistryAdminSession(
+  sessionTokenHash: string,
+  db?: Database.Database,
+): ReturnType<typeof sessionRowToObject> | null {
+  const database = db ?? getDb();
+  const row = database
+    .prepare(
+      `SELECT * FROM registry_admin_sessions WHERE session_token_hash = ? LIMIT 1`,
+    )
+    .get(sessionTokenHash) as AdminSessionRow | undefined;
+  return row ? sessionRowToObject(row) : null;
+}
+
+export function revokeRegistryAdminSessions(
+  registryId: string,
+  db?: Database.Database,
+): void {
+  const database = db ?? getDb();
+  const now = new Date().toISOString();
+  database
+    .prepare(
+      `UPDATE registry_admin_sessions SET revoked_at = ? WHERE registry_id = ? AND revoked_at IS NULL`,
+    )
+    .run(now, registryId);
+}
+
+// ---------------------------------------------------------------------------
+// Access event logging
+// ---------------------------------------------------------------------------
+
+export function recordAdminAccessEvent(
+  registryId: string,
+  eventType: string,
+  opts: { reason?: string; actorHint?: string } = {},
+  db?: Database.Database,
+): void {
+  const database = db ?? getDb();
+  const now = new Date().toISOString();
+  const id = nanoid('evt');
+  database
+    .prepare(
+      `INSERT INTO registry_admin_access_events
+        (id, registry_id, event_type, event_reason, actor_hint, created_at)
+       VALUES (?,?,?,?,?,?)`,
+    )
+    .run(id, registryId, eventType, opts.reason ?? null, opts.actorHint ?? null, now);
 }

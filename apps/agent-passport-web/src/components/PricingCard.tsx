@@ -8,16 +8,21 @@ interface PricingCardProps {
 
 export function PricingCard({ tier }: PricingCardProps) {
   async function handleCheckout() {
+    if (tier.key === 'organization_agent_registry') {
+      window.location.href = '/organization-registry/start';
+      return;
+    }
+
     const res = await fetch('/api/checkout/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tier: tier.key }),
     });
-    const data = await res.json();
+    const data = await res.json() as { url?: string; error?: string };
     if (data.url) {
       window.location.href = data.url;
     } else {
-      alert(data.error || 'Checkout failed. Please try again.');
+      alert(data.error ?? 'Checkout failed. Please try again.');
     }
   }
 

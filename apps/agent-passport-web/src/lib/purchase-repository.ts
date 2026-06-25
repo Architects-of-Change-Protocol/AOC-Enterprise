@@ -20,6 +20,7 @@ export interface PurchaseRecord {
   stripePaymentIntent: string | null;
   passportId: string | null;
   enrollmentStatus: EnrollmentStatus;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -37,6 +38,7 @@ interface PurchaseRow {
   stripe_payment_intent: string | null;
   passport_id: string | null;
   enrollment_status: string;
+  metadata: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -46,6 +48,10 @@ interface PurchaseRow {
 }
 
 function rowToRecord(row: PurchaseRow): PurchaseRecord {
+  let metadata: Record<string, unknown> | null = null;
+  if (row.metadata) {
+    try { metadata = JSON.parse(row.metadata) as Record<string, unknown>; } catch { /* ignore */ }
+  }
   return {
     id: row.id,
     tier: row.tier,
@@ -55,6 +61,7 @@ function rowToRecord(row: PurchaseRow): PurchaseRecord {
     stripePaymentIntent: row.stripe_payment_intent,
     passportId: row.passport_id,
     enrollmentStatus: row.enrollment_status as EnrollmentStatus,
+    metadata,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     completedAt: row.completed_at,
@@ -228,6 +235,21 @@ export function markPurchaseEnrollmentStarted(
     )
     .run(now, purchaseId);
 
+  return getPurchaseById(purchaseId, database);
+}
+
+export function updatePurchaseMetadata(
+  purchaseId: string,
+  metadata: Record<string, unknown>,
+  db?: Database.Database,
+): PurchaseRecord | null {
+  const database = db ?? getDb();
+  const now = new Date().toISOString();
+  const existing = getPurchaseById(purchaseId, database);
+  const merged = { ...(existing?.metadata ?? {}), ...metadata };
+  database
+    .prepare(`UPDATE purchases SET metadata = ?, updated_at = ? WHERE id = ?`)
+    .run(JSON.stringify(merged), now, purchaseId);
   return getPurchaseById(purchaseId, database);
 }
 

@@ -3,14 +3,16 @@ import { isValidTierKey } from '@/lib/pricing';
 import {
   createPurchaseRecord,
   updatePurchaseWithStripeSession,
+  updatePurchaseMetadata,
 } from '@/lib/purchase-repository';
+import { validateOrganizationProfile, type SanitizedProfile } from '@/lib/organization-profile-validation';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  let body: { tier?: string };
+  let body: { tier?: string; organization_profile?: Record<string, unknown> };
   try {
-    body = await request.json();
+    body = await request.json() as typeof body;
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
@@ -53,8 +55,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Validate organization profile for org tier
+  let orgProfile: SanitizedProfile | null = null;
+  if (tier === 'organization_agent_registry') {
+    if (!body.organization_profile) {
+      return NextResponse.json(
+        { error: 'Organization profile is required for this tier', code: 'ORGANIZATION_PROFILE_REQUIRED' },
+        { status: 400 },
+      );
+    }
+    const validation = validateOrganizationProfile(body.organization_profile);
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error, code: validation.code }, { status: 400 });
+    }
+    orgProfile = validation.profile;
+  }
+
   // Create a pending purchase record first so we have a purchaseId for metadata
   const purchase = createPurchaseRecord(tier);
+
+  // Persist org profile in purchase metadata
+  if (orgProfile) {
+    updatePurchaseMetadata(purchase.id, { organization_profile: orgProfile });
+  }
 
   const baseUrl =
     process.env.NEXT_PUBLIC_AGENT_PASSPORT_BASE_URL || 'http://localhost:3000';
@@ -71,7 +94,20 @@ export async function POST(request: NextRequest) {
       mode: tier === 'organization_agent_registry' ? 'subscription' : 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: { tier, purchase_id: purchase.id },
+      metadata: {
+        tier,
+        purchase_id: purchase.id,
+        ...(orgProfile && {
+          organization_name: orgProfile.organizationName.slice(0, 500),
+          buyer_contact_email: (orgProfile.buyerContactEmail ?? '').slice(0, 500),
+          buyer_contact_name: (orgProfile.buyerContactName ?? '').slice(0, 500),
+          buyer_contact_role: (orgProfile.buyerContactRole ?? '').slice(0, 500),
+          organization_country: (orgProfile.organizationCountry ?? '').slice(0, 500),
+          organization_industry: (orgProfile.organizationIndustry ?? '').slice(0, 500),
+          organization_size: (orgProfile.organizationSize ?? '').slice(0, 500),
+          organization_use_case: (orgProfile.organizationUseCase ?? '').slice(0, 500),
+        }),
+      },
     });
 
     // Link the Stripe session ID to the purchase record

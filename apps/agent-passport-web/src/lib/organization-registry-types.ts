@@ -21,9 +21,57 @@ export interface AgentOrganizationRegistryRecord {
   stripeSubscriptionId: string | null;
   adminAccessTokenHash: string | null;
   adminAccessTokenCreatedAt: string | null;
+  // Profile fields
+  organizationWebsite: string | null;
+  organizationCountry: string | null;
+  organizationIndustry: string | null;
+  organizationSize: string | null;
+  organizationUseCase: string | null;
+  buyerContactName: string | null;
+  buyerContactEmail: string | null;
+  buyerContactRole: string | null;
+  // Token/recovery metadata
+  adminAccessTokenRotatedAt: string | null;
+  adminAccessTokenLastUsedAt: string | null;
+  recoveryCodeHash: string | null;
+  recoveryCodeCreatedAt: string | null;
+  recoveryCodeUsedAt: string | null;
+  recoveryCodeRotatedAt: string | null;
+  // Profile timestamps
+  profileCompletedAt: string | null;
+  profileUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export type OrganizationProfile = {
+  organizationName: string;
+  organizationWebsite?: string | null;
+  organizationCountry?: string | null;
+  organizationIndustry?: string | null;
+  organizationSize?: string | null;
+  organizationUseCase?: string | null;
+  buyerContactName?: string | null;
+  buyerContactEmail?: string | null;
+  buyerContactRole?: string | null;
+};
+
+export type RegistryAdminRecoveryResult = {
+  registryId: string;
+  newAccessToken: string;
+  newRecoveryCode: string;
+  adminUrl: string;
+  rotatedAt: string;
+};
+
+export type RegistryAdminAccessStatus = {
+  registryId: string;
+  hasRecoveryCode: boolean;
+  recoveryCodeCreatedAt: string | null;
+  recoveryCodeUsedAt: string | null;
+  adminAccessTokenRotatedAt: string | null;
+  adminAccessTokenLastUsedAt: string | null;
+};
 
 export interface AgentRegistryEntitlementRecord {
   id: string;
