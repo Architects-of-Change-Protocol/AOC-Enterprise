@@ -1,5 +1,5 @@
-import type { RuntimeFederationEnvelope, RuntimeFederationReconciliationResult } from './runtime-federation-types';
-import { validateRuntimeFederationEnvelope } from './runtime-federation-validation';
+import type { RuntimeFederationEnvelope, RuntimeFederationReconciliationResult } from './runtime-federation-types.js';
+import { validateRuntimeFederationEnvelope } from './runtime-federation-validation.js';
 
 export function reconcileRuntimeFederationEnvelopes(local: RuntimeFederationEnvelope, foreign: RuntimeFederationEnvelope): RuntimeFederationReconciliationResult {
   const validation = validateRuntimeFederationEnvelope(foreign, local.federationMetadata.trustDomain);

@@ -1,4 +1,4 @@
-import type { RuntimeFederationEnvelope, RuntimeFederationAttestation } from './runtime-federation-types';
+import type { RuntimeFederationEnvelope, RuntimeFederationAttestation } from './runtime-federation-types.js';
 
 function deterministicHash(value: string): string { let h = 2166136261; for (let i = 0; i < value.length; i += 1) { h ^= value.charCodeAt(i); h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24); } return `f${(h >>> 0).toString(16).padStart(8, '0')}`; }
 
