@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "npm run build --workspace=packages/agent-governance",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run build --workspace=packages/agent-governance",
     "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
   },
   "dependencies": {
