@@ -39,15 +39,14 @@ try {
   const tarballPath = resolve(root, tarballName);
   await cp(fixtureDir, consumerDir, { recursive: true });
 
-
   const fixturePkgPath = join(consumerDir, 'package.json');
   const fixturePkg = JSON.parse(await readFile(fixturePkgPath, 'utf8'));
   fixturePkg.dependencies = fixturePkg.dependencies ?? {};
   fixturePkg.dependencies['@aoc/protocol'] = `file:${protocolPath}`;
+  fixturePkg.dependencies['@aoc-enterprise/runtime'] = `file:${tarballPath}`;
   await writeFile(fixturePkgPath, `${JSON.stringify(fixturePkg, null, 2)}\n`);
 
-  run('npm', ['install'], consumerDir);
-  run('npm', ['install', tarballPath], consumerDir);
+  run('npm', ['install', '--prefer-offline'], consumerDir);
 
   run('npx', ['--no-install', 'tsc', '--pretty', 'false', '--noEmit', '-p', 'tsconfig.json'], consumerDir);
   run('npx', ['--no-install', 'tsc', '--pretty', 'false', '-p', 'tsconfig.json'], consumerDir);
