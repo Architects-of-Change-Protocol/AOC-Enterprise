@@ -1,6 +1,7 @@
 import type { AgentPassportSignerPort } from '../signing/signer-port.js';
 import type { AgentPassport } from '../passport/passport-contracts.js';
 import { canonicalizeJson, createHashUrn } from '../crypto/canonical-json.js';
+import { extractPassportHashableCore } from '../passport/passport-hash-core.js';
 import type { AgentRuntimeSeal, AgentRuntimeSealVerificationResult } from './runtime-seal-contracts.js';
 
 const DEFAULT_VERIFICATION_BASE_URL = 'https://aocprotocol.org/verify';
@@ -77,8 +78,13 @@ export async function verifyAgentRuntimeSeal(
     valid = false;
   }
 
+  const expectedPassportHash = createHashUrn(
+    canonicalizeJson(extractPassportHashableCore(passport)),
+  );
+
   const hashMismatch =
-    seal.passportHash !== passport.passportHash ||
+    seal.passportHash !== expectedPassportHash ||
+    expectedPassportHash !== passport.passportHash ||
     seal.constitutionHash !== passport.constitutionHash ||
     seal.policyManifestHash !== passport.policyManifestHash;
 

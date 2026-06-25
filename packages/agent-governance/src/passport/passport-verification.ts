@@ -25,6 +25,11 @@ export async function verifyAgentPassport(
     valid = false;
   }
 
+  if (passport.expiresAt !== undefined && new Date(passport.expiresAt) < new Date()) {
+    reasonCodes.push('passport.expired');
+    valid = false;
+  }
+
   if (!passport.constitutionHash) {
     reasonCodes.push('passport.missing_constitution_hash');
     valid = false;

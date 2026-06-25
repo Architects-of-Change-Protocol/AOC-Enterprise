@@ -26,7 +26,11 @@ export interface GenerateAgentPassportIdOptions {
 export function generateAgentPassportId(
   options: GenerateAgentPassportIdOptions,
 ): AgentPassportId {
-  const year = new Date(options.issuedAt).getUTCFullYear();
+  const parsedDate = new Date(options.issuedAt);
+  if (isNaN(parsedDate.getTime())) {
+    throw new Error(`Invalid issuedAt date: ${options.issuedAt}`);
+  }
+  const year = parsedDate.getUTCFullYear();
   const rawRegion = options.region ?? 'GLOBAL';
   const region = rawRegion
     .toUpperCase()

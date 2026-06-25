@@ -13,6 +13,7 @@ import { issueAgentPassport, createAgentPassportPublicVerificationPayload } from
 import { verifyAgentPassport } from '../src/passport/passport-verification.js';
 import { verifyAgentRuntimeSeal } from '../src/runtime-seal/runtime-seal.js';
 import { createTestSigner } from '../src/signing/test-signer.js';
+import { createInMemoryAgentPassportStore } from '../src/store/store-port.js';
 import type { AgentEnrollmentInput } from '../src/enrollment/enrollment-contracts.js';
 import type { IssuedAgentPassportBundle } from '../src/passport/passport-contracts.js';
 
@@ -70,6 +71,12 @@ describe('Passport ID', () => {
     assert.equal(isValidAgentPassportId('AOC-AGT-2026-EU-ABC'), false); // only 3 entropy chars
     assert.equal(isValidAgentPassportId('aoc-agt-2026-eu-abcdef'), false); // lowercase
     assert.equal(isValidAgentPassportId('AOC-AGT-26-EU-ABCDEF'), false); // 2-digit year
+  });
+
+  it('throws for invalid issuedAt date', () => {
+    assert.throws(
+      () => generateAgentPassportId({ issuedAt: 'not-a-date', entropy: 'AAAAAA' }),
+    );
   });
 });
 
@@ -391,6 +398,26 @@ describe('Passport verification', () => {
     assert.equal(result.valid, false);
     assert.ok(result.reasonCodes.includes('passport.status_not_active'));
   });
+
+  it('passportHash is stable across status transitions (status not in hash core)', async () => {
+    const active = { ...bundle.passport, status: 'active' as const };
+    assert.equal(active.passportHash, bundle.passport.passportHash);
+    const result = await verifyAgentPassport(active, { signer });
+    assert.ok(result.valid, `Expected valid but got: ${JSON.stringify(result.reasonCodes)}`);
+  });
+
+  it('fails when expiresAt is in the past', async () => {
+    const expired = { ...bundle.passport, expiresAt: '2020-01-01T00:00:00.000Z' };
+    const result = await verifyAgentPassport(expired, { signer });
+    assert.equal(result.valid, false);
+    assert.ok(result.reasonCodes.includes('passport.expired'));
+  });
+
+  it('passes when expiresAt is in the future', async () => {
+    const future = { ...bundle.passport, expiresAt: '2099-01-01T00:00:00.000Z' };
+    const result = await verifyAgentPassport(future, { signer });
+    assert.ok(result.valid);
+  });
 });
 
 describe('Runtime seal verification', () => {
@@ -459,6 +486,35 @@ describe('Runtime seal verification', () => {
     const result = await verifyAgentRuntimeSeal(bundle.runtimeSeal, suspended, { signer });
     assert.equal(result.valid, false);
     assert.ok(result.reasonCodes.includes('passport.status_not_active'));
+  });
+});
+
+describe('In-memory store', () => {
+  it('savePassportBundle seeds events so listPassportEvents returns them', async () => {
+    const store = createInMemoryAgentPassportStore();
+    const signer = createTestSigner();
+    const bundle = await issueAgentPassport(ENROLLMENT, { signer });
+    await store.savePassportBundle(bundle);
+    const events = await store.listPassportEvents(bundle.passport.passportId);
+    assert.equal(events.length, bundle.events.length);
+    assert.equal(events[0]?.type, bundle.events[0]?.type);
+  });
+
+  it('appendPassportEvent adds to existing seeded events', async () => {
+    const store = createInMemoryAgentPassportStore();
+    const signer = createTestSigner();
+    const bundle = await issueAgentPassport(ENROLLMENT, { signer });
+    await store.savePassportBundle(bundle);
+    await store.appendPassportEvent({
+      eventId: 'evt-extra',
+      passportId: bundle.passport.passportId,
+      type: 'agent_passport.activated',
+      actorId: 'system',
+      occurredAt: new Date().toISOString(),
+      reasonCodes: ['passport.activated'],
+    });
+    const events = await store.listPassportEvents(bundle.passport.passportId);
+    assert.equal(events.length, bundle.events.length + 1);
   });
 });
 

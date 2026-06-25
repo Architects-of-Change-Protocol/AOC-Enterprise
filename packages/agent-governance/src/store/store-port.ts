@@ -17,6 +17,7 @@ export function createInMemoryAgentPassportStore(): AgentPassportStorePort {
   return {
     async savePassportBundle(bundle) {
       bundles.set(bundle.passport.passportId, bundle);
+      events.set(bundle.passport.passportId, [...bundle.events]);
     },
     async getPassport(passportId) {
       return bundles.get(passportId)?.passport;
