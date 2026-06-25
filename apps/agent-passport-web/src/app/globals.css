@@ -219,3 +219,35 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
 /* FORM GRID */
 .form-grid { display: grid; gap: 20px; }
 @media (min-width: 640px) { .form-grid-2 { grid-template-columns: 1fr 1fr; } }
+
+/* PRICING CARDS */
+.pricing-card { position: relative; display: flex; flex-direction: column; gap: 16px; }
+.pricing-card-recommended { border-color: var(--accent); }
+.pricing-badge-recommended {
+  position: absolute; top: -12px; right: 16px;
+  background: var(--accent); color: #fff;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px;
+}
+.pricing-name { font-size: 18px; font-weight: 700; }
+.pricing-price { display: flex; align-items: baseline; gap: 4px; }
+.pricing-amount { font-size: 36px; font-weight: 800; }
+.pricing-billing { font-size: 14px; color: var(--text-muted); }
+.pricing-description { font-size: 14px; color: var(--text-muted); flex: 1; }
+.pricing-features { list-style: none; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.pricing-features li { font-size: 14px; color: var(--text-muted); display: flex; gap: 8px; align-items: flex-start; }
+.pricing-check { color: var(--green); font-weight: 700; flex-shrink: 0; }
+.pricing-cta { width: 100%; justify-content: center; margin-top: auto; }
+
+/* FAQ */
+.faq-item {
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+  cursor: pointer;
+}
+.faq-question {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 600; font-size: 15px; gap: 16px;
+}
+.faq-toggle { color: var(--accent); font-size: 20px; flex-shrink: 0; line-height: 1; }
+.faq-answer { margin-top: 12px; font-size: 14px; color: var(--text-muted); line-height: 1.7; }

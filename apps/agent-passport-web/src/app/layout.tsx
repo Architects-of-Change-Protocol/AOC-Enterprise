@@ -18,13 +18,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span>AOC</span> Agent Passport
               </a>
               <div className="nav-links">
-                <a href="/enroll-agent">Enroll Agent</a>
+                <a href="/pricing">Pricing</a>
                 <a href="/sample-passport">Sample Passport</a>
                 <a href="/agent-passport">About</a>
               </div>
               <div className="nav-cta">
-                <a href="/enroll-agent" className="btn btn-primary btn-sm">
-                  Enroll an Agent
+                <a href="/pricing" className="btn btn-primary btn-sm">
+                  Get Agent Passport
                 </a>
               </div>
             </div>
