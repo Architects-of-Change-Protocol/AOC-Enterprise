@@ -9,9 +9,9 @@ const tmp = await mkdtemp(join(tmpdir(), 'aoc-publishability-'));
 const consumerDir = join(tmp, 'external-consumer');
 
 const rootPkg = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-const protocolSpec = rootPkg.dependencies?.['@aoc/protocol'];
+const protocolSpec = rootPkg.devDependencies?.['@aoc/protocol'] ?? rootPkg.dependencies?.['@aoc/protocol'];
 if (!protocolSpec || !protocolSpec.startsWith('file:')) {
-  throw new Error('Root dependency @aoc/protocol must be a real file: dependency for publishability validation.');
+  throw new Error('Root devDependency (or dependency) @aoc/protocol must be a real file: dependency for publishability validation.');
 }
 const protocolPath = resolve(root, protocolSpec.slice('file:'.length));
 const protocolPkgJson = resolve(protocolPath, 'package.json');
