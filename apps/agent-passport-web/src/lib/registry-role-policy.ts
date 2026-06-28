@@ -11,6 +11,8 @@ const ROLE_PERMISSIONS: Record<RegistryRole, RegistryPermission[]> = {
     'registry:download_exports',
     'registry:rotate_admin_access',
     'registry:recover_access',
+    'registry:view_billing',
+    'registry:manage_billing',
   ],
   admin: [
     'registry:view',
@@ -20,6 +22,8 @@ const ROLE_PERMISSIONS: Record<RegistryRole, RegistryPermission[]> = {
     'registry:enroll_agent',
     'registry:generate_exports',
     'registry:download_exports',
+    'registry:view_billing',
+    'registry:manage_billing',
   ],
   member: [
     'registry:view',

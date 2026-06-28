@@ -308,6 +308,43 @@ function initSchema(db: Database.Database): void {
       event_payload TEXT,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS registry_billing_events (
+      id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL UNIQUE,
+      registry_id TEXT,
+      account_id TEXT,
+      stripe_customer_id TEXT,
+      stripe_subscription_id TEXT,
+      event_type TEXT NOT NULL,
+      subscription_status TEXT,
+      billing_status TEXT,
+      payload_summary TEXT,
+      created_at TEXT NOT NULL,
+      processed_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS registry_billing_events_registry_idx
+      ON registry_billing_events(registry_id);
+    CREATE INDEX IF NOT EXISTS registry_billing_events_customer_idx
+      ON registry_billing_events(stripe_customer_id);
+    CREATE INDEX IF NOT EXISTS registry_billing_events_subscription_idx
+      ON registry_billing_events(stripe_subscription_id);
+
+    CREATE TABLE IF NOT EXISTS billing_portal_sessions (
+      id TEXT PRIMARY KEY,
+      portal_session_id TEXT NOT NULL UNIQUE,
+      registry_id TEXT,
+      account_id TEXT,
+      stripe_customer_id TEXT NOT NULL,
+      return_url TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS billing_portal_sessions_registry_idx
+      ON billing_portal_sessions(registry_id);
+    CREATE INDEX IF NOT EXISTS billing_portal_sessions_account_idx
+      ON billing_portal_sessions(account_id);
   `);
 
   // Migrate existing organization_registries with new columns (safe for existing DBs)
@@ -328,10 +365,24 @@ function initSchema(db: Database.Database): void {
     ['recovery_code_rotated_at', 'TEXT'],
     ['profile_completed_at', 'TEXT'],
     ['profile_updated_at', 'TEXT'],
+    ['billing_status', 'TEXT'],
+    ['billing_status_updated_at', 'TEXT'],
+    ['subscription_status', 'TEXT'],
+    ['subscription_current_period_start', 'TEXT'],
+    ['subscription_current_period_end', 'TEXT'],
+    ['subscription_cancel_at_period_end', 'INTEGER'],
+    ['subscription_canceled_at', 'TEXT'],
+    ['subscription_trial_end', 'TEXT'],
+    ['billing_grace_period_ends_at', 'TEXT'],
+    ['billing_last_event_id', 'TEXT'],
   ];
   for (const [col, def] of orgRegCols) {
     ensureColumn(db, 'organization_registries', col, def);
   }
+
+  // Migrate buyer_accounts with billing fields
+  ensureColumn(db, 'buyer_accounts', 'stripe_customer_id', 'TEXT');
+  ensureColumn(db, 'buyer_accounts', 'billing_email', 'TEXT');
 
   // Migrate purchases table with metadata column
   ensureColumn(db, 'purchases', 'metadata', 'TEXT');

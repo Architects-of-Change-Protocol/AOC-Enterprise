@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyRegistryAccess } from '@/lib/organization-registry-service';
 import { getEntitlementByRegistryId } from '@/lib/organization-registry-repository';
+import { getRegistryBillingEnforcementState, requireRegistryBillingForAction } from '@/lib/registry-billing-enforcement';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,20 @@ export async function POST(
   if (registry.registryStatus !== 'active') {
     return NextResponse.json(
       { ok: false, error: { code: 'REGISTRY_INACTIVE', message: 'Registry is not active.' } },
+      { status: 403 },
+    );
+  }
+
+  // Billing enforcement
+  const enforcementState = await getRegistryBillingEnforcementState(registryId);
+  const billingCheck = requireRegistryBillingForAction({
+    billingStatus: enforcementState.billingStatus,
+    gracePeriodEndsAt: enforcementState.gracePeriodEndsAt,
+    action: 'enroll_agent',
+  });
+  if (!billingCheck.allowed) {
+    return NextResponse.json(
+      { ok: false, error: { code: 'REGISTRY_BILLING_SUSPENDED', message: billingCheck.reason ?? 'Registry enrollment blocked due to billing status.' } },
       { status: 403 },
     );
   }

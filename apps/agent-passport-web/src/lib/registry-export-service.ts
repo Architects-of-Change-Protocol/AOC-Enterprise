@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3';
 import { getDb } from './db.js';
 import { verifyRegistryAccess } from './organization-registry-service.js';
+import { getRegistryBillingProfile } from './billing-repository.js';
+import type { RegistryBillingProfile } from './billing-types.js';
 import {
   getEntitlementByRegistryId,
   listRegistryPassports,
@@ -143,6 +145,7 @@ export interface GovernanceJsonBuilderInput {
   passports: AgentRegistryPassportRecord[];
   baseUrl: string;
   generatedAt: string;
+  billingProfile?: RegistryBillingProfile | null;
 }
 
 export function buildRegistryGovernanceJson(
@@ -161,6 +164,8 @@ export function buildRegistryGovernanceJson(
   const publicVerificationCoverage =
     totalAgents > 0 ? Math.round((totalAgents / totalAgents) * 100) : 0;
 
+  const billingProfile = input.billingProfile ?? null;
+
   return {
     exportType: 'registry_governance_json',
     generatedAt,
@@ -173,6 +178,8 @@ export function buildRegistryGovernanceJson(
       maxPassports: registry.maxPassports,
       issuedPassports: registry.issuedPassports,
       remainingPassports: registry.remainingPassports,
+      billingStatus: billingProfile?.billingStatus ?? 'unknown',
+      operationalState: billingProfile?.operationalState ?? 'restricted',
     },
     governanceSummary: {
       totalAgents,
@@ -214,6 +221,7 @@ export interface EvidenceBundleBuilderInput {
   passports: AgentRegistryPassportRecord[];
   baseUrl: string;
   generatedAt: string;
+  billingProfile?: RegistryBillingProfile | null;
 }
 
 export function buildRegistryEvidenceBundleJson(
@@ -232,6 +240,8 @@ export function buildRegistryEvidenceBundleJson(
     govBreakdown[key] = (govBreakdown[key] ?? 0) + 1;
   }
 
+  const billingProfile = input.billingProfile ?? null;
+
   return {
     exportType: 'registry_evidence_bundle_json',
     generatedAt,
@@ -242,6 +252,9 @@ export function buildRegistryEvidenceBundleJson(
       registryStatus: registry.registryStatus,
       governanceLevel: registry.governanceLevel,
       tier: 'organization_agent_registry',
+      billingStatus: billingProfile?.billingStatus ?? 'unknown',
+      operationalState: billingProfile?.operationalState ?? 'restricted',
+      subscriptionCurrentPeriodEnd: billingProfile?.currentPeriodEnd ?? null,
     },
     entitlement: entitlement
       ? {
@@ -300,6 +313,7 @@ export interface MarkdownBuilderInput {
   passports: AgentRegistryPassportRecord[];
   baseUrl: string;
   generatedAt: string;
+  billingProfile?: RegistryBillingProfile | null;
 }
 
 function buildRecommendations(
@@ -338,7 +352,7 @@ function buildRecommendations(
 export function buildRegistryGovernanceReportMarkdown(
   input: MarkdownBuilderInput,
 ): string {
-  const { registry, entitlement, passports, baseUrl, generatedAt } = input;
+  const { registry, entitlement, passports, baseUrl, generatedAt, billingProfile } = input;
   const issuer = getPublicIssuerMetadata();
   const standing = computeRegistryStanding(registry, passports);
   const totalPassports = passports.length;
@@ -472,6 +486,16 @@ export function buildRegistryGovernanceReportMarkdown(
   }
 
   lines.push(
+    '',
+    '## Billing & Operational State',
+    '',
+    `| Field | Value |`,
+    `|---|---|`,
+    `| Billing Status | ${billingProfile?.billingStatus ?? 'unknown'} |`,
+    `| Operational State | ${billingProfile?.operationalState ?? 'restricted'} |`,
+    billingProfile?.subscriptionStatus ? `| Subscription Status | ${billingProfile.subscriptionStatus} |` : '',
+    billingProfile?.currentPeriodEnd ? `| Current Period End | ${billingProfile.currentPeriodEnd.slice(0, 10)} |` : '',
+    billingProfile?.cancelAtPeriodEnd ? `| Cancel at Period End | Yes |` : '',
     '',
     '## Current MVP Limitations',
     '',
@@ -626,6 +650,7 @@ export function generateRegistryExport(
   const registry = access.registry;
   const entitlement = getEntitlementByRegistryId(input.registryId, database);
   const passports = listRegistryPassports(input.registryId, database);
+  const billingProfile = getRegistryBillingProfile(input.registryId, database);
   const base = input.baseUrl ?? getBaseUrl();
   const generatedAt = new Date().toISOString();
 
@@ -639,6 +664,7 @@ export function generateRegistryExport(
       passports,
       baseUrl: base,
       generatedAt,
+      billingProfile,
     });
   } catch (_err) {
     return { ok: false, errorCode: 'REGISTRY_EXPORT_GENERATION_FAILED' };
@@ -675,6 +701,7 @@ function buildExportContent(
     passports: AgentRegistryPassportRecord[];
     baseUrl: string;
     generatedAt: string;
+    billingProfile?: RegistryBillingProfile | null;
   },
 ): string {
   switch (exportType) {

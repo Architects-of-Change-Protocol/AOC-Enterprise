@@ -71,7 +71,9 @@ export type RegistryPermission =
   | "registry:generate_exports"
   | "registry:download_exports"
   | "registry:rotate_admin_access"
-  | "registry:recover_access";
+  | "registry:recover_access"
+  | "registry:view_billing"
+  | "registry:manage_billing";
 
 export type RegistryAccessContext = {
   registryId: string;

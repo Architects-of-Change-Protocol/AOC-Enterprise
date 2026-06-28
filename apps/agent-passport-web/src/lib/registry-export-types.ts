@@ -51,6 +51,8 @@ export interface RegistryGovernanceJsonExport {
     maxPassports: number;
     issuedPassports: number;
     remainingPassports: number;
+    billingStatus?: string;
+    operationalState?: string;
   };
   governanceSummary: {
     totalAgents: number;
@@ -86,6 +88,9 @@ export interface RegistryEvidenceBundleExport {
     registryStatus: string;
     governanceLevel: string;
     tier: 'organization_agent_registry';
+    billingStatus?: string;
+    operationalState?: string;
+    subscriptionCurrentPeriodEnd?: string | null;
   };
   entitlement: {
     maxQuantity: number;
