@@ -3,6 +3,8 @@ import { getRegistryByRegistryId, getEntitlementByRegistryId, listRegistryPasspo
 import { verifyRegistryAdminAccessToken } from '@/lib/registry-access-token';
 import { listRegistryExportArtifactsByRegistryId } from '@/lib/registry-export-repository';
 import type { RegistryExportArtifactMeta } from '@/lib/registry-export-types';
+import { getRegistryBillingProfile } from '@/lib/billing-repository';
+import type { RegistryBillingProfile } from '@/lib/billing-types';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +36,7 @@ export default function RegistryAdminPage({ searchParams }: Props) {
   const entitlement = getEntitlementByRegistryId(registry_id);
   const passports = listRegistryPassports(registry_id);
   const exportHistory = listRegistryExportArtifactsByRegistryId(registry_id, 20);
+  const billingProfile: RegistryBillingProfile | null = getRegistryBillingProfile(registry_id);
 
   const activeCount = passports.filter(p => p.status === 'active').length;
   const revokedCount = passports.filter(p => p.status === 'revoked').length;
@@ -91,6 +94,68 @@ export default function RegistryAdminPage({ searchParams }: Props) {
           <li>{registry.remainingPassports} passport slot{registry.remainingPassports !== 1 ? 's' : ''} remaining</li>
           <li>Registry standing: <strong>{registry.registryStatus === 'active' ? 'Good standing' : registry.registryStatus}</strong></li>
         </ul>
+      </div>
+
+      {/* Billing Status */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Billing Status</h2>
+        {!billingProfile || billingProfile.billingStatus === 'unknown' ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+            Billing status unavailable. This registry may have been created before billing lifecycle tracking was enabled.
+          </p>
+        ) : (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, fontSize: 14, marginBottom: 16 }}>
+              <div>
+                <span style={{ color: 'var(--text-muted)' }}>Billing Status: </span>
+                <span style={{ fontWeight: 700, color: billingProfile.billingStatus === 'active' || billingProfile.billingStatus === 'trialing' ? 'var(--accent)' : billingProfile.billingStatus === 'past_due' ? '#f59e0b' : '#ef4444' }}>
+                  {billingProfile.billingStatus}
+                </span>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)' }}>Operational State: </span>
+                <span style={{ fontWeight: 600 }}>{billingProfile.operationalState}</span>
+              </div>
+              {billingProfile.subscriptionStatus && (
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Subscription: </span>
+                  {billingProfile.subscriptionStatus}
+                </div>
+              )}
+              {billingProfile.currentPeriodEnd && (
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Period End: </span>
+                  {new Date(billingProfile.currentPeriodEnd).toLocaleDateString()}
+                </div>
+              )}
+              {billingProfile.gracePeriodEndsAt && billingProfile.billingStatus === 'past_due' && (
+                <div style={{ color: '#f59e0b' }}>
+                  <span>Grace period ends: </span>
+                  {new Date(billingProfile.gracePeriodEndsAt).toLocaleDateString()}
+                </div>
+              )}
+              {billingProfile.cancelAtPeriodEnd && (
+                <div style={{ color: '#f59e0b', fontWeight: 600 }}>Cancels at period end</div>
+              )}
+            </div>
+            {billingProfile.billingStatus === 'past_due' && (
+              <p style={{ color: '#f59e0b', fontSize: 13, marginBottom: 12 }}>
+                Payment issue detected. Please update billing to avoid suspension.
+              </p>
+            )}
+            {(billingProfile.billingStatus === 'suspended' || billingProfile.billingStatus === 'canceled') && (
+              <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>
+                Registry {billingProfile.billingStatus}. New agent enrollment and new governance exports are blocked until billing is restored.
+              </p>
+            )}
+            {billingProfile.stripeCustomerId && (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                To manage billing, subscription, or payment methods, use the Manage Billing button in your{' '}
+                <Link href="/account/dashboard" style={{ color: 'var(--accent)' }}>Buyer Dashboard</Link>.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Passport inventory */}

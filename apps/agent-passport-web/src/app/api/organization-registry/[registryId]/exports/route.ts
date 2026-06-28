@@ -12,6 +12,7 @@ import {
   listRegistryExports,
   isValidExportType,
 } from '@/lib/registry-export-service';
+import { getRegistryBillingEnforcementState, requireRegistryBillingForAction } from '@/lib/registry-billing-enforcement';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +58,20 @@ export async function POST(
         },
       },
       { status: 400 },
+    );
+  }
+
+  // Billing enforcement for new export generation
+  const enforcementState = await getRegistryBillingEnforcementState(registryId);
+  const billingCheck = requireRegistryBillingForAction({
+    billingStatus: enforcementState.billingStatus,
+    gracePeriodEndsAt: enforcementState.gracePeriodEndsAt,
+    action: 'generate_export',
+  });
+  if (!billingCheck.allowed) {
+    return NextResponse.json(
+      { ok: false, error: { code: 'REGISTRY_BILLING_SUSPENDED', message: billingCheck.reason ?? 'Registry export generation blocked due to billing status.' } },
+      { status: 403 },
     );
   }
 
