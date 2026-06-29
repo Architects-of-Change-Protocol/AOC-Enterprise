@@ -28,6 +28,9 @@ export default function AgentPassportPage() {
             <Link href="/sample-passport" className="btn btn-secondary">
               View Sample Passport
             </Link>
+            <Link href="/governance-proof" className="btn btn-secondary">
+              See Proof of Governance
+            </Link>
           </div>
         </div>
       </section>
@@ -277,6 +280,9 @@ export default function AgentPassportPage() {
           </p>
           <Link href="/sample-passport" className="btn btn-secondary">
             View SalesBot CR Sample Passport
+          </Link>
+          <Link href="/governance-proof" className="btn btn-primary">
+            See Proof of Governance
           </Link>
         </div>
       </section>
