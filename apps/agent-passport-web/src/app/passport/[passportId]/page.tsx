@@ -79,6 +79,9 @@ export default async function PassportPage({
           <Link href={`/verify/${passport.passportId}`} className="btn btn-secondary btn-sm">
             Verify →
           </Link>
+          <Link href="/governance-proof" className="btn btn-primary btn-sm">
+            Proof of Governance →
+          </Link>
         </div>
       </div>
 

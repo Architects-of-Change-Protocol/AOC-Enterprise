@@ -87,7 +87,13 @@ export async function evaluateAgentRuntimeGuard(
       allowIssued: opts.allowIssuedPassport,
     });
     if (!sealResult.valid) {
-      const decision = deny('runtime_guard.invalid_runtime_seal');
+      const sealCodes = sealResult.reasonCodes;
+      const code: AgentRuntimeGuardReasonCode = sealCodes.includes('passport.revoked')
+        ? 'runtime_guard.passport_revoked'
+        : sealCodes.includes('passport.expired')
+        ? 'runtime_guard.passport_expired'
+        : 'runtime_guard.invalid_runtime_seal';
+      const decision = deny(code);
       await emitEvent(decision, deps);
       return decision;
     }

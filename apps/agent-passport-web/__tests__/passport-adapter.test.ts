@@ -7,6 +7,8 @@ import {
   verifyAgentPassportBundle,
   createSampleAgentPassport,
   runRuntimeGuardDemo,
+  runGovernanceProofScenarios,
+  runGovernanceProofScenario,
 } from '../src/lib/passport-adapter.js';
 import { createAgentPassportPublicVerificationPayload } from '@aoc-enterprise/agent-governance';
 
@@ -128,5 +130,54 @@ describe('passport-adapter', () => {
       [],
     );
     assert.equal(result, null);
+  });
+});
+
+
+
+describe('proof-of-governance scenarios', () => {
+  it('allowed action returns allow', async () => {
+    const result = await runGovernanceProofScenario('allowed_action');
+    assert.equal(result.decision.outcome, 'allow');
+    assert.equal(result.executionResult, 'Allowed to proceed');
+  });
+
+  it('prohibited action returns deny', async () => {
+    const result = await runGovernanceProofScenario('prohibited_action');
+    assert.equal(result.decision.outcome, 'deny');
+    assert.ok(result.decision.reasonCodes.includes('runtime_guard.action_prohibited'));
+  });
+
+  it('unauthorized data returns deny', async () => {
+    const result = await runGovernanceProofScenario('unauthorized_data_access');
+    assert.equal(result.decision.outcome, 'deny');
+    assert.ok(result.decision.reasonCodes.includes('runtime_guard.data_access_not_allowed'));
+  });
+
+  it('human approval scenario returns require_human_approval', async () => {
+    const result = await runGovernanceProofScenario('human_approval_required');
+    assert.equal(result.decision.outcome, 'require_human_approval');
+    assert.ok(result.decision.reasonCodes.includes('runtime_guard.high_risk_requires_approval'));
+  });
+
+  it('tampered runtime seal returns deny', async () => {
+    const result = await runGovernanceProofScenario('tampered_runtime_seal');
+    assert.equal(result.decision.outcome, 'deny');
+    assert.ok(result.decision.reasonCodes.includes('runtime_guard.invalid_runtime_seal'));
+  });
+
+  it('revoked passport returns deny', async () => {
+    const result = await runGovernanceProofScenario('revoked_passport');
+    assert.equal(result.decision.outcome, 'deny');
+    assert.ok(result.decision.reasonCodes.includes('runtime_guard.passport_revoked'));
+  });
+
+  it('each scenario emits at least one audit event and passes expectations', async () => {
+    const results = await runGovernanceProofScenarios();
+    assert.ok(results.length >= 7);
+    for (const result of results) {
+      assert.ok(result.auditEvents.length > 0, `${result.scenarioKey} should emit audit events`);
+      assert.equal(result.passed, true, `${result.scenarioKey} should pass expected outcome`);
+    }
   });
 });

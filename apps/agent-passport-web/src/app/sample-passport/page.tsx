@@ -23,9 +23,9 @@ export default async function SamplePassportPage() {
 
       <div className="alert alert-info" style={{ marginBottom: 32 }}>
         This is a demo passport generated with test signing keys. It is not production-valid.
-        See the{' '}
-        <Link href={`/passport/${passport.passportId}`}>full passport page</Link> or{' '}
-        <Link href={`/verify/${passport.passportId}`}>verify this passport</Link>.
+        See the <Link href={`/passport/${passport.passportId}`}>full passport page</Link>,{' '}
+        <Link href={`/verify/${passport.passportId}`}>verify this passport</Link>, or{' '}
+        <Link href="/governance-proof">run the Proof of Governance demo</Link>.
       </div>
 
       <div style={{ display: 'grid', gap: 24 }}>
@@ -118,6 +118,9 @@ export default async function SamplePassportPage() {
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Link href={`/passport/${passport.passportId}`} className="btn btn-primary">
             View Full Passport →
+          </Link>
+          <Link href="/governance-proof" className="btn btn-primary">
+            See Proof of Governance
           </Link>
           <Link href={`/verify/${passport.passportId}`} className="btn btn-secondary">
             Verify This Passport

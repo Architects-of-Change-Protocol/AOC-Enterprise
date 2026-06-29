@@ -198,3 +198,182 @@ export async function createSampleAgentPassport(): Promise<IssuedAgentPassportBu
     tags: ['sales', 'crm', 'demo'],
   });
 }
+
+
+export type GovernanceProofScenarioKey =
+  | 'allowed_action'
+  | 'prohibited_action'
+  | 'unauthorized_data_access'
+  | 'tool_not_allowed'
+  | 'human_approval_required'
+  | 'tampered_runtime_seal'
+  | 'revoked_passport';
+
+export interface GovernanceProofScenarioResult {
+  readonly scenarioKey: GovernanceProofScenarioKey;
+  readonly title: string;
+  readonly request: EvaluateAgentRuntimeGuardInput['request'];
+  readonly passportStatus: string;
+  readonly runtimeSealValid: boolean;
+  readonly passportValid: boolean;
+  readonly policyManifestSummary: {
+    readonly toolAllowed: boolean;
+    readonly dataAllowed: boolean;
+    readonly actionProhibited: boolean;
+    readonly humanApprovalConfigured: boolean;
+  };
+  readonly decision: AgentRuntimeGuardDecision;
+  readonly executionResult: 'Allowed to proceed' | 'Blocked' | 'Paused pending human approval';
+  readonly autonomousExecutionBlocked: boolean;
+  readonly auditEvents: import('@aoc-enterprise/agent-governance').AgentRuntimeGuardEvent[];
+  readonly expectedOutcome: AgentRuntimeGuardDecision['outcome'];
+  readonly passed: boolean;
+  readonly hashSnippets: {
+    readonly passportHash: string;
+    readonly runtimeSealPassportHash: string | null;
+    readonly policyManifestHash: string;
+  };
+}
+
+type ScenarioDefinition = {
+  readonly title: string;
+  readonly request: Omit<EvaluateAgentRuntimeGuardInput['request'], 'requestId' | 'passportId' | 'actorId' | 'requestedAt'>;
+  readonly expectedOutcome: AgentRuntimeGuardDecision['outcome'];
+  readonly expectedReasonCodes?: readonly string[];
+  readonly mutateBundle?: (bundle: IssuedAgentPassportBundle) => IssuedAgentPassportBundle;
+};
+
+const GOVERNANCE_PROOF_SCENARIOS: Record<GovernanceProofScenarioKey, ScenarioDefinition> = {
+  allowed_action: {
+    title: 'Allowed action',
+    request: { requestedAction: 'create_lead', actionCategory: 'create_record', toolName: 'create_lead', dataCategories: ['crm_lead_notes'] },
+    expectedOutcome: 'allow',
+  },
+  prohibited_action: {
+    title: 'Prohibited action',
+    request: { requestedAction: 'offer_unapproved_discounts', actionCategory: 'send_message', toolName: 'draft_response', dataCategories: ['approved_faq'] },
+    expectedOutcome: 'deny',
+    expectedReasonCodes: ['runtime_guard.action_prohibited'],
+  },
+  unauthorized_data_access: {
+    title: 'Unauthorized data access',
+    request: { requestedAction: 'create_lead', actionCategory: 'create_record', toolName: 'create_lead', dataCategories: ['payment_data'] },
+    expectedOutcome: 'deny',
+    expectedReasonCodes: ['runtime_guard.data_access_not_allowed'],
+  },
+  tool_not_allowed: {
+    title: 'Tool not allowed',
+    request: { requestedAction: 'delete_customer_records', actionCategory: 'delete_record', toolName: 'delete_customer_records', dataCategories: ['crm_lead_notes'] },
+    expectedOutcome: 'deny',
+    expectedReasonCodes: ['runtime_guard.action_prohibited', 'runtime_guard.tool_not_allowed'],
+  },
+  human_approval_required: {
+    title: 'Human approval required',
+    request: { requestedAction: 'refund_commitment', actionCategory: 'financial_action', toolName: 'draft_response', dataCategories: ['crm_lead_notes'], riskTier: 'critical' },
+    expectedOutcome: 'require_human_approval',
+    expectedReasonCodes: ['runtime_guard.high_risk_requires_approval'],
+  },
+  tampered_runtime_seal: {
+    title: 'Tampered runtime seal',
+    request: { requestedAction: 'create_lead', actionCategory: 'create_record', toolName: 'create_lead', dataCategories: ['crm_lead_notes'] },
+    expectedOutcome: 'deny',
+    expectedReasonCodes: ['runtime_guard.invalid_runtime_seal'],
+    mutateBundle: createTamperedRuntimeSealScenario,
+  },
+  revoked_passport: {
+    title: 'Revoked passport',
+    request: { requestedAction: 'create_lead', actionCategory: 'create_record', toolName: 'create_lead', dataCategories: ['crm_lead_notes'] },
+    expectedOutcome: 'deny',
+    expectedReasonCodes: ['runtime_guard.passport_revoked'],
+    mutateBundle: createRevokedPassportScenario,
+  },
+};
+
+export function createTamperedRuntimeSealScenario(bundle: IssuedAgentPassportBundle): IssuedAgentPassportBundle {
+  return {
+    ...bundle,
+    runtimeSeal: bundle.runtimeSeal ? { ...bundle.runtimeSeal, passportHash: 'sha256:tampered-governance-proof' } : bundle.runtimeSeal,
+  };
+}
+
+export function createRevokedPassportScenario(bundle: IssuedAgentPassportBundle): IssuedAgentPassportBundle {
+  return {
+    ...bundle,
+    passport: { ...bundle.passport, status: 'revoked' },
+  };
+}
+
+export async function runGovernanceProofScenario(
+  scenarioKey: GovernanceProofScenarioKey,
+): Promise<GovernanceProofScenarioResult> {
+  const baseBundle = await createSampleAgentPassport();
+  const definition = GOVERNANCE_PROOF_SCENARIOS[scenarioKey];
+  const proofBaseBundle: IssuedAgentPassportBundle = {
+    ...baseBundle,
+    policyManifest: {
+      ...baseBundle.policyManifest,
+      humanApprovalRequiredFor: ['discount_above_10_percent', 'contract_language', 'refund_commitment', 'customer_escalation'],
+    },
+  };
+  const bundle = definition.mutateBundle ? definition.mutateBundle(proofBaseBundle) : proofBaseBundle;
+  const signer = createDevSigner();
+  const auditEvents: GovernanceProofScenarioResult['auditEvents'] = [];
+  const request: EvaluateAgentRuntimeGuardInput['request'] = {
+    requestId: `proof-${scenarioKey}`,
+    passportId: bundle.passport.passportId,
+    actorId: bundle.passport.ownerId,
+    requestedAt: new Date().toISOString(),
+    ...definition.request,
+  };
+
+  const [runtimeSealResult, passportResult] = await Promise.all([
+    bundle.runtimeSeal
+      ? verifyAgentRuntimeSeal(bundle.runtimeSeal, bundle.passport, { signer }, { allowIssued: true })
+      : Promise.resolve({ valid: false, reasonCodes: ['runtime_seal.missing'] } as AgentRuntimeSealVerificationResult),
+    verifyAgentPassport(bundle.passport, { signer }),
+  ]);
+
+  const decision = await evaluateAgentRuntimeGuard(
+    { request, passport: bundle.passport, runtimeSeal: bundle.runtimeSeal, policyManifest: bundle.policyManifest, options: { allowIssuedPassport: true } },
+    { signer, eventSink: { emit: (event) => { auditEvents.push(event); } } },
+  );
+
+  const executionResult = decision.outcome === 'allow'
+    ? 'Allowed to proceed'
+    : decision.outcome === 'require_human_approval'
+    ? 'Paused pending human approval'
+    : 'Blocked';
+  const expectedReasonCodes = definition.expectedReasonCodes ?? [];
+  const reasonCodesPassed = expectedReasonCodes.length === 0 || expectedReasonCodes.some((code) => decision.reasonCodes.includes(code as never));
+
+  return {
+    scenarioKey,
+    title: definition.title,
+    request,
+    passportStatus: bundle.passport.status,
+    runtimeSealValid: runtimeSealResult.valid,
+    passportValid: passportResult.valid,
+    policyManifestSummary: {
+      toolAllowed: request.toolName ? bundle.policyManifest.toolAccess.includes(request.toolName) : true,
+      dataAllowed: (request.dataCategories ?? []).every((cat) => bundle.policyManifest.dataAccess.includes(cat)),
+      actionProhibited: bundle.policyManifest.prohibitedActions.includes(request.requestedAction),
+      humanApprovalConfigured: bundle.policyManifest.humanApprovalRequiredFor.includes(request.requestedAction) || request.riskTier === 'critical',
+    },
+    decision,
+    executionResult,
+    autonomousExecutionBlocked: decision.outcome !== 'allow',
+    auditEvents,
+    expectedOutcome: definition.expectedOutcome,
+    passed: decision.outcome === definition.expectedOutcome && reasonCodesPassed && auditEvents.length > 0,
+    hashSnippets: {
+      passportHash: bundle.passport.passportHash.slice(0, 20),
+      runtimeSealPassportHash: bundle.runtimeSeal?.passportHash.slice(0, 20) ?? null,
+      policyManifestHash: bundle.passport.policyManifestHash.slice(0, 20),
+    },
+  };
+}
+
+export async function runGovernanceProofScenarios(): Promise<GovernanceProofScenarioResult[]> {
+  const keys = Object.keys(GOVERNANCE_PROOF_SCENARIOS) as GovernanceProofScenarioKey[];
+  return Promise.all(keys.map((key) => runGovernanceProofScenario(key)));
+}
