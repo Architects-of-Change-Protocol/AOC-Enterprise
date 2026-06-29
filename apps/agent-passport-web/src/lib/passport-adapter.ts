@@ -19,8 +19,10 @@ import type {
   EvaluateAgentRuntimeGuardInput,
   AgentRuntimeGuardDecision,
 } from '@aoc-enterprise/agent-governance';
-import { createDevSigner } from './dev-signer.js';
+import { createIssuerSignerFromEnv, ensureConfiguredIssuerKeyRegistered, getIssuerSignerConfigFromEnv } from './issuer/issuer-signer.js';
 import { storePassportBundle, getPassportBundle, getAllPassportIds } from './store.js';
+import { SqliteAuditEventRepository } from './persistence/sqlite-audit-event-repository.js';
+import { PersistentRuntimeGuardEventSink } from './runtime-guard/persistent-event-sink.js';
 
 const BASE_VERIFICATION_URL =
   process.env.NEXT_PUBLIC_BASE_URL
@@ -47,7 +49,9 @@ export interface EnrollAgentInput {
 }
 
 export async function enrollAgent(input: EnrollAgentInput): Promise<IssuedAgentPassportBundle> {
-  const signer = createDevSigner();
+  const signer = createIssuerSignerFromEnv();
+  const issuerConfig = getIssuerSignerConfigFromEnv();
+  await ensureConfiguredIssuerKeyRegistered();
   const hasHumanApproval = input.humanApprovalRequiredActions.length > 0;
 
   const enrollmentInput: AgentEnrollmentInput = {
@@ -76,12 +80,17 @@ export async function enrollAgent(input: EnrollAgentInput): Promise<IssuedAgentP
     modelProvider: input.modelProvider,
     runtimeEnvironment: input.runtimeEnvironment,
     tags: input.tags,
+    metadata: {
+      issuerId: issuerConfig.issuerId,
+      issuerKeyId: issuerConfig.keyId,
+      issuerAlgorithm: issuerConfig.algorithm,
+    },
   };
 
   const bundle = await issueAgentPassport(enrollmentInput, {
     signer,
     baseVerificationUrl: BASE_VERIFICATION_URL,
-    issuer: 'AOC-Dev-Governance-Authority',
+    issuer: issuerConfig.issuerId,
   });
 
   storePassportBundle(bundle);
@@ -104,7 +113,7 @@ export async function verifyAgentPassportBundle(
   const bundle = getPassportBundle(passportId);
   if (!bundle) return null;
 
-  const signer = createDevSigner();
+  const signer = createIssuerSignerFromEnv();
   const passportResult = await verifyAgentPassport(bundle.passport, { signer });
 
   let runtimeSealResult: AgentRuntimeSealVerificationResult | null = null;
@@ -120,6 +129,12 @@ export async function verifyAgentPassportBundle(
 
   const publicPayload = createAgentPassportPublicVerificationPayload(bundle.passport);
 
+  await new SqliteAuditEventRepository().recordPassportVerificationEvent({
+    passportId,
+    verificationResult: passportResult.valid && (runtimeSealResult === null || runtimeSealResult.valid) ? 'valid' : 'invalid',
+    reasonCodes: [...passportResult.reasonCodes, ...(runtimeSealResult?.reasonCodes ?? [])],
+  });
+
   return { passportResult, runtimeSealResult, publicPayload };
 }
 
@@ -133,7 +148,7 @@ export async function runRuntimeGuardDemo(
   const bundle = getPassportBundle(passportId);
   if (!bundle) return null;
 
-  const signer = createDevSigner();
+  const signer = createIssuerSignerFromEnv();
   const input: EvaluateAgentRuntimeGuardInput = {
     request: {
       requestId: `demo-${Date.now()}`,
@@ -153,7 +168,7 @@ export async function runRuntimeGuardDemo(
     },
   };
 
-  return evaluateAgentRuntimeGuard(input, { signer });
+  return evaluateAgentRuntimeGuard(input, { signer, eventSink: new PersistentRuntimeGuardEventSink() });
 }
 
 export async function createSampleAgentPassport(): Promise<IssuedAgentPassportBundle> {
@@ -316,7 +331,7 @@ export async function runGovernanceProofScenario(
     },
   };
   const bundle = definition.mutateBundle ? definition.mutateBundle(proofBaseBundle) : proofBaseBundle;
-  const signer = createDevSigner();
+  const signer = createIssuerSignerFromEnv();
   const auditEvents: GovernanceProofScenarioResult['auditEvents'] = [];
   const request: EvaluateAgentRuntimeGuardInput['request'] = {
     requestId: `proof-${scenarioKey}`,
