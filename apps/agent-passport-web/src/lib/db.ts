@@ -1,7 +1,7 @@
 /**
  * SQLite database initialization for agent-passport-web.
  *
- * Opens the database at AGENT_PASSPORT_DB_PATH (default: .data/agent-passport.sqlite).
+ * Opens the database at AOC_AGENT_PASSPORT_DB_PATH (default: .data/agent-passport.sqlite).
  * Creates the .data directory if it doesn't exist.
  * Initializes the schema on first run.
  */
@@ -13,7 +13,7 @@ import { dirname, resolve } from 'path';
 const DEFAULT_DB_PATH = '.data/agent-passport.sqlite';
 
 function resolveDbPath(): string {
-  const dbPath = process.env.AGENT_PASSPORT_DB_PATH ?? DEFAULT_DB_PATH;
+  const dbPath = process.env.AOC_AGENT_PASSPORT_DB_PATH ?? process.env.AGENT_PASSPORT_DB_PATH ?? DEFAULT_DB_PATH;
   // Allow :memory: for tests
   if (dbPath === ':memory:') return ':memory:';
   const absPath = resolve(dbPath);
@@ -330,6 +330,110 @@ function initSchema(db: Database.Database): void {
       ON registry_billing_events(stripe_customer_id);
     CREATE INDEX IF NOT EXISTS registry_billing_events_subscription_idx
       ON registry_billing_events(stripe_subscription_id);
+
+
+
+    CREATE TABLE IF NOT EXISTS agent_passports (
+      passport_id TEXT PRIMARY KEY,
+      agent_name TEXT NOT NULL,
+      owner_id TEXT NOT NULL,
+      owner_name TEXT NOT NULL,
+      purpose TEXT,
+      jurisdiction TEXT,
+      status TEXT NOT NULL,
+      governance_level TEXT,
+      autonomy_level TEXT,
+      risk_tier TEXT,
+      issuer TEXT,
+      issuer_key_id TEXT,
+      passport_hash TEXT,
+      constitution_hash TEXT,
+      policy_manifest_hash TEXT,
+      passport_json TEXT NOT NULL,
+      constitution_json TEXT NOT NULL,
+      policy_manifest_json TEXT NOT NULL,
+      runtime_seal_json TEXT,
+      bundle_json TEXT NOT NULL,
+      issued_at TEXT,
+      expires_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      revoked_at TEXT,
+      revocation_reason TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS agent_passports_status_idx ON agent_passports(status);
+    CREATE INDEX IF NOT EXISTS agent_passports_issuer_key_idx ON agent_passports(issuer, issuer_key_id);
+
+    CREATE TABLE IF NOT EXISTS passport_status_events (
+      event_id TEXT PRIMARY KEY,
+      passport_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      previous_status TEXT,
+      new_status TEXT,
+      reason TEXT,
+      actor_id TEXT,
+      occurred_at TEXT NOT NULL,
+      payload_json TEXT,
+      FOREIGN KEY(passport_id) REFERENCES agent_passports(passport_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS passport_status_events_passport_idx ON passport_status_events(passport_id, occurred_at);
+
+    CREATE TABLE IF NOT EXISTS passport_verification_events (
+      event_id TEXT PRIMARY KEY,
+      passport_id TEXT NOT NULL,
+      verification_result TEXT NOT NULL,
+      reason_codes_json TEXT NOT NULL,
+      actor_id TEXT,
+      request_context_json TEXT,
+      occurred_at TEXT NOT NULL,
+      FOREIGN KEY(passport_id) REFERENCES agent_passports(passport_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS passport_verification_events_passport_idx ON passport_verification_events(passport_id, occurred_at);
+
+    CREATE TABLE IF NOT EXISTS runtime_guard_audit_events (
+      event_id TEXT PRIMARY KEY,
+      passport_id TEXT NOT NULL,
+      request_id TEXT NOT NULL,
+      decision_id TEXT,
+      event_type TEXT NOT NULL,
+      actor_id TEXT,
+      outcome TEXT,
+      reason_codes_json TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      occurred_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS runtime_guard_audit_events_passport_idx ON runtime_guard_audit_events(passport_id, occurred_at);
+
+    CREATE TABLE IF NOT EXISTS issuer_keys (
+      issuer_id TEXT NOT NULL,
+      key_id TEXT NOT NULL,
+      algorithm TEXT NOT NULL,
+      public_key_pem TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      activated_at TEXT,
+      retired_at TEXT,
+      revoked_at TEXT,
+      metadata_json TEXT,
+      PRIMARY KEY (issuer_id, key_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS issuer_keys_active_idx ON issuer_keys(issuer_id, status);
+
+    CREATE TABLE IF NOT EXISTS issuer_key_events (
+      event_id TEXT PRIMARY KEY,
+      issuer_id TEXT NOT NULL,
+      key_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      reason TEXT,
+      actor_id TEXT,
+      occurred_at TEXT NOT NULL,
+      payload_json TEXT
+    );
 
     CREATE TABLE IF NOT EXISTS billing_portal_sessions (
       id TEXT PRIMARY KEY,

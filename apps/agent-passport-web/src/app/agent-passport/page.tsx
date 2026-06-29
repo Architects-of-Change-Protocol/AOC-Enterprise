@@ -21,7 +21,7 @@ export default function AgentPassportPage() {
             human oversight, public verification, and runtime-enforceable evidence.
           </p>
           <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 32 }}>
-            Built on AOC Passport Core, Runtime Seal, and Runtime Guard Lite.
+            Built on AOC Passport Core, Runtime Seal, and Runtime Guard Lite. Passports can now be persisted server-side with issuer key metadata and durable verification records.
           </div>
           <div className="hero-actions">
             <CheckoutButton tierKey="agent_passport_single" label="Get Agent Passport" className="btn btn-primary" />

@@ -1,4 +1,5 @@
 import { runGovernanceProofScenarios } from '@/lib/passport-adapter';
+export const dynamic = 'force-dynamic';
 
 const flowSteps = [
   ['Runtime Seal', 'Checks the runtime-bound seal and hash linkage.'],
