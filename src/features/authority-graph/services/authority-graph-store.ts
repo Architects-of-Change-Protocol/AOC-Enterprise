@@ -111,6 +111,10 @@ export class AuthorityGraphStore {
     return [...this.roleAssignments.values()].filter((assignment) => assignment.actorId === actorId);
   }
 
+  getRoleAssignmentsForTrustDomain(trustDomainId: string): readonly RoleAssignment[] {
+    return [...this.roleAssignments.values()].filter((assignment) => assignment.trustDomainId === trustDomainId);
+  }
+
   updateGrantStatus(authorityGrantId: string, status: AuthorityGrantStatus): AuthorityGrant {
     const existing = this.grants.get(authorityGrantId);
     if (!existing) {

@@ -21,6 +21,8 @@ export interface AuthorityEventTrailFilter {
   readonly actorId?: string;
   readonly trustDomainId?: string;
   readonly authorityDecisionId?: string;
+  readonly authorityGrantId?: string;
+  readonly delegationGrantId?: string;
 }
 
 export class AuthorityLineageLedger {
@@ -78,7 +80,9 @@ export class AuthorityLineageLedger {
       (event) =>
         (filter.actorId === undefined || event.actorId === filter.actorId) &&
         (filter.trustDomainId === undefined || event.trustDomainId === filter.trustDomainId) &&
-        (filter.authorityDecisionId === undefined || event.authorityDecisionId === filter.authorityDecisionId),
+        (filter.authorityDecisionId === undefined || event.authorityDecisionId === filter.authorityDecisionId) &&
+        (filter.authorityGrantId === undefined || event.authorityGrantId === filter.authorityGrantId) &&
+        (filter.delegationGrantId === undefined || event.delegationGrantId === filter.delegationGrantId),
     );
   }
 }

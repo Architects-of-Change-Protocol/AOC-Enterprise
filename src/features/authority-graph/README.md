@@ -44,6 +44,19 @@ A DelegationGrant can never grant more than its `sourceAuthorityGrantId`
 itself holds: not more actions, not wider resource scopes, not deeper
 redelegation than its source permits.
 
+## RoleAssignment vs. AuthorityGrant
+
+A **RoleAssignment** connects an actor to a role inside a trust domain (e.g.
+"Victor is Project Manager") with its own resource scopes, status and
+expiry -- it is a statement about who holds a position, not by itself a
+license to act. An **AuthorityGrant** is the license to act: a bounded set of
+actions and resource scopes that `AuthorityResolver` actually walks when
+proving a chain. A role assignment only becomes authority once
+`RoleAssignmentService.deriveAuthorityGrantFromRole` turns it into a real
+`AuthorityGrant`, and that derived grant is clipped to the role assignment's
+own `resourceScopes` -- a role can never produce a grant broader than the
+role itself.
+
 ## Direct authority vs. delegated authority
 
 Direct authority means the actor requesting the action is the same actor an
@@ -155,6 +168,19 @@ a proof, with `valid: false` and the failing `decisionType`, so a denial is
 just as auditable as an allowance. `AuthorityLineageLedger` records three
 hash-chained `AuthorityEvent`s alongside it: the chain being resolved, the
 chain being marked valid or invalid, and the proof being created.
+
+## How AuthorityLineageLedger works
+
+`AuthorityLineageLedger` is Authority Graph's own hash-chained audit trail,
+independent of `AuthorityProof`: every grant issuance/revocation/suspension/
+expiration, every delegation issuance/revocation/suspension/expiration, and
+every chain resolution/validity/proof-creation is recorded as an
+`AuthorityEvent` whose `eventHash` covers its payload and the previous
+event's `eventHash` -- the same pattern `AuthorityProofService` uses for
+`proofHash`, and the same pattern Recognition Runtime's `EvidenceLedger` uses
+for its own audit events. The ledger can be queried by `trustDomainId`,
+`authorityGrantId` or `delegationGrantId` to answer "what happened to this
+grant, in order" without re-deriving it from the store.
 
 ## How Recognition Runtime integrates with Authority Graph
 
