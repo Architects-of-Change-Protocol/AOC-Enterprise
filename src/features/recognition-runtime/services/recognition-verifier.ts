@@ -3,6 +3,7 @@ import type { PolicyContext } from '../domain/policy.js';
 import type { RecognitionDecision, RecognitionDecisionType } from '../domain/recognition-decision.js';
 import type { RuntimeContext } from '../runtime/runtime-context.js';
 import type { ActorRegistry } from './actor-registry.js';
+import { mapAuthorityDecisionType, requiresAuthorityChain, type AuthorityGraphIntegration } from './authority-graph-integration.js';
 import type { CapabilityTokenService } from './capability-token-service.js';
 import type { EvidenceLedger } from './evidence-ledger.js';
 import type { PassportService } from './passport-service.js';
@@ -22,6 +23,7 @@ export class RecognitionVerifier {
     private readonly policyEvaluator: PolicyEvaluator,
     private readonly revocationEngine: RevocationEngine,
     private readonly evidenceLedger: EvidenceLedger,
+    private readonly authorityGraph?: AuthorityGraphIntegration,
   ) {}
 
   verifyAction(request: ActionRequest): RecognitionDecision {
@@ -56,6 +58,36 @@ export class RecognitionVerifier {
     const result = this.policyEvaluator.evaluatePolicies(request, context);
     const decisionId = this.ctx.idGenerator.next('decision');
 
+    let decisionType = result.decisionType;
+    let reasonCode = result.reasonCode;
+    let reason = result.reason;
+    let authorityDecisionId: string | undefined;
+    let authorityProofId: string | undefined;
+
+    // Recognition alone only proves a capability token exists; it does not prove the
+    // authority behind it is legitimate. For agent actions (or acting-for-a-principal
+    // actions) that Recognition already deems viable, Authority Graph must additionally
+    // prove the authority chain before the action can be allowed to proceed.
+    if (this.authorityGraph && RECOGNIZED_DECISION_TYPES.includes(decisionType) && requiresAuthorityChain(actor?.type, request.actorId, request.principalActorId)) {
+      const authorityDecision = this.authorityGraph.verifyAuthority({
+        id: request.id,
+        actorId: request.actorId,
+        trustDomainId: request.trustDomainId,
+        action: request.action,
+        resourceScope: request.resource,
+        requestedAt: now,
+        ...(request.principalActorId !== undefined ? { principalActorId: request.principalActorId } : {}),
+        ...(request.capabilityTokenId !== undefined ? { capabilityTokenId: request.capabilityTokenId } : {}),
+      });
+      authorityDecisionId = authorityDecision.id;
+      authorityProofId = authorityDecision.proofId;
+      if (!authorityDecision.valid) {
+        decisionType = mapAuthorityDecisionType(authorityDecision.type);
+        reasonCode = authorityDecision.reasonCode;
+        reason = authorityDecision.reason;
+      }
+    }
+
     const auditEvent = this.evidenceLedger.recordAuditEvent({
       eventType: 'recognition_decision',
       actorId: request.actorId,
@@ -65,9 +97,10 @@ export class RecognitionVerifier {
       payload: {
         action: request.action,
         resource: request.resource,
-        decisionType: result.decisionType,
-        reasonCode: result.reasonCode,
+        decisionType,
+        reasonCode,
         policyResults: result.policyResults,
+        ...(authorityDecisionId !== undefined ? { authorityDecisionId } : {}),
       },
       ...(request.passportId !== undefined ? { passportId: request.passportId } : {}),
       ...(request.capabilityTokenId !== undefined ? { capabilityTokenId: request.capabilityTokenId } : {}),
@@ -76,10 +109,10 @@ export class RecognitionVerifier {
     return {
       id: decisionId,
       requestId: request.id,
-      type: result.decisionType,
-      recognized: RECOGNIZED_DECISION_TYPES.includes(result.decisionType),
-      reasonCode: result.reasonCode,
-      reason: result.reason,
+      type: decisionType,
+      recognized: RECOGNIZED_DECISION_TYPES.includes(decisionType),
+      reasonCode,
+      reason,
       actorId: request.actorId,
       trustDomainId: request.trustDomainId,
       evaluatedAt: now,
@@ -88,6 +121,8 @@ export class RecognitionVerifier {
       ...(result.riskLevel !== undefined ? { riskLevel: result.riskLevel } : {}),
       ...(result.requiredEvidence !== undefined ? { requiredEvidence: result.requiredEvidence } : {}),
       ...(result.requiredApproverActorIds !== undefined ? { requiredApproverActorIds: result.requiredApproverActorIds } : {}),
+      ...(authorityDecisionId !== undefined ? { authorityDecisionId } : {}),
+      ...(authorityProofId !== undefined ? { authorityProofId } : {}),
     };
   }
 }

@@ -35,4 +35,7 @@ export interface RecognitionDecision {
   readonly requiredApproverActorIds?: readonly string[];
   readonly policyResults: readonly PolicyResult[];
   readonly auditEventId: string;
+  /** Set when Authority Graph integration evaluated this request's authority lineage. */
+  readonly authorityDecisionId?: string;
+  readonly authorityProofId?: string;
 }

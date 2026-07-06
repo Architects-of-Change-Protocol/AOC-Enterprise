@@ -8,6 +8,7 @@ import type { RecognitionDecision } from '../domain/recognition-decision.js';
 import type { TrustDomain } from '../domain/trust-domain.js';
 import { createDefaultPolicyChain } from '../policies/index.js';
 import { ActorRegistry, type RegisterActorInput } from '../services/actor-registry.js';
+import type { AuthorityGraphIntegration } from '../services/authority-graph-integration.js';
 import {
   CapabilityTokenService,
   type CapabilityTokenVerificationResult,
@@ -36,6 +37,7 @@ export class AocRecognitionRuntime {
   constructor(
     private readonly ctx: RuntimeContext,
     policies: readonly Policy[] = createDefaultPolicyChain(),
+    authorityGraph?: AuthorityGraphIntegration,
   ) {
     this.actorRegistry = new ActorRegistry(ctx);
     this.trustDomainService = new TrustDomainService(ctx);
@@ -53,6 +55,7 @@ export class AocRecognitionRuntime {
       this.policyEvaluator,
       this.revocationEngine,
       this.evidenceLedger,
+      authorityGraph,
     );
   }
 
@@ -113,6 +116,10 @@ export class AocRecognitionRuntime {
   }
 }
 
-export function createAocRecognitionRuntime(ctx: RuntimeContext, policies?: readonly Policy[]): AocRecognitionRuntime {
-  return policies ? new AocRecognitionRuntime(ctx, policies) : new AocRecognitionRuntime(ctx);
+export function createAocRecognitionRuntime(
+  ctx: RuntimeContext,
+  policies?: readonly Policy[],
+  authorityGraph?: AuthorityGraphIntegration,
+): AocRecognitionRuntime {
+  return new AocRecognitionRuntime(ctx, policies ?? createDefaultPolicyChain(), authorityGraph);
 }
