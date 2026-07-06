@@ -54,6 +54,10 @@ export class RoleAssignmentService {
     return this.store.getRoleAssignmentsForActor(actorId);
   }
 
+  findRolesForTrustDomain(trustDomainId: string): readonly RoleAssignment[] {
+    return this.store.getRoleAssignmentsForTrustDomain(trustDomainId);
+  }
+
   revokeRoleAssignment(roleAssignmentId: string): RoleAssignment {
     return this.store.updateRoleAssignmentStatus(roleAssignmentId, 'revoked');
   }
