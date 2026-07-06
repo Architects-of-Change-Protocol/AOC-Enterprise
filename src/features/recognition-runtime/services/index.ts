@@ -19,3 +19,6 @@ export { EvidenceLedger } from './evidence-ledger.js';
 export type { RecordAuditEventInput, AuditTrailFilter, ActionProofExport } from './evidence-ledger.js';
 
 export { RecognitionVerifier } from './recognition-verifier.js';
+
+export { requiresAuthorityChain, mapAuthorityDecisionType } from './authority-graph-integration.js';
+export type { AuthorityGraphIntegration, AuthorityChainRequestLike, AuthorityDecisionLike } from './authority-graph-integration.js';
