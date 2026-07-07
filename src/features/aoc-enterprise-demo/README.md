@@ -57,8 +57,10 @@ domain/      Pure types: DemoScenario, DemoStepDefinition/DemoStepRun,
              DemoProofChain, DemoControlPlaneSnapshot, DemoScript,
              DemoExportArtifact, DemoPersona, DemoNarrative(Message).
 fixtures/    The real, composed enterprise demo world (built on top of
-             action-enforcement's datasys-enforcement fixture), the
-             persona roster, and a descriptive action catalog.
+             action-enforcement's policy-pack-enforcement fixture, itself a
+             superset of the datasys-enforcement fixture), the persona
+             roster, a descriptive action catalog, and a re-export of the
+             Policy Pack Enforcement fixture's guard-input builders.
 scenarios/   One file per scenario: a pure DemoScenario definition plus a
              ScenarioExecutor that drives real runtime calls and a
              ScenarioAssertionEvaluator that checks the real result.
@@ -66,7 +68,9 @@ services/    DemoScenarioRegistry, DemoFixtureOrchestrator,
              DemoScenarioRunner, DemoStepRunner, DemoAssertionService,
              DemoScriptService, DemoNarrativeService,
              DemoControlPlaneSnapshotService, DemoProofChainService,
-             DemoExportService, DemoResetService, DemoReportService.
+             DemoExportService, DemoResetService, DemoReportService,
+             DemoPolicyPackScenarioService, DemoPolicyPackControlPlaneService,
+             DemoPolicyPackNarrativeService.
 components/  Feature-local React components; AocEnterpriseDemoPage is the
              mount point.
 hooks/       useAocEnterpriseDemo / useDemoScenarioSelection /
@@ -89,8 +93,9 @@ Each `scenarios/*.scenario.ts` file exports three things:
 - `evaluate<Name>Assertions: ScenarioAssertionEvaluator` -- checks the real
   result against each declared assertion.
 
-`scenarios/index.ts` assembles all ten into `ALL_DEMO_SCENARIOS`,
-`SCENARIO_EXECUTORS` and `SCENARIO_ASSERTION_EVALUATORS`.
+`scenarios/index.ts` assembles all eighteen (ten foundational + eight
+policy-pack, see "Policy Pack Enterprise Demo Extension" below) into
+`ALL_DEMO_SCENARIOS`, `SCENARIO_EXECUTORS` and `SCENARIO_ASSERTION_EVALUATORS`.
 `DemoScenarioRegistry` (`services/demo-scenario-registry.ts`) wraps
 `ALL_DEMO_SCENARIOS`: it validates every scenario has a title, summary,
 enterprise message, buyer pain, steps and assertions, rejects duplicate ids,
@@ -203,7 +208,9 @@ a string) -- there is no filesystem write anywhere in this module:
 - `technical_trace` -- every real id (`enforcementRequestId`, `enforcementDecisionId`, `recognitionDecisionId`, `authorityProofId`, `approvalProofId`, `handshakeProofId`, `proofHash`) plus per-assertion pass/fail.
 - `sales_one_pager` -- summary, buyer pain, AOC value, enterprise message, demonstrated outcome.
 
-## The 10 scenarios
+## The 10 foundational scenarios
+
+(See "Policy Pack Enterprise Demo Extension" below for the 8 policy-pack scenarios.)
 
 | # | Scenario id | Category | Expected outcome |
 |---|---|---|---|
@@ -363,18 +370,263 @@ panel, Approvals panel.
   pre-computed `run` prop, the same way `aoc-control-plane`'s tests
   pre-build a read model before rendering).
 
-## Domain Policy Pack Runtime scenarios
+## Policy Pack Enterprise Demo Extension
 
-`action-enforcement` can optionally consult Domain Policy Pack Runtime
-during preflight (see `action-enforcement/README.md`'s "Domain Policy Pack
-Runtime integration" section). A scenario demonstrating a policy pack
-decision (e.g. `approve_payment` blocked pending finance review) is just an
-ordinary scenario whose `ActionEnforcementRuntime` was built with
-`policyPackIntegration` configured -- it needs no changes to this module's
-scenario/executor/assertion machinery. See
-`action-enforcement/fixtures/policy-pack-enforcement.fixture.ts` and
-`action-enforcement/tests/policy-pack-sample-wiring-scenarios.test.ts` for
-the composition this module's scenarios would build on.
+Domain Policy Pack Runtime, Policy Pack Enforcement Wiring, and the Policy
+Pack Control Plane Extension all exist independently of this module. This
+extension answers the demo-layer question they leave open: **how do we
+demonstrate, end to end, that AOC can apply domain/customer/jurisdiction
+policy packs during autonomous execution, block unsafe actions, require
+evidence or approval, preserve warnings, and show everything in the Control
+Plane -- using the real runtime, not a story about it?**
+
+### Why this matters after enforcement wiring and Control Plane visibility
+
+Action Enforcement can already consult a Domain Policy Pack Runtime during
+preflight, and the Control Plane can already display a Policy Packs section.
+What was still missing was the same narrative layer the first ten scenarios
+give every other AOC layer: a curated, runtime-backed walk from "an agent
+tried a policy-governed action" to "here is exactly which rule matched,
+which decision it produced, and what it means for an enterprise buyer."
+
+### Real runtime behavior, same rule as every other scenario
+
+Every policy-pack scenario follows the module's one rule: **no scenario
+ever fabricates a decision, proof, event, approval or enforcement
+outcome.** Each policy-pack scenario's executor calls
+`world.fixture.policyPackAocGuard.enforce(...)` -- a *second*,
+policy-pack-configured `AocGuard` that `EnterpriseDemoWorld` now exposes
+alongside the original `world.fixture.aocGuard` (see "How the policy-pack
+world is built" below). The guard input builders themselves come from
+`action-enforcement/fixtures/policy-pack-enforcement.fixture.ts` -- the same
+builders `action-enforcement`'s own
+`policy-pack-sample-wiring-scenarios.test.ts` exercises -- so this module
+never re-derives a policy-pack request shape or duplicates rule evaluation.
+
+### How the policy-pack world is built
+
+`fixtures/enterprise-demo-world.fixture.ts` now builds every scenario's
+`EnterpriseDemoWorld` via `buildPolicyPackEnforcementFixture()` -- a strict
+superset of `buildDatasysEnforcementFixture()` that additionally registers a
+real `PolicyPackRuntime` (all six Domain Policy Pack Runtime demo packs:
+payments-basic, procurement-basic, data-boundary-basic,
+sports-event-settlement-basic, financial-approval-basic,
+jurisdictional-baseline-demo) and a second `ActionEnforcementRuntime`/
+`AocGuard` wired with `policyPackIntegration`. Every existing (non-policy)
+scenario keeps calling `world.fixture.aocGuard`, so its behavior is
+byte-for-byte unchanged; only the eight `policy_packs`-category scenarios
+call `world.fixture.policyPackAocGuard`.
+
+`fixtures/enterprise-demo-policy-pack.fixture.ts` re-exports the real Policy
+Pack Enforcement fixture's guard-input builders
+(`buildApprovePaymentRequiresFinanceReviewInput`,
+`buildChangeBankAccountDeniedInput`,
+`buildPrepareInvoiceSupportRequiresEvidenceInput`,
+`buildExportClientDataRequiresComplianceReviewInput`,
+`buildExportClientDataProhibitedInput`,
+`buildSettleEventPaymentRequiresEvidenceInput`, plus the trusted-partner
+handshake helpers) so scenario files never hand-build a policy-pack request
+shape.
+
+### Policy metadata on `DemoScenarioOutcome`
+
+`DemoScenarioOutcome` carries optional policy fields -- `policyDecisionId`,
+`policyProofId`, `policyPackVersionIds`, `policyMatchedRuleIds`,
+`policyReasonCode`, `policyReason` -- populated by the shared
+`scenarios/outcome-helpers.ts#buildScenarioOutcome` directly from
+`EnforcementDecision`'s own policy fields whenever a policy-pack-configured
+guard actually evaluated the request. Every other scenario's outcome is
+unaffected: those fields are simply absent.
+
+### Policy Packs in the Control Plane snapshot
+
+`DemoControlPlaneSnapshotService` (shared by every scenario, not just
+policy-pack ones) now also highlights a `policy_packs` row whenever the
+final `EnforcementDecision` carries a `policyDecisionId` -- which
+automatically adds `'policy_packs'` to `DemoControlPlaneSnapshot.visiblePanelIds`
+through the same generic `visiblePanelsFor()` logic every other panel uses.
+
+### The three new services
+
+- **`DemoPolicyPackScenarioService`** (`services/demo-policy-pack-scenario-service.ts`)
+  -- lists the eight `policy_packs`-category scenarios and runs them through
+  the existing, shared `DemoScenarioRunner` (so step reconciliation,
+  assertions, proof chain, the standard Control Plane snapshot and export
+  artifacts are produced exactly the way every other scenario produces
+  them). It additionally builds the richer policy-pack Control Plane
+  snapshot from one more real, deterministic run of the same scenario's
+  executor, and exposes `executorSafetyVerified`,
+  `policyReferencesVerified` and `controlPlaneSnapshotVerified` booleans
+  computed purely from the real run's outcome/snapshot.
+- **`DemoPolicyPackControlPlaneService`** (`services/demo-policy-pack-control-plane-service.ts`)
+  -- builds a policy-pack-focused Control Plane snapshot by calling
+  `aoc-control-plane`'s own `buildPolicyPackViewModel()` (fed with the
+  scenario's real `PolicyPackRuntime` plus its real
+  `EnforcementRequest`/`EnforcementDecision`/`EnforcementProof` objects,
+  converted with `aoc-control-plane`'s own exported
+  `toEnforcementRequestRow`/`toEnforcementDecisionRow`/`toEnforcementProofRow`)
+  -- never re-implementing that mapping. It surfaces which packs/rules/
+  decision/proof/enforcement-link this run touched and builds
+  operator-walkthrough anchors.
+- **`DemoPolicyPackNarrativeService`** (`services/demo-policy-pack-narrative-service.ts`)
+  -- generates deterministic executive/technical/operator/investor narration
+  from the scenario's own declared `buyerPain`/`aocValue`/`enterpriseMessage`
+  and the real outcome/snapshot, always including the same
+  not-legal-advice disclaimer and never an LLM call.
+
+### The four new components
+
+`DemoPolicyPackScenarioPanel`, `DemoPolicyPackOutcomePanel`,
+`DemoPolicyPackControlPlaneWalkthrough` and `DemoPolicyPackProofChainPanel`
+(`components/`) render this data; like every other component in this
+module they are feature-local and SSR-tested only.
+
+### The 8 policy-pack scenarios
+
+| # | Scenario id | Policy pack | Expected policy result | Enforcement behavior |
+|---|---|---|---|---|
+| 1 | `policy-pack-payment-approval-required` | payments-basic | `policy_requires_approval` | `approval_required`, executor never runs |
+| 2 | `policy-pack-bank-account-change-denied` | payments-basic | `policy_denied` | `blocked`, executor never runs |
+| 3 | `policy-pack-invoice-evidence-required` | procurement-basic | `policy_requires_evidence` | `evidence_required`, executor never runs |
+| 4 | `policy-pack-sensitive-data-export-requires-compliance` | data-boundary-basic | `policy_requires_approval` | `approval_required`, executor never runs |
+| 5 | `policy-pack-prohibited-data-export-denied` | data-boundary-basic | `policy_denied` | `blocked`, executor never runs |
+| 6 | `policy-pack-sports-settlement-event-record-required` | sports-event-settlement-basic | `policy_requires_evidence` | `evidence_required`, executor never runs |
+| 7 | `policy-pack-low-risk-read-warning-allowed` | data-boundary-basic | `policy_allowed` | `executed`, executor runs exactly once |
+| 8 | `policy-pack-control-plane-walkthrough` | all four | mixed (sweep) | `executed` (closes on the allowed read) |
+
+#### 1. Payment Approval Blocked Pending Finance Review
+**Story:** PMFreak attempts `approve_payment`; payments-basic requires a
+`finance_review` approval.
+**Buyer message:** AOC can prevent autonomous financial execution unless the
+enterprise policy pack requires and receives finance approval.
+**Show in Control Plane:** Policy Packs (matched finance-review rule),
+Enforcement (blocked decision referencing the same policy decision id).
+
+#### 2. Bank Account Change Denied by Policy Pack
+**Story:** Victor attempts `change_bank_account`; payments-basic denies it
+by default, independent of every other governance layer.
+**Buyer message:** AOC can enforce hard-deny enterprise policies at
+execution time.
+**Show in Control Plane:** Policy Packs (deny rule + proof), Enforcement
+(blocked decision).
+
+#### 3. Invoice Support Blocked Pending Purchase Order Evidence
+**Story:** PMFreak attempts `prepare_invoice_support` with Recognition's own
+evidence requirement satisfied, but without the purchase-order evidence
+procurement-basic independently requires.
+**Buyer message:** AOC does not let agents proceed with procurement
+workflows unless required supporting evidence exists.
+**Show in Control Plane:** Policy Packs (evidence requirement), Enforcement
+(evidence_required decision).
+
+#### 4. Sensitive Data Export Blocked Pending Compliance Review
+**Story:** Victor attempts `export_client_data` touching the sensitive `pii`
+data domain; data-boundary-basic requires compliance review.
+**Buyer message:** AOC can protect sensitive data exports through
+policy-pack-driven compliance approval requirements.
+**Show in Control Plane:** Policy Packs (compliance-review approval
+requirement), Enforcement (approval_required decision).
+
+#### 5. Prohibited Data Export Denied by Policy Pack
+**Story:** Victor attempts `export_client_data` touching the prohibited
+`classified` data domain; data-boundary-basic denies it outright.
+**Buyer message:** AOC can enforce non-negotiable data boundaries before
+execution.
+**Show in Control Plane:** Policy Packs (denial reason + proof), Enforcement
+(blocked decision).
+
+#### 6. Event Settlement Blocked Pending Event Record Evidence
+**Story:** PMFreak (delegated authority from Victor) attempts
+`settle_event_payment` for a known counterparty below the approval
+threshold, but without `event_record` evidence.
+**Buyer message:** AOC can require event records before smart-contract or
+payment settlement actions are executed.
+**Show in Control Plane:** Policy Packs (event_record evidence
+requirement), Enforcement (evidence_required decision).
+
+#### 7. Low-Risk Read Allowed With Policy Recorded, Not Blocked
+**Story:** Trusted Partner Research Agent, with an active visa, performs
+`read_project_summary` touching only non-sensitive `project_metadata`;
+data-boundary-basic records an explicit `policy_allowed`.
+**Buyer message:** AOC does not overblock low-risk work; it preserves
+execution while recording policy warnings/decisions.
+**Show in Control Plane:** Policy Packs (allow rule + proof, present even
+though nothing was blocked), Enforcement (executed request).
+
+#### 8. Operator Walkthrough of Policy Pack Enforcement in the Control Plane
+**Story:** An operator opens the Control Plane after a representative sweep
+of six blocked/pending policy decisions plus one allowed read, all in the
+same policy-pack-configured world.
+**Buyer message:** AOC makes policy-pack enforcement explainable to
+operators and buyers.
+**Show in Control Plane:** Policy Packs (every matched pack/rule/decision
+from the sweep), Enforcement (each linked decision), Proofs / Audit (the
+full policy + enforcement proof chain).
+
+### Policy warning vs. policy block
+
+A `policy_warning` or `policy_allowed` result never blocks execution -- it
+is recorded (a real `PolicyPackDecision`/`PolicyPackProof` exist) but
+`EnforcementDecision.allowedToExecute` stays whatever every other AOC layer
+already decided. A `policy_denied`/`policy_requires_evidence`/
+`policy_requires_approval` result blocks even if every other AOC layer
+already allowed the request -- see `DomainPolicyPackPolicy` in
+`action-enforcement/policies/domain-policy-pack-policy.ts`. Scenario 7
+demonstrates the former; scenarios 1-6 demonstrate the latter.
+
+### Policy decision vs. enforcement decision, policy proof vs. enforcement proof
+
+A **policy decision** (`PolicyPackDecision`) is Domain Policy Pack Runtime's
+own record of one rule evaluation -- it exists independently of Action
+Enforcement. An **enforcement decision** (`EnforcementDecision`) is Action
+Enforcement's own record of the full preflight, which *references* the
+policy decision (via `policyDecisionId`) only when a policy pack integration
+was configured and consulted. The same relationship holds for proofs: a
+**policy proof** (`PolicyPackProof`) hashes the policy evaluation's own
+input/rule-results/decision; an **enforcement proof** (`EnforcementProof`)
+hashes the full enforcement outcome and separately references the policy
+proof (via `policyProofId`). `PolicyEnforcementLinkRow`
+(`aoc-control-plane/domain/policy-pack-view-model.ts`) is the read-only row
+that connects the two without re-deriving either.
+
+### Legal/compliance disclaimer
+
+Every policy-pack scenario, narrative and README passage in this extension
+follows the same rule:
+
+- Demo packs are **not legal advice**.
+- Policy packs are **not a complete compliance program** unless
+  customer/counsel-validated -- every demo pack's current version carries
+  `demoOnly: true` and `legalCompleteness: 'not_legal_advice'`.
+- The Control Plane and this demo pack show **enforcement trace and policy
+  evidence**, not a legal conclusion. Say "this demo pack models an
+  enterprise policy requirement" and "a customer- or counsel-validated pack
+  could encode real customer policy" -- never "AOC proves legal compliance"
+  or a jurisdiction-specific compliance claim.
+
+### How to add a future customer/jurisdiction policy-pack demo
+
+1. If the underlying policy pack doesn't exist yet, add it in
+   `domain-policy-pack-runtime/packs/` first (see that module's README).
+2. Add or extend a guard-input builder in
+   `action-enforcement/fixtures/policy-pack-enforcement.fixture.ts` (or
+   compose the `GuardActionRequestInput` directly in the scenario file, the
+   way `policy-pack-low-risk-read-warning-allowed.scenario.ts` does).
+3. Create `scenarios/<name>.scenario.ts` following the same three-export
+   pattern as every other scenario, calling
+   `world.fixture.policyPackAocGuard.enforce(...)` and using
+   `scenarios/assertion-helpers.ts#policyDecisionAssertion` to check the
+   matched rule.
+4. Add the `DemoScenarioId` to `domain/demo-scenario.ts` and register the
+   scenario/executor/evaluator in `scenarios/index.ts`.
+5. Add `tests/scenarios/<name>.scenario.test.ts` following the pattern in
+   this section.
+
+### How to run policy-pack scenario tests
+
+```
+npm run build && node --test dist/src/features/aoc-enterprise-demo/tests/demo-policy-pack-*.test.js dist/src/features/aoc-enterprise-demo/tests/scenarios/policy-pack-*.test.js dist/src/features/aoc-enterprise-demo/tests/components/demo-policy-pack-*.test.js
+```
 
 ## How to add a new scenario
 

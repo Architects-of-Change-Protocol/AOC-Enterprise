@@ -13,8 +13,8 @@ describe('DemoReportService', () => {
       runs.push(await suite.runner.runScenario(scenario.id));
     }
     const report = createDemoReportService().buildReport(runs, () => '2026-01-01T00:00:00.000Z');
-    assert.equal(report.totalScenarios, 10);
-    assert.equal(report.entries.length, 10);
+    assert.equal(report.totalScenarios, 18);
+    assert.equal(report.entries.length, 18);
   });
 
   it('includes pass/fail counts', async () => {
@@ -26,7 +26,7 @@ describe('DemoReportService', () => {
     }
     const report = createDemoReportService().buildReport(runs, () => '2026-01-01T00:00:00.000Z');
     assert.equal(report.passedCount + report.failedCount, report.totalScenarios);
-    assert.equal(report.passedCount, 10);
+    assert.equal(report.passedCount, 18);
     assert.equal(report.failedCount, 0);
   });
 

@@ -49,6 +49,46 @@ import {
   evaluateInternalAgentAllowedAssertions,
   executeInternalAgentAllowedScenario,
 } from './internal-agent-allowed.scenario.js';
+import {
+  POLICY_PACK_PAYMENT_APPROVAL_REQUIRED_SCENARIO,
+  evaluatePolicyPackPaymentApprovalRequiredAssertions,
+  executePolicyPackPaymentApprovalRequiredScenario,
+} from './policy-pack-payment-approval-required.scenario.js';
+import {
+  POLICY_PACK_BANK_ACCOUNT_CHANGE_DENIED_SCENARIO,
+  evaluatePolicyPackBankAccountChangeDeniedAssertions,
+  executePolicyPackBankAccountChangeDeniedScenario,
+} from './policy-pack-bank-account-change-denied.scenario.js';
+import {
+  POLICY_PACK_INVOICE_EVIDENCE_REQUIRED_SCENARIO,
+  evaluatePolicyPackInvoiceEvidenceRequiredAssertions,
+  executePolicyPackInvoiceEvidenceRequiredScenario,
+} from './policy-pack-invoice-evidence-required.scenario.js';
+import {
+  POLICY_PACK_SENSITIVE_DATA_EXPORT_REQUIRES_COMPLIANCE_SCENARIO,
+  evaluatePolicyPackSensitiveDataExportRequiresComplianceAssertions,
+  executePolicyPackSensitiveDataExportRequiresComplianceScenario,
+} from './policy-pack-sensitive-data-export-requires-compliance.scenario.js';
+import {
+  POLICY_PACK_PROHIBITED_DATA_EXPORT_DENIED_SCENARIO,
+  evaluatePolicyPackProhibitedDataExportDeniedAssertions,
+  executePolicyPackProhibitedDataExportDeniedScenario,
+} from './policy-pack-prohibited-data-export-denied.scenario.js';
+import {
+  POLICY_PACK_SPORTS_SETTLEMENT_EVENT_RECORD_REQUIRED_SCENARIO,
+  evaluatePolicyPackSportsSettlementEventRecordRequiredAssertions,
+  executePolicyPackSportsSettlementEventRecordRequiredScenario,
+} from './policy-pack-sports-settlement-event-record-required.scenario.js';
+import {
+  POLICY_PACK_LOW_RISK_READ_WARNING_ALLOWED_SCENARIO,
+  evaluatePolicyPackLowRiskReadWarningAllowedAssertions,
+  executePolicyPackLowRiskReadWarningAllowedScenario,
+} from './policy-pack-low-risk-read-warning-allowed.scenario.js';
+import {
+  POLICY_PACK_CONTROL_PLANE_WALKTHROUGH_SCENARIO,
+  evaluatePolicyPackControlPlaneWalkthroughAssertions,
+  executePolicyPackControlPlaneWalkthroughScenario,
+} from './policy-pack-control-plane-walkthrough.scenario.js';
 import type { ScenarioAssertionEvaluator, ScenarioExecutor } from './scenario-runtime-types.js';
 
 export const ALL_DEMO_SCENARIOS: readonly DemoScenario[] = [
@@ -62,6 +102,14 @@ export const ALL_DEMO_SCENARIOS: readonly DemoScenario[] = [
   IDEMPOTENCY_DUPLICATE_SUPPRESSED_SCENARIO,
   EMERGENCY_DENY_SHUTDOWN_SCENARIO,
   FULL_PROOF_CHAIN_AUDIT_SCENARIO,
+  POLICY_PACK_PAYMENT_APPROVAL_REQUIRED_SCENARIO,
+  POLICY_PACK_BANK_ACCOUNT_CHANGE_DENIED_SCENARIO,
+  POLICY_PACK_INVOICE_EVIDENCE_REQUIRED_SCENARIO,
+  POLICY_PACK_SENSITIVE_DATA_EXPORT_REQUIRES_COMPLIANCE_SCENARIO,
+  POLICY_PACK_PROHIBITED_DATA_EXPORT_DENIED_SCENARIO,
+  POLICY_PACK_SPORTS_SETTLEMENT_EVENT_RECORD_REQUIRED_SCENARIO,
+  POLICY_PACK_LOW_RISK_READ_WARNING_ALLOWED_SCENARIO,
+  POLICY_PACK_CONTROL_PLANE_WALKTHROUGH_SCENARIO,
 ];
 
 export const SCENARIO_EXECUTORS: Readonly<Record<DemoScenarioId, ScenarioExecutor>> = {
@@ -75,6 +123,14 @@ export const SCENARIO_EXECUTORS: Readonly<Record<DemoScenarioId, ScenarioExecuto
   'idempotency-duplicate-suppressed': executeIdempotencyDuplicateSuppressedScenario,
   'emergency-deny-shutdown': executeEmergencyDenyShutdownScenario,
   'full-proof-chain-audit': executeFullProofChainAuditScenario,
+  'policy-pack-payment-approval-required': executePolicyPackPaymentApprovalRequiredScenario,
+  'policy-pack-bank-account-change-denied': executePolicyPackBankAccountChangeDeniedScenario,
+  'policy-pack-invoice-evidence-required': executePolicyPackInvoiceEvidenceRequiredScenario,
+  'policy-pack-sensitive-data-export-requires-compliance': executePolicyPackSensitiveDataExportRequiresComplianceScenario,
+  'policy-pack-prohibited-data-export-denied': executePolicyPackProhibitedDataExportDeniedScenario,
+  'policy-pack-sports-settlement-event-record-required': executePolicyPackSportsSettlementEventRecordRequiredScenario,
+  'policy-pack-low-risk-read-warning-allowed': executePolicyPackLowRiskReadWarningAllowedScenario,
+  'policy-pack-control-plane-walkthrough': executePolicyPackControlPlaneWalkthroughScenario,
 };
 
 export const SCENARIO_ASSERTION_EVALUATORS: Readonly<Record<DemoScenarioId, ScenarioAssertionEvaluator>> = {
@@ -88,6 +144,14 @@ export const SCENARIO_ASSERTION_EVALUATORS: Readonly<Record<DemoScenarioId, Scen
   'idempotency-duplicate-suppressed': evaluateIdempotencyDuplicateSuppressedAssertions,
   'emergency-deny-shutdown': evaluateEmergencyDenyShutdownAssertions,
   'full-proof-chain-audit': evaluateFullProofChainAuditAssertions,
+  'policy-pack-payment-approval-required': evaluatePolicyPackPaymentApprovalRequiredAssertions,
+  'policy-pack-bank-account-change-denied': evaluatePolicyPackBankAccountChangeDeniedAssertions,
+  'policy-pack-invoice-evidence-required': evaluatePolicyPackInvoiceEvidenceRequiredAssertions,
+  'policy-pack-sensitive-data-export-requires-compliance': evaluatePolicyPackSensitiveDataExportRequiresComplianceAssertions,
+  'policy-pack-prohibited-data-export-denied': evaluatePolicyPackProhibitedDataExportDeniedAssertions,
+  'policy-pack-sports-settlement-event-record-required': evaluatePolicyPackSportsSettlementEventRecordRequiredAssertions,
+  'policy-pack-low-risk-read-warning-allowed': evaluatePolicyPackLowRiskReadWarningAllowedAssertions,
+  'policy-pack-control-plane-walkthrough': evaluatePolicyPackControlPlaneWalkthroughAssertions,
 };
 
 export {
@@ -101,6 +165,14 @@ export {
   FULL_PROOF_CHAIN_AUDIT_SCENARIO,
   IDEMPOTENCY_DUPLICATE_SUPPRESSED_SCENARIO,
   INTERNAL_AGENT_ALLOWED_SCENARIO,
+  POLICY_PACK_BANK_ACCOUNT_CHANGE_DENIED_SCENARIO,
+  POLICY_PACK_CONTROL_PLANE_WALKTHROUGH_SCENARIO,
+  POLICY_PACK_INVOICE_EVIDENCE_REQUIRED_SCENARIO,
+  POLICY_PACK_LOW_RISK_READ_WARNING_ALLOWED_SCENARIO,
+  POLICY_PACK_PAYMENT_APPROVAL_REQUIRED_SCENARIO,
+  POLICY_PACK_PROHIBITED_DATA_EXPORT_DENIED_SCENARIO,
+  POLICY_PACK_SENSITIVE_DATA_EXPORT_REQUIRES_COMPLIANCE_SCENARIO,
+  POLICY_PACK_SPORTS_SETTLEMENT_EVENT_RECORD_REQUIRED_SCENARIO,
 };
 export type { ScenarioAssertionEvaluator, ScenarioExecutionContext, ScenarioExecutionResult, ScenarioExecutor } from './scenario-runtime-types.js';
 export { createTickingClock } from './scenario-runtime-types.js';

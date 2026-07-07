@@ -3,6 +3,9 @@ import { createDemoAssertionService } from './demo-assertion-service.js';
 import { createDemoControlPlaneSnapshotService } from './demo-control-plane-snapshot-service.js';
 import { createDemoExportService } from './demo-export-service.js';
 import { createDemoFixtureOrchestrator } from './demo-fixture-orchestrator.js';
+import { createDemoPolicyPackControlPlaneService } from './demo-policy-pack-control-plane-service.js';
+import { createDemoPolicyPackNarrativeService } from './demo-policy-pack-narrative-service.js';
+import { createDemoPolicyPackScenarioService } from './demo-policy-pack-scenario-service.js';
 import { createDemoProofChainService } from './demo-proof-chain-service.js';
 import { createDemoReportService } from './demo-report-service.js';
 import { createDemoScenarioRegistry } from './demo-scenario-registry.js';
@@ -31,6 +34,14 @@ export {
   type DemoReport,
   type DemoScenarioReportEntry,
 } from './demo-report-service.js';
+export { DemoPolicyPackControlPlaneService, createDemoPolicyPackControlPlaneService } from './demo-policy-pack-control-plane-service.js';
+export { DemoPolicyPackNarrativeService, createDemoPolicyPackNarrativeService } from './demo-policy-pack-narrative-service.js';
+export {
+  DemoPolicyPackScenarioService,
+  DemoPolicyPackScenarioNotFoundError,
+  createDemoPolicyPackScenarioService,
+  type DemoPolicyPackScenarioServiceDeps,
+} from './demo-policy-pack-scenario-service.js';
 
 export interface EnterpriseDemoSuite {
   readonly registry: ReturnType<typeof createDemoScenarioRegistry>;
@@ -41,6 +52,9 @@ export interface EnterpriseDemoSuite {
   readonly controlPlaneSnapshotService: ReturnType<typeof createDemoControlPlaneSnapshotService>;
   readonly exportService: ReturnType<typeof createDemoExportService>;
   readonly reportService: ReturnType<typeof createDemoReportService>;
+  readonly policyPackControlPlaneService: ReturnType<typeof createDemoPolicyPackControlPlaneService>;
+  readonly policyPackNarrativeService: ReturnType<typeof createDemoPolicyPackNarrativeService>;
+  readonly policyPackScenarioService: ReturnType<typeof createDemoPolicyPackScenarioService>;
 }
 
 /** Wires every demo pack service together with the real, registered scenario set. The single composition root for the rest of the module. */
@@ -53,6 +67,8 @@ export function createEnterpriseDemoSuite(): EnterpriseDemoSuite {
   const controlPlaneSnapshotService = createDemoControlPlaneSnapshotService();
   const exportService = createDemoExportService();
   const reportService = createDemoReportService();
+  const policyPackControlPlaneService = createDemoPolicyPackControlPlaneService();
+  const policyPackNarrativeService = createDemoPolicyPackNarrativeService();
 
   const runner = new DemoScenarioRunner({
     registry,
@@ -64,5 +80,24 @@ export function createEnterpriseDemoSuite(): EnterpriseDemoSuite {
     exportService,
   });
 
-  return { registry, orchestrator, runner, assertionService, proofChainService, controlPlaneSnapshotService, exportService, reportService };
+  const policyPackScenarioService = createDemoPolicyPackScenarioService({
+    registry,
+    orchestrator,
+    runner,
+    policyPackControlPlaneService,
+  });
+
+  return {
+    registry,
+    orchestrator,
+    runner,
+    assertionService,
+    proofChainService,
+    controlPlaneSnapshotService,
+    exportService,
+    reportService,
+    policyPackControlPlaneService,
+    policyPackNarrativeService,
+    policyPackScenarioService,
+  };
 }

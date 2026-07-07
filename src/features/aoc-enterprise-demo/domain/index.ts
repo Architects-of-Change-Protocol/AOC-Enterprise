@@ -23,3 +23,12 @@ export type { DemoScriptAudience, DemoScriptSegment, DemoScript } from './demo-s
 export type { DemoExportArtifactType, DemoExportArtifact } from './demo-export.js';
 export type { DemoNarrativeMessageKind, DemoNarrativeMessage, DemoNarrative } from './demo-message.js';
 export type { DemoArtifactReferenceKind, DemoArtifactReference } from './demo-artifact.js';
+export type {
+  DemoPolicyPackWalkthroughAnchor,
+  DemoPolicyPackControlPlaneSnapshot,
+  DemoPolicyPackNarrativeAudience,
+  DemoPolicyPackNarrativeSection,
+  DemoPolicyPackNarrative,
+  DemoPolicyPackScenarioMetadata,
+  DemoPolicyPackScenarioRun,
+} from './demo-policy-pack.js';

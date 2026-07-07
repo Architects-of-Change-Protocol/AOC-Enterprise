@@ -459,7 +459,8 @@ function buildExternalAgentsViewModel(
   };
 }
 
-function toEnforcementRequestRow(request: EnforcementRequest): EnforcementRequestRow {
+/** Exported so other features (e.g. aoc-enterprise-demo's policy-pack scenarios) can convert a real EnforcementRequest into the same read-model row this service uses, without duplicating the mapping. */
+export function toEnforcementRequestRow(request: EnforcementRequest): EnforcementRequestRow {
   return {
     id: request.id,
     mode: request.mode,
@@ -478,7 +479,8 @@ function toEnforcementRequestRow(request: EnforcementRequest): EnforcementReques
   };
 }
 
-function toEnforcementDecisionRow(decision: EnforcementDecision): EnforcementDecisionRow {
+/** Exported so other features (e.g. aoc-enterprise-demo's policy-pack scenarios) can convert a real EnforcementDecision into the same read-model row this service uses, without duplicating the mapping. */
+export function toEnforcementDecisionRow(decision: EnforcementDecision): EnforcementDecisionRow {
   return {
     id: decision.id,
     enforcementRequestId: decision.enforcementRequestId,
@@ -539,7 +541,8 @@ function toEnforcementViolationRow(violation: EnforcementViolation): Enforcement
   };
 }
 
-function toEnforcementProofRow(proof: import('../../action-enforcement/domain/enforcement-proof.js').EnforcementProof): EnforcementProofRow {
+/** Exported so other features (e.g. aoc-enterprise-demo's policy-pack scenarios) can convert a real EnforcementProof into the same read-model row this service uses, without duplicating the mapping. */
+export function toEnforcementProofRow(proof: import('../../action-enforcement/domain/enforcement-proof.js').EnforcementProof): EnforcementProofRow {
   return {
     id: proof.id,
     enforcementRequestId: proof.enforcementRequestId,

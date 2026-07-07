@@ -8,8 +8,8 @@ import type { DemoScenario, DemoScenarioId } from '../domain/demo-scenario.js';
 describe('DemoScenarioRegistry', () => {
   const registry = createDemoScenarioRegistry(ALL_DEMO_SCENARIOS);
 
-  it('registers all 10 scenarios', () => {
-    assert.equal(registry.listScenarios().length, 10);
+  it('registers all 18 scenarios', () => {
+    assert.equal(registry.listScenarios().length, 18);
   });
 
   it('scenario ids are unique', () => {

@@ -21,6 +21,8 @@ function relevantIdsFromResult(result: ScenarioExecutionResult): ReadonlySet<str
     if (outcome.decision.handshakeProofId !== undefined) ids.add(outcome.decision.handshakeProofId);
     if (outcome.decision.visaId !== undefined) ids.add(outcome.decision.visaId);
     if (outcome.decision.ingressGrantId !== undefined) ids.add(outcome.decision.ingressGrantId);
+    if (outcome.decision.policyDecisionId !== undefined) ids.add(outcome.decision.policyDecisionId);
+    if (outcome.decision.policyProofId !== undefined) ids.add(outcome.decision.policyProofId);
   }
   return ids;
 }
@@ -90,6 +92,14 @@ function buildHighlightedRows(scenario: DemoScenario, world: EnterpriseDemoWorld
       panel: 'proofs',
       rowId: finalOutcome.proof.id,
       reason: 'Enforcement proof produced by this scenario.',
+    });
+  }
+  if (finalOutcome.decision.policyDecisionId !== undefined) {
+    rows.push({
+      id: `row-policy-packs-${finalOutcome.decision.policyDecisionId}`,
+      panel: 'policy_packs',
+      rowId: finalOutcome.decision.policyDecisionId,
+      reason: 'Domain Policy Pack Runtime decision consulted during enforcement preflight for this scenario.',
     });
   }
 

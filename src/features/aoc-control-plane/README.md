@@ -313,6 +313,20 @@ jurisdictional pack with `legalCompleteness: 'verified_by_counsel'` and
 `demoOnly: false` renders with the `success` tone and no "demo only" badge,
 with zero code changes required here.
 
+### 16. Driven by the Policy Pack Enterprise Demo Extension
+
+`aoc-enterprise-demo`'s eight `policy_packs`-category scenarios (see that
+module's README) drive this section end to end: each scenario's
+`DemoPolicyPackControlPlaneService` calls this module's own
+`buildPolicyPackViewModel()` (fed with the scenario's real
+`PolicyPackRuntime` and real enforcement request/decision/proof rows,
+converted with this module's exported `toEnforcementRequestRow`/
+`toEnforcementDecisionRow`/`toEnforcementProofRow`) -- never
+re-implementing this section's own read-model mapping. Every pack, rule,
+decision and proof an operator inspects after running a policy-pack demo
+scenario is exactly what this section would show for that same
+`PolicyPackRuntime` in a live deployment.
+
 ## How commands work
 
 `ControlPlaneCommandService` wraps the real runtime services and nothing

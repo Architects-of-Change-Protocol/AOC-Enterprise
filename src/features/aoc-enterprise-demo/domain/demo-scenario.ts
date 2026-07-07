@@ -13,7 +13,15 @@ export type DemoScenarioId =
   | 'adapter-denies-dangerous-action'
   | 'idempotency-duplicate-suppressed'
   | 'emergency-deny-shutdown'
-  | 'full-proof-chain-audit';
+  | 'full-proof-chain-audit'
+  | 'policy-pack-payment-approval-required'
+  | 'policy-pack-bank-account-change-denied'
+  | 'policy-pack-invoice-evidence-required'
+  | 'policy-pack-sensitive-data-export-requires-compliance'
+  | 'policy-pack-prohibited-data-export-denied'
+  | 'policy-pack-sports-settlement-event-record-required'
+  | 'policy-pack-low-risk-read-warning-allowed'
+  | 'policy-pack-control-plane-walkthrough';
 
 export type DemoScenarioCategory =
   | 'recognition'
@@ -22,7 +30,8 @@ export type DemoScenarioCategory =
   | 'external_agents'
   | 'enforcement'
   | 'audit'
-  | 'enterprise_story';
+  | 'enterprise_story'
+  | 'policy_packs';
 
 export interface DemoScenario {
   readonly id: DemoScenarioId;
