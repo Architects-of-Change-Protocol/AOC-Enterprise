@@ -14,10 +14,17 @@ function walk(dir) {
   }
 }
 
+// Matches the TypeScript `any` escape hatch itself (`: any`, `as any`, `any[]`,
+// or `any` as a generic type argument like `Array<any>`/`Record<string, any>`)
+// -- not the English word "any" appearing in a string literal, identifier, or
+// comment (e.g. a `PolicyConditionOperator` value of `'any'`, or prose noting
+// something applies "in any jurisdiction").
+const explicitAnyPattern = /:\s*any\b|<[^<>]*\bany\b[^<>]*>|\bas\s+any\b|\bany\[\]/;
+
 function checkFile(path) {
   const text = readFileSync(path, 'utf8');
   if (path.startsWith('src/runtime/') && !path.endsWith('/index.ts') && /\bexport\s*\*/.test(text)) violations.push(`${path}: wildcard export is not allowed in runtime internals`);
-  if (/\bany\b/.test(text)) violations.push(`${path}: explicit any is not allowed`);
+  if (explicitAnyPattern.test(text)) violations.push(`${path}: explicit any is not allowed`);
 }
 
 for (const r of roots) walk(r);

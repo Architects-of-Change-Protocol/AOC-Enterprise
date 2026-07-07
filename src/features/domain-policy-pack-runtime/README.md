@@ -1,0 +1,425 @@
+# AOC Domain Policy Pack Runtime
+
+Recognition Runtime answers "can this action be recognized?" Authority Graph
+answers "where did the authority behind this action come from?" Approval
+Runtime answers "who can approve this, and did they?" External Agent
+Handshake answers "does this external agent have local standing?" Action
+Enforcement answers "should real execution be blocked?" None of them answer
+the question that only shows up once AOC is deployed at a real enterprise:
+
+**Which domain-specific, jurisdiction-specific, customer-specific or
+industry-specific rules apply to this autonomous action, and what must AOC
+require before the action can be recognized, approved, enforced or blocked?**
+
+That is the Domain Policy Pack Runtime's job.
+
+## Why AOC should not hardcode all laws into the core runtimes
+
+AOC's core runtimes are **constitutional**: they answer the same questions
+for every deployment, every customer, every jurisdiction. "Is this actor
+recognized?" and "did a real approver with real authority sign off?" do not
+change based on which industry a customer is in. Hardcoding "if customer is
+a bank, require X; if jurisdiction is Y, require Z" into Recognition Runtime
+or Action Enforcement would couple a generic, reusable protocol to a
+combinatorial, ever-growing, and inevitably incomplete pile of
+domain/jurisdiction/customer-specific rules -- and it would make every one of
+those rules un-versioned, un-auditable, and impossible to test in isolation.
+
+No enterprise software vendor can encode "all laws" upfront, and no customer
+wants a black box that claims to. The correct shape is **compliance by
+need**: code the domain policy when the business use case requires it, code
+the jurisdiction policy when the deployment requires it, code customer
+policy when the enterprise requires it -- as an explicit, versioned,
+testable, auditable pack loaded on top of the constitutional core, not baked
+into it.
+
+## Core AOC governance vs. domain policy packs
+
+| Core AOC runtime | Question it answers |
+| --- | --- |
+| Recognition Runtime | Is the actor recognized? |
+| Authority Graph | Where did authority come from? |
+| Approval Runtime | Is human approval required or valid? |
+| External Agent Handshake | Does an external agent have local standing? |
+| Action Enforcement | Should execution be blocked? |
+| AOC Control Plane | Can an operator inspect the proof trail? |
+| AOC Enterprise Demo | Can the system be proven end-to-end? |
+| **Domain Policy Pack Runtime** | **Which domain/jurisdiction/customer policy applies, and what does it require?** |
+
+The Domain Policy Pack Runtime never re-implements or bypasses any of the
+runtimes above. It produces additional **requirements** (evidence, approval,
+authority, external standing, denial, obligations) that a caller layers on
+top of what those runtimes already decided. A policy pack can only ever make
+an action *more* restrictive than the core runtimes already required, never
+less -- see [Never overriding core denials](#never-overriding-core-denials-non-negotiable).
+
+## Concepts
+
+- **PolicyPack** -- a named, versioned container for one domain/jurisdiction/
+  customer's rules (e.g. "Payments Basic"). Has a `kind` (`domain`,
+  `jurisdiction`, `industry`, `customer`, `contract`, `data_boundary`,
+  `risk`, `demo`) and a `domain` it applies to.
+- **PolicyPackVersion** -- the actual unit of evaluation. Immutable once
+  active: `rules`, `scope`, `sources`, `effectiveFrom`/`effectiveUntil`,
+  `demoOnly`, and `legalCompleteness` all live here, not on the pack. A pack
+  can have many versions over time (`draft` → `active` → `deprecated` /
+  `revoked` / `superseded`).
+- **PolicyPackRule** -- one `condition` → `effect` mapping, plus the
+  `obligations`, `evidenceRequirements` and `approvalRequirements` that
+  effect carries. Rules are evaluated independently and in deterministic
+  priority order; every active rule produces a result (matched or not) so
+  nothing is silently skipped.
+- **PolicyCondition** -- a predicate (`field` + `operator` + `value`) or a
+  group (`all` / `any` / `not` of nested conditions). Evaluated by plain,
+  total functions -- no `eval`, no regex beyond simple string ops, no LLM.
+- **PolicyEffect** -- what a matched rule *means*: `allow`, `deny`,
+  `require_evidence`, `require_approval`, `require_authority`,
+  `require_external_standing`, `limit_scope`, `raise_risk`, `warn`, or
+  `no_op`.
+- **PolicyObligation** -- a side requirement that doesn't change the
+  decision type but must still be tracked (e.g. `notify_operator`,
+  `manual_verification`, `attach_source_reference`).
+- **PolicyEvidenceRequirement** / **PolicyApprovalRequirement** -- structured
+  requirements a matched rule adds to the decision; these are what Approval
+  Runtime and evidence-collection callers consume.
+
+## Registering packs
+
+```ts
+const runtime = createPolicyPackRuntime(createPolicyPackRuntimeContext(nowIso));
+runtime.registerPolicyPack({ id, name, description, kind, domain });
+runtime.registerPolicyPackVersion({ id, policyPackId, version, scope, rules, sources, effectiveFrom, demoOnly, legalCompleteness });
+```
+
+`registerPolicyPackVersion` runs `PolicyPackValidator` immediately: duplicate
+rule IDs, rule `sourceIds` that don't resolve to a real `PolicyPackSource`,
+empty condition groups, and deny/approval/evidence effects missing a
+`reasonCode`/`reason` all fail registration before the version is ever
+evaluable.
+
+## Activating, deprecating, revoking
+
+```ts
+runtime.activatePolicyPackVersion(versionId); // draft|deprecated -> active (only if it has active rules)
+runtime.deprecatePolicyPackVersion(versionId); // active -> deprecated
+runtime.revokePolicyPackVersion(versionId);   // draft|active|deprecated -> revoked
+```
+
+Activating a version that declares `supersedesVersionId` automatically
+transitions the superseded version to `superseded` and records both
+transitions on the ledger. Status transitions follow a fixed state machine
+(`PolicyPackRegistry`'s `VALID_TRANSITIONS`); an invalid transition (e.g.
+re-activating a revoked version) throws
+`PolicyPackInvalidStatusTransitionError` rather than silently succeeding.
+
+## How applicability is resolved
+
+`PolicyPackApplicabilityService` walks every registered version (not just
+active ones, so operators can see *why* something doesn't apply) and
+classifies each as `applicable`, `revoked`, `inactive`, `expired`, or
+`scope_mismatch`. A version only reaches `applicable` if:
+
+1. its status is `active`,
+2. the evaluation's `requestedAt` falls within `effectiveFrom`/`effectiveUntil`, and
+3. every non-empty field on its `PolicyPackScope` (trust domain, jurisdiction,
+   country, industry, customer, domain, action, capability, resource scope,
+   actor type, data domains) matches the input -- an empty/absent scope field
+   means "no constraint on this dimension", not "matches nothing".
+
+Only versions that resolve to `applicable` are handed to `PolicyRuleEvaluator`.
+
+## How conditions are evaluated
+
+`PolicyConditionEvaluator` reads one of ~20 known `PolicyEvaluationInput`
+fields (or a dotted `metadataPath` under `input.metadata`) and applies one of
+14 operators (`equals`, `not_equals`, `includes`, `not_includes`,
+`starts_with`, `ends_with`, `in`, `not_in`, `greater_than(_or_equal)`,
+`less_than(_or_equal)`, `exists`, `not_exists`). Group conditions compose
+with `all` (AND), `any` (OR), and `not` (true only when every nested
+condition is false). Every operator is a pure, total function -- a missing
+field evaluates to `false` (or `true` for `not_exists`), never throws, and
+never depends on anything but the input and the condition tree.
+
+## How rule effects are aggregated
+
+`PolicyRuleEvaluator` evaluates **every active rule** in every applicable
+version, in ascending `priority` order (rule id as tie-break), and never
+short-circuits: a matched `deny` rule does not stop a later `require_evidence`
+rule from also being recorded. This matters because obligations, evidence
+requirements and approval requirements are collected from **all** matched
+rules regardless of which effect ultimately wins the decision -- so a
+`deny`-winning decision can still carry the approval/evidence requirements
+another matched rule attached, giving an operator the full picture of what
+was checked.
+
+## Effect precedence
+
+`PolicyPackEvaluationService` picks exactly one *winning* matched effect,
+using this fixed precedence (most to least restrictive):
+
+1. `deny`
+2. `require_external_standing`
+3. `require_authority`
+4. `require_approval`
+5. `require_evidence`
+6. `limit_scope`
+7. `raise_risk`
+8. `warn`
+9. `allow`
+
+`no_op` never wins (it can still contribute obligations). If no rule matched
+at all, or no version was applicable, the decision type is `not_applicable`
+-- meaning "no domain policy constrains this action", which is explicitly
+**not** an allow claim, just an absence of an additional constraint. A
+malformed `PolicyEvaluationInput` (missing trust domain, actor, action,
+resource scope, risk level, or timestamp) short-circuits to `invalid_input`,
+which is always `allowed: false` -- a runtime that cannot evaluate an input
+must fail closed, never be silently skipped.
+
+## Evidence requirements
+
+`PolicyEvidenceService` deduplicates evidence requirements by `type:id`
+across every matched rule and marks a requirement "missing" unless the
+input's `evidenceIds` includes it (or `hasRequiredEvidence` is explicitly
+`true`). `toStructuralApprovalEvidence()` maps each requirement onto a shape
+structurally identical to Approval Runtime's `ApprovalEvidenceRequirement`
+(e.g. `invoice` → `source_document`, `authority_proof` → `authority_proof`)
+without importing Approval Runtime's types directly.
+
+## Approval requirements → Approval Runtime
+
+`PolicyApprovalRequirementService.toStructuralApprovalRequirement()` maps a
+`PolicyApprovalRequirement` onto a shape structurally identical to Approval
+Runtime's `ApprovalRequirement`:
+
+| Policy pack type | Structural approval type | Default `requiredAuthorityCapability` |
+| --- | --- | --- |
+| `finance_review` | `authority_based_approval` | `approve_financial_action` |
+| `legal_review` | `authority_based_approval` | `approve_critical_action` |
+| `compliance_review` | `authority_based_approval` | `approve_critical_action` |
+| `operator_review` | `authority_based_approval` | `approve_project_action` |
+| `single_approval` / `dual_approval` / `quorum_approval` / `role_based_approval` | same name | (none; use `requiredApproverRoleIds`/`requiredApproverActorIds` instead) |
+
+`minimumApprovals` and `requiresSegregationOfDuties` always pass through
+unchanged -- this module only **proposes** requirements; Approval Runtime
+still decides who may approve, still enforces segregation of duties, and
+still produces its own `ApprovalDecision`/`ApprovalProof`.
+
+## How Action Enforcement can consume policy pack results
+
+`createActionEnforcementPolicyPackIntegration(runtime)` returns
+`evaluatePolicyForEnforcement(input)`, mapping a `PolicyPackDecision` onto a
+`PolicyEnforcementEvaluationResult` (`policy_allowed` / `policy_denied` /
+`policy_requires_evidence` / `policy_requires_approval` /
+`policy_requires_authority` / `policy_requires_external_standing` /
+`policy_limited` / `policy_warning` / `policy_not_applicable`). This is a
+**structural adapter**: it never imports `action-enforcement`'s
+`EnforcementRequest`/`EnforcementPolicy` types, and it never itself blocks or
+allows execution -- it only evaluates and reports. A host wiring both
+runtimes together is expected to either call this adapter inside a custom
+`EnforcementPolicy` (Action Enforcement's policy chain accepts a caller-
+supplied `policies` array without touching any existing policy file -- see
+`createDefaultEnforcementPolicyChain()` in `action-enforcement/policies/index.ts`),
+or call it directly during preflight and AND its `allowed` flag together with
+Action Enforcement's own decision. **This wiring is intentionally left as an
+adapter, not a live integration**, so that adding a policy pack can never
+regress Action Enforcement's own default-deny chain.
+
+## How Recognition Runtime can consume policy pack results
+
+`createRecognitionPolicyPackIntegration(runtime)` returns
+`evaluatePolicyForRecognition(input)`, mapping `denied`/`invalid_input`/
+`limited`/`requires_authority`/`requires_external_standing` to
+`'policy_violation'`, `requires_evidence` to `'require_more_evidence'`, and
+`requires_approval` to `'require_human_approval'` -- Recognition Runtime's
+own `RecognitionDecisionType` vocabulary. `allowed`, `warning` and
+`not_applicable` all map to **no override** (`recognitionOverrideType:
+undefined`), meaning "defer entirely to Recognition Runtime's own passport,
+capability, revocation and expiry checks." A policy pack can never itself
+grant recognition -- the override vocabulary only ever narrows, never widens,
+what Recognition Runtime would otherwise decide.
+
+## How Control Plane can display policy pack decisions
+
+`buildPolicyPackControlPlaneViewModel(runtime)` maps every registered pack,
+version, rule, evaluation, decision, proof and event into flat `*Row` types
+(`PolicyPackRow`, `PolicyPackVersionRow`, `PolicyRuleRow`,
+`PolicyEvaluationRow`, `PolicyDecisionRow`, `PolicyProofRow`,
+`PolicyEventRow`), mirroring `aoc-control-plane`'s existing
+`to<X>Row()`/`build<X>ViewModel()` pattern. This is read-model-only: it never
+evaluates policy and never mutates the runtime. Wiring it into the live
+`AocControlPlaneReadModel` union requires touching
+`aoc-control-plane/services/control-plane-read-model-service.ts` and
+`aoc-control-plane/domain/control-plane-view-model.ts`, which this module
+deliberately leaves undone -- the adapter and its tests are the deliverable;
+Control Plane UI wiring is a follow-up.
+
+## How Enterprise Demo scenarios can use policy packs
+
+`buildPolicyPackDemoScenarioMetadata(evaluationResult)`,
+`buildPolicyPackProofChainReference(evaluationResult)` and
+`buildPolicyPackDemoExportSnippet(evaluationResult)` all derive their output
+strictly from a real `PolicyPackEvaluationResult` the runtime produced --
+none of them accept a canned outcome or synthesize a decision. A future demo
+scenario can import a sample pack, drive an evaluation through
+`buildDemoPolicyPackRuntime()`, and hand the result to these functions
+without editing any existing `aoc-enterprise-demo` scenario file.
+
+## How PolicyPackProof is generated
+
+`PolicyPackProofService` hashes three independent slices of an evaluation --
+`inputHash` (the `PolicyEvaluationInput`), `ruleResultsHash` (every
+`PolicyRuleEvaluationResult`), `decisionHash` (the `PolicyPackDecision`) --
+using the same `stableStringify` + SHA-256 pattern used across every other
+AOC runtime (recursively sort object keys so hashing never depends on
+insertion order). `proofHash` then chains all three hashes together with the
+applicable pack version IDs, matched rule IDs, and the previous proof's hash
+(`previousHash`), so identical inputs always produce an identical
+`proofHash`, and changing any part of the input, rule results, decision, or
+which pack versions applied changes it. `verifyProof()` re-derives the hash
+from a proof's own recorded fields and compares.
+
+## How PolicyPackLedger works
+
+Every lifecycle transition and every step of an evaluation
+(`policy_pack_registered`, `policy_pack_version_activated/deprecated/
+revoked/superseded`, `policy_evaluation_started`,
+`policy_pack_applicability_resolved`, `policy_rule_matched`/
+`policy_rule_not_matched`, `policy_decision_created`, `policy_proof_created`,
+`policy_simulation_started`/`completed`) is recorded as a `PolicyPackEvent`
+with its own hash-chained `eventHash`/`previousHash`, independent of the
+proof chain. `getTrailByEvaluation`/`getTrailByDecision`/`getTrailByProof`/
+`getTrailByTrustDomain` reconstruct the full audit trail behind any decision.
+
+## How simulation works
+
+`PolicyPackSimulationService.simulate(input)` copies the selected
+`policyPackVersionIds` (and their parent packs) into a throwaway in-memory
+`PolicyPackStore`, runs every `evaluationInputs` entry through a fresh
+`PolicyPackEvaluationService` bound to that sandbox, and returns a summary
+(`allowed`/`denied`/`requiresEvidence`/`requiresApproval`/`warnings`/
+`notApplicable` counts). The live runtime's decisions, proofs and event
+ledger are never touched -- this is how a pack author tests a **draft**
+version's behavior before ever activating it.
+
+## Sample packs
+
+All six ship marked `demoOnly: true` and `legalCompleteness:
+'not_legal_advice'` (or `'partial_policy_model'`), and none claims to encode
+a real jurisdiction, regulation, or industry certification:
+
+| Pack | Domain | Demonstrates |
+| --- | --- | --- |
+| `payments-basic` | payments | finance review, deny-by-default bank account changes, dual approval above a value threshold, invoice evidence, authority proof |
+| `procurement-basic` | procurement | purchase order evidence, vendor counterparty requirement, operator review for high-risk procurement |
+| `data-boundary-basic` | data_boundary | compliance review for sensitive exports, deny for prohibited data domains, allow for non-sensitive reads, data classification evidence |
+| `sports-event-settlement-basic` | sports_event_settlement | event record evidence, authority proof, value-threshold approval, unsupported-jurisdiction manual verification, counterparty requirement |
+| `financial-approval-basic` | financial_approval | finance review capability gate, deny-by-default bank details management, approval proof for financial side effects, dual approval at critical risk |
+| `jurisdictional-baseline-demo` | general_enterprise | a **placeholder** showing the shape of a jurisdictional pack -- legal/contractual review, sign_contract authority+approval, source-reference obligation, and (because it encodes no real jurisdiction) every jurisdiction-tagged action requires manual verification |
+
+## Legal / compliance disclaimer
+
+**These sample packs are demo-only illustrations, not legal advice.** They
+do not constitute a complete legal, regulatory, or industry compliance pack
+for any real jurisdiction or business. They do not claim PCI-DSS, AML, SOX,
+GDPR, HIPAA, CCPA, or any other statutory or contractual compliance. The
+`jurisdictional-baseline-demo` pack in particular encodes **no real
+jurisdiction's law** -- it exists only to show how a real, customer- and
+counsel-reviewed jurisdictional pack would be loaded and evaluated later. A
+real deployment must author its own packs from sources it can stand behind
+(`PolicyPackSource.authority`: `customer_provided`, `internal`,
+`external_reference`, or `counsel_reviewed`) and set `legalCompleteness`
+honestly (`not_legal_advice` → `partial_policy_model` →
+`customer_provided_policy` → `verified_by_customer` →
+`verified_by_counsel`). This runtime never fetches legal data from the
+network, never uses an LLM to decide applicability or evaluate a rule, and
+never claims completeness beyond what a pack's own `sources` and
+`legalCompleteness` field explicitly assert.
+
+## Never overriding core denials (non-negotiable)
+
+A policy pack can only ever **add** a restriction on top of what Recognition
+Runtime, Authority Graph, Approval Runtime, External Agent Handshake and
+Action Enforcement already decided -- it can never remove one:
+
+- `policy_allowed`/`policy_warning`/`policy_not_applicable` never override a
+  revoked capability, an expired capability, invalid authority, a missing
+  approval, invalid external standing, or an Action Enforcement deny. Every
+  integration adapter in this module documents this composition rule at the
+  call site (see the "does not override" scenario tests under
+  `tests/scenarios/`), and a caller wiring this module in is expected to
+  `AND` this module's `allowed` flag with every other runtime's decision,
+  never substitute it.
+- `policy_denied` always blocks, even if every other runtime would have
+  allowed the action.
+
+## Adding a new policy pack
+
+1. Add a new file under `packs/<name>.policy-pack.ts` exporting a
+   `RegisterPolicyPackParams` const, a `RegisterPolicyPackVersionParams`
+   const (with real `PolicyPackRule`s, each with a real `sourceIds` entry
+   resolving to a `PolicyPackSource` in the same version), and a
+   `register<Name>PolicyPack(runtime)` function that registers and activates
+   it.
+2. Mark `demoOnly` and `legalCompleteness` honestly. If the pack is not
+   backed by a customer- or counsel-reviewed source, it must stay `demoOnly:
+   true` and `legalCompleteness: 'not_legal_advice'` or
+   `'partial_policy_model'`.
+3. Re-export it from `packs/index.ts`.
+4. Add a fixture builder under `fixtures/` if the pack needs demo inputs, and
+   register it with `buildDemoPolicyPackRuntime()` if it should be part of
+   the shared demo seed.
+5. Write `tests/packs/<name>.policy-pack.test.ts` covering every rule's
+   condition, effect, and (where relevant) precedence interaction with other
+   packs.
+
+## Adding a jurisdiction-specific pack safely
+
+Never encode a real jurisdiction's law without a real, attributable source.
+A jurisdictional pack must:
+
+- set `kind: 'jurisdiction'` and scope itself with `scope.jurisdictions`/
+  `scope.countries`,
+- attach a `PolicyPackSource` for every rule with `authority` set honestly
+  (`customer_provided`/`external_reference`/`counsel_reviewed` -- never
+  `demo_only` for a pack claiming real jurisdictional coverage),
+- set `legalCompleteness` no higher than what was actually reviewed, and
+- never claim completeness for a jurisdiction it doesn't have a rule for --
+  an unsupported jurisdiction should route to `manual_verification` (see
+  `jurisdictional-baseline-demo`'s pattern), not silently pass.
+
+## Testing a new pack
+
+Use `PolicyPackSimulationService` to run a batch of representative
+`PolicyEvaluationInput`s against a **draft** version before activating it --
+this never touches the live runtime's decisions/proofs/events. Once
+satisfied, activate the version and add its scenarios to
+`tests/packs/<name>.policy-pack.test.ts`. Every test in this module runs
+against a fixed, injected clock and ID generator, so re-running a test twice
+must always produce byte-identical decisions and proof hashes -- if it
+doesn't, the pack (or the test) has a nondeterminism bug.
+
+## Determinism
+
+- **Injected clock**: every service takes a `PolicyPackRuntimeContext` with
+  `clock.now()`; nothing calls `Date.now()` or `new Date()` directly.
+- **Injected ID generator**: `ids.nextId(prefix)` is a simple sequential
+  counter (`createSequentialPolicyPackIdGenerator`); nothing calls
+  `Math.random()`, `crypto.randomUUID()`, or similar.
+- **Deterministic hashing**: `stableStringify` + SHA-256, recursively sorted
+  keys, shared verbatim with the same pattern used in `action-enforcement`,
+  `approval-runtime`, `authority-graph` and `recognition-runtime`.
+- **No LLM evaluation**: every condition, rule, and applicability check is a
+  plain, total TypeScript function over typed fields -- no model call, no
+  prompt, no non-deterministic inference, anywhere in this module.
+- **No network calls**: policy packs are code, registered in-process; this
+  module never fetches a pack, a source, or a rule from the network.
+
+## Relationship to `packages/policy-runtime`
+
+This module is unrelated to the separate `packages/policy-runtime` workspace
+package (`EnterprisePolicyDecision`/`EnterprisePolicyEvaluationRequest` in
+`packages/policy-runtime/src/contracts.ts`). That package is a placeholder,
+has no consumers, and lives in a different TypeScript project (`packages/*`
+vs. `src/features/*`). Do not confuse the two when searching for "policy" in
+this repository.
