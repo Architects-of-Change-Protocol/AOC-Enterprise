@@ -40,7 +40,9 @@ function requestInput(overrides: Partial<CreateEnforcementRequestInput> = {}): C
 
 function buildRuntime(policyPackIntegration?: EnforcementPolicyPackIntegration, recognitionResult: RecognitionVerificationResult = ALLOW_RECOGNITION) {
   const ctx = createEnforcementRuntimeContext(NOW);
-  return createActionEnforcementRuntime(ctx, fakeRecognition(recognitionResult), { policyPackIntegration });
+  return createActionEnforcementRuntime(ctx, fakeRecognition(recognitionResult), {
+    ...(policyPackIntegration !== undefined ? { policyPackIntegration } : {}),
+  });
 }
 
 describe('GuardedExecutionService <-> Domain Policy Pack Runtime wiring', () => {

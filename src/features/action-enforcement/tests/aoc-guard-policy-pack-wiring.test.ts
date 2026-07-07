@@ -16,7 +16,9 @@ function fakeRecognition(): EnforcementRecognitionIntegration {
 
 function buildGuard(policyPackIntegration?: EnforcementPolicyPackIntegration) {
   const ctx = createEnforcementRuntimeContext(NOW);
-  const runtime = createActionEnforcementRuntime(ctx, fakeRecognition(), { policyPackIntegration });
+  const runtime = createActionEnforcementRuntime(ctx, fakeRecognition(), {
+    ...(policyPackIntegration !== undefined ? { policyPackIntegration } : {}),
+  });
   return createAocGuard(runtime);
 }
 
