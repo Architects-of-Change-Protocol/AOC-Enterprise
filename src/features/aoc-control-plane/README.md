@@ -470,3 +470,13 @@ route table to integrate into, so no route was registered here.
 - `retry_failed_enforcement` is permanently disabled (see above) since
   Action Enforcement has no runtime API to back it without inventing new
   governance behavior.
+
+## Evidence / Source / Citation Runtime
+
+`src/features/evidence-source-runtime/integrations/control-plane-evidence-adapter.ts`
+builds a read-model-only `EvidenceControlPlaneViewModel` (source documents,
+evidence artifacts, requirements, satisfactions, reviews, citations, links,
+proofs, events) that can feed future evidence/source/citation panels here.
+No UI section for it exists yet in this sprint -- the adapter and its tests
+are the MVP surface; wiring it into `AocControlPlanePage`/`AocNavigationTabs`
+is left for a future sprint.

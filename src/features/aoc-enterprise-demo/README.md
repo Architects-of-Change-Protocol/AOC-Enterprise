@@ -675,3 +675,12 @@ repository.)
 - No governance decision is ever hardcoded: every `DemoScenarioOutcome`,
   `DemoAssertionResult` and `DemoProofChain` is derived from what the real
   runtime actually returned for that specific run.
+
+## Evidence / Source / Citation Runtime
+
+Future demo scenarios can include evidence-backed policy/approval/enforcement
+outcomes using `src/features/evidence-source-runtime/integrations/enterprise-demo-evidence-adapter.ts`
+and the fixtures under `evidence-source-runtime/fixtures/` (`policy-pack-evidence-demo.fixture.ts`,
+`approval-evidence-demo.fixture.ts`, `enforcement-evidence-demo.fixture.ts`).
+No scenario in this module currently wires those in -- this is a note for a
+future sprint, not a claim of existing coverage.

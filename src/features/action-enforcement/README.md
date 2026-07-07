@@ -486,3 +486,12 @@ dry-run, adapter-denied, emergency-denied).
 - **No LLMs**: every enforcement decision is produced by the fixed,
   ordered policy chain in `policies/`. There is no model call anywhere in
   this feature's decision path.
+
+## Evidence / Source / Citation Runtime
+
+`evidence_required` outcomes from `EvidenceRequiredPolicy` can be linked to
+`EvidenceRequirement`s in the new `src/features/evidence-source-runtime/`
+module via `integrations/action-enforcement-evidence-integration.ts`. That
+integration is purely advisory: checking evidence satisfaction there never
+flips an `EnforcementDecision` this runtime already produced -- a host must
+always rerun `enforce()` to act on newly-satisfied evidence.

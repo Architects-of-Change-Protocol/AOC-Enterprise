@@ -516,3 +516,14 @@ package (`EnterprisePolicyDecision`/`EnterprisePolicyEvaluationRequest` in
 has no consumers, and lives in a different TypeScript project (`packages/*`
 vs. `src/features/*`). Do not confuse the two when searching for "policy" in
 this repository.
+
+## Evidence / Source / Citation Runtime
+
+`PolicyEvidenceRequirement`s produced here (see [Evidence requirements](#evidence-requirements))
+can be represented, tracked, and validated by the new
+`src/features/evidence-source-runtime/` module via
+`integrations/policy-pack-evidence-integration.ts`. That runtime owns
+registering source documents, submitting evidence artifacts, and producing
+deterministic evidence proofs and citation trails -- this runtime still owns
+evaluating rules and deciding `requires_evidence`; it never delegates that
+decision.
