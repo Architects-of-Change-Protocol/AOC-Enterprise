@@ -96,8 +96,11 @@ callback to `GuardedExecutionService.run`, which:
    `EnforcementDecisionService`, and evaluates the fixed
    `EnforcementPolicyEvaluator` chain (emergency deny -> recognition required
    -> allow decision required -> approval pending -> evidence required ->
-   external standing -> adapter permission -> idempotency -> execution
-   timeout -> side-effect boundary -> dry run -> post-execution record).
+   external standing -> adapter permission -> **domain policy pack** ->
+   idempotency -> execution timeout -> side-effect boundary -> dry run ->
+   post-execution record). See "Domain Policy Pack Runtime integration"
+   below for what the `domain_policy_pack` step does and why it sits exactly
+   there.
 2. If the resulting decision does not allow execution, it marks the side
    effect(s) `blocked`/`skipped`, creates a `not_executed`/`skipped`/
    `duplicate` `ExecutionResult`, and returns -- **the callback is never
@@ -270,6 +273,176 @@ them into an ordinary `RecognitionDecisionType` (`revoked`, `expired`,
 `external-standing-policy` only confirms that a request declaring standing
 resolved through a decision path Recognition Runtime would only reach after
 validating it -- it never re-derives or overrides that validation.
+
+## Domain Policy Pack Runtime integration
+
+AOC core (this feature, Recognition Runtime, Authority Graph, Approval
+Runtime, External Agent Handshake) is **constitutional**: unrecognized
+actors, invalid passports, revoked/expired capabilities, missing approvals
+and missing external standing are always denied, for every customer, in
+every domain. It deliberately does not know anything about payments
+thresholds, procurement counterparties, data classification, sports-event
+settlement, or any other domain/customer/industry/jurisdiction-specific
+obligation -- those belong to
+[Domain Policy Pack Runtime](../domain-policy-pack-runtime/README.md), a
+separate, adjacent module. This integration is the wiring between the two:
+**Action Enforcement, as the execution boundary, optionally consults policy
+packs during preflight, before any executor callback can run.**
+
+### Why this consultation happens here, and why it's optional
+
+Action Enforcement is the only place a real `execute()` callback is ever
+invoked, so it is the correct chokepoint to enforce a domain policy pack's
+result -- not Recognition Runtime (which has no concept of amount/currency/
+jurisdiction) and not a bolt-on wrapper an application could forget to call.
+The integration is entirely optional: `ActionEnforcementRuntimeOptions.policyPackIntegration`
+defaults to `undefined`, and every other runtime construction path (guards,
+fixtures, tests) is unaffected. A runtime built without it behaves exactly
+as it did before this integration existed -- no new fields appear on
+`EnforcementDecision`/`EnforcementProof`, no new events are recorded, and
+the `domain_policy_pack` policy always passes with `policy_not_applicable`.
+
+### Why policy pack `allow` can never override a core AOC denial
+
+`domain_policy_pack` sits in the fixed policy chain **after** emergency
+deny, recognition required, allow decision required, approval pending,
+evidence required, external standing and adapter permission -- and **before**
+idempotency, execution timeout, side-effect boundary and dry run. The chain
+evaluates in order and stops at the first failure
+(`EnforcementPolicyEvaluator`), so `domain_policy_pack` is only ever reached
+once every core AOC layer has already independently allowed the request.
+A policy pack result can therefore only ever *narrow* what core AOC already
+allowed -- never widen it. Concretely: policy pack `allow` cannot override an
+unrecognized actor, a rogue actor, an invalid passport, an invalid or revoked
+or expired capability, invalid authority, a missing or invalid approval, a
+missing or invalid external standing, an adapter deny, an emergency deny, a
+dry run, or idempotency duplicate suppression -- all of those resolve (and,
+if they deny, stop the chain) before `domain_policy_pack` ever runs. A
+policy pack `deny` (or `requires_evidence`/`requires_approval`/
+`requires_authority`/`requires_external_standing`), on the other hand, *can*
+still block execution even though every core AOC layer allowed it -- that is
+the entire point of this integration: core AOC says an action is
+structurally permitted; the policy pack says whether it is also
+domain-appropriate right now.
+
+### Result mapping
+
+`PolicyPackEnforcementService.evaluatePolicyPackForRequest` calls the
+configured integration at most once per preflight and maps its result:
+
+| Policy pack result                    | `EnforcementDecision.type`      | Blocks execution? |
+| -------------------------------------- | -------------------------------- | ------------------ |
+| `policy_denied`                        | `execution_blocked`              | yes                 |
+| `policy_requires_evidence`             | `evidence_required`              | yes                 |
+| `policy_requires_approval`             | `approval_required`              | yes                 |
+| `policy_requires_authority`            | `execution_blocked`              | yes                 |
+| `policy_requires_external_standing`    | `external_handshake_required`    | yes                 |
+| `policy_limited` (outside its own scope) | `execution_blocked`             | yes                 |
+| `policy_limited` (within its own scope)  | unchanged                       | no                  |
+| `policy_warning`                       | unchanged                        | no                  |
+| `policy_not_applicable`                | unchanged                        | no                  |
+| `policy_allowed`                       | unchanged                        | no                  |
+| integration throws, or returns a malformed result | `execution_blocked` (fail-closed) | yes    |
+
+`policy_warning` and `policy_not_applicable` never block *by themselves* --
+but they also never widen a decision another policy already narrowed; they
+simply let the rest of the chain (and the ultimate `execute_allowed`/
+otherwise verdict) stand. An integration that throws, or returns a result
+that fails structural validation (unknown `type`, missing `reasonCode`/
+`reason`, or an `allowed` flag inconsistent with its `type`), always fails
+closed to `execution_blocked` with `reasonCode` `POLICY_PACK_INTEGRATION_ERROR`
+or `POLICY_PACK_INVALID_RESULT` -- there is no fail-open mode.
+
+### How policy references flow into decisions and proofs
+
+When a policy pack integration is configured, `EnforcementDecision` and
+`EnforcementProof` both carry `policyDecisionId`/`policyProofId`/
+`policyPackVersionIds`/`policyMatchedRuleIds` (plus `policyReasonCode`/
+`policyReason`/`policyEffectiveRiskLevel` on the decision) whenever the
+policy pack actually evaluated the request -- including when an earlier core
+AOC layer already denied it, so the audit trail always shows a policy pack
+was consulted. `EnforcementProofService` folds these same fields into the
+proof's `sha256` digest alongside every existing input, so changing which
+policy pack version or rule produced a decision changes the proof hash,
+exactly like changing an authority/approval/handshake proof reference does.
+A `policy_pack_evaluated` event is recorded whenever the integration ran;
+`policy_pack_blocked` when it was the reason a decision didn't execute; and
+`policy_pack_warning_recorded` when a `policy_warning` didn't block. A
+policy-caused block also records an `EnforcementViolation` (`policy_denied`/
+`policy_requires_evidence`/`policy_requires_approval`/
+`policy_requires_authority`/`policy_requires_external_standing`/
+`policy_integration_error`/`policy_invalid_result`), exactly like every
+other blocked decision.
+
+### Providing policy context through SDK guards
+
+`policyEvaluationInput` (`domain`/`jurisdiction`/`country`/`industry`/
+`customerId`/`amount`/`currency`/`counterpartyId`/`dataDomains`/
+`evidenceIds`/`metadata`) is an optional field on `GuardActionRequestInput`
+(and therefore on `AocGuard.preflight`/`enforce`, `ToolCallGuard.execute`,
+and `ApiHandlerGuard.wrap` via an optional `policyEvaluationInputFromRequest`
+mapper). It is forwarded, unchanged, into the policy pack evaluation input
+and is otherwise inert -- Recognition Runtime, Authority Graph, Approval
+Runtime and External Agent Handshake never see it. Omitting it is always
+safe; most policy packs key their scope on `domain` (and sometimes
+`jurisdiction`/`country`/`industry`/`customerId`), so a policy pack that
+expects a `domain` it never receives simply reports `policy_not_applicable`.
+
+### Examples
+
+`approve_payment` blocked pending finance review (payments-basic pack, no
+approval proof yet):
+
+```ts
+const outcome = await aocGuard.enforce(
+  {
+    actorId, principalActorId, trustDomainId,
+    action: 'approve_payment', resourceScope, capability: 'payments.approval',
+    sideEffectType: 'financial', riskLevel: 'critical',
+    policyEvaluationInput: { domain: 'payments', evidenceIds: ['invoice-1'] },
+  },
+  async () => submitPayment(/* ... */),
+);
+// outcome.decision.type === 'approval_required'
+// outcome.decision.policyReasonCode === 'PAYMENT_REQUIRES_FINANCE_REVIEW'
+// the payment callback above was never invoked
+```
+
+`read_project_summary` allowed, with a data-boundary policy pack consulted
+and recorded but not blocking:
+
+```ts
+const outcome = await aocGuard.enforce(
+  {
+    actorId, trustDomainId, action: 'read_project_summary', resourceScope,
+    sideEffectType: 'read', riskLevel: 'low',
+    policyEvaluationInput: { domain: 'data_boundary', dataDomains: ['project_metadata'] },
+  },
+  async () => readSummary(/* ... */),
+);
+// outcome.decision.type === 'execute_allowed'
+// outcome.decision.policyDecisionId is present -- the pack was consulted and recorded
+```
+
+See `fixtures/policy-pack-enforcement.fixture.ts` for a full working
+composition (Datasys enforcement world + all six Domain Policy Pack Runtime
+sample packs) and `tests/policy-pack-sample-wiring-scenarios.test.ts` for
+these and other scenarios exercised end to end.
+
+### Legal / compliance disclaimer
+
+The sample policy packs this integration can be wired against
+(payments-basic, procurement-basic, data-boundary-basic,
+sports-event-settlement-basic, financial-approval-basic,
+jurisdictional-baseline-demo) are demo-only illustrations of the *shape* of
+a domain policy pack, not legal advice, and not a complete compliance
+program for any real regulatory regime. Action Enforcement enforces
+whatever result a configured policy pack integration returns -- it never
+independently interprets a law, drafts a policy, or claims that enforcing a
+pack's result satisfies any legal or regulatory obligation. Any pack
+intended for real customer/jurisdictional use must be authored, sourced and
+reviewed independently of this repository (see Domain Policy Pack Runtime's
+own "Legal / compliance disclaimer" section).
 
 ## Demo scenario
 

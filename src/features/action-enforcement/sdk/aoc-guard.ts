@@ -1,6 +1,6 @@
 import type { EnforcementAdapterType } from '../domain/enforcement-adapter.js';
 import type { EnforcementDecision } from '../domain/enforcement-decision.js';
-import type { EnforcementMode } from '../domain/enforcement-request.js';
+import type { EnforcementMode, EnforcementPolicyEvaluationInput } from '../domain/enforcement-request.js';
 import type { EnforcementOutcome } from '../domain/enforcement-outcome.js';
 import type { EnforcementTarget, EnforcementTargetType } from '../domain/enforcement-target.js';
 import type { ExecutionIntent, ExecutionRiskLevel } from '../domain/execution-intent.js';
@@ -36,6 +36,9 @@ export interface GuardActionRequestInput {
   readonly visaId?: string;
   readonly ingressGrantId?: string;
   readonly handshakeProofId?: string;
+
+  /** Caller-declared context for the optional Domain Policy Pack Runtime preflight integration -- ignored entirely when no `policyPackIntegration` is configured on the runtime. */
+  readonly policyEvaluationInput?: EnforcementPolicyEvaluationInput;
 
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -111,6 +114,7 @@ export class AocGuard {
       ...(input.visaId !== undefined ? { visaId: input.visaId } : {}),
       ...(input.ingressGrantId !== undefined ? { ingressGrantId: input.ingressGrantId } : {}),
       ...(input.handshakeProofId !== undefined ? { handshakeProofId: input.handshakeProofId } : {}),
+      ...(input.policyEvaluationInput !== undefined ? { policyEvaluationInput: input.policyEvaluationInput } : {}),
       ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
     });
   }

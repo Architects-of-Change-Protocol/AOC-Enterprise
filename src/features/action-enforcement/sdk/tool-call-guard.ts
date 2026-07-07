@@ -1,4 +1,5 @@
 import type { EnforcementOutcome } from '../domain/enforcement-outcome.js';
+import type { EnforcementPolicyEvaluationInput } from '../domain/enforcement-request.js';
 import type { ExecutionRiskLevel } from '../domain/execution-intent.js';
 import type { SideEffectType } from '../domain/side-effect.js';
 import type { AocGuard, GuardActionRequestInput } from './aoc-guard.js';
@@ -17,6 +18,9 @@ export interface ToolCallInput<T> {
   readonly sideEffectType?: SideEffectType;
   readonly idempotencyKey?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
+
+  /** Forwarded verbatim to the optional Domain Policy Pack Runtime preflight integration. */
+  readonly policyEvaluationInput?: EnforcementPolicyEvaluationInput;
 
   readonly execute: () => Promise<T> | T;
 }
@@ -39,6 +43,7 @@ export class ToolCallGuard {
       ...(input.riskLevel !== undefined ? { riskLevel: input.riskLevel } : {}),
       ...(input.sideEffectType !== undefined ? { sideEffectType: input.sideEffectType } : {}),
       ...(input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {}),
+      ...(input.policyEvaluationInput !== undefined ? { policyEvaluationInput: input.policyEvaluationInput } : {}),
       ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
     };
     return this.guard.enforce(guardInput, input.execute);

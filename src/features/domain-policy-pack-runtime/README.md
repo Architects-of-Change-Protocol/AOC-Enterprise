@@ -212,18 +212,71 @@ still produces its own `ApprovalDecision`/`ApprovalProof`.
 `PolicyEnforcementEvaluationResult` (`policy_allowed` / `policy_denied` /
 `policy_requires_evidence` / `policy_requires_approval` /
 `policy_requires_authority` / `policy_requires_external_standing` /
-`policy_limited` / `policy_warning` / `policy_not_applicable`). This is a
+`policy_limited` / `policy_warning` / `policy_not_applicable`). This remains a
 **structural adapter**: it never imports `action-enforcement`'s
 `EnforcementRequest`/`EnforcementPolicy` types, and it never itself blocks or
-allows execution -- it only evaluates and reports. A host wiring both
-runtimes together is expected to either call this adapter inside a custom
-`EnforcementPolicy` (Action Enforcement's policy chain accepts a caller-
-supplied `policies` array without touching any existing policy file -- see
-`createDefaultEnforcementPolicyChain()` in `action-enforcement/policies/index.ts`),
-or call it directly during preflight and AND its `allowed` flag together with
-Action Enforcement's own decision. **This wiring is intentionally left as an
-adapter, not a live integration**, so that adding a policy pack can never
-regress Action Enforcement's own default-deny chain.
+allows execution -- it only evaluates and reports. Deciding what a result
+*means* for a real enforcement decision, and invoking a real executor
+callback, stays entirely inside `action-enforcement`.
+
+### Action Enforcement wiring
+
+`action-enforcement` now has an optional, deterministic preflight
+integration that consults this adapter. To wire the two together:
+
+1. **Build a `PolicyPackRuntime`** with the packs you need registered and
+   activated (see "Registering packs" above, or reuse
+   `buildDemoPolicyPackRuntime()` from `fixtures/domain-policy-pack-demo.fixture.ts`
+   for the six sample packs).
+2. **Create the integration adapter**:
+   `const integration = createActionEnforcementPolicyPackIntegration(runtime);`
+3. **Bridge it onto `action-enforcement`'s local structural interface** --
+   `action-enforcement/domain/policy-pack-enforcement.ts` defines its own
+   `EnforcementPolicyPackIntegration`/`EnforcementPolicyPackEvaluationInput`/
+   `EnforcementPolicyPackEvaluationResult` types (mirroring this module's
+   shapes field-for-field, the same pattern `action-enforcement` already uses
+   for Recognition Runtime) rather than importing this module's types
+   directly, so a small bridge function adapts one to the other. See
+   `bridgePolicyPackIntegration()` in
+   `action-enforcement/fixtures/policy-pack-enforcement.fixture.ts` for a
+   complete example, including how it enriches the result with
+   `policyPackVersionIds`/`matchedRuleIds` by reading the underlying
+   `PolicyPackDecision` back off `runtime.getPolicyPackDecision(...)`.
+4. **Pass the bridged integration into the runtime**:
+   `createActionEnforcementRuntime(ctx, recognitionIntegration, { policyPackIntegration })`.
+
+Once wired, `action-enforcement`'s preflight pipeline calls
+`evaluatePolicyForEnforcement` once per request (after recognition, approval,
+evidence, external standing and adapter permission have already
+independently passed) and maps the result onto its own `EnforcementDecision`:
+`policy_denied`/`policy_requires_authority` block as `execution_blocked`,
+`policy_requires_evidence` blocks as `evidence_required`,
+`policy_requires_approval` blocks as `approval_required`,
+`policy_requires_external_standing` blocks as `external_handshake_required`,
+and `policy_allowed`/`policy_warning`/`policy_not_applicable` never block by
+themselves. A policy pack `allow` can therefore never override an earlier
+Recognition Runtime, Authority Graph, Approval Runtime, External Agent
+Handshake, adapter, emergency-deny, dry-run or idempotency denial -- those
+are all resolved before the policy pack is ever consulted. See
+`action-enforcement/README.md`'s "Domain Policy Pack Runtime integration"
+section for the full preflight ordering and mapping table.
+
+**Why adapter-only composition preserves module boundaries**: this module
+never imports `action-enforcement` internals, and `action-enforcement` never
+imports this module's domain types outside of fixtures/tests -- both sides
+depend only on the small structural shapes each defines for itself. That
+keeps the two features free to evolve independently and keeps
+`action-enforcement` policy-pack-*aware*, not policy-pack-*dependent*: a
+runtime built without `policyPackIntegration` behaves exactly as it did
+before this integration existed.
+
+**Testing a pack before wiring it into enforcement**: call
+`runtime.evaluatePolicy(...)` (or `PolicyPackSimulationService` for a draft
+version) directly against representative inputs and assert on the
+`PolicyPackDecision` -- this module's own `tests/packs/` and
+`tests/scenarios/` suites are the place to validate a pack's rules in
+isolation, before any `action-enforcement` wiring test ever runs it end to
+end.
 
 ## How Recognition Runtime can consume policy pack results
 

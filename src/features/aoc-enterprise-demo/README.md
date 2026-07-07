@@ -363,6 +363,19 @@ panel, Approvals panel.
   pre-computed `run` prop, the same way `aoc-control-plane`'s tests
   pre-build a read model before rendering).
 
+## Domain Policy Pack Runtime scenarios
+
+`action-enforcement` can optionally consult Domain Policy Pack Runtime
+during preflight (see `action-enforcement/README.md`'s "Domain Policy Pack
+Runtime integration" section). A scenario demonstrating a policy pack
+decision (e.g. `approve_payment` blocked pending finance review) is just an
+ordinary scenario whose `ActionEnforcementRuntime` was built with
+`policyPackIntegration` configured -- it needs no changes to this module's
+scenario/executor/assertion machinery. See
+`action-enforcement/fixtures/policy-pack-enforcement.fixture.ts` and
+`action-enforcement/tests/policy-pack-sample-wiring-scenarios.test.ts` for
+the composition this module's scenarios would build on.
+
 ## How to add a new scenario
 
 1. Create `scenarios/<name>.scenario.ts` exporting a `DemoScenario` constant,

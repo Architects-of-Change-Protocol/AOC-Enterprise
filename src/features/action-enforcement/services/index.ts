@@ -37,3 +37,11 @@ export type {
   MarkSkippedInput,
   MarkDuplicateInput,
 } from './enforcement-result-service.js';
+
+export {
+  PolicyPackEnforcementService,
+  mapPolicyResultToEnforcementDecisionType,
+  shouldBlockForPolicy,
+  severityForPolicyPackResult,
+  policyPackViolationType,
+} from './policy-pack-enforcement-service.js';

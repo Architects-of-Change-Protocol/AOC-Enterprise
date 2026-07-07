@@ -1,4 +1,5 @@
 import type { EnforcementPolicyResult } from './enforcement-verification.js';
+import type { ExecutionRiskLevel } from './execution-intent.js';
 
 export type EnforcementDecisionType =
   | 'execute_allowed'
@@ -45,6 +46,23 @@ export interface EnforcementDecision {
   readonly decidedAt: string;
 
   readonly policyResults: readonly EnforcementPolicyResult[];
+
+  /**
+   * Populated only when the optional Domain Policy Pack Runtime preflight
+   * integration actually evaluated this request (i.e. a policy pack
+   * integration is configured on the runtime). Absent -- not just
+   * `undefined` in memory, but genuinely never set -- when no integration is
+   * configured, so decisions produced by an unconfigured runtime are
+   * byte-for-byte identical to decisions produced before this integration
+   * existed.
+   */
+  readonly policyDecisionId?: string;
+  readonly policyProofId?: string;
+  readonly policyPackVersionIds?: readonly string[];
+  readonly policyMatchedRuleIds?: readonly string[];
+  readonly policyReasonCode?: string;
+  readonly policyReason?: string;
+  readonly policyEffectiveRiskLevel?: ExecutionRiskLevel;
 
   readonly metadata?: Readonly<Record<string, unknown>>;
 }

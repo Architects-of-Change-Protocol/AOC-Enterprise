@@ -1,6 +1,7 @@
 import type { RecognitionVerificationResult } from '../domain/enforcement-context.js';
 import type { EnforcementDecision, EnforcementDecisionType } from '../domain/enforcement-decision.js';
 import type { EnforcementPolicyResult } from '../domain/enforcement-verification.js';
+import type { EnforcementPolicyPackEvaluationResult } from '../domain/policy-pack-enforcement.js';
 import type { EnforcementRuntimeContext } from '../runtime/enforcement-runtime-context.js';
 import type { EnforcementStore } from './enforcement-store.js';
 
@@ -54,6 +55,9 @@ export interface CreateEnforcementDecisionInput {
   readonly ingressGrantId?: string;
   readonly handshakeDecisionId?: string;
   readonly handshakeProofId?: string;
+
+  /** Set only when a policy pack integration actually evaluated this request -- see EnforcementDecision.policyDecisionId. */
+  readonly policyPackResult?: EnforcementPolicyPackEvaluationResult;
 }
 
 export class EnforcementDecisionService {
@@ -110,7 +114,36 @@ export class EnforcementDecisionService {
       ...(input.ingressGrantId !== undefined ? { ingressGrantId: input.ingressGrantId } : {}),
       ...(input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {}),
     };
-    return this.store.saveDecision(decision);
+    const withPolicyMetadata = input.policyPackResult !== undefined ? this.attachPolicyMetadataToDecision(decision, input.policyPackResult) : decision;
+    return this.store.saveDecision(withPolicyMetadata);
+  }
+
+  /**
+   * Pure merge of a policy pack evaluation result onto an already-built
+   * decision. The caller (`EnforcementPreflightService`) only ever invokes
+   * this when a policy pack integration is actually configured
+   * (`PolicyPackEnforcementService.isConfigured()`) -- an unconfigured
+   * runtime's decisions must stay byte-for-byte identical to before this
+   * integration existed, so this method is never called at all in that
+   * case. `policyDecisionId`/`policyProofId`/`policyPackVersionIds`/
+   * `policyMatchedRuleIds` are attached only when present -- a fail-closed
+   * synthetic result (integration threw, or returned a malformed result)
+   * has no real policy decision to reference, but its reasonCode/reason are
+   * still attached so the block is auditable. Never touches
+   * `type`/`allowedToExecute`: whether a policy result blocks execution is
+   * decided by the policy chain, not here.
+   */
+  attachPolicyMetadataToDecision(decision: EnforcementDecision, result: EnforcementPolicyPackEvaluationResult): EnforcementDecision {
+    return {
+      ...decision,
+      ...(result.policyDecisionId !== undefined ? { policyDecisionId: result.policyDecisionId } : {}),
+      ...(result.policyProofId !== undefined ? { policyProofId: result.policyProofId } : {}),
+      ...(result.policyPackVersionIds !== undefined ? { policyPackVersionIds: result.policyPackVersionIds } : {}),
+      ...(result.matchedRuleIds !== undefined ? { policyMatchedRuleIds: result.matchedRuleIds } : {}),
+      policyReasonCode: result.reasonCode,
+      policyReason: result.reason,
+      ...(result.effectiveRiskLevel !== undefined ? { policyEffectiveRiskLevel: result.effectiveRiskLevel } : {}),
+    };
   }
 
   getDecision(enforcementDecisionId: string): EnforcementDecision | undefined {
