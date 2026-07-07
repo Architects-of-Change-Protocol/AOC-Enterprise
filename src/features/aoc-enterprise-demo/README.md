@@ -684,3 +684,12 @@ and the fixtures under `evidence-source-runtime/fixtures/` (`policy-pack-evidenc
 `approval-evidence-demo.fixture.ts`, `enforcement-evidence-demo.fixture.ts`).
 No scenario in this module currently wires those in -- this is a note for a
 future sprint, not a claim of existing coverage.
+
+## Verifiable Export Package
+
+Demo scenario runs can produce an exportable decision packet via
+`src/features/verifiable-export-package/fixtures/enterprise-demo-export.fixture.ts`,
+which packages a real `DemoScenario`/`DemoScenarioRun`, its Control Plane
+snapshot, and its underlying policy/enforcement decision and proof into one
+`enterprise_demo_packet`. It never fabricates a scenario outcome -- every
+included fact is exactly what the real scenario run produced.

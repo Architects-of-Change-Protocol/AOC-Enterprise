@@ -495,3 +495,13 @@ module via `integrations/action-enforcement-evidence-integration.ts`. That
 integration is purely advisory: checking evidence satisfaction there never
 flips an `EnforcementDecision` this runtime already produced -- a host must
 always rerun `enforce()` to act on newly-satisfied evidence.
+
+## Verifiable Export Package
+
+`verifiable-export-package/integrations/action-enforcement-export-adapter.ts`
+maps `EnforcementRequest`, `EnforcementDecision`, `EnforcementProof`,
+`ExecutionResult`, `SideEffectDescriptor`, and `EnforcementEvent` into
+`ExportPackageItem`s, so a decision packet can include this runtime's
+enforcement decision, proof, execution result, and event trail. It never
+re-runs the executor and never changes a recorded execution status -- see
+that module's README for details.

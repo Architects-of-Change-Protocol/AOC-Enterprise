@@ -273,6 +273,15 @@ scenarios once it is ready to show evidence-backed outcomes end-to-end; see
 `fixtures/approval-evidence-demo.fixture.ts`, and
 `fixtures/enforcement-evidence-demo.fixture.ts` for composable examples.
 
+## How evidence proofs can be included in Verifiable Export Packages
+
+`verifiable-export-package/integrations/evidence-export-adapter.ts` maps
+`EvidenceProof`, `Citation`, `SourceDocument`, `EvidenceArtifact`, and every
+other record this runtime produces into `ExportPackageItem`s, so a
+decision/evidence/audit packet can include this runtime's proof, evidence,
+and citation trail. It never re-evaluates evidence sufficiency -- see that
+module's README for details.
+
 ## Legal / compliance disclaimer
 
 - Evidence records produced by this runtime are **not legal advice**.

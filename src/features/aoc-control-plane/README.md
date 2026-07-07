@@ -480,3 +480,12 @@ proofs, events) that can feed future evidence/source/citation panels here.
 No UI section for it exists yet in this sprint -- the adapter and its tests
 are the MVP surface; wiring it into `AocControlPlanePage`/`AocNavigationTabs`
 is left for a future sprint.
+
+## Verifiable Export Package
+
+Control Plane snapshots (either a `DemoControlPlaneSnapshot` or a live
+`AocControlPlaneReadModel`) can be included in a verifiable export package
+via
+`src/features/verifiable-export-package/integrations/control-plane-export-adapter.ts`.
+That adapter is read-model-only: it never mutates Control Plane state and
+never creates policy/evidence/enforcement truth of its own.
