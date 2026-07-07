@@ -105,7 +105,7 @@ function buildAndAcceptHandshake(overrides: { readonly allowedActions?: readonly
       allowedCapabilities: overrides.allowedCapabilities ?? result.visa!.allowedCapabilities,
     });
   }
-  return { runtime, request, ...result };
+  return { runtime, ...result };
 }
 
 describe('External Agent Handshake + Recognition Runtime integration', () => {

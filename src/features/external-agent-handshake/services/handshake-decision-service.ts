@@ -120,10 +120,10 @@ export class HandshakeDecisionService {
         allowedResourceScopes: evaluation.allowedResourceScopes,
         reasonCode: evaluation.reasonCode,
         reason: evaluation.reason,
-        ttlMinutes: input.ttlMinutes,
-        localActorId: input.localActorId,
-        approvalProofId: input.approvalCheck?.approvalProofId,
         requestPatch: approvalPatch,
+        ...(input.ttlMinutes !== undefined ? { ttlMinutes: input.ttlMinutes } : {}),
+        ...(input.localActorId !== undefined ? { localActorId: input.localActorId } : {}),
+        ...(input.approvalCheck?.approvalProofId !== undefined ? { approvalProofId: input.approvalCheck.approvalProofId } : {}),
       });
     }
 
@@ -138,8 +138,8 @@ export class HandshakeDecisionService {
       allowedResourceScopes: [...request.requestedResourceScopes],
       reasonCode,
       reason,
-      ttlMinutes: options.ttlMinutes,
-      localActorId: options.localActorId,
+      ...(options.ttlMinutes !== undefined ? { ttlMinutes: options.ttlMinutes } : {}),
+      ...(options.localActorId !== undefined ? { localActorId: options.localActorId } : {}),
     });
   }
 
@@ -157,8 +157,8 @@ export class HandshakeDecisionService {
       allowedResourceScopes: allowed.resourceScopes,
       reasonCode,
       reason,
-      ttlMinutes: options.ttlMinutes,
-      localActorId: options.localActorId,
+      ...(options.ttlMinutes !== undefined ? { ttlMinutes: options.ttlMinutes } : {}),
+      ...(options.localActorId !== undefined ? { localActorId: options.localActorId } : {}),
     });
   }
 
@@ -300,7 +300,7 @@ export class HandshakeDecisionService {
 
   private finalizeNonAccepted(
     request: HandshakeRequest,
-    type: 'requires_approval' | 'rejected' | 'quarantined',
+    type: 'requires_approval' | 'rejected' | 'quarantined' | 'expired' | 'revoked',
     reasonCode: string,
     reason: string,
     requestPatch: Partial<HandshakeRequest> = {},
@@ -330,8 +330,9 @@ export class HandshakeDecisionService {
     this.store.putHandshakeDecision(decision);
 
     let proofId: string | undefined;
+    let createdProof: HandshakeProof | undefined;
     if (type !== 'requires_approval') {
-      const proof = this.proofService.createProof({
+      createdProof = this.proofService.createProof({
         handshakeRequestId: request.id,
         handshakeDecisionId: decisionId,
         localTrustDomainId: request.localTrustDomainId,
@@ -342,7 +343,7 @@ export class HandshakeDecisionService {
         evidenceHashes: [request.passportPresentation.presentationHash],
         ...(request.authorityPresentation !== undefined ? { authorityPresentationId: request.authorityPresentation.id } : {}),
       });
-      proofId = proof.id;
+      proofId = createdProof.id;
       this.store.putHandshakeDecision({ ...decision, proofId });
     }
 
@@ -361,7 +362,7 @@ export class HandshakeDecisionService {
     return {
       decision: this.store.getHandshakeDecision(decisionId) ?? decision,
       request: updatedRequest,
-      ...(proofId !== undefined ? { proof: this.store.getHandshakeProof(proofId) } : {}),
+      ...(createdProof !== undefined ? { proof: createdProof } : {}),
     };
   }
 }

@@ -78,9 +78,9 @@ export class HandshakeRequestService {
       type: 'handshake_submitted',
       localTrustDomainId: request.localTrustDomainId,
       externalAgentId: request.externalAgent.id,
-      externalIssuerId: request.externalAgent.externalIssuerId,
       handshakeRequestId: request.id,
       payload: { requestedActions: request.requestedActions, requestedResourceScopes: request.requestedResourceScopes },
+      ...(request.externalAgent.externalIssuerId !== undefined ? { externalIssuerId: request.externalAgent.externalIssuerId } : {}),
     });
 
     return request;
