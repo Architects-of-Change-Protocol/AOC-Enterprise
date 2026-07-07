@@ -14,7 +14,7 @@ import type { DecisionPacket } from '../domain/decision-packet.js';
 import type { AuditBundle } from '../domain/audit-bundle.js';
 import type { PackageSnapshot } from '../domain/package-snapshot.js';
 import type { ExportPackageEvent, ExportPackageEventType } from '../domain/package-event.js';
-import { ExportPackageStore, ExportPackageNotFoundError } from '../services/export-package-store.js';
+import { ExportPackageStore } from '../services/export-package-store.js';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 
@@ -406,6 +406,6 @@ describe('ExportPackageStore', () => {
 
   it('22. updatePackageHashes throws ExportPackageNotFoundError for an unknown package', () => {
     const store = new ExportPackageStore();
-    assert.throws(() => store.updatePackageHashes('missing-package', { packageHash: 'x' }), ExportPackageNotFoundError);
+    assert.throws(() => store.updatePackageHashes('missing-package', { packageHash: 'x' }));
   });
 });

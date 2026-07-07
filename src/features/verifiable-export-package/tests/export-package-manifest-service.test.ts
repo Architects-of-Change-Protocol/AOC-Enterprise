@@ -177,6 +177,7 @@ describe('ExportPackageManifestService', () => {
     const item1B = makeItem('item-1', 'policy_decision', 'domain_policy_pack_runtime', 'source-1');
     const summarySectionA = buildSummarySection(setupA.ctx, setupA.hashService, [item1A], true);
     const summarySectionB = buildSummarySection(setupB.ctx, setupB.hashService, [item1B], true);
+    setupB.ctx.ids.nextId('noise'); // shifts only setupB's *manifest* id so manifest.id differs while sectionId stays aligned
 
     const buildInput = (sections: readonly ExportPackageSection[]): CreateManifestInput => ({
       packageId: 'package-1',
