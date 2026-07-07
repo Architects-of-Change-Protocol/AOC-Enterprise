@@ -7,8 +7,8 @@ import type { AocRecognitionRuntime } from '../../recognition-runtime/runtime/ao
 import type { ActionEnforcementRuntime } from '../../action-enforcement/runtime/action-enforcement-runtime.js';
 import type { EnforcementOutcome } from '../../action-enforcement/domain/enforcement-outcome.js';
 import type { AocGuard } from '../../action-enforcement/sdk/aoc-guard.js';
+import type { PolicyPackRuntime } from '../../domain-policy-pack-runtime/services/policy-pack-runtime.js';
 import {
-  buildDatasysEnforcementFixture,
   DRAFT_CLOSURE_EMAIL,
   PMFREAK_ACTOR_ID,
   PROJECT_SCOPE,
@@ -21,6 +21,13 @@ import {
   VICTOR_LEGAL_TOKEN_ID,
   type DatasysEnforcementFixture,
 } from '../../action-enforcement/fixtures/datasys-enforcement.fixture.js';
+import {
+  buildApprovePaymentRequiresFinanceReviewInput,
+  buildChangeBankAccountDeniedInput,
+  buildPrepareInvoiceSupportRequiresEvidenceInput,
+  buildPolicyPackEnforcementFixture,
+  buildUnrecognizedJurisdictionWarningInput,
+} from '../../action-enforcement/fixtures/policy-pack-enforcement.fixture.js';
 import { buildDraftClosureEmailGuardInput } from '../../action-enforcement/fixtures/allowed-action.fixture.js';
 import { approveSendClientFollowUp, buildSendClientFollowUpGuardInput } from '../../action-enforcement/fixtures/approval-required-action.fixture.js';
 import { buildUnknownAgentReadGuardInput } from '../../action-enforcement/fixtures/denied-action.fixture.js';
@@ -44,6 +51,15 @@ export interface ControlPlaneRuntimeBundle {
   readonly handshakeRuntime: ExternalAgentHandshakeRuntime;
   readonly enforcementRuntime: ActionEnforcementRuntime;
   readonly aocGuard: AocGuard;
+  /**
+   * The Domain Policy Pack Runtime backing every EnforcementDecision's
+   * policy* fields above -- `enforcementRuntime`/`aocGuard` are the *same*
+   * policy-pack-configured runtime `buildPolicyPackEnforcementFixture`
+   * builds, so every enforcement decision in this bundle (old scenarios and
+   * new policy-aware ones alike) carries real policy metadata rather than
+   * splitting enforcement state across two separate stores.
+   */
+  readonly policyPackRuntime: PolicyPackRuntime;
   readonly world: DatasysEnforcementFixture['world'];
   /**
    * Recognition Runtime exposes single-id getters (getActor/getPassport/
@@ -67,6 +83,14 @@ export interface ControlPlaneRuntimeBundle {
         readonly trustedPartnerRead: EnforcementOutcome<string>;
         readonly approvePaymentAdapterDenied: EnforcementOutcome<string>;
         readonly draftClosureEmailDryRun: EnforcementOutcome<string>;
+        /** jurisdictional-baseline-demo: policy pack warns (manual verification) but never blocks -- a `policy_warning` evaluation that still executes. */
+        readonly policyWarningRead: EnforcementOutcome<string>;
+        /** payments-basic: change_bank_account is denied outright by the policy pack even though every core AOC layer allows it -- the one policy-blocked execution. */
+        readonly policyDeniedChangeBankAccount: EnforcementOutcome<string>;
+        /** procurement-basic: the policy pack's own evidence rule (not Recognition Runtime's) blocks this request. */
+        readonly policyRequiresEvidenceInvoiceSupport: EnforcementOutcome<string>;
+        /** payments-basic: the policy pack requires (finance) approval that was never supplied. */
+        readonly policyRequiresApprovalPayment: EnforcementOutcome<string>;
   };
 }
 
@@ -80,8 +104,10 @@ export interface ControlPlaneRuntimeBundle {
  * a dry run, and one revoked capability token.
  */
 export async function buildControlPlaneDemoFixture(): Promise<ControlPlaneRuntimeBundle> {
-  const fixture = buildDatasysEnforcementFixture();
-  const { authorityRuntime, approvalRuntime, handshakeRuntime, enforcementRuntime, aocGuard, recognitionRuntime, world } = fixture;
+  const fixture = buildPolicyPackEnforcementFixture();
+  const { authorityRuntime, approvalRuntime, handshakeRuntime, recognitionRuntime, world, policyPackRuntime } = fixture;
+  const enforcementRuntime = fixture.policyPackEnforcementRuntime;
+  const aocGuard = fixture.policyPackAocGuard;
 
   authorityRuntime.assignRole({
     id: 'role-assignment-victor-project-manager',
@@ -159,6 +185,11 @@ export async function buildControlPlaneDemoFixture(): Promise<ControlPlaneRuntim
     () => 'draft saved',
   );
 
+  const policyWarningRead = await aocGuard.enforce(buildUnrecognizedJurisdictionWarningInput(), () => 'summary');
+  const policyDeniedChangeBankAccount = await aocGuard.enforce(buildChangeBankAccountDeniedInput(), () => 'unused');
+  const policyRequiresEvidenceInvoiceSupport = await aocGuard.enforce(buildPrepareInvoiceSupportRequiresEvidenceInput(), () => 'unused');
+  const policyRequiresApprovalPayment = await aocGuard.enforce(buildApprovePaymentRequiresFinanceReviewInput(), () => 'unused');
+
   recognitionRuntime.revokeCapabilityToken(VICTOR_LEGAL_TOKEN_ID, TRUST_DOMAIN_ID);
 
   return {
@@ -169,6 +200,7 @@ export async function buildControlPlaneDemoFixture(): Promise<ControlPlaneRuntim
     handshakeRuntime,
     enforcementRuntime,
     aocGuard,
+    policyPackRuntime,
     world,
     knownActorIds: [world.datasys.id, world.victor.id, world.pmfreak.id, UNKNOWN_AGENT_ACTOR_ID, TRUSTED_PARTNER_AGENT_ID],
     knownPassportIds: [world.victorPassport.id, world.pmfreakPassport.id, world.trustedPartnerPassport.id],
@@ -193,6 +225,10 @@ export async function buildControlPlaneDemoFixture(): Promise<ControlPlaneRuntim
       trustedPartnerRead,
       approvePaymentAdapterDenied,
       draftClosureEmailDryRun,
+      policyWarningRead,
+      policyDeniedChangeBankAccount,
+      policyRequiresEvidenceInvoiceSupport,
+      policyRequiresApprovalPayment,
     },
   };
 }

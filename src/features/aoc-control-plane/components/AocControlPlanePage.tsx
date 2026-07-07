@@ -15,6 +15,7 @@ import { ApprovalPanel } from './approvals/ApprovalPanel.js';
 import { ExternalAgentsPanel } from './external-agents/ExternalAgentsPanel.js';
 import { EnforcementPanel } from './enforcement/EnforcementPanel.js';
 import { ProofsPanel } from './proofs/ProofsPanel.js';
+import { PolicyPacksPanel } from './policy-packs/PolicyPacksPanel.js';
 
 export interface AocControlPlanePageCommands {
   readonly onApproveApproval?: ((requestId: string) => void) | undefined;
@@ -102,6 +103,7 @@ export function AocControlPlanePage({
               />
             ) : null}
             {section === 'enforcement' ? <EnforcementPanel enforcement={readModel.enforcement} /> : null}
+            {section === 'policy-packs' ? <PolicyPacksPanel policyPacks={readModel.policyPacks} /> : null}
             {section === 'proofs' ? <ProofsPanel proofs={readModel.proofs} auditEvents={readModel.recognition.auditEvents} /> : null}
           </>
         )}

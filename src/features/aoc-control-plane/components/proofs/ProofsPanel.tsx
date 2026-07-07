@@ -34,6 +34,7 @@ export function ProofsPanel({ proofs, auditEvents }: ProofsPanelProps): React.Re
       <ProofReferencesList title="Approval proofs" proofs={proofs.approvalProofs} onSelect={setSelectedProof} />
       <ProofReferencesList title="Handshake proofs" proofs={proofs.handshakeProofs} onSelect={setSelectedProof} />
       <ProofReferencesList title="Enforcement proofs" proofs={proofs.enforcementProofs} onSelect={setSelectedProof} />
+      <ProofReferencesList title="Policy proofs" proofs={proofs.policyProofs} onSelect={setSelectedProof} />
 
       <h3>Audit trail</h3>
       <AuditTrailTable auditEvents={auditEvents} />

@@ -22,6 +22,10 @@ export interface ControlPlaneProofInput {
   readonly approvals: ApprovalViewModel;
   readonly enforcement: EnforcementViewModel;
   readonly handshakeProofs: readonly HandshakeProofSource[];
+  /** Already-built policy proof references (see control-plane-policy-pack-proof-service.ts) -- empty when no Domain Policy Pack Runtime is wired in. */
+  readonly policyProofs?: readonly ProofReferenceRow[];
+  /** Already-built enforcement -> policy proof chains -- appended alongside the enforcement-only chains this service builds. */
+  readonly policyProofChains?: readonly ProofChainRow[];
 }
 
 function compareProofReferences(a: ProofReferenceRow, b: ProofReferenceRow): number {
@@ -172,11 +176,14 @@ export function buildProofsViewModel(input: ControlPlaneProofInput): ProofsViewM
   const approvalProofs = approvalProofReferences(input.approvals);
   const handshakeProofs = handshakeProofReferences(input.handshakeProofs);
   const enforcementProofs = enforcementProofReferences(input.enforcement);
+  const policyProofs = input.policyProofs ?? [];
 
   const allProofsById = new Map<string, ProofReferenceRow>();
-  for (const proof of [...recognitionProofs, ...authorityProofs, ...approvalProofs, ...handshakeProofs, ...enforcementProofs]) {
+  for (const proof of [...recognitionProofs, ...authorityProofs, ...approvalProofs, ...handshakeProofs, ...enforcementProofs, ...policyProofs]) {
     allProofsById.set(proof.id, proof);
   }
+
+  const proofChains = [...buildProofChains(input.enforcement, allProofsById), ...(input.policyProofChains ?? [])].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
   return {
     recognitionProofs,
@@ -184,6 +191,7 @@ export function buildProofsViewModel(input: ControlPlaneProofInput): ProofsViewM
     approvalProofs,
     handshakeProofs,
     enforcementProofs,
-    proofChains: buildProofChains(input.enforcement, allProofsById),
+    policyProofs,
+    proofChains,
   };
 }

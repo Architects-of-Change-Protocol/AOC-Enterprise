@@ -56,6 +56,33 @@ export type { AocControlPlaneFilter } from './control-plane-filter.js';
 export { EMPTY_FILTER } from './control-plane-filter.js';
 
 export type {
+  PolicyPackRow,
+  PolicyPackVersionRow,
+  PolicyRuleRow,
+  PolicyObligationRow,
+  PolicyEvidenceRequirementRow,
+  PolicyApprovalRequirementRow,
+  PolicyEvaluationRow,
+  PolicyDecisionRow,
+  PolicyProofRow,
+  PolicyEventRow,
+  PolicyEnforcementLinkRow,
+  PolicyPackMetric,
+  PolicyPackControlPlaneViewModel,
+} from './policy-pack-view-model.js';
+export { EMPTY_POLICY_PACK_VIEW_MODEL } from './policy-pack-view-model.js';
+
+export type { PolicyPackControlPlaneFilter } from './policy-pack-control-plane-filter.js';
+export { EMPTY_POLICY_PACK_FILTER } from './policy-pack-control-plane-filter.js';
+
+export {
+  toneForPolicyDecisionType,
+  toneForPolicyEffectType,
+  toneForLegalCompleteness,
+  legalCompletenessLabel,
+} from './policy-pack-control-plane-status.js';
+
+export type {
   ControlPlaneCommandType,
   ControlPlaneCommandResult,
   ControlPlaneCommandRequest,

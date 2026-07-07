@@ -40,6 +40,30 @@ export function EnforcementProofDetail({ proof }: EnforcementProofDetailProps): 
           <dd>{proof.handshakeProofId}</dd>
         </>
       ) : null}
+      {proof.policyDecisionId !== undefined ? (
+        <>
+          <dt>Policy decision</dt>
+          <dd>{proof.policyDecisionId}</dd>
+        </>
+      ) : null}
+      {proof.policyProofId !== undefined ? (
+        <>
+          <dt>Policy proof</dt>
+          <dd>{proof.policyProofId}</dd>
+        </>
+      ) : null}
+      {proof.policyPackVersionIds !== undefined ? (
+        <>
+          <dt>Policy pack versions</dt>
+          <dd>{proof.policyPackVersionIds.length > 0 ? proof.policyPackVersionIds.join(', ') : '—'}</dd>
+        </>
+      ) : null}
+      {proof.policyMatchedRuleIds !== undefined ? (
+        <>
+          <dt>Policy matched rules</dt>
+          <dd>{proof.policyMatchedRuleIds.length > 0 ? proof.policyMatchedRuleIds.join(', ') : '—'}</dd>
+        </>
+      ) : null}
       <dt>Created at</dt>
       <dd>{proof.createdAt}</dd>
     </dl>

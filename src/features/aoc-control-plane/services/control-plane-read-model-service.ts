@@ -58,9 +58,13 @@ import type {
   TrustBoundaryRow,
 } from '../domain/control-plane-view-model.js';
 import type { AocDecisionStatus } from '../domain/control-plane-status.js';
+import type { PolicyPackControlPlaneViewModel } from '../domain/policy-pack-view-model.js';
 import { buildTimeline } from './control-plane-timeline-service.js';
 import { computeHealth, computeMetrics } from './control-plane-metrics-service.js';
 import { buildProofsViewModel, type HandshakeProofSource } from './control-plane-proof-service.js';
+import { buildPolicyPackViewModel } from './control-plane-policy-pack-read-model-service.js';
+import { buildPolicyPackTimeline } from './control-plane-policy-pack-timeline-service.js';
+import { policyProofReferences, buildPolicyProofChains } from './control-plane-policy-pack-proof-service.js';
 
 export interface BuildReadModelOptions {
   /** Injected clock for `generatedAt`; defaults to the demo world's trust domain creation time so output stays deterministic without a wall-clock read. */
@@ -486,6 +490,13 @@ function toEnforcementDecisionRow(decision: EnforcementDecision): EnforcementDec
     ...(decision.authorityProofId !== undefined ? { authorityProofId: decision.authorityProofId } : {}),
     ...(decision.approvalProofId !== undefined ? { approvalProofId: decision.approvalProofId } : {}),
     ...(decision.handshakeProofId !== undefined ? { handshakeProofId: decision.handshakeProofId } : {}),
+    ...(decision.policyDecisionId !== undefined ? { policyDecisionId: decision.policyDecisionId } : {}),
+    ...(decision.policyProofId !== undefined ? { policyProofId: decision.policyProofId } : {}),
+    ...(decision.policyPackVersionIds !== undefined ? { policyPackVersionIds: decision.policyPackVersionIds } : {}),
+    ...(decision.policyMatchedRuleIds !== undefined ? { policyMatchedRuleIds: decision.policyMatchedRuleIds } : {}),
+    ...(decision.policyReasonCode !== undefined ? { policyReasonCode: decision.policyReasonCode } : {}),
+    ...(decision.policyReason !== undefined ? { policyReason: decision.policyReason } : {}),
+    ...(decision.policyEffectiveRiskLevel !== undefined ? { policyEffectiveRiskLevel: decision.policyEffectiveRiskLevel } : {}),
     decidedAt: decision.decidedAt,
   };
 }
@@ -539,6 +550,10 @@ function toEnforcementProofRow(proof: import('../../action-enforcement/domain/en
     ...(proof.authorityProofId !== undefined ? { authorityProofId: proof.authorityProofId } : {}),
     ...(proof.approvalProofId !== undefined ? { approvalProofId: proof.approvalProofId } : {}),
     ...(proof.handshakeProofId !== undefined ? { handshakeProofId: proof.handshakeProofId } : {}),
+    ...(proof.policyDecisionId !== undefined ? { policyDecisionId: proof.policyDecisionId } : {}),
+    ...(proof.policyProofId !== undefined ? { policyProofId: proof.policyProofId } : {}),
+    ...(proof.policyPackVersionIds !== undefined ? { policyPackVersionIds: proof.policyPackVersionIds } : {}),
+    ...(proof.policyMatchedRuleIds !== undefined ? { policyMatchedRuleIds: proof.policyMatchedRuleIds } : {}),
     proofHash: proof.proofHash,
     ...(proof.previousHash !== undefined ? { previousHash: proof.previousHash } : {}),
     createdAt: proof.createdAt,
@@ -676,7 +691,12 @@ function buildRecentDecisions(recognition: RecognitionViewModel, authority: Auth
   return summaries.sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
 }
 
-function buildOpenItems(approvals: ApprovalViewModel, externalAgents: ExternalAgentsViewModel, enforcement: EnforcementViewModel): AocOpenItem[] {
+function buildOpenItems(
+  approvals: ApprovalViewModel,
+  externalAgents: ExternalAgentsViewModel,
+  enforcement: EnforcementViewModel,
+  policyPacks: PolicyPackControlPlaneViewModel,
+): AocOpenItem[] {
   const items: AocOpenItem[] = [];
 
   for (const request of approvals.requests.filter((r) => r.status === 'pending')) {
@@ -709,6 +729,47 @@ function buildOpenItems(approvals: ApprovalViewModel, externalAgents: ExternalAg
       relatedId: visa.id,
     });
   }
+  for (const link of policyPacks.enforcementLinks.filter((l) => l.blockedByPolicy)) {
+    items.push({
+      id: `open-policy-blocked-${link.id}`,
+      source: 'policy',
+      title: `Policy pack blocked execution: ${link.action}`,
+      description: link.reason ?? `Action ${link.action} for ${link.actorId} was blocked by policy pack evaluation.`,
+      severity: 'danger',
+      ...(link.enforcementDecisionId !== undefined ? { relatedId: link.enforcementDecisionId } : {}),
+    });
+  }
+  for (const pack of policyPacks.packs.filter((p) => p.status === 'active' && p.demoOnly)) {
+    items.push({
+      id: `open-policy-demo-only-${pack.id}`,
+      source: 'policy',
+      title: `Demo-only policy pack active: ${pack.name}`,
+      description: 'This policy pack is demo-only and is not legal advice or a certified compliance control.',
+      severity: 'warning',
+      relatedId: pack.id,
+    });
+  }
+  for (const decision of policyPacks.decisions.filter((d) => d.type === 'denied')) {
+    items.push({
+      id: `open-policy-denied-${decision.id}`,
+      source: 'policy',
+      title: `Policy denied: ${decision.action}`,
+      description: decision.reason,
+      severity: 'warning',
+      relatedId: decision.id,
+    });
+  }
+  const policyProofIds = new Set(policyPacks.proofs.map((proof) => proof.id));
+  for (const decision of policyPacks.decisions.filter((d) => d.proofId !== undefined && !policyProofIds.has(d.proofId))) {
+    items.push({
+      id: `open-policy-missing-proof-${decision.id}`,
+      source: 'policy',
+      title: `Missing policy proof for decision ${decision.id}`,
+      description: `Policy decision ${decision.id} references proof ${decision.proofId} which was not found in the policy pack read model.`,
+      severity: 'warning',
+      relatedId: decision.id,
+    });
+  }
 
   return items;
 }
@@ -728,22 +789,39 @@ export function buildControlPlaneReadModel(bundle: ControlPlaneRuntimeBundle, op
   const handshakeEvents = bundle.handshakeRuntime.getHandshakeTrail({ localTrustDomainId: trustDomainId });
   const externalAgents = buildExternalAgentsViewModel(bundle, handshakeEvents);
   const enforcement = buildEnforcementViewModel(bundle);
-  const handshakeProofs = collectHandshakeProofSources(bundle, handshakeEvents);
-  const proofs = buildProofsViewModel({ recognition, authority, approvals, enforcement, handshakeProofs });
 
-  const timeline = buildTimeline({
+  const policyPacks = buildPolicyPackViewModel({
+    ...(bundle.policyPackRuntime !== undefined ? { policyPackRuntime: bundle.policyPackRuntime } : {}),
+    enforcementRequests: enforcement.requests,
+    enforcementDecisions: enforcement.decisions,
+    enforcementProofs: enforcement.proofs,
+  });
+  const policyProofs = policyProofReferences(policyPacks.proofs);
+  const policyProofsById = new Map(policyPacks.proofs.map((proof) => [proof.id, proof]));
+  const policyProofChains = buildPolicyProofChains(enforcement.proofs, policyProofsById);
+
+  const handshakeProofs = collectHandshakeProofSources(bundle, handshakeEvents);
+  const proofs = buildProofsViewModel({ recognition, authority, approvals, enforcement, handshakeProofs, policyProofs, policyProofChains });
+
+  const baseTimeline = buildTimeline({
     recognitionEvents: bundle.recognitionRuntime.getAuditTrail({ trustDomainId }),
     authorityEvents: bundle.authorityRuntime.getAuthorityEvents({ trustDomainId }),
     approvalEvents: bundle.approvalRuntime.getApprovalTrail({ trustDomainId }),
     handshakeEvents,
     enforcementEvents: bundle.enforcementRuntime.store.getEvents({ trustDomainId }),
   });
+  const policyTimeline = buildPolicyPackTimeline({
+    events: policyPacks.events,
+    enforcementLinks: policyPacks.enforcementLinks,
+    enforcementDecisions: enforcement.decisions,
+  });
+  const timeline = [...baseTimeline, ...policyTimeline].sort((a, b) => (a.timestamp !== b.timestamp ? (a.timestamp < b.timestamp ? 1 : -1) : a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
 
   const emergencyDenyActive = bundle.enforcementRuntime.isEmergencyDenyActive();
-  const metrics = computeMetrics({ recognition, authority, approvals, externalAgents, enforcement, emergencyDenyActive });
+  const metrics = [...computeMetrics({ recognition, authority, approvals, externalAgents, enforcement, emergencyDenyActive }), ...policyPacks.metrics];
   const health = computeHealth({ recognition, authority, approvals, externalAgents, enforcement, emergencyDenyActive });
   const recentDecisions = buildRecentDecisions(recognition, authority, approvals, enforcement).slice(0, 10);
-  const openItems = buildOpenItems(approvals, externalAgents, enforcement);
+  const openItems = buildOpenItems(approvals, externalAgents, enforcement, policyPacks);
 
   const now = options.now ?? (() => bundle.world.trustDomain.updatedAt);
 
@@ -757,6 +835,7 @@ export function buildControlPlaneReadModel(bundle: ControlPlaneRuntimeBundle, op
     externalAgents,
     enforcement,
     proofs,
+    policyPacks,
     timeline,
   };
 }

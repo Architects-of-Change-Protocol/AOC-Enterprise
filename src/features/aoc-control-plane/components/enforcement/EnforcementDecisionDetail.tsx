@@ -48,6 +48,50 @@ export function EnforcementDecisionDetail({ decision }: EnforcementDecisionDetai
           </dd>
         </>
       ) : null}
+      {decision.policyDecisionId !== undefined ? (
+        <>
+          <dt>Policy decision</dt>
+          <dd>{decision.policyDecisionId}</dd>
+        </>
+      ) : null}
+      {decision.policyProofId !== undefined ? (
+        <>
+          <dt>Policy proof</dt>
+          <dd>
+            <code>{decision.policyProofId}</code>
+          </dd>
+        </>
+      ) : null}
+      {decision.policyPackVersionIds !== undefined ? (
+        <>
+          <dt>Policy pack versions</dt>
+          <dd>{decision.policyPackVersionIds.length > 0 ? decision.policyPackVersionIds.join(', ') : '—'}</dd>
+        </>
+      ) : null}
+      {decision.policyMatchedRuleIds !== undefined ? (
+        <>
+          <dt>Policy matched rules</dt>
+          <dd>{decision.policyMatchedRuleIds.length > 0 ? decision.policyMatchedRuleIds.join(', ') : '—'}</dd>
+        </>
+      ) : null}
+      {decision.policyReasonCode !== undefined ? (
+        <>
+          <dt>Policy reason code</dt>
+          <dd>{decision.policyReasonCode}</dd>
+        </>
+      ) : null}
+      {decision.policyReason !== undefined ? (
+        <>
+          <dt>Policy reason</dt>
+          <dd>{decision.policyReason}</dd>
+        </>
+      ) : null}
+      {decision.policyEffectiveRiskLevel !== undefined ? (
+        <>
+          <dt>Policy effective risk</dt>
+          <dd>{decision.policyEffectiveRiskLevel}</dd>
+        </>
+      ) : null}
       <dt>Decided at</dt>
       <dd>{decision.decidedAt}</dd>
     </dl>
