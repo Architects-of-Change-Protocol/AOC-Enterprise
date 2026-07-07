@@ -4,5 +4,5 @@
     "rootDir": "src",
     "outDir": "dist/src"
   },
-  "include": ["src/**/*.ts", "types/**/*.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "types/**/*.d.ts"]
 }
