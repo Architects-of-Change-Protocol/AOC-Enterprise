@@ -7,6 +7,11 @@ import { isHardBlockingApprovalResult, type ApprovalRuntimeIntegration } from '.
 import { mapAuthorityDecisionType, requiresAuthorityChain, type AuthorityGraphIntegration } from './authority-graph-integration.js';
 import type { CapabilityTokenService } from './capability-token-service.js';
 import type { EvidenceLedger } from './evidence-ledger.js';
+import {
+  mapExternalStandingResultType,
+  type ExternalAgentStandingIntegration,
+  type ExternalStandingVerificationResult,
+} from './external-agent-handshake-integration.js';
 import type { PassportService } from './passport-service.js';
 import type { PolicyEvaluator } from './policy-evaluator.js';
 import type { RevocationEngine } from './revocation-engine.js';
@@ -27,6 +32,7 @@ export class RecognitionVerifier {
     private readonly evidenceLedger: EvidenceLedger,
     private readonly authorityGraph?: AuthorityGraphIntegration,
     private readonly approvalRuntime?: ApprovalRuntimeIntegration,
+    private readonly externalAgentHandshake?: ExternalAgentStandingIntegration,
   ) {}
 
   verifyAction(request: ActionRequest): RecognitionDecision {
@@ -46,6 +52,24 @@ export class RecognitionVerifier {
       ...(request.capabilityTokenId !== undefined ? { capabilityTokenId: request.capabilityTokenId } : {}),
     });
 
+    // External Agent Handshake is consulted up front (not after the policy chain) because
+    // RogueActorPolicy unconditionally denies actor.type 'external' -- that denial must be the
+    // default with no integration configured. When External Agent Handshake vouches for this
+    // actor with a currently-valid visa, RogueActorPolicy lets it through so the *rest* of the
+    // normal chain (passport, capability, revocation, authority, approval) still applies in full;
+    // those checks are never bypassed or overridden by handshake standing.
+    let externalStandingResult: ExternalStandingVerificationResult | undefined;
+    if (this.externalAgentHandshake && actor?.type === 'external') {
+      externalStandingResult = this.externalAgentHandshake.verifyExternalStanding({
+        actorId: request.actorId,
+        trustDomainId: request.trustDomainId,
+        action: request.action,
+        resourceScope: request.resource,
+        requestedAt: now,
+        ...(capabilityToken?.capability !== undefined ? { capability: capabilityToken.capability } : {}),
+      });
+    }
+
     const context: PolicyContext = {
       now,
       issuerAccepted: this.trustDomainService.isIssuerAccepted(request.trustDomainId, actor?.issuerId),
@@ -56,6 +80,7 @@ export class RecognitionVerifier {
       ...(passport !== undefined ? { passport } : {}),
       ...(capabilityToken !== undefined ? { capabilityToken } : {}),
       ...(capabilityCheck !== undefined ? { capabilityCheck } : {}),
+      ...(externalStandingResult !== undefined ? { externalStandingValid: externalStandingResult.type === 'standing_valid' } : {}),
     };
 
     const result = this.policyEvaluator.evaluatePolicies(request, context);
@@ -133,6 +158,19 @@ export class RecognitionVerifier {
         reasonCode = approvalResult.reasonCode;
         reason = approvalResult.reason;
       }
+    }
+
+    // If the only reason this action was denied is RogueActorPolicy's blanket rule against
+    // actor.type 'external', and External Agent Handshake was consulted but did not return a
+    // valid visa, surface the more specific handshake reason (expired/revoked/scope_denied/
+    // capability_denied/handshake_pending/etc.) instead of the generic ROGUE_ACTOR_TYPE message.
+    // Any *other* denial reason (invalid passport, revoked capability, out-of-scope, missing
+    // approval, invalid authority chain) is left untouched -- handshake standing never overrides
+    // those.
+    if (externalStandingResult && externalStandingResult.type !== 'standing_valid' && decisionType === 'unrecognized_actor' && reasonCode === 'ROGUE_ACTOR_TYPE') {
+      decisionType = mapExternalStandingResultType(externalStandingResult.type);
+      reasonCode = externalStandingResult.reasonCode;
+      reason = externalStandingResult.reason;
     }
 
     const auditEvent = this.evidenceLedger.recordAuditEvent({

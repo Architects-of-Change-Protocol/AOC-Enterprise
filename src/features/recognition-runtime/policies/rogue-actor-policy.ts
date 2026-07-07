@@ -19,7 +19,7 @@ export class RogueActorPolicy implements Policy {
       };
     }
 
-    if (actor.type === 'unknown' || actor.type === 'external') {
+    if (actor.type === 'unknown' || (actor.type === 'external' && context.externalStandingValid !== true)) {
       return {
         policyId: POLICY_ID,
         passed: false,
