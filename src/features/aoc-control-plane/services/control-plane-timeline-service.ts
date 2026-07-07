@@ -100,6 +100,9 @@ const ENFORCEMENT_STATUS: Readonly<Record<EnforcementEventType, AocTimelineStatu
   side_effect_executed: 'success',
   enforcement_proof_created: 'info',
   enforcement_violation_recorded: 'danger',
+  policy_pack_evaluated: 'info',
+  policy_pack_blocked: 'danger',
+  policy_pack_warning_recorded: 'warning',
 };
 
 function normalizeRecognitionEvent(event: AuditEvent): AocTimelineItem {

@@ -7,6 +7,7 @@ import type { EnforcementProof } from '../domain/enforcement-proof.js';
 import type { EnforcementRequest } from '../domain/enforcement-request.js';
 import type { EnforcementViolation } from '../domain/enforcement-violation.js';
 import type { EnforcementPolicy } from '../domain/enforcement-verification.js';
+import type { EnforcementPolicyPackIntegration } from '../domain/policy-pack-enforcement.js';
 import type { ExecutionResult } from '../domain/execution-result.js';
 import { AdapterRegistry } from '../services/adapter-registry.js';
 import { EnforcementDecisionService } from '../services/enforcement-decision-service.js';
@@ -19,6 +20,7 @@ import { EnforcementResultService } from '../services/enforcement-result-service
 import { EnforcementStore } from '../services/enforcement-store.js';
 import { GuardedExecutionService } from '../services/guarded-execution-service.js';
 import { IdempotencyService } from '../services/idempotency-service.js';
+import { PolicyPackEnforcementService } from '../services/policy-pack-enforcement-service.js';
 import { SideEffectLedger } from '../services/side-effect-ledger.js';
 import type { EnforcementRuntimeContext } from './enforcement-runtime-context.js';
 
@@ -28,6 +30,14 @@ export interface ActionEnforcementRuntimeOptions {
   /** Whether a previously *failed* execution under the same idempotency key may be retried. Defaults to true. */
   readonly allowIdempotencyRetryAfterFailure?: boolean;
   readonly policies?: readonly EnforcementPolicy[];
+  /**
+   * Optional, deterministic Domain Policy Pack Runtime preflight
+   * integration. When omitted, preflight behavior is identical to before
+   * this option existed: the `domain_policy_pack` policy always passes with
+   * `policy_not_applicable` and no policy fields are attached to decisions
+   * or proofs.
+   */
+  readonly policyPackIntegration?: EnforcementPolicyPackIntegration;
 }
 
 /**
@@ -47,6 +57,7 @@ export class ActionEnforcementRuntime {
   readonly idempotencyService: IdempotencyService;
   readonly resultService: EnforcementResultService;
   readonly proofService: EnforcementProofService;
+  readonly policyPackService: PolicyPackEnforcementService;
   readonly preflightService: EnforcementPreflightService;
   readonly guardedExecutionService: GuardedExecutionService;
 
@@ -69,6 +80,7 @@ export class ActionEnforcementRuntime {
     this.idempotencyService = new IdempotencyService(ctx, { allowRetryAfterFailure: options.allowIdempotencyRetryAfterFailure ?? true });
     this.resultService = new EnforcementResultService(ctx, this.store);
     this.proofService = new EnforcementProofService(ctx, this.store);
+    this.policyPackService = new PolicyPackEnforcementService(ctx, options.policyPackIntegration);
     this.preflightService = new EnforcementPreflightService(
       ctx,
       this.store,
@@ -79,6 +91,7 @@ export class ActionEnforcementRuntime {
       this.idempotencyService,
       recognitionIntegration,
       () => this.emergencyDeny,
+      this.policyPackService,
     );
     this.guardedExecutionService = new GuardedExecutionService(
       ctx,

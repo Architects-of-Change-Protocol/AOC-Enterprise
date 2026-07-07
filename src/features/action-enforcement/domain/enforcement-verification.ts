@@ -3,6 +3,7 @@ import type { EnforcementDecisionType } from './enforcement-decision.js';
 import type { RecognitionVerificationResult } from './enforcement-context.js';
 import type { EnforcementRequest } from './enforcement-request.js';
 import type { IdempotencyCheckResult } from './idempotency-key.js';
+import type { EnforcementPolicyPackEvaluationResult } from './policy-pack-enforcement.js';
 
 export type EnforcementPolicySeverity = 'info' | 'warning' | 'error' | 'critical';
 
@@ -25,6 +26,14 @@ export interface EnforcementPolicyContext {
   readonly adapter?: EnforcementAdapter;
   readonly emergencyDeny: boolean;
   readonly idempotency?: IdempotencyCheckResult;
+  /**
+   * Precomputed once per preflight (mirrors `recognitionResult`/`adapter`/
+   * `idempotency`) so the policy chain never calls the policy pack
+   * integration itself. Always present: when no policy pack integration is
+   * configured, this deterministically resolves to a `policy_not_applicable`
+   * result rather than being `undefined`.
+   */
+  readonly policyPackResult?: EnforcementPolicyPackEvaluationResult;
 }
 
 export interface EnforcementPolicyOutcome extends EnforcementPolicyResult {

@@ -23,6 +23,12 @@ export interface EnforcementProof {
   readonly approvalProofId?: string;
   readonly handshakeProofId?: string;
 
+  /** Policy pack references, present only when a policy pack integration actually evaluated this request -- see EnforcementDecision.policyDecisionId. */
+  readonly policyDecisionId?: string;
+  readonly policyProofId?: string;
+  readonly policyPackVersionIds?: readonly string[];
+  readonly policyMatchedRuleIds?: readonly string[];
+
   readonly sideEffectIds: readonly string[];
 
   readonly idempotencyKey?: string;

@@ -1,4 +1,4 @@
-import type { EnforcementMode, EnforcementRequest } from '../domain/enforcement-request.js';
+import type { EnforcementMode, EnforcementPolicyEvaluationInput, EnforcementRequest } from '../domain/enforcement-request.js';
 import type { EnforcementTarget } from '../domain/enforcement-target.js';
 import type { ExecutionIntent } from '../domain/execution-intent.js';
 import type { EnforcementRuntimeContext } from '../runtime/enforcement-runtime-context.js';
@@ -27,6 +27,9 @@ export interface CreateEnforcementRequestInput {
   readonly visaId?: string;
   readonly ingressGrantId?: string;
   readonly handshakeProofId?: string;
+
+  /** Caller-declared context for the optional Domain Policy Pack Runtime preflight integration. */
+  readonly policyEvaluationInput?: EnforcementPolicyEvaluationInput;
 
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -66,6 +69,7 @@ export class EnforcementRequestService {
       ...(input.visaId !== undefined ? { visaId: input.visaId } : {}),
       ...(input.ingressGrantId !== undefined ? { ingressGrantId: input.ingressGrantId } : {}),
       ...(input.handshakeProofId !== undefined ? { handshakeProofId: input.handshakeProofId } : {}),
+      ...(input.policyEvaluationInput !== undefined ? { policyEvaluationInput: input.policyEvaluationInput } : {}),
       ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
     };
     this.store.saveRequest(request);

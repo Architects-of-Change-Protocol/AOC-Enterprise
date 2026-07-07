@@ -8,7 +8,7 @@ export type {
   IdempotencyOutcome,
   IdempotencyCheckResult,
 } from './idempotency-key.js';
-export type { EnforcementMode, EnforcementRequestStatus, EnforcementRequest } from './enforcement-request.js';
+export type { EnforcementMode, EnforcementRequestStatus, EnforcementRequest, EnforcementPolicyEvaluationInput } from './enforcement-request.js';
 export type {
   RecognitionVerificationInput,
   RecognitionVerificationResult,
@@ -30,3 +30,16 @@ export type {
   EnforcementPolicy,
 } from './enforcement-verification.js';
 export type { EnforcementOutcome } from './enforcement-outcome.js';
+export type {
+  EnforcementPolicyPackEvaluationInput,
+  EnforcementPolicyPackEvaluationResult,
+  EnforcementPolicyPackEvidenceRequirement,
+  EnforcementPolicyPackApprovalRequirement,
+  EnforcementPolicyPackObligation,
+  EnforcementPolicyPackIntegration,
+  PolicyPackEnforcementDecisionType,
+  PolicyPackEnforcementEvaluation,
+  PolicyPackEnforcementViolationType,
+  PolicyPackEnforcementViolation,
+  PolicyPackEnforcementMetadata,
+} from './policy-pack-enforcement.js';

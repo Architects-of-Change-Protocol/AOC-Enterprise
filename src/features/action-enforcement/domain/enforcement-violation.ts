@@ -10,7 +10,14 @@ export type EnforcementViolationType =
   | 'adapter_denied'
   | 'emergency_denied'
   | 'request_expired'
-  | 'execution_error';
+  | 'execution_error'
+  | 'policy_denied'
+  | 'policy_requires_evidence'
+  | 'policy_requires_approval'
+  | 'policy_requires_authority'
+  | 'policy_requires_external_standing'
+  | 'policy_integration_error'
+  | 'policy_invalid_result';
 
 export type EnforcementViolationSeverity = 'info' | 'warning' | 'error' | 'critical';
 

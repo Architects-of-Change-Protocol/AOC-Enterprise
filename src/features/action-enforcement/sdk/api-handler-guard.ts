@@ -1,4 +1,5 @@
 import type { EnforcementOutcome } from '../domain/enforcement-outcome.js';
+import type { EnforcementPolicyEvaluationInput } from '../domain/enforcement-request.js';
 import type { AocGuard, GuardActionRequestInput } from './aoc-guard.js';
 
 export interface ApiHandlerConfig<TReq, TRes> {
@@ -11,6 +12,8 @@ export interface ApiHandlerConfig<TReq, TRes> {
   readonly principalActorFromRequest?: (req: TReq) => string | undefined;
   readonly resourceScopeFromRequest: (req: TReq) => string;
   readonly idempotencyKeyFromRequest?: (req: TReq) => string | undefined;
+  /** Derives the optional Domain Policy Pack Runtime preflight context from the framework request. Omit when no policy pack integration is configured, or when this route needs none. */
+  readonly policyEvaluationInputFromRequest?: (req: TReq) => EnforcementPolicyEvaluationInput | undefined;
 
   readonly handler: (req: TReq) => Promise<TRes> | TRes;
   readonly throwOnBlocked?: boolean;
@@ -41,6 +44,7 @@ export class ApiHandlerGuard {
     return async (req: TReq): Promise<ApiHandlerResult<TRes>> => {
       const principalActorId = config.principalActorFromRequest?.(req);
       const idempotencyKey = config.idempotencyKeyFromRequest?.(req);
+      const policyEvaluationInput = config.policyEvaluationInputFromRequest?.(req);
 
       const guardInput: GuardActionRequestInput = {
         actorId: config.actorFromRequest(req),
@@ -53,6 +57,7 @@ export class ApiHandlerGuard {
         ...(config.capability !== undefined ? { capability: config.capability } : {}),
         ...(principalActorId !== undefined ? { principalActorId } : {}),
         ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+        ...(policyEvaluationInput !== undefined ? { policyEvaluationInput } : {}),
       };
 
       const outcome = await this.guard.enforce<TRes>(guardInput, () => config.handler(req));

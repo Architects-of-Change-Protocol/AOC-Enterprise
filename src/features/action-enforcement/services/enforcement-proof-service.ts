@@ -24,6 +24,11 @@ export interface CreateEnforcementProofInput {
   readonly approvalProofId?: string;
   readonly handshakeProofId?: string;
 
+  readonly policyDecisionId?: string;
+  readonly policyProofId?: string;
+  readonly policyPackVersionIds?: readonly string[];
+  readonly policyMatchedRuleIds?: readonly string[];
+
   readonly sideEffectIds: readonly string[];
 
   readonly idempotencyKey?: string;
@@ -60,6 +65,10 @@ export class EnforcementProofService {
       authorityProofId: input.authorityProofId,
       approvalProofId: input.approvalProofId,
       handshakeProofId: input.handshakeProofId,
+      policyDecisionId: input.policyDecisionId,
+      policyProofId: input.policyProofId,
+      policyPackVersionIds: input.policyPackVersionIds,
+      policyMatchedRuleIds: input.policyMatchedRuleIds,
       sideEffectIds: input.sideEffectIds,
       idempotencyKey: input.idempotencyKey,
       previousHash,
@@ -85,6 +94,10 @@ export class EnforcementProofService {
       ...(input.authorityProofId !== undefined ? { authorityProofId: input.authorityProofId } : {}),
       ...(input.approvalProofId !== undefined ? { approvalProofId: input.approvalProofId } : {}),
       ...(input.handshakeProofId !== undefined ? { handshakeProofId: input.handshakeProofId } : {}),
+      ...(input.policyDecisionId !== undefined ? { policyDecisionId: input.policyDecisionId } : {}),
+      ...(input.policyProofId !== undefined ? { policyProofId: input.policyProofId } : {}),
+      ...(input.policyPackVersionIds !== undefined ? { policyPackVersionIds: input.policyPackVersionIds } : {}),
+      ...(input.policyMatchedRuleIds !== undefined ? { policyMatchedRuleIds: input.policyMatchedRuleIds } : {}),
       ...(input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {}),
       ...(previousHash !== undefined ? { previousHash } : {}),
     };
@@ -118,6 +131,10 @@ export class EnforcementProofService {
       authorityProofId: proof.authorityProofId,
       approvalProofId: proof.approvalProofId,
       handshakeProofId: proof.handshakeProofId,
+      policyDecisionId: proof.policyDecisionId,
+      policyProofId: proof.policyProofId,
+      policyPackVersionIds: proof.policyPackVersionIds,
+      policyMatchedRuleIds: proof.policyMatchedRuleIds,
       sideEffectIds: proof.sideEffectIds,
       idempotencyKey: proof.idempotencyKey,
       previousHash: proof.previousHash,

@@ -174,6 +174,10 @@ export class GuardedExecutionService {
       ...(decision.authorityProofId !== undefined ? { authorityProofId: decision.authorityProofId } : {}),
       ...(decision.approvalProofId !== undefined ? { approvalProofId: decision.approvalProofId } : {}),
       ...(decision.handshakeProofId !== undefined ? { handshakeProofId: decision.handshakeProofId } : {}),
+      ...(decision.policyDecisionId !== undefined ? { policyDecisionId: decision.policyDecisionId } : {}),
+      ...(decision.policyProofId !== undefined ? { policyProofId: decision.policyProofId } : {}),
+      ...(decision.policyPackVersionIds !== undefined ? { policyPackVersionIds: decision.policyPackVersionIds } : {}),
+      ...(decision.policyMatchedRuleIds !== undefined ? { policyMatchedRuleIds: decision.policyMatchedRuleIds } : {}),
       ...(request.idempotencyKey !== undefined ? { idempotencyKey: request.idempotencyKey } : {}),
     });
 

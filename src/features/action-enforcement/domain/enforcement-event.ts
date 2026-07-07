@@ -13,7 +13,10 @@ export type EnforcementEventType =
   | 'side_effect_blocked'
   | 'side_effect_executed'
   | 'enforcement_proof_created'
-  | 'enforcement_violation_recorded';
+  | 'enforcement_violation_recorded'
+  | 'policy_pack_evaluated'
+  | 'policy_pack_blocked'
+  | 'policy_pack_warning_recorded';
 
 export interface EnforcementEvent {
   readonly id: string;
