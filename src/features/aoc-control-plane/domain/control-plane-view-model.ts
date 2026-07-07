@@ -3,6 +3,7 @@ import type { AocDecisionStatus, AocControlPlaneHealth } from './control-plane-s
 import type { AocMetric } from './control-plane-metric.js';
 import type { AocTimelineItem } from './control-plane-timeline.js';
 import type { ProofChainRow, ProofReferenceRow } from './control-plane-proof-reference.js';
+import type { PolicyPackControlPlaneViewModel } from './policy-pack-view-model.js';
 
 export interface AocDecisionSummary {
   readonly id: string;
@@ -340,6 +341,14 @@ export interface EnforcementDecisionRow {
   readonly authorityProofId?: string;
   readonly approvalProofId?: string;
   readonly handshakeProofId?: string;
+  /** Populated only when a Domain Policy Pack Runtime preflight integration actually evaluated this request -- see EnforcementDecision.policyDecisionId in action-enforcement/domain/enforcement-decision.ts. */
+  readonly policyDecisionId?: string;
+  readonly policyProofId?: string;
+  readonly policyPackVersionIds?: readonly string[];
+  readonly policyMatchedRuleIds?: readonly string[];
+  readonly policyReasonCode?: string;
+  readonly policyReason?: string;
+  readonly policyEffectiveRiskLevel?: string;
   readonly decidedAt: string;
 }
 
@@ -385,6 +394,11 @@ export interface EnforcementProofRow {
   readonly authorityProofId?: string;
   readonly approvalProofId?: string;
   readonly handshakeProofId?: string;
+  /** Policy pack references, present only when a policy pack integration actually evaluated this request -- see EnforcementProof.policyDecisionId in action-enforcement/domain/enforcement-proof.ts. */
+  readonly policyDecisionId?: string;
+  readonly policyProofId?: string;
+  readonly policyPackVersionIds?: readonly string[];
+  readonly policyMatchedRuleIds?: readonly string[];
   readonly proofHash: string;
   readonly previousHash?: string;
   readonly createdAt: string;
@@ -407,6 +421,8 @@ export interface ProofsViewModel {
   readonly approvalProofs: readonly ProofReferenceRow[];
   readonly handshakeProofs: readonly ProofReferenceRow[];
   readonly enforcementProofs: readonly ProofReferenceRow[];
+  /** Policy pack proofs (PolicyPackProof, projected as PolicyProofRow) -- populated only when a Domain Policy Pack Runtime is wired in. */
+  readonly policyProofs: readonly ProofReferenceRow[];
   readonly proofChains: readonly ProofChainRow[];
 }
 
@@ -422,5 +438,6 @@ export interface AocControlPlaneReadModel {
   readonly externalAgents: ExternalAgentsViewModel;
   readonly enforcement: EnforcementViewModel;
   readonly proofs: ProofsViewModel;
+  readonly policyPacks: PolicyPackControlPlaneViewModel;
   readonly timeline: readonly AocTimelineItem[];
 }

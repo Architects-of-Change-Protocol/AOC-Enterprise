@@ -374,6 +374,14 @@ policy-caused block also records an `EnforcementViolation` (`policy_denied`/
 `policy_integration_error`/`policy_invalid_result`), exactly like every
 other blocked decision.
 
+`policyDecisionId`/`policyProofId` (and the other `policy*` fields above) are
+now visible in the AOC Control Plane: the Policy Packs section's
+`PolicyEnforcementLinkPanel` and the Enforcement section's
+`EnforcementDecisionDetail`/`EnforcementProofDetail` both render them
+verbatim, and link them back to the underlying `PolicyPackDecision`/
+`PolicyPackProof` in Domain Policy Pack Runtime -- see
+`../aoc-control-plane/README.md`'s "Policy Pack Control Plane" section.
+
 ### Providing policy context through SDK guards
 
 `policyEvaluationInput` (`domain`/`jurisdiction`/`country`/`industry`/

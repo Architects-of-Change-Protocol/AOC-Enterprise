@@ -1,4 +1,4 @@
-export type AocGovernanceSource = 'recognition' | 'authority' | 'approval' | 'handshake' | 'enforcement';
+export type AocGovernanceSource = 'recognition' | 'authority' | 'approval' | 'handshake' | 'enforcement' | 'policy';
 
 export type AocSection =
   | 'overview'
@@ -7,6 +7,7 @@ export type AocSection =
   | 'approvals'
   | 'external-agents'
   | 'enforcement'
+  | 'policy-packs'
   | 'proofs';
 
 export interface AocNavigationItem {
@@ -22,5 +23,6 @@ export const AOC_NAVIGATION_ITEMS: readonly AocNavigationItem[] = [
   { section: 'approvals', label: 'Approvals', description: 'Approval requests, decisions, evidence and quorum.' },
   { section: 'external-agents', label: 'External Agents', description: 'External agents, handshakes, visas and ingress grants.' },
   { section: 'enforcement', label: 'Enforcement', description: 'Enforcement requests, decisions, execution results and side effects.' },
+  { section: 'policy-packs', label: 'Policy Packs', description: 'Domain policy packs, versions, rules, evaluations, decisions and their enforcement links.' },
   { section: 'proofs', label: 'Proofs / Audit', description: 'Proof references, proof chains and the audit trail.' },
 ];

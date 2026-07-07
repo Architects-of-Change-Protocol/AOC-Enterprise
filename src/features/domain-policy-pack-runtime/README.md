@@ -468,6 +468,37 @@ doesn't, the pack (or the test) has a nondeterminism bug.
 - **No network calls**: policy packs are code, registered in-process; this
   module never fetches a pack, a source, or a rule from the network.
 
+## Control Plane visibility
+
+The AOC Control Plane's Policy Packs section
+(`../aoc-control-plane/components/policy-packs/`) surfaces this runtime's
+state to an operator. A few rules govern that integration:
+
+1. Policy packs, versions, rules, evaluations, decisions, proofs and events
+   can all be surfaced in the AOC Control Plane -- see
+   `integrations/control-plane-policy-pack-adapter.ts`
+   (`buildPolicyPackControlPlaneViewModel`), which the Control Plane's own
+   `control-plane-policy-pack-read-model-service.ts` consumes and re-projects
+   into its own row types.
+2. The Control Plane consumes this runtime's read-only rows/adapter output
+   -- never `PolicyConditionEvaluator`, `PolicyRuleEvaluator`, or any other
+   evaluation service directly. It only ever reads `PolicyPackStore`/
+   `PolicyPackLedger` state through the adapter above.
+3. The UI does not re-evaluate policy. No React component in the Control
+   Plane calls `evaluatePolicy`, `simulatePolicyPack`, or any other
+   evaluation entry point on `PolicyPackRuntime` -- it only renders decisions
+   and proofs this runtime already produced.
+4. The UI shows pack/version/rule/decision/proof/event state exactly as
+   recorded: `PolicyPacksTable`/`PolicyPackVersionsTable`/`PolicyRulesTable`
+   list registry state, `PolicyEvaluationsTable`/`PolicyDecisionDetail`/
+   `PolicyProofDetail` show a single evaluation's outcome and proof, and
+   `PolicyEventsTable` shows the ledger's hash-chained event trail.
+5. `legalCompleteness`/`demoOnly` badges (`PolicyLegalCompletenessBadge`,
+   `PolicyDemoOnlyBadge`) are **display metadata, not legal conclusions**.
+   They render exactly what `PolicyPackVersion.legalCompleteness`/
+   `demoOnly` already say -- the Control Plane never upgrades, infers, or
+   softens either value.
+
 ## Relationship to `packages/policy-runtime`
 
 This module is unrelated to the separate `packages/policy-runtime` workspace

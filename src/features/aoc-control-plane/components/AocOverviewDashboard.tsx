@@ -19,6 +19,7 @@ const QUICK_LINKS: readonly { readonly section: AocSection; readonly label: stri
   { section: 'approvals', label: 'Approvals' },
   { section: 'external-agents', label: 'External Agents' },
   { section: 'enforcement', label: 'Enforcement' },
+  { section: 'policy-packs', label: 'Policy Packs' },
   { section: 'proofs', label: 'Proofs / Audit' },
 ];
 

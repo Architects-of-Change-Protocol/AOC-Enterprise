@@ -25,7 +25,7 @@ describe('AocControlPlanePage', () => {
 
   it('renders navigation sections', () => {
     const html = renderToStaticMarkup(<AocControlPlanePage readModel={model} />);
-    for (const label of ['Overview', 'Recognition', 'Authority', 'Approvals', 'External Agents', 'Enforcement', 'Proofs / Audit']) {
+    for (const label of ['Overview', 'Recognition', 'Authority', 'Approvals', 'External Agents', 'Enforcement', 'Policy Packs', 'Proofs / Audit']) {
       assert.ok(html.includes(label), `expected navigation label "${label}"`);
     }
   });
@@ -43,6 +43,7 @@ describe('AocControlPlanePage', () => {
       approvals: '<h2>Approvals</h2>',
       'external-agents': '<h2>External Agents</h2>',
       enforcement: '<h2>Enforcement</h2>',
+      'policy-packs': '<h2>Policy Packs</h2>',
       proofs: '<h2>Proofs / Audit</h2>',
     };
     for (const section of Object.keys(sectionHeadings) as AocSection[]) {

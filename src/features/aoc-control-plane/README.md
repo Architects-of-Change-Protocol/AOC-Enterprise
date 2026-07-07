@@ -46,7 +46,7 @@ If a row says an action was `allowed`, that is because
 an action was `executed`, that is because `ExecutionResult.executed` was
 `true`. Nothing here is inferred or dramatized.
 
-## The seven sections
+## The eight sections
 
 ### 1. Overview (`AocOverviewDashboard`)
 Status cards (recognized actors, active grants/delegations, pending
@@ -81,10 +81,17 @@ Enforcement requests, decisions (with reasonCode/reason and links back to
 the recognition/authority/approval/handshake proof that justified them),
 execution results, side effects, violations, and idempotency status.
 
-### 7. Proofs / Audit (`ProofsPanel`)
-Proof references from all five runtimes, proof chains linking an
-enforcement proof back through recognition, authority, approval and
-handshake, hash/previousHash display, and the full audit trail.
+### 7. Policy Packs (`PolicyPacksPanel`)
+Domain policy packs, versions, rules, evaluations, decisions, proofs and
+events read from Domain Policy Pack Runtime, plus the links between an
+Action Enforcement decision/proof and the policy pack decision/proof it
+consulted. See "Policy Pack Control Plane" below.
+
+### 8. Proofs / Audit (`ProofsPanel`)
+Proof references from all five governance runtimes plus Domain Policy Pack
+Runtime, proof chains linking an enforcement proof back through recognition,
+authority, approval, handshake and policy, hash/previousHash display, and
+the full audit trail.
 
 ## How read models are built
 
@@ -136,6 +143,11 @@ into one `AocTimelineItem[]`, normalizing each event's type into a title,
 description and status (`info`/`success`/`warning`/`danger`) via a fixed
 lookup table per event type -- no interpretation beyond that -- and sorts
 newest-first (falling back to id for a stable tie-break).
+`buildControlPlaneReadModel` then merges in
+`ControlPlanePolicyPackTimelineService.buildPolicyPackTimeline`'s output
+(policy events plus policy-blocked enforcement decisions -- see "Policy Pack
+Control Plane" below) and re-sorts, so the final timeline is one
+chronologically consistent feed across all six sources.
 
 ## How proof chains are built and displayed
 
@@ -146,6 +158,160 @@ the ids it already carries (`recognitionDecisionId`, `authorityProofId`,
 when every one of those referenced ids was actually found among the
 collected proofs -- if Action Enforcement recorded a reference to a proof
 this service could not resolve, the chain is `incomplete`, visibly.
+`control-plane-policy-pack-proof-service.ts` builds an additional
+`enforcement proof → policy proof` chain per enforcement proof carrying a
+`policyProofId`, using the same "complete only if actually found" rule.
+
+## Policy Pack Control Plane
+
+Domain Policy Pack Runtime and its Action Enforcement wiring (see
+`../domain-policy-pack-runtime/README.md` and
+`../action-enforcement/README.md`) let an operator answer "was this action
+allowed?" but not "was it allowed *under which policy pack, and by which
+rule*?". The Policy Packs section closes that gap.
+
+### 1. What this section shows
+
+Policy packs and their versions (with status, scope, demo-only/legal-
+completeness metadata), the rules inside each version, every recorded policy
+evaluation and decision, policy proofs, the policy pack event trail, and the
+links between an Action Enforcement decision/proof and the policy pack
+decision/proof it consulted during preflight.
+
+### 2. Why this is needed after enforcement wiring
+
+Policy Pack Enforcement Wiring lets Action Enforcement's preflight
+optionally consult Domain Policy Pack Runtime and carry the result forward
+as `policyDecisionId`/`policyProofId`/... on its own `EnforcementDecision`/
+`EnforcementProof`. Those ids are opaque without a place to look them up --
+this section is that place. It never re-evaluates policy; it only reads what
+Domain Policy Pack Runtime and Action Enforcement already decided.
+
+### 3. Policy evaluation vs. enforcement decision
+
+A **policy evaluation** (`PolicyPackEvaluationRow`/`PolicyPackDecision`) is
+Domain Policy Pack Runtime's own answer to "does any active policy pack
+version apply to this action, and if so, what does it require?" -- computed
+independently of Action Enforcement. An **enforcement decision**
+(`EnforcementDecisionRow`) is Action Enforcement's own answer to "is this
+action allowed to execute right now?", which folds together recognition,
+authority, approval, evidence, external standing *and* (optionally) the
+policy pack evaluation above. A policy pack can only ever narrow an
+enforcement decision that every earlier AOC layer already allowed -- it
+never overrides a core denial, and a `policy_warning`/`policy_allowed`
+result never shows as blocked unless something else in the chain blocked it.
+
+### 4. Policy proof vs. enforcement proof
+
+A **policy proof** (`PolicyProofRow`) hash-chains a single policy
+evaluation's input, rule results and decision. An **enforcement proof**
+(`EnforcementProofRow`) hash-chains the whole enforcement outcome
+(recognition/authority/approval/handshake/policy references, execution
+result, side effects). When an enforcement proof carries a `policyProofId`,
+the Proofs / Audit panel's proof chain viewer shows both: `enforcement proof
+→ policy proof`, marked `complete` only when the referenced policy proof was
+actually found (see `control-plane-policy-pack-proof-service.ts`).
+
+### 5. How `policyDecisionId`/`policyProofId` connect the two
+
+`EnforcementDecision.policyDecisionId`/`policyProofId` (and the mirrored
+fields on `EnforcementProof`) are the only link the Control Plane trusts.
+`ControlPlanePolicyPackReadModelService.buildPolicyEnforcementLinks` builds
+one `PolicyEnforcementLinkRow` per enforcement decision that carries either
+id, resolving `policyDecisionType` by looking that id up in Domain Policy
+Pack Runtime's own decisions. `blockedByPolicy` is `true` only when the
+enforcement decision's own `reasonCode` exactly equals its
+`policyReasonCode` -- i.e. the policy pack outcome is what actually stopped
+execution, not some other AOC layer that happened to run after a policy
+warning.
+
+### 6. Policy pack versions and matched rules
+
+`PolicyPackVersionsTable` shows each version's status, demo-only/legal-
+completeness metadata and scope (jurisdictions/countries/domains/actions).
+`PolicyRulesTable` and `PolicyDecisionDetail`/`PolicyEvaluationsTable` show
+`matchedRuleIds` verbatim from the underlying `PolicyPackDecision` -- this
+Control Plane never re-runs `PolicyConditionEvaluator`/`PolicyRuleEvaluator`
+to determine which rules matched.
+
+### 7. How obligations are displayed
+
+`PolicyObligationsList` renders each obligation's type, description and
+required/optional status exactly as `PolicyPackDecision.obligations`
+recorded them, with the source rule id when present.
+
+### 8. How evidence requirements are displayed
+
+`PolicyEvidenceRequirementsList` renders each evidence requirement's type,
+description and required/optional status from `PolicyPackDecision.
+evidenceRequirements`, unchanged.
+
+### 9. How approval requirements are displayed
+
+`PolicyApprovalRequirementsList` renders each approval requirement's type,
+description, minimum approvals, segregation-of-duties flag and required
+authority capability from `PolicyPackDecision.approvalRequirements`.
+
+### 10. How policy events appear in the timeline
+
+`ControlPlanePolicyPackTimelineService.buildPolicyPackTimeline` normalizes
+every `PolicyPackEvent` (`policy_pack_registered`,
+`policy_pack_version_activated/deprecated/revoked`, `policy_evaluation_
+started`, `policy_pack_applicability_resolved`, `policy_rule_matched/not_
+matched`, `policy_decision_created`, `policy_proof_created`, `policy_
+simulation_started/completed`) into an `AocTimelineItem` with `source:
+'policy'`, plus a synthetic-but-not-fabricated `policy_pack_blocked_
+execution` item for every enforcement decision whose `blockedByPolicy` is
+true -- timestamped from that decision's own `decidedAt`, never invented.
+The main `AocControlPlaneReadModel.timeline` merges these in with every
+other source, sorted newest-first.
+
+### 11. How policy proofs appear in proof chains
+
+See point 4 above; `ProofsViewModel.policyProofs` and the policy entries in
+`ProofsViewModel.proofChains` are additive to the existing five-source proof
+model, built by `control-plane-policy-pack-proof-service.ts`.
+
+### 12. What `demoOnly` means
+
+`demoOnly: true` means the policy pack version is illustrative/sample data,
+not a customer-configured or production policy. `PolicyDemoOnlyBadge` always
+renders this with a `warning` tone and the literal label "demo only" -- it
+is never hidden or downplayed.
+
+### 13. What `legalCompleteness` means
+
+One of `not_legal_advice`, `partial_policy_model`, `customer_provided_
+policy`, `verified_by_customer`, `verified_by_counsel` -- metadata the
+policy pack version's author declared, not a conclusion this Control Plane
+draws. `PolicyLegalCompletenessBadge` always renders `not_legal_advice` with
+a `danger` tone and the literal label "Not legal advice"; only
+`verified_by_customer`/`verified_by_counsel` render as `success`.
+
+### 14. Legal / compliance disclaimer
+
+- Every demo policy pack shipped in this repository is `demoOnly: true` and
+  `not_legal_advice`. **None of it is legal advice**, and none of it should
+  be treated as a certified compliance control.
+- A policy pack is not "complete" compliance coverage for any domain or
+  jurisdiction unless its own metadata explicitly says
+  `verified_by_customer` or `verified_by_counsel` -- absence of a denial is
+  not evidence of compliance.
+- This Control Plane displays policy **evidence** (what was evaluated, what
+  matched, what was required, what was proven) -- it draws no legal
+  **conclusions**, and it must never be extended to do so (no LLM-generated
+  explanations, no compliance scoring, no "this is GDPR-compliant"-style
+  claims).
+
+### 15. Extending with future customer/jurisdiction packs
+
+Nothing in this section is specific to the six demo packs. Any additional
+`PolicyPack`/`PolicyPackVersion` registered on the `PolicyPackRuntime` this
+Control Plane is wired to shows up automatically through the same
+`buildPolicyPackControlPlaneViewModel` adapter -- a customer or
+jurisdictional pack with `legalCompleteness: 'verified_by_counsel'` and
+`demoOnly: false` renders with the `success` tone and no "demo only" badge,
+with zero code changes required here.
 
 ## How commands work
 
@@ -188,17 +354,25 @@ was supplied, rather than silently hiding it or faking success.
 `fixtures/control-plane-demo.fixture.ts` builds one deterministic "Datasys
 Agent Republic" world by:
 
-1. Calling Action Enforcement's own `buildDatasysEnforcementFixture()`, which
-   already wires all five runtimes together (this module does not rebuild
-   that composition).
+1. Calling Action Enforcement's own `buildPolicyPackEnforcementFixture()`,
+   which wires all five governance runtimes together *and* registers all six
+   Domain Policy Pack Runtime demo packs on the same `ActionEnforcementRuntime`
+   used for every scenario below (this module does not rebuild that
+   composition, and does not run a second, unconfigured runtime alongside it
+   -- there is exactly one enforcement store, so every decision/proof in the
+   read model is internally consistent).
 2. Directly exercising Authority Graph's `verifyAuthority` for two
    representative actions (one delegated and valid, one not delegated), the
    same way `authority-graph`'s own demo scenarios do.
-3. Driving nine real scenarios through `AocGuard.enforce(...)`: an allowed
-   and executed action, a pending-then-approved approval (plus a suppressed
-   duplicate via the same idempotency key), an evidence-required denial, an
-   unrecognized-actor denial, a completed external handshake and successful
-   read, an adapter-denied action, and a dry run.
+3. Driving thirteen real scenarios through `AocGuard.enforce(...)`: an
+   allowed and executed action, a pending-then-approved approval (plus a
+   suppressed duplicate via the same idempotency key), an evidence-required
+   denial, an unrecognized-actor denial, a completed external handshake and
+   successful read, an adapter-denied action, a dry run, plus four
+   policy-pack-specific scenarios -- a `policy_warning` that still executes,
+   a `policy_denied` block (payments-basic's bank-account rule), a
+   `policy_requires_evidence` block (procurement-basic) and a
+   `policy_requires_approval` block (payments-basic's finance-review rule).
 4. Revoking one capability token nobody else in the fixture depends on, so
    the Recognition panel has a genuine `revoked` row to show.
 
@@ -245,8 +419,11 @@ route table to integrate into, so no route was registered here.
 - Every action button has visible text (never icon-only) and a `title`
   explaining its state, especially when disabled.
 - Status/decision/risk badges (`AocDecisionBadge`, `AocRiskBadge`,
-  `ExternalStandingBadge`) always pair color with a text label and symbol --
-  color is never the only signal.
+  `ExternalStandingBadge`, and the policy pack badges --
+  `PolicyDecisionBadge`, `PolicyEffectBadge`, `PolicyLegalCompletenessBadge`,
+  `PolicyDemoOnlyBadge`, `PolicyRuleMatchBadge`) always pair color with a
+  text label and symbol -- color is never the only signal, and
+  `not_legal_advice` is always `danger`-toned, never green.
 - Navigation tabs use `role="tablist"`/`role="tab"`/`aria-selected`.
 - Error and empty states use `role="alert"`/`role="status"` respectively.
 
