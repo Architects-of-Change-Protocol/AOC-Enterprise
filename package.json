@@ -59,9 +59,19 @@
     }
   },
   "peerDependencies": {
-    "@aoc/protocol": ">=0.1.0"
+    "@aoc/protocol": ">=0.1.0",
+    "react": ">=18.3.1",
+    "react-dom": ">=18.3.1"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
   },
   "devDependencies": {
-    "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol"
+    "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }
