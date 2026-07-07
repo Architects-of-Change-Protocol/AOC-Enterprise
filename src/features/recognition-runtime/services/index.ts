@@ -34,3 +34,11 @@ export type {
   ApprovalRequestReferenceStatus,
   ApprovalRequestReference,
 } from './approval-runtime-integration.js';
+
+export { mapExternalStandingResultType } from './external-agent-handshake-integration.js';
+export type {
+  ExternalAgentStandingIntegration,
+  ExternalStandingVerificationInput,
+  ExternalStandingVerificationResultType,
+  ExternalStandingVerificationResult,
+} from './external-agent-handshake-integration.js';

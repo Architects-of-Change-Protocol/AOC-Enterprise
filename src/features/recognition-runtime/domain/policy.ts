@@ -22,6 +22,16 @@ export interface PolicyContext {
   readonly issuerAccepted: boolean;
   readonly capabilityCheck?: CapabilityCheckResult;
   readonly revocation: RevocationCheckResult;
+  /**
+   * Set only when an ExternalAgentStandingIntegration is configured and has
+   * already confirmed a valid, unexpired, unrevoked handshake-issued visa for
+   * this actor/action. RogueActorPolicy is the only policy that reads this --
+   * it lets an actor of type 'external' past its otherwise-unconditional
+   * rogue check once (and only once) External Agent Handshake has vouched
+   * for it. Absent this integration, actor.type 'external' remains
+   * unconditionally rogue, exactly as before.
+   */
+  readonly externalStandingValid?: boolean;
 }
 
 export interface PolicyOutcome extends PolicyResult {

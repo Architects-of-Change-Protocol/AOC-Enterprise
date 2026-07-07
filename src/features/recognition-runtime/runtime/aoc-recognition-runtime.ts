@@ -20,6 +20,7 @@ import {
   type IssueCapabilityTokenInput,
 } from '../services/capability-token-service.js';
 import { EvidenceLedger, type ActionProofExport, type AuditTrailFilter } from '../services/evidence-ledger.js';
+import type { ExternalAgentStandingIntegration } from '../services/external-agent-handshake-integration.js';
 import { PassportService, type IssuePassportInput, type PassportVerificationResult } from '../services/passport-service.js';
 import { PolicyEvaluator } from '../services/policy-evaluator.js';
 import { RecognitionVerifier } from '../services/recognition-verifier.js';
@@ -44,6 +45,7 @@ export class AocRecognitionRuntime {
     policies: readonly Policy[] = createDefaultPolicyChain(),
     authorityGraph?: AuthorityGraphIntegration,
     private readonly approvalRuntime?: ApprovalRuntimeIntegration,
+    private readonly externalAgentHandshake?: ExternalAgentStandingIntegration,
   ) {
     this.actorRegistry = new ActorRegistry(ctx);
     this.trustDomainService = new TrustDomainService(ctx);
@@ -63,6 +65,7 @@ export class AocRecognitionRuntime {
       this.evidenceLedger,
       authorityGraph,
       this.approvalRuntime,
+      this.externalAgentHandshake,
     );
   }
 
@@ -138,6 +141,7 @@ export function createAocRecognitionRuntime(
   policies?: readonly Policy[],
   authorityGraph?: AuthorityGraphIntegration,
   approvalRuntime?: ApprovalRuntimeIntegration,
+  externalAgentHandshake?: ExternalAgentStandingIntegration,
 ): AocRecognitionRuntime {
-  return new AocRecognitionRuntime(ctx, policies ?? createDefaultPolicyChain(), authorityGraph, approvalRuntime);
+  return new AocRecognitionRuntime(ctx, policies ?? createDefaultPolicyChain(), authorityGraph, approvalRuntime, externalAgentHandshake);
 }
