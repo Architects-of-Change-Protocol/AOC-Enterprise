@@ -35,6 +35,12 @@ export function buildScenarioOutcome(
     ...(outcome.decision.approvalProofId !== undefined ? { approvalProofId: outcome.decision.approvalProofId } : {}),
     ...(outcome.decision.handshakeProofId !== undefined ? { handshakeProofId: outcome.decision.handshakeProofId } : {}),
     ...(outcome.proof?.proofHash !== undefined ? { proofHash: outcome.proof.proofHash } : {}),
+    ...(outcome.decision.policyDecisionId !== undefined ? { policyDecisionId: outcome.decision.policyDecisionId } : {}),
+    ...(outcome.decision.policyProofId !== undefined ? { policyProofId: outcome.decision.policyProofId } : {}),
+    ...(outcome.decision.policyPackVersionIds !== undefined ? { policyPackVersionIds: outcome.decision.policyPackVersionIds } : {}),
+    ...(outcome.decision.policyMatchedRuleIds !== undefined ? { policyMatchedRuleIds: outcome.decision.policyMatchedRuleIds } : {}),
+    ...(outcome.decision.policyReasonCode !== undefined ? { policyReasonCode: outcome.decision.policyReasonCode } : {}),
+    ...(outcome.decision.policyReason !== undefined ? { policyReason: outcome.decision.policyReason } : {}),
     executorRan,
     sideEffectsExecuted: outcome.result.executed,
   };

@@ -10,7 +10,8 @@ export type DemoAssertionType =
   | 'side_effect_state'
   | 'proof_chain'
   | 'control_plane_row'
-  | 'executor_safety';
+  | 'executor_safety'
+  | 'policy_decision';
 
 export interface DemoAssertionDefinition {
   readonly id: string;

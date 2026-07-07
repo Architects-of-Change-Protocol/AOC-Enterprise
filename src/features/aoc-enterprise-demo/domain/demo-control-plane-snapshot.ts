@@ -7,7 +7,8 @@ export type DemoControlPlanePanel =
   | 'approvals'
   | 'external_agents'
   | 'enforcement'
-  | 'proofs';
+  | 'proofs'
+  | 'policy_packs';
 
 export interface DemoHighlightedControlPlaneRow {
   readonly id: string;

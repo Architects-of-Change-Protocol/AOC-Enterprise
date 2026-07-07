@@ -313,10 +313,19 @@ Control Plane UI wiring is a follow-up.
 `buildPolicyPackProofChainReference(evaluationResult)` and
 `buildPolicyPackDemoExportSnippet(evaluationResult)` all derive their output
 strictly from a real `PolicyPackEvaluationResult` the runtime produced --
-none of them accept a canned outcome or synthesize a decision. A future demo
-scenario can import a sample pack, drive an evaluation through
-`buildDemoPolicyPackRuntime()`, and hand the result to these functions
-without editing any existing `aoc-enterprise-demo` scenario file.
+none of them accept a canned outcome or synthesize a decision.
+
+`aoc-enterprise-demo`'s Policy Pack Enterprise Demo Extension (see that
+module's README) now demonstrates all six demo packs end to end: eight
+`policy_packs`-category scenarios drive real `AocGuard.enforce()` calls
+through a policy-pack-configured runtime (built via
+`action-enforcement/fixtures/policy-pack-enforcement.fixture.ts`'s
+`buildPolicyPackEnforcementFixture()`, which itself wraps
+`buildDemoPolicyPackRuntime()`), covering payments-basic,
+procurement-basic, data-boundary-basic and sports-event-settlement-basic --
+finance-review approval, hard-deny bank account changes, purchase-order and
+event-record evidence requirements, sensitive/prohibited data export
+handling, and a low-risk allowed read that still records a policy decision.
 
 ## How PolicyPackProof is generated
 
