@@ -22,3 +22,15 @@ export { RecognitionVerifier } from './recognition-verifier.js';
 
 export { requiresAuthorityChain, mapAuthorityDecisionType } from './authority-graph-integration.js';
 export type { AuthorityGraphIntegration, AuthorityChainRequestLike, AuthorityDecisionLike } from './authority-graph-integration.js';
+
+export { isHardBlockingApprovalResult, APPROVAL_EVALUATION_DECISION_TYPE } from './approval-runtime-integration.js';
+export type {
+  ApprovalRuntimeIntegration,
+  RecognitionApprovalVerificationInput,
+  RecognitionApprovalVerificationResultType,
+  RecognitionApprovalVerificationResult,
+  CreateApprovalRequestForDecisionInput,
+  CreateApprovalRequestForDecisionRiskLevel,
+  ApprovalRequestReferenceStatus,
+  ApprovalRequestReference,
+} from './approval-runtime-integration.js';

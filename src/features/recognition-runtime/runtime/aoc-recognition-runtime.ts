@@ -8,6 +8,11 @@ import type { RecognitionDecision } from '../domain/recognition-decision.js';
 import type { TrustDomain } from '../domain/trust-domain.js';
 import { createDefaultPolicyChain } from '../policies/index.js';
 import { ActorRegistry, type RegisterActorInput } from '../services/actor-registry.js';
+import type {
+  ApprovalRequestReference,
+  ApprovalRuntimeIntegration,
+  CreateApprovalRequestForDecisionInput,
+} from '../services/approval-runtime-integration.js';
 import type { AuthorityGraphIntegration } from '../services/authority-graph-integration.js';
 import {
   CapabilityTokenService,
@@ -38,6 +43,7 @@ export class AocRecognitionRuntime {
     private readonly ctx: RuntimeContext,
     policies: readonly Policy[] = createDefaultPolicyChain(),
     authorityGraph?: AuthorityGraphIntegration,
+    private readonly approvalRuntime?: ApprovalRuntimeIntegration,
   ) {
     this.actorRegistry = new ActorRegistry(ctx);
     this.trustDomainService = new TrustDomainService(ctx);
@@ -56,6 +62,7 @@ export class AocRecognitionRuntime {
       this.revocationEngine,
       this.evidenceLedger,
       authorityGraph,
+      this.approvalRuntime,
     );
   }
 
@@ -114,12 +121,23 @@ export class AocRecognitionRuntime {
   exportActionProof(requestId: string): ActionProofExport | undefined {
     return this.evidenceLedger.exportActionProof(requestId);
   }
+
+  /**
+   * Creates (or references) an ApprovalRequest for a RecognitionDecision that
+   * came back `require_human_approval`. Opt-in: returns undefined when no
+   * ApprovalRuntimeIntegration was configured, or when the integration does
+   * not implement this optional method.
+   */
+  createApprovalRequestForDecision(input: CreateApprovalRequestForDecisionInput): ApprovalRequestReference | undefined {
+    return this.approvalRuntime?.createApprovalRequestForDecision?.(input);
+  }
 }
 
 export function createAocRecognitionRuntime(
   ctx: RuntimeContext,
   policies?: readonly Policy[],
   authorityGraph?: AuthorityGraphIntegration,
+  approvalRuntime?: ApprovalRuntimeIntegration,
 ): AocRecognitionRuntime {
-  return new AocRecognitionRuntime(ctx, policies ?? createDefaultPolicyChain(), authorityGraph);
+  return new AocRecognitionRuntime(ctx, policies ?? createDefaultPolicyChain(), authorityGraph, approvalRuntime);
 }

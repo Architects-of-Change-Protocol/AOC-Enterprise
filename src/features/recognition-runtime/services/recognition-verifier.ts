@@ -3,6 +3,7 @@ import type { PolicyContext } from '../domain/policy.js';
 import type { RecognitionDecision, RecognitionDecisionType } from '../domain/recognition-decision.js';
 import type { RuntimeContext } from '../runtime/runtime-context.js';
 import type { ActorRegistry } from './actor-registry.js';
+import { isHardBlockingApprovalResult, type ApprovalRuntimeIntegration } from './approval-runtime-integration.js';
 import { mapAuthorityDecisionType, requiresAuthorityChain, type AuthorityGraphIntegration } from './authority-graph-integration.js';
 import type { CapabilityTokenService } from './capability-token-service.js';
 import type { EvidenceLedger } from './evidence-ledger.js';
@@ -12,6 +13,7 @@ import type { RevocationEngine } from './revocation-engine.js';
 import type { TrustDomainService } from './trust-domain-service.js';
 
 const RECOGNIZED_DECISION_TYPES: readonly RecognitionDecisionType[] = ['allow', 'require_human_approval', 'require_more_evidence'];
+const APPROVAL_EVALUATION_DECISION_TYPE: RecognitionDecisionType = 'require_human_approval';
 
 export class RecognitionVerifier {
   constructor(
@@ -24,6 +26,7 @@ export class RecognitionVerifier {
     private readonly revocationEngine: RevocationEngine,
     private readonly evidenceLedger: EvidenceLedger,
     private readonly authorityGraph?: AuthorityGraphIntegration,
+    private readonly approvalRuntime?: ApprovalRuntimeIntegration,
   ) {}
 
   verifyAction(request: ActionRequest): RecognitionDecision {
@@ -63,6 +66,9 @@ export class RecognitionVerifier {
     let reason = result.reason;
     let authorityDecisionId: string | undefined;
     let authorityProofId: string | undefined;
+    let approvalRequestId: string | undefined;
+    let approvalDecisionId: string | undefined;
+    let approvalProofId: string | undefined;
 
     // Recognition alone only proves a capability token exists; it does not prove the
     // authority behind it is legitimate. For agent actions (or acting-for-a-principal
@@ -88,6 +94,47 @@ export class RecognitionVerifier {
       }
     }
 
+    // Approval Runtime governs the human-approval decision itself. It only ever runs once
+    // identity, passport, capability, revocation, authority-chain and evidence checks already
+    // deemed the action viable and landed on 'require_human_approval' -- it can upgrade that to
+    // 'allow' with a valid proof, or hard-block to 'policy_violation', but it never runs for
+    // (and so never overrides) a denial, missing-evidence, or unrelated 'allow' outcome.
+    if (this.approvalRuntime && decisionType === APPROVAL_EVALUATION_DECISION_TYPE) {
+      const approvalResult = this.approvalRuntime.verifyApprovalForAction({
+        actionRequestId: request.id,
+        recognitionDecisionId: decisionId,
+        actorId: request.actorId,
+        trustDomainId: request.trustDomainId,
+        action: request.action,
+        resourceScope: request.resource,
+        requestedAt: now,
+        ...(request.principalActorId !== undefined ? { principalActorId: request.principalActorId } : {}),
+        ...(capabilityToken?.capability !== undefined ? { capability: capabilityToken.capability } : {}),
+        ...(request.approvalProofId !== undefined ? { approvalProofId: request.approvalProofId } : {}),
+        ...(request.approvalRequestId !== undefined ? { approvalRequestId: request.approvalRequestId } : {}),
+        ...(request.approvalDecisionId !== undefined ? { approvalDecisionId: request.approvalDecisionId } : {}),
+      });
+
+      approvalRequestId = approvalResult.approvalRequestId;
+      approvalDecisionId = approvalResult.approvalDecisionId;
+      approvalProofId = approvalResult.approvalProofId;
+
+      if (approvalResult.type === 'approval_valid') {
+        decisionType = 'allow';
+        reasonCode = approvalResult.reasonCode;
+        reason = approvalResult.reason;
+      } else if (isHardBlockingApprovalResult(approvalResult.type)) {
+        decisionType = 'policy_violation';
+        reasonCode = approvalResult.reasonCode;
+        reason = approvalResult.reason;
+      } else {
+        // approval_missing / approval_expired / approval_insufficient_evidence / approval_quorum_not_met:
+        // the action still needs a human approval decision, but the reason now reflects why.
+        reasonCode = approvalResult.reasonCode;
+        reason = approvalResult.reason;
+      }
+    }
+
     const auditEvent = this.evidenceLedger.recordAuditEvent({
       eventType: 'recognition_decision',
       actorId: request.actorId,
@@ -101,6 +148,7 @@ export class RecognitionVerifier {
         reasonCode,
         policyResults: result.policyResults,
         ...(authorityDecisionId !== undefined ? { authorityDecisionId } : {}),
+        ...(approvalRequestId !== undefined ? { approvalRequestId } : {}),
       },
       ...(request.passportId !== undefined ? { passportId: request.passportId } : {}),
       ...(request.capabilityTokenId !== undefined ? { capabilityTokenId: request.capabilityTokenId } : {}),
@@ -123,6 +171,9 @@ export class RecognitionVerifier {
       ...(result.requiredApproverActorIds !== undefined ? { requiredApproverActorIds: result.requiredApproverActorIds } : {}),
       ...(authorityDecisionId !== undefined ? { authorityDecisionId } : {}),
       ...(authorityProofId !== undefined ? { authorityProofId } : {}),
+      ...(approvalRequestId !== undefined ? { approvalRequestId } : {}),
+      ...(approvalDecisionId !== undefined ? { approvalDecisionId } : {}),
+      ...(approvalProofId !== undefined ? { approvalProofId } : {}),
     };
   }
 }

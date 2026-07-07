@@ -38,4 +38,8 @@ export interface RecognitionDecision {
   /** Set when Authority Graph integration evaluated this request's authority lineage. */
   readonly authorityDecisionId?: string;
   readonly authorityProofId?: string;
+  /** Set when Approval Runtime integration evaluated or referenced an approval for this request. */
+  readonly approvalRequestId?: string;
+  readonly approvalDecisionId?: string;
+  readonly approvalProofId?: string;
 }

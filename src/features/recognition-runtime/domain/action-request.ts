@@ -12,4 +12,8 @@ export interface ActionRequest {
   readonly context?: Readonly<Record<string, string>>;
   readonly evidence?: readonly EvidenceItem[];
   readonly requestedAt: string;
+  /** References an existing Approval Runtime proof/request/decision this action claims to be covered by. */
+  readonly approvalProofId?: string;
+  readonly approvalRequestId?: string;
+  readonly approvalDecisionId?: string;
 }
