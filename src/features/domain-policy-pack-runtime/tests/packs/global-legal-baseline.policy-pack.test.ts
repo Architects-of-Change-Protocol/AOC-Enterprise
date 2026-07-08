@@ -52,6 +52,11 @@ function scanForOverclaim(text: string): string | undefined {
   return PROHIBITED_OVERCLAIM_PHRASES.find((phrase) => sanitized.includes(phrase));
 }
 
+/** Portable equivalent of `assert.doesNotMatch` (not declared in every pinned `@types/node` version). */
+function assertDoesNotMatch(text: string, pattern: RegExp): void {
+  assert.equal(pattern.test(text), false, `expected "${text}" not to match ${pattern}`);
+}
+
 function collectPackText(): string {
   const parts: string[] = [
     GLOBAL_LEGAL_BASELINE_POLICY_PACK.name,
@@ -116,7 +121,7 @@ describe('global-legal-baseline policy pack', () => {
         id: 'glb-test-5',
         action: 'draft_agreement',
         sideEffectType: 'legal',
-        jurisdiction: undefined,
+        // jurisdiction intentionally omitted -- this is the scenario under test.
         // principal is identified so this isolates jurisdiction-unknown from the separate
         // principal-not-identified authority-boundary rule (higher decision precedence).
         principalActorId: 'principal-known-1',
@@ -126,7 +131,7 @@ describe('global-legal-baseline policy pack', () => {
     assert.equal(result.decision.type, 'requires_approval');
     assert.equal(result.decision.allowed, false);
     assert.ok(result.decision.matchedRuleIds.includes('global-legal-baseline-rule-jurisdiction-unknown'));
-    assert.doesNotMatch(result.decision.reason.toLowerCase(), /complies with|compliant|legal advice/);
+    assertDoesNotMatch(result.decision.reason.toLowerCase(), /complies with|compliant|legal advice/);
   });
 
   it('6. a regulated-action detection with missing counsel review requires review, and is never itself an approval', () => {
@@ -143,7 +148,7 @@ describe('global-legal-baseline policy pack', () => {
     assert.equal(result.decision.allowed, false);
     assert.ok(result.decision.matchedRuleIds.includes('global-legal-baseline-rule-counsel-review-missing-for-regulated-action'));
     assert.ok(result.decision.approvalRequirements.some((requirement) => requirement.type === 'legal_review'));
-    assert.doesNotMatch(result.decision.reason.toLowerCase(), /compliant|approved|passed/);
+    assertDoesNotMatch(result.decision.reason.toLowerCase(), /compliant|approved|passed/);
   });
 
   it('7. a demo-baseline policy source cannot pass as counsel-reviewed', () => {
@@ -184,8 +189,10 @@ describe('global-legal-baseline policy pack', () => {
         action: 'execute_contract',
         sideEffectType: 'contractual',
         hasRequiredEvidence: false,
-        // principal is identified so this isolates the contract-acceptance-evidence rule from the
-        // separate principal-not-identified authority-boundary rule (higher decision precedence).
+        // jurisdiction and principal are known so this isolates the contract-acceptance-evidence
+        // rule from the separate jurisdiction-unknown and principal-not-identified rules (both of
+        // which take decision precedence over require_evidence).
+        jurisdiction: 'demo-jurisdiction-a',
         principalActorId: 'principal-known-1',
       }),
     );
@@ -226,7 +233,7 @@ describe('global-legal-baseline policy pack', () => {
     assert.equal(result.decision.type, 'denied');
     assert.equal(result.decision.allowed, false);
     assert.ok(result.decision.matchedRuleIds.includes('global-legal-baseline-rule-authority-missing-proof-binds-principal'));
-    assert.doesNotMatch(result.decision.reason.toLowerCase(), /legally authorized|power of attorney|complies with/);
+    assertDoesNotMatch(result.decision.reason.toLowerCase(), /legally authorized|power of attorney|complies with/);
   });
 
   it('12. a regulated-action pattern detection escalates to compliance review without interpreting or certifying compliance', () => {
@@ -244,7 +251,7 @@ describe('global-legal-baseline policy pack', () => {
     assert.ok(result.decision.matchedRuleIds.includes('global-legal-baseline-rule-regulated-action-pattern-detected'));
     assert.ok(result.decision.approvalRequirements.some((requirement) => requirement.type === 'compliance_review'));
     const reason = result.decision.reason.toLowerCase();
-    assert.doesNotMatch(reason, /compliant|compliance passed|definitively applies/);
+    assertDoesNotMatch(reason, /compliant|compliance passed|definitively applies/);
   });
 
   it('13. a contract template modified after attestation requires re-review; the old attestation cannot be reused', () => {
@@ -270,6 +277,10 @@ describe('global-legal-baseline policy pack', () => {
         id: 'glb-test-14',
         action: 'settle_event_payment',
         sideEffectType: 'financial',
+        // jurisdiction is known so this isolates active-dispute-blocks-execution (deny) from the
+        // separate jurisdiction-unknown rule (a lower-precedence require_approval that would not
+        // change the asserted decision type here, but this keeps the isolation deliberate).
+        jurisdiction: 'demo-jurisdiction-a',
         metadata: { activeDispute: true },
       }),
     );

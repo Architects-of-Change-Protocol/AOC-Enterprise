@@ -25,12 +25,18 @@ export function buildGlobalLegalBaselineDemoPolicyPackRuntime(initialIso: string
 
 /**
  * A "quiet" baseline PolicyEvaluationInput: every field this pack's rules
- * inspect is set to a value that keeps every rule un-matched (known
- * jurisdiction, authority/approval/evidence proofs present, a known
- * counterparty, low risk, no legally sensitive side effect, no legal-baseline
- * metadata flags). Each test overrides only the field(s) needed to isolate
- * exactly the rule(s) under test, so cross-rule interaction stays
- * deliberate and visible rather than accidental.
+ * inspect is set to a value that keeps every rule un-matched (authority/
+ * approval/evidence proofs present, a known counterparty, low risk, no
+ * legally sensitive side effect, no legal-baseline metadata flags, and no
+ * jurisdiction -- pass `jurisdiction` explicitly in `overrides` for any test
+ * that isn't specifically exercising the jurisdiction-unknown rule). Each
+ * test overrides only the field(s) needed to isolate exactly the rule(s)
+ * under test, so cross-rule interaction stays deliberate and visible rather
+ * than accidental. `jurisdiction` is intentionally omitted from these
+ * defaults (rather than set and overridable to `undefined`) because
+ * `PolicyEvaluationInput.jurisdiction` is optional under
+ * `exactOptionalPropertyTypes`, which forbids assigning `undefined` to it
+ * explicitly.
  */
 export function buildQuietGlobalLegalBaselineInput(
   overrides: Partial<PolicyEvaluationInput> & Pick<PolicyEvaluationInput, 'id' | 'action'>,
@@ -41,7 +47,6 @@ export function buildQuietGlobalLegalBaselineInput(
     resourceScope: GLOBAL_LEGAL_BASELINE_RESOURCE_SCOPE,
     riskLevel: 'low',
     requestedAt: GLOBAL_LEGAL_BASELINE_DEMO_NOW,
-    jurisdiction: 'demo-jurisdiction-a',
     counterpartyId: 'counterparty-1',
     hasAuthorityProof: true,
     hasApprovalProof: true,
