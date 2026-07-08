@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import { createJurisdictionPack, fromPolicyPackManifest, toPolicyPackManifest } from '../jurisdiction-pack-factory.js';
 import { validateJurisdictionPack } from '../jurisdiction-pack-validator.js';
+import { createJurisdictionPackRegistry } from '../jurisdiction-pack-registry.js';
 import { buildDemoJurisdictionPackFixture } from '../jurisdiction-pack-fixtures.js';
 import { buildGlobalBaselineManifestFixture } from '../../../policy-pack-foundation/fixtures/policy-pack-foundation-fixtures.js';
+import { createPolicyPackManifest } from '../../../policy-pack-foundation/manifest/policy-pack-manifest-factory.js';
 
 describe('JurisdictionPack consumes PolicyPackManifest', () => {
   it('1. a created jurisdiction pack carries a PolicyPackManifest with jurisdiction-safe framing', () => {
@@ -61,5 +63,36 @@ describe('JurisdictionPack consumes PolicyPackManifest', () => {
     const result = validateJurisdictionPack(pack);
     assert.equal(result.valid, false);
     assert.ok(result.errors.some((error) => error.includes('jurisdictionId')));
+  });
+
+  it('validateJurisdictionPack rejects a jurisdiction-shaped manifest whose status is outside JurisdictionValidationStatus', () => {
+    // Simulates a pack reconstructed via fromPolicyPackManifest/deserialized JSON rather than
+    // the typed createJurisdictionPack factory, which cannot itself produce this status.
+    const manifest = createPolicyPackManifest({
+      id: 'aoc.demo.out_of_lattice_status.v1',
+      name: 'Demo Out-of-Lattice Status Jurisdiction Pack',
+      version: '1.0.0',
+      kind: 'jurisdiction_pack',
+      domain: 'jurisdiction',
+      status: 'security_reviewed',
+      sourceStatus: 'demo_fixture',
+      description: 'Demo fixture exercising the out-of-lattice status validation error.',
+      scope: { demoOnly: true },
+    });
+    const pack = fromPolicyPackManifest(manifest, { jurisdictionId: 'demo-jurisdiction', label: 'Demo Jurisdiction' });
+
+    const result = validateJurisdictionPack(pack);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((error) => error.includes('JurisdictionValidationStatus')));
+  });
+
+  it('the registry rejects an invalid jurisdiction pack instead of silently accepting it', () => {
+    const registry = createJurisdictionPackRegistry();
+    const nonJurisdictionManifest = buildGlobalBaselineManifestFixture();
+    const invalidPack = fromPolicyPackManifest(nonJurisdictionManifest, { jurisdictionId: 'demo-jurisdiction', label: 'Demo Jurisdiction' });
+
+    assert.throws(() => registry.register(invalidPack));
+    assert.equal(registry.get(nonJurisdictionManifest.id), undefined);
+    assert.deepEqual(registry.listByJurisdiction('demo-jurisdiction'), []);
   });
 });

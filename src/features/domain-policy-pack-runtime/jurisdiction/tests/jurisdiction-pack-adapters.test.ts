@@ -7,7 +7,9 @@ import { mapJurisdictionResolutionToEvidenceRequirements } from '../jurisdiction
 import { createJurisdictionExportMetadata } from '../jurisdiction-pack-export.js';
 import { createJurisdictionControlPlaneSummary } from '../jurisdiction-pack-control-plane.js';
 import { buildJurisdictionPackWithRequirementsFixture } from '../jurisdiction-pack-fixtures.js';
+import { fromPolicyPackManifest } from '../jurisdiction-pack-factory.js';
 import { buildGlobalBaselineManifestFixture } from '../../../policy-pack-foundation/fixtures/policy-pack-foundation-fixtures.js';
+import { createPolicyPackManifest } from '../../../policy-pack-foundation/manifest/policy-pack-manifest-factory.js';
 import { detectFoundationRuntimeCapabilities, findFoundationRuntimeCapabilityStatus } from '../../../policy-pack-foundation/foundation/foundation-runtime-capabilities.js';
 import { JURISDICTION_CONTROL_PLANE_SAFE_LABELS } from '../jurisdiction-pack-constants.js';
 
@@ -91,6 +93,40 @@ describe('Jurisdiction Pack Runtime maps to shared Foundation adapter references
     }
     for (const unsafeLabel of UNSAFE_LABELS) {
       assert.ok(!summary.displaySafeLabels.includes(unsafeLabel), `Control Plane summary must not include "${unsafeLabel}"`);
+    }
+  });
+
+  it('Control Plane summary preserves surfaces/labels the composition already aggregated from included pack manifests', () => {
+    const manifest = createPolicyPackManifest({
+      id: 'aoc.demo.jurisdiction_with_control_plane_requirement.v1',
+      name: 'Demo Jurisdiction Pack With Control Plane Requirement',
+      version: '1.0.0',
+      kind: 'jurisdiction_pack',
+      domain: 'jurisdiction',
+      status: 'demo_baseline',
+      sourceStatus: 'demo_fixture',
+      description: 'Demo fixture exercising Control Plane requirement preservation through composition.',
+      scope: { demoOnly: true },
+      controlPlaneRequirements: [
+        { id: 'demo-jurisdiction-pack-specific-surface', surface: 'policy_pack', required: true, safeDisplayLabels: ['Jurisdiction-specific demo surface'] },
+      ],
+    });
+    const jurisdictionPack = fromPolicyPackManifest(manifest, { jurisdictionId: 'demo-jurisdiction', label: 'Demo Jurisdiction' });
+    const baseline = buildGlobalBaselineManifestFixture();
+    const capabilities = detectFoundationRuntimeCapabilities();
+
+    const composition = composeJurisdictionWithBaseline({
+      compositionId: 'test-control-plane-preserve',
+      jurisdictionPack,
+      baselinePackId: baseline.id,
+      availableManifests: [baseline],
+    });
+    assert.ok(composition.requiredControlPlaneSurfaces.some((requirement) => requirement.id === 'demo-jurisdiction-pack-specific-surface'));
+
+    const summary = createJurisdictionControlPlaneSummary({ composition, capabilities });
+    assert.ok(summary.displaySafeLabels.includes('Jurisdiction-specific demo surface'));
+    for (const safeLabel of JURISDICTION_CONTROL_PLANE_SAFE_LABELS) {
+      assert.ok(summary.displaySafeLabels.includes(safeLabel));
     }
   });
 });

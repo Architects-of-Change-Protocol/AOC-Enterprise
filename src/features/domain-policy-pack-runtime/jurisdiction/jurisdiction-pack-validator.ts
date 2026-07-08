@@ -1,5 +1,6 @@
 import type { PolicyPackManifestValidationResult } from '../../policy-pack-foundation/manifest/policy-pack-manifest-validator.js';
 import { validatePolicyPackManifest } from '../../policy-pack-foundation/manifest/policy-pack-manifest-validator.js';
+import { JURISDICTION_VALIDATION_STATUSES } from './jurisdiction-pack-constants.js';
 import type { JurisdictionPack } from './jurisdiction-pack-types.js';
 
 /** Not a parallel result shape -- `validateJurisdictionPack` returns the same `valid`/`errors`/`warnings` structure `validatePolicyPackManifest` does. */
@@ -33,6 +34,11 @@ export function validateJurisdictionPack(pack: JurisdictionPack): JurisdictionPa
   }
   if (pack.manifest.safeFraming.noJurisdictionalComplianceClaim !== true) {
     errors.push(`Jurisdiction pack "${pack.manifest.id}" must have manifest.safeFraming.noJurisdictionalComplianceClaim = true.`);
+  }
+  if (!(JURISDICTION_VALIDATION_STATUSES as readonly string[]).includes(pack.manifest.status)) {
+    errors.push(
+      `Jurisdiction pack "${pack.manifest.id}" has status "${pack.manifest.status}", which is not a JurisdictionValidationStatus (${JURISDICTION_VALIDATION_STATUSES.join(', ')}).`,
+    );
   }
   if (isBlank(pack.jurisdiction.jurisdictionId)) {
     errors.push(`Jurisdiction pack "${pack.manifest.id}" is missing a jurisdiction.jurisdictionId.`);

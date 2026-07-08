@@ -26,7 +26,12 @@ export function composeJurisdictionWithBaseline(input: ComposeJurisdictionWithBa
     compositionId: input.compositionId,
     rootPackId: input.jurisdictionPack.manifest.id,
     requestedPackIds: [input.baselinePackId],
-    availableManifests: [input.jurisdictionPack.manifest, ...input.availableManifests],
+    // The explicit jurisdiction pack manifest goes last: composePolicyPacks builds its
+    // internal id -> manifest map from this array in order, so a later entry wins. If a
+    // caller's availableManifests happens to also carry an entry for this pack's id (e.g.
+    // a full registry dump), the explicit manifest passed in here must still be the one
+    // used as the composition root, not a possibly-stale duplicate.
+    availableManifests: [...input.availableManifests, input.jurisdictionPack.manifest],
     ...(input.requiredValidationStatus !== undefined ? { requiredValidationStatus: input.requiredValidationStatus } : {}),
   });
 }

@@ -68,9 +68,13 @@ export function createJurisdictionPack(input: CreateJurisdictionPackInput): Juri
     status: input.status,
     sourceStatus: input.sourceStatus,
     description: input.description,
-    extendsPackIds: input.extendsPackIds,
-    requiredPackIds: input.requiredPackIds,
-    optionalPackIds: input.optionalPackIds,
+    // `exactOptionalPropertyTypes` rejects explicitly assigning `undefined` to an
+    // optional property -- array-typed fields default to `[]` (createPolicyPackManifest
+    // treats a missing array the same as an empty one), and scalar-typed fields are
+    // included only when actually present.
+    extendsPackIds: input.extendsPackIds ?? [],
+    requiredPackIds: input.requiredPackIds ?? [],
+    optionalPackIds: input.optionalPackIds ?? [],
     evidenceRequirements,
     approvalRequirements: reviewRequirements,
     ...(isDemoFixture ? { scope: { demoOnly: true } } : {}),
@@ -79,15 +83,15 @@ export function createJurisdictionPack(input: CreateJurisdictionPackInput): Juri
       ...(requiresCounselReviewWhenApplicable ? { requiresCounselReviewWhenApplicable: true } : {}),
       ...(requiresCustomerValidation ? { requiresCustomerValidation: true } : {}),
     },
-    labels: input.labels,
-    notes: input.notes,
-    createdBy: input.createdBy,
-    reviewedBy: input.reviewedBy,
-    reviewedAt: input.reviewedAt,
-    effectiveFrom: input.effectiveFrom,
-    effectiveUntil: input.effectiveUntil,
-    supersedesPackId: input.supersedesPackId,
-    supersededByPackId: input.supersededByPackId,
+    labels: input.labels ?? [],
+    notes: input.notes ?? [],
+    ...(input.createdBy !== undefined ? { createdBy: input.createdBy } : {}),
+    ...(input.reviewedBy !== undefined ? { reviewedBy: input.reviewedBy } : {}),
+    ...(input.reviewedAt !== undefined ? { reviewedAt: input.reviewedAt } : {}),
+    ...(input.effectiveFrom !== undefined ? { effectiveFrom: input.effectiveFrom } : {}),
+    ...(input.effectiveUntil !== undefined ? { effectiveUntil: input.effectiveUntil } : {}),
+    ...(input.supersedesPackId !== undefined ? { supersedesPackId: input.supersedesPackId } : {}),
+    ...(input.supersededByPackId !== undefined ? { supersededByPackId: input.supersededByPackId } : {}),
   });
 
   return {

@@ -58,4 +58,24 @@ describe('Jurisdiction Pack Runtime composition uses composePolicyPacks', () => 
     assert.ok(composition.disabledPackIds.includes(disabledBaseline.id));
     assert.equal(composition.decision, 'deny');
   });
+
+  it('a stale duplicate of the jurisdiction pack manifest in availableManifests never shadows the explicit pack', () => {
+    const jurisdictionPack = buildDemoJurisdictionPackFixture();
+    const baseline = buildGlobalBaselineManifestFixture();
+    // Simulate a caller passing a full registry dump that happens to also contain a stale,
+    // disabled copy of this same jurisdiction pack id -- composeJurisdictionWithBaseline
+    // must still use the explicit, valid jurisdictionPack.manifest as the composition root.
+    const staleDuplicate = { ...jurisdictionPack.manifest, status: 'disabled' as const };
+
+    const composition = composeJurisdictionWithBaseline({
+      compositionId: 'test-composition-stale-duplicate',
+      jurisdictionPack,
+      baselinePackId: baseline.id,
+      availableManifests: [staleDuplicate, baseline],
+    });
+
+    assert.equal(composition.composed, true);
+    assert.equal(composition.disabledPackIds.length, 0);
+    assert.notEqual(composition.decision, 'deny');
+  });
 });
