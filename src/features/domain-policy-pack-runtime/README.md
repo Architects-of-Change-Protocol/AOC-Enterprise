@@ -366,7 +366,7 @@ version's behavior before ever activating it.
 
 ## Sample packs
 
-All six ship marked `demoOnly: true` and `legalCompleteness:
+All seven ship marked `demoOnly: true` and `legalCompleteness:
 'not_legal_advice'` (or `'partial_policy_model'`), and none claims to encode
 a real jurisdiction, regulation, or industry certification:
 
@@ -378,6 +378,60 @@ a real jurisdiction, regulation, or industry certification:
 | `sports-event-settlement-basic` | sports_event_settlement | event record evidence, authority proof, value-threshold approval, unsupported-jurisdiction manual verification, counterparty requirement |
 | `financial-approval-basic` | financial_approval | finance review capability gate, deny-by-default bank details management, approval proof for financial side effects, dual approval at critical risk |
 | `jurisdictional-baseline-demo` | general_enterprise | a **placeholder** showing the shape of a jurisdictional pack -- legal/contractual review, sign_contract authority+approval, source-reference obligation, and (because it encodes no real jurisdiction) every jurisdiction-tagged action requires manual verification |
+| `global-legal-baseline` (`aoc.global_legal_baseline.v1`) | legal | see [AOC Global Legal Baseline Pack v1](#aoc-global-legal-baseline-pack-v1) below |
+
+## AOC Global Legal Baseline Pack v1
+
+`packs/global-legal-baseline.policy-pack.ts` (pack id `aoc.global_legal_baseline.v1`,
+registered via `registerGlobalLegalBaselinePolicyPack(runtime)`) is a
+**baseline legal-awareness layer**, not a legal compliance engine. It gives
+AOC a reusable, deterministic baseline for jurisdiction awareness
+(jurisdiction-unknown/conflict handling, missing jurisdiction-specific-pack
+detection), authority-boundary flags (missing authority proof binding a
+principal, authority scope mismatch, unidentified principal), legal-review
+triggers (high-value contract, cross-border payment, minor involvement,
+unclear consumer refund rights, employment classification risk, detected
+regulated activity), regulated-action-pattern warnings (payment services,
+healthcare data, employment decision, financial advice, consumer credit,
+insurance, gambling/prize, minor data, biometric data, cross-border
+transfer -- flagged, never interpreted), prohibited-action baseline patterns
+(deny-by-default), contract-template re-review after modification, active-
+dispute blocking, and customer/counsel validation gating -- evaluated
+entirely through this runtime's ordinary `condition` -> `effect` rule shape,
+exactly like every other pack above. It creates no separate legal engine,
+interpreter, or jurisdictional law resolver.
+
+Its `PolicyPackVersion.metadata` carries the required safe-framing fields
+(`legalAdvice: false`, `complianceCertification: false`,
+`jurisdictionSpecific: false`, `completenessClaimed: false`,
+`policyModelStatus: 'partial_policy_model'`, `validationStatus:
+'demo_baseline'`, `requiredDisclaimer: 'not_legal_advice'`,
+`safeFramingLabels: [...]`) alongside this runtime's existing
+`legalCompleteness`/`demoOnly` fields, plus empty extension-point arrays for
+future jurisdiction-specific packs (`requiredJurisdictionPackIds`,
+`jurisdictionPackStatus`, `jurisdictionSpecificPolicyRefs`,
+`counselReviewedPolicyRefs`) that this pack never pre-populates with a real
+compliance claim.
+
+Two rules are the **critical merge gate**: a policy source whose
+`validationStatus` is `demo_baseline` or `customer_provided` can never
+satisfy an action that `requiresCounselReview` -- both always route to
+`legal_review` instead of passing, and `PolicyPackValidator` separately
+rejects any attempt to register this pack `demoOnly: true` with
+`legalCompleteness: 'verified_by_counsel'`.
+
+Because its scope is intentionally unconstrained (`{}` -- a *global*
+baseline meant to apply across every domain/jurisdiction, not one vertical),
+it is deliberately kept out of the shared `buildDemoPolicyPackRuntime()` seed
+the other six sample packs' tests reuse: an unconstrained-scope pack added
+to that shared seed would start matching those packs' existing demo inputs
+and silently changing their asserted decisions. Use
+`buildGlobalLegalBaselineDemoPolicyPackRuntime()` /
+`buildQuietGlobalLegalBaselineInput()` from
+`fixtures/global-legal-baseline-policy-demo.fixture.ts` instead. Wiring it
+into the shared demo runtime, `action-enforcement`, `aoc-enterprise-demo`, or
+the Enterprise Pilot Template is left as a follow-up once a real deployment
+has decided which of its triggers it wants active enterprise-wide.
 
 ## Legal / compliance disclaimer
 

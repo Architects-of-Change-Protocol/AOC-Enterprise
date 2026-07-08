@@ -20,6 +20,7 @@ export type PolicyPackDomain =
   | 'financial_approval'
   | 'data_boundary'
   | 'general_enterprise'
+  | 'legal'
   | 'demo';
 
 export interface PolicyPack {

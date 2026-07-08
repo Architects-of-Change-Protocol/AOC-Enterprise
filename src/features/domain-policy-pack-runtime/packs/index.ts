@@ -33,3 +33,11 @@ export {
   JURISDICTIONAL_BASELINE_DEMO_POLICY_PACK_VERSION_V1,
   registerJurisdictionalBaselineDemoPolicyPack,
 } from './jurisdictional-baseline-demo.policy-pack.js';
+
+export {
+  GLOBAL_LEGAL_BASELINE_POLICY_PACK_ID,
+  GLOBAL_LEGAL_BASELINE_POLICY_PACK_VERSION_ID,
+  GLOBAL_LEGAL_BASELINE_POLICY_PACK,
+  GLOBAL_LEGAL_BASELINE_POLICY_PACK_VERSION_V1,
+  registerGlobalLegalBaselinePolicyPack,
+} from './global-legal-baseline.policy-pack.js';
