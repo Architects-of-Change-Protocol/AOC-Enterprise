@@ -489,3 +489,13 @@ via
 `src/features/verifiable-export-package/integrations/control-plane-export-adapter.ts`.
 That adapter is read-model-only: it never mutates Control Plane state and
 never creates policy/evidence/enforcement truth of its own.
+
+## AOC Enterprise Pilot Template
+
+Control Plane walkthroughs can now be included in Enterprise Pilot
+Templates via
+`src/features/aoc-enterprise-pilot-template/integrations/control-plane-pilot-adapter.ts`,
+which cross-checks a pilot's declared walkthrough sections against a real
+`AocControlPlaneReadModel` -- read-only, never mutating this module's state,
+and honestly reporting that `evidence`/`export_packages` focus areas are not
+yet backed by a dedicated read-model section here.

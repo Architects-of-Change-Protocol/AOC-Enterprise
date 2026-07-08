@@ -693,3 +693,11 @@ which packages a real `DemoScenario`/`DemoScenarioRun`, its Control Plane
 snapshot, and its underlying policy/enforcement decision and proof into one
 `enterprise_demo_packet`. It never fabricates a scenario outcome -- every
 included fact is exactly what the real scenario run produced.
+
+## AOC Enterprise Pilot Template
+
+Enterprise Demo scenarios can now be packaged into reusable Enterprise Pilot
+Templates via `src/features/aoc-enterprise-pilot-template/services/pilot-scenario-binding-service.ts`,
+which binds a pilot's declared scenario to a real `DemoScenarioRegistry`/
+`DemoScenarioRunner` and actually runs it end to end -- it never invents a
+scenario outcome that runtime did not produce.
