@@ -536,3 +536,12 @@ in a verifiable decision packet via
 That module never re-evaluates a policy rule -- it packages the decision and
 proof this runtime already produced, preserving `demoOnly`/
 `legalCompleteness` as plain metadata, never a compliance claim.
+
+## AOC Enterprise Pilot Template
+
+Sample policy packs registered here (payments-basic, procurement-basic,
+data-boundary-basic, financial-approval-basic, sports-event-settlement-basic,
+jurisdictional-baseline-demo) can now be referenced inside Enterprise Pilot
+Templates via `src/features/aoc-enterprise-pilot-template/integrations/policy-pack-pilot-adapter.ts`,
+which propagates each pack version's `demoOnly`/`legalCompleteness` label
+verbatim and never claims production compliance on this runtime's behalf.

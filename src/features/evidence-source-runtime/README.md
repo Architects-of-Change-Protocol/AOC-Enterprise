@@ -282,6 +282,14 @@ decision/evidence/audit packet can include this runtime's proof, evidence,
 and citation trail. It never re-evaluates evidence sufficiency -- see that
 module's README for details.
 
+## How evidence can feed Enterprise Pilot Templates
+
+`aoc-enterprise-pilot-template/integrations/evidence-pilot-adapter.ts` and
+`aoc-enterprise-pilot-template/fixtures/pilot-fixture-support.ts` map real
+source documents, evidence artifacts, requirements and proofs from this
+runtime into a pilot's `PilotEvidenceModel` binding -- statuses are copied
+verbatim, and legal sufficiency is never inferred from evidence presence.
+
 ## Legal / compliance disclaimer
 
 - Evidence records produced by this runtime are **not legal advice**.
