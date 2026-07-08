@@ -527,3 +527,12 @@ registering source documents, submitting evidence artifacts, and producing
 deterministic evidence proofs and citation trails -- this runtime still owns
 evaluating rules and deciding `requires_evidence`; it never delegates that
 decision.
+
+## Verifiable Export Package
+
+`PolicyPackDecision`/`PolicyPackProof` records produced here can be exported
+in a verifiable decision packet via
+`src/features/verifiable-export-package/integrations/policy-pack-export-adapter.ts`.
+That module never re-evaluates a policy rule -- it packages the decision and
+proof this runtime already produced, preserving `demoOnly`/
+`legalCompleteness` as plain metadata, never a compliance claim.
