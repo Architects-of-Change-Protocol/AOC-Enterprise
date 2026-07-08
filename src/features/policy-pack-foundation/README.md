@@ -66,12 +66,14 @@ is always `reference_only` (or `not_available` if the underlying capability
 is missing/disabled) -- because this module never actually invokes those
 runtimes. Deep integration wiring is out of scope for this PR by design.
 
-`Jurisdiction Pack Runtime` is marked `planned`: Domain Policy Pack Runtime
-already models `PolicyPackKind = 'jurisdiction'` generically, but no
-dedicated jurisdiction-pack runtime module exists yet. A concrete
-jurisdiction pack (e.g. `aoc.jurisdiction.costa_rica.base.v1`) is expected as
-a future, separate PR built on top of this foundation -- not part of this
-one.
+`Jurisdiction Pack Runtime` is marked `available`: `AOC Rebase / Align
+Jurisdiction Pack Runtime with Policy Pack Foundation v1` added a real module
+at `src/features/domain-policy-pack-runtime/jurisdiction` that specializes
+this Foundation's manifest, validation-status, safe-framing, no-overclaim,
+and composition standards for jurisdiction packs rather than duplicating
+them -- see that module's README. It still implements no real jurisdiction's
+law; a concrete jurisdiction pack (e.g. `aoc.jurisdiction.costa_rica.base.v1`)
+remains a future, separate PR built on top of it.
 
 `createFoundationRuntimeReferenceMap()` normalizes caller-supplied
 references against the real capability statuses, clamping any reference that

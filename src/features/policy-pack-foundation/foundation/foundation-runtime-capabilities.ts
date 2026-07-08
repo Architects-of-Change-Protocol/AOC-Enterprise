@@ -7,10 +7,13 @@ import type { FoundationRuntimeCapability, FoundationRuntimeIntegrationStatus } 
  * `available` are real, working runtimes that already exist under
  * `src/features/*` (see each capability's `notes` for the exact path).
  *
- * `jurisdiction_pack_runtime` is intentionally `planned`: `domain-policy-pack-runtime`
- * already models `PolicyPackKind = 'jurisdiction'` generically, but no
- * dedicated jurisdiction-pack runtime module exists yet. This Foundation
- * layer is what makes a future `aoc.jurisdiction.*` pack safe to add.
+ * `jurisdiction_pack_runtime` is `available`: `AOC Rebase / Align Jurisdiction
+ * Pack Runtime with Policy Pack Foundation v1` added a real jurisdiction-pack
+ * runtime module at `domain-policy-pack-runtime/jurisdiction` that specializes
+ * this Foundation's `PolicyPackManifest`/`PolicyPackValidationStatus`/
+ * `PolicyPackSafeFraming`/no-overclaim/composition standards for jurisdiction
+ * packs rather than duplicating them. It still implements no real
+ * jurisdiction's law -- see that module's README.
  *
  * When a new Foundation module lands, update this list by hand -- do not
  * make this function scan the filesystem or infer availability from
@@ -95,11 +98,12 @@ const FOUNDATION_RUNTIME_CAPABILITY_STATUSES: readonly FoundationRuntimeIntegrat
   },
   {
     capability: 'jurisdiction_pack_runtime',
-    availability: 'planned',
+    availability: 'available',
+    modulePath: 'src/features/domain-policy-pack-runtime/jurisdiction',
     notes: [
-      'No dedicated jurisdiction-pack runtime module exists in this checkout yet.',
-      "Domain Policy Pack Runtime already models PolicyPackKind = 'jurisdiction' generically.",
-      'A concrete jurisdiction pack (e.g. aoc.jurisdiction.costa_rica.base.v1) is planned as a future, separate PR built on this foundation.',
+      'Jurisdiction Pack Runtime is a real, working module in this checkout, aligned onto this Foundation rather than duplicating it.',
+      'It consumes PolicyPackManifest, PolicyPackValidationStatus (via satisfiesPolicyPackValidationStatus), PolicyPackSafeFraming, composePolicyPacks, and the universal no-overclaim harness.',
+      'It still implements no real jurisdiction (e.g. Costa Rica, Panama, the US, the EU) -- a concrete jurisdiction pack remains a future, separate PR built on top of this module.',
     ],
   },
   {
