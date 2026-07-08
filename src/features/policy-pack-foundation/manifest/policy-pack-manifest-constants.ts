@@ -36,6 +36,8 @@ export const POLICY_PACK_PROHIBITED_OVERCLAIM_PHRASES = [
   'regulatory approved',
   'regulatory approval',
   'complies with Costa Rica',
+  'costa rica compliant',
+  'cr compliant',
   'complies with Panama',
   'complies with US law',
   'complies with EU law',

@@ -39,8 +39,18 @@ jurisdiction's requirements.
 **This runtime does not claim completeness.**
 
 **This runtime prepares infrastructure for future jurisdiction-specific
-packs** (e.g. `aoc.jurisdiction.costa_rica.base.v1`), which remain separate,
-later PRs built on top of it -- not part of this module.
+packs**, which remain separate, later PRs built on top of it -- not part of
+this module.
+
+## Available jurisdiction packs
+
+- `aoc.jurisdiction.costa_rica.base.v1` -- AOC Jurisdiction Costa Rica Base
+  Pack v1 (see `packs/costa-rica/README.md`). A **demo/system-authored
+  baseline**: not legal advice, not a compliance certification, and not
+  counsel-reviewed by default. It provides Costa Rica jurisdiction context,
+  review triggers, evidence/approval requirements, and safe export/Control
+  Plane metadata -- it does not encode Costa Rican law and does not certify
+  Costa Rica compliance.
 
 ## What this module is
 
