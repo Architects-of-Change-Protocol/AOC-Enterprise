@@ -22,3 +22,12 @@ export {
 } from './procurement-policy-demo.fixture.js';
 
 export { buildExportClientDataInput, buildReadProjectSummaryInput } from './data-boundary-policy-demo.fixture.js';
+
+export {
+  GLOBAL_LEGAL_BASELINE_DEMO_NOW,
+  GLOBAL_LEGAL_BASELINE_TRUST_DOMAIN_ID,
+  GLOBAL_LEGAL_BASELINE_ACTOR_ID,
+  GLOBAL_LEGAL_BASELINE_RESOURCE_SCOPE,
+  buildGlobalLegalBaselineDemoPolicyPackRuntime,
+  buildQuietGlobalLegalBaselineInput,
+} from './global-legal-baseline-policy-demo.fixture.js';
