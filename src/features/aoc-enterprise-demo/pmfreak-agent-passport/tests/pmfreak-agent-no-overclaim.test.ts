@@ -56,6 +56,6 @@ describe('PMFreak Agent Passport Demo Pack passes the universal no-overclaim har
     const result = evaluatePMFreakAgentPassportClaimSafety(safeText);
 
     assert.equal(result.safe, true, JSON.stringify(result.prohibitedPhrasesFound));
-    assert.doesNotThrow(() => assertNoPMFreakAgentPassportOverclaim(safeText));
+    assertNoPMFreakAgentPassportOverclaim(safeText);
   });
 });
