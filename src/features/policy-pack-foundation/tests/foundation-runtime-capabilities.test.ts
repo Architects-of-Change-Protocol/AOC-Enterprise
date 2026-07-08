@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { detectFoundationRuntimeCapabilities, findFoundationRuntimeCapabilityStatus } from '../foundation/foundation-runtime-capabilities.js';
+import type { FoundationRuntimeCapability } from '../foundation/foundation-runtime-types.js';
 
 describe('detectFoundationRuntimeCapabilities', () => {
   it('1. detects available and reference-only/planned capabilities truthfully', () => {
@@ -13,9 +14,12 @@ describe('detectFoundationRuntimeCapabilities', () => {
     const manifestStandard = findFoundationRuntimeCapabilityStatus(capabilities, 'policy_pack_manifest_standard');
     assert.equal(manifestStandard?.availability, 'available');
 
+    // Aligned by "AOC Rebase / Align Jurisdiction Pack Runtime with Policy
+    // Pack Foundation v1": the module now exists and is exported, so this
+    // capability is truthfully `available`, not `planned`.
     const jurisdictionPackRuntime = findFoundationRuntimeCapabilityStatus(capabilities, 'jurisdiction_pack_runtime');
-    assert.notEqual(jurisdictionPackRuntime?.availability, 'available');
-    assert.ok(['reference_only', 'planned', 'missing'].includes(jurisdictionPackRuntime?.availability ?? ''));
+    assert.equal(jurisdictionPackRuntime?.availability, 'available');
+    assert.equal(jurisdictionPackRuntime?.modulePath, 'src/features/domain-policy-pack-runtime/jurisdiction');
 
     const approval = findFoundationRuntimeCapabilityStatus(capabilities, 'approval_runtime');
     assert.ok(['available', 'reference_only', 'planned'].includes(approval?.availability ?? ''));
@@ -37,7 +41,8 @@ describe('detectFoundationRuntimeCapabilities', () => {
 
   it('never marks a capability it does not know about as available', () => {
     const capabilities = detectFoundationRuntimeCapabilities();
-    const unknown = findFoundationRuntimeCapabilityStatus(capabilities, 'jurisdiction_pack_runtime');
-    assert.notEqual(unknown?.availability, 'available');
+    const unknownCapability = 'nonexistent_capability' as unknown as FoundationRuntimeCapability;
+    const unknown = findFoundationRuntimeCapabilityStatus(capabilities, unknownCapability);
+    assert.equal(unknown, undefined);
   });
 });
