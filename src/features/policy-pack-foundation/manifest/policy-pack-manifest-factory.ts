@@ -76,7 +76,11 @@ function buildScope(input: CreatePolicyPackManifestInput): PolicyPackScope {
     domainSpecific: input.kind === 'domain_pack',
     useCaseSpecific: input.kind === 'use_case_pack',
     customerSpecific: input.kind === 'customer_pack',
-    demoOnly: input.kind === 'demo_pack',
+    // Matches validatePolicyPackManifest's demoOnly requirement, which triggers on
+    // sourceStatus === 'demo_fixture' too -- not just kind === 'demo_pack' -- so a
+    // demo-sourced jurisdiction/domain/customer pack defaults to a manifest that
+    // passes its own validator instead of silently failing it.
+    demoOnly: input.kind === 'demo_pack' || input.sourceStatus === 'demo_fixture',
     systemAuthored: input.kind === 'system_pack' || input.kind === 'integration_pack' || input.sourceStatus === 'system_authored',
   };
   return { ...derivedDefaults, ...input.scope };

@@ -95,11 +95,12 @@ const FOUNDATION_RUNTIME_CAPABILITY_STATUSES: readonly FoundationRuntimeIntegrat
   },
   {
     capability: 'jurisdiction_pack_runtime',
-    availability: 'planned',
+    availability: 'available',
+    modulePath: 'src/features/jurisdiction-pack-runtime',
     notes: [
-      'No dedicated jurisdiction-pack runtime module exists in this checkout yet.',
-      "Domain Policy Pack Runtime already models PolicyPackKind = 'jurisdiction' generically.",
-      'A concrete jurisdiction pack (e.g. aoc.jurisdiction.costa_rica.base.v1) is planned as a future, separate PR built on this foundation.',
+      'Jurisdiction Pack Runtime is a real, working module in this checkout, built directly on this Foundation.',
+      'It registers and resolves jurisdiction pack manifests and composes them via composePolicyPacks; it defines no parallel manifest, validation-status, safe-framing, composition, or no-overclaim system of its own.',
+      'It carries no real jurisdiction-specific law -- only demo/fictional jurisdiction packs.',
     ],
   },
   {
