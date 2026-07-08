@@ -4,6 +4,7 @@ import { buildEnterpriseDemoWorld } from '../../aoc-enterprise-demo/fixtures/ent
 import { SCENARIO_EXECUTORS, createTickingClock } from '../../aoc-enterprise-demo/scenarios/index.js';
 import { createExportRuntimeContext, type ExportRuntimeContext } from '../domain/export-runtime-context.js';
 import { ExportPackageRuntime, createExportPackageRuntime } from '../services/export-package-runtime.js';
+import { buildSummaryTextItem } from '../services/export-package-section-builder.js';
 import { mapDemoScenarioToItem, mapDemoScenarioRunToItem, mapDemoExportArtifactToItem } from '../integrations/enterprise-demo-export-adapter.js';
 import { mapDemoControlPlaneSnapshotToItem } from '../integrations/control-plane-export-adapter.js';
 import { mapPolicyDecisionToItem, mapPolicyProofToItem } from '../integrations/policy-pack-export-adapter.js';
@@ -72,7 +73,7 @@ export async function buildEnterpriseDemoExportFixture(): Promise<EnterpriseDemo
     targetType: 'demo_scenario',
     targetId: run.scenarioId,
     sections: [
-      { type: 'summary', required: true, items: [] },
+      { type: 'summary', required: true, items: [buildSummaryTextItem(ctx, `Enterprise demo scenario "${run.scenario.title}" ran with status "${run.status}".`)] },
       {
         type: 'enterprise_demo',
         required: true,

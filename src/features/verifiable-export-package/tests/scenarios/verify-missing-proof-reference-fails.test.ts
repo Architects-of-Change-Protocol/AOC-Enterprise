@@ -2,12 +2,33 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { EnforcementDecision } from '../../../action-enforcement/domain/enforcement-decision.js';
-import { createExportRuntimeContext } from '../../domain/export-runtime-context.js';
+import { createDigest } from '../../domain/export-package.js';
+import { createExportRuntimeContext, type ExportRuntimeContext } from '../../domain/export-runtime-context.js';
+import type { ExportPackageItem } from '../../domain/export-package-item.js';
 import { createExportPackageRuntime } from '../../services/export-package-runtime.js';
 import { mapEnforcementDecisionToItem } from '../../integrations/action-enforcement-export-adapter.js';
 
 const NOW = '2026-02-03T00:00:00.000Z';
 const TRUST_DOMAIN_ID = 'trust-domain-datasys-agent-republic';
+
+// The REQUIRED_SECTIONS_BY_PACKAGE_TYPE list always requires a non-empty
+// `summary` section (regardless of the `required` flag passed when building
+// it), so this hand-built package carries one real summary_text item.
+function buildSummaryItem(ctx: ExportRuntimeContext, sourceId: string, text: string): ExportPackageItem {
+  const payload = { text };
+  return {
+    id: ctx.ids.nextId('export-item'),
+    type: 'summary_text',
+    sourceModule: 'verifiable_export_package',
+    sourceId,
+    title: 'Summary',
+    summary: text,
+    payload,
+    payloadHash: createDigest(payload),
+    references: [],
+    createdAt: ctx.clock.now(),
+  };
+}
 
 // References a policy proof id that is never included as a policy_proof
 // item in this package, so the reference resolver cannot find it.
@@ -28,6 +49,7 @@ function buildPackageWithDanglingReference() {
   const runtime = createExportPackageRuntime(ctx);
 
   const enforcementDecisionItem = mapEnforcementDecisionToItem(ctx, DECISION_WITH_DANGLING_POLICY_PROOF);
+  const summaryItem = buildSummaryItem(ctx, 'summary-dangling-policy-proof-001', 'Enforcement decision referencing a policy proof that was never included.');
 
   const { pkg } = runtime.createEnforcementDecisionPacket({
     title: 'Enforcement decision packet: dangling policy proof reference',
@@ -36,7 +58,7 @@ function buildPackageWithDanglingReference() {
     targetType: 'enforcement_decision',
     targetId: DECISION_WITH_DANGLING_POLICY_PROOF.id,
     sections: [
-      { type: 'summary', required: true, items: [] },
+      { type: 'summary', required: true, items: [summaryItem] },
       { type: 'enforcement', required: true, items: [enforcementDecisionItem] },
     ],
   });

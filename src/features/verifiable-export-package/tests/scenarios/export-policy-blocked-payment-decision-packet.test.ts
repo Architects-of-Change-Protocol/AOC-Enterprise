@@ -49,10 +49,25 @@ describe('export scenario: policy-blocked payment decision packet', () => {
     assert.ok((pkg?.packageHash?.length ?? 0) > 0);
   });
 
-  it('7. verifies as verified or verified_with_warnings, never failed', async () => {
+  // The summary section carries a real summary_text item (see
+  // buildSummaryTextItem in export-package-section-builder.ts), so the
+  // required `summary` section is present and every hash recomputes
+  // correctly. Any remaining issues are, at most, warning-severity
+  // MISSING_REFERENCE entries for upstream ids (e.g.
+  // authorityProofId/recognitionDecisionId) this packet's enforcement
+  // section references but does not itself include -- never a critical
+  // issue, so verification never reaches `'failed'`.
+  it('7. verifies with every hash intact and zero critical issues', async () => {
     const { runtime, packageId } = await buildPolicyPackDecisionPacketFixture();
     const verification = runtime.getPackageVerification(packageId);
-    assert.ok(verification?.status === 'verified' || verification?.status === 'verified_with_warnings');
+    assert.notEqual(verification?.status, 'failed');
+    assert.equal(verification?.verifiedManifest, true);
+    assert.equal(verification?.verifiedPackageHash, true);
+    assert.equal(verification?.verifiedSectionHashes, true);
+    assert.equal(verification?.verifiedItemHashes, true);
+    assert.equal(verification?.verifiedReferenceHashes, true);
+    const criticalIssues = verification?.issues.filter((issue) => issue.severity === 'critical') ?? [];
+    assert.deepEqual(criticalIssues, []);
   });
 
   it('8. renders a markdown summary carrying the legal disclaimer without claiming compliance', async () => {

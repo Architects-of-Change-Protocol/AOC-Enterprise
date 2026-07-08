@@ -3,6 +3,7 @@ import type { EnforcementProof } from '../../action-enforcement/domain/enforceme
 import type { ExecutionResult } from '../../action-enforcement/domain/execution-result.js';
 import { createExportRuntimeContext, type ExportRuntimeContext } from '../domain/export-runtime-context.js';
 import { ExportPackageRuntime, createExportPackageRuntime } from '../services/export-package-runtime.js';
+import { buildSummaryTextItem } from '../services/export-package-section-builder.js';
 import { mapEnforcementDecisionToItem, mapEnforcementProofToItem, mapExecutionResultToItem } from '../integrations/action-enforcement-export-adapter.js';
 
 export const NOW = '2026-01-05T00:00:00.000Z';
@@ -78,7 +79,11 @@ export function buildVerifiableExportDemoFixture(): VerifiableExportDemoFixture 
     targetType: 'enforcement_decision',
     targetId: ENFORCEMENT_DECISION_ID,
     sections: [
-      { type: 'summary', required: true, items: [] },
+      {
+        type: 'summary',
+        required: true,
+        items: [buildSummaryTextItem(ctx, 'read_project_summary was recognized, authorized, allowed to execute, and executed.')],
+      },
       { type: 'enforcement', required: true, items: [enforcementDecisionItem, enforcementProofItem] },
       { type: 'execution', required: false, items: [executionResultItem] },
     ],

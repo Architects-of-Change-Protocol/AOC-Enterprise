@@ -1,7 +1,31 @@
+import { createDigest } from '../domain/export-package.js';
 import type { ExportRuntimeContext } from '../domain/export-runtime-context.js';
 import type { ExportPackageItem } from '../domain/export-package-item.js';
 import type { ExportPackageSection, ExportPackageSectionType } from '../domain/export-package-section.js';
 import type { ExportPackageHashService } from './export-package-hash-service.js';
+
+/**
+ * Builds a self-authored `summary_text` item: a plain, deterministic
+ * restatement of the package's own title/description, never a new fact.
+ * Every package's required `summary` section needs at least one item to
+ * avoid being marked `not_available`; this is the standard way to supply
+ * one without borrowing a fact from another module.
+ */
+export function buildSummaryTextItem(ctx: ExportRuntimeContext, summary: string, title = 'Package summary'): ExportPackageItem {
+  const payload = { summary };
+  return {
+    id: ctx.ids.nextId('export-item'),
+    type: 'summary_text',
+    sourceModule: 'verifiable_export_package',
+    sourceId: ctx.ids.nextId('export-summary'),
+    title,
+    summary,
+    payload,
+    payloadHash: createDigest(payload),
+    references: [],
+    createdAt: ctx.clock.now(),
+  };
+}
 
 export interface BuildSectionInput {
   readonly type: ExportPackageSectionType;

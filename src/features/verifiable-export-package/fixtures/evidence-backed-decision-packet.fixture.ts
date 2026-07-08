@@ -1,5 +1,12 @@
 import { buildPolicyPackEnforcementFixture, type PolicyPackEnforcementFixture } from '../../action-enforcement/fixtures/policy-pack-enforcement.fixture.js';
-import { APPROVE_PAYMENT, PROJECT_SCOPE, TRUST_DOMAIN_ID, VICTOR_ACTOR_ID, PMFREAK_ACTOR_ID } from '../../action-enforcement/fixtures/datasys-enforcement.fixture.js';
+import {
+  APPROVE_PAYMENT,
+  PROJECT_SCOPE,
+  TRUST_DOMAIN_ID,
+  VICTOR_ACTOR_ID,
+  PMFREAK_ACTOR_ID,
+  PMFREAK_PAYMENT_TOKEN_ID,
+} from '../../action-enforcement/fixtures/datasys-enforcement.fixture.js';
 import { buildDemoPolicyPackRuntime } from '../../domain-policy-pack-runtime/fixtures/domain-policy-pack-demo.fixture.js';
 import type { PolicyPackDecision } from '../../domain-policy-pack-runtime/domain/policy-pack-decision.js';
 import type { PolicyPackProof } from '../../domain-policy-pack-runtime/domain/policy-pack-proof.js';
@@ -9,6 +16,7 @@ import { buildApprovalEvidenceDemoFixture } from '../../evidence-source-runtime/
 import type { EvidenceProof } from '../../evidence-source-runtime/domain/evidence-proof.js';
 import { createExportRuntimeContext, type ExportRuntimeContext } from '../domain/export-runtime-context.js';
 import { ExportPackageRuntime, createExportPackageRuntime } from '../services/export-package-runtime.js';
+import { buildSummaryTextItem } from '../services/export-package-section-builder.js';
 import { mapPolicyDecisionToItem, mapPolicyProofToItem } from '../integrations/policy-pack-export-adapter.js';
 import { mapApprovalDecisionToItem, mapApprovalProofToItem } from '../integrations/approval-export-adapter.js';
 import { mapEnforcementDecisionToItem } from '../integrations/action-enforcement-export-adapter.js';
@@ -59,6 +67,13 @@ export async function buildEvidenceBackedDecisionPacketFixture(): Promise<Eviden
   const policyDecision = policyResult.decision;
   const policyProof = policyResult.proof;
 
+  // The approver must be independent of both the requester and the target
+  // actor -- Approval Runtime's segregation-of-duties policy rejects a
+  // self-approval, so this uses a dedicated finance-reviewer actor rather
+  // than Victor (the request's own targetActorId) approving himself.
+  const FINANCE_REVIEWER_ACTOR_ID = 'actor-finance-reviewer-independent';
+  enforcementFixture.approvalRuntime.registerApproverRecognitionStatus(FINANCE_REVIEWER_ACTOR_ID, 'recognized');
+
   const approvalRequestReference = enforcementFixture.approvalRuntime.createApprovalRequestForDecision({
     trustDomainId: TRUST_DOMAIN_ID,
     actionRequestId: 'action-request-evidence-backed-001',
@@ -73,7 +88,7 @@ export async function buildEvidenceBackedDecisionPacketFixture(): Promise<Eviden
   });
   const approvalSubmission = enforcementFixture.approvalRuntime.approve({
     approvalRequestId: approvalRequestReference.approvalRequestId,
-    approverActorId: VICTOR_ACTOR_ID,
+    approverActorId: FINANCE_REVIEWER_ACTOR_ID,
     reason: 'Finance review complete; payment approved.',
   });
   if (approvalSubmission.proof === undefined) {
@@ -107,7 +122,7 @@ export async function buildEvidenceBackedDecisionPacketFixture(): Promise<Eviden
       capability: 'payments.approval',
       sideEffectType: 'financial',
       riskLevel: 'critical',
-      metadata: { passportId: 'passport-pmfreak', capabilityTokenId: 'cap-pmfreak-payment-approval' },
+      metadata: { passportId: 'passport-pmfreak', capabilityTokenId: PMFREAK_PAYMENT_TOKEN_ID },
       policyEvaluationInput: { domain: 'payments', evidenceIds: ['invoice-1'] },
     },
     () => 'payment approved',
@@ -123,7 +138,11 @@ export async function buildEvidenceBackedDecisionPacketFixture(): Promise<Eviden
     targetType: 'policy_decision',
     targetId: policyDecision.id,
     sections: [
-      { type: 'summary', required: true, items: [] },
+      {
+        type: 'summary',
+        required: true,
+        items: [buildSummaryTextItem(ctx, `${APPROVE_PAYMENT} is backed by a policy decision, an approval decision, an enforcement decision, and evidence with a citation.`)],
+      },
       { type: 'policy', required: false, items: [mapPolicyDecisionToItem(ctx, policyDecision), mapPolicyProofToItem(ctx, policyProof)] },
       { type: 'approval', required: false, items: [mapApprovalDecisionToItem(ctx, approvalDecision), mapApprovalProofToItem(ctx, approvalProof)] },
       { type: 'enforcement', required: false, items: [mapEnforcementDecisionToItem(ctx, enforcementOutcome.decision)] },

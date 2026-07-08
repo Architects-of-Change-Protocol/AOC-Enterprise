@@ -42,9 +42,24 @@ describe('export scenario: enterprise demo scenario packet', () => {
     assert.ok(markdown.includes(run.scenario.title));
   });
 
-  it('6. verifies without a failed status', async () => {
+  // The summary section now carries a real summary_text item (see
+  // buildSummaryTextItem in export-package-section-builder.ts), so the
+  // required `summary` section is present and this package verifies as
+  // `verified_with_warnings`: every hash recomputes correctly, and the only
+  // remaining issues are warning-severity MISSING_REFERENCE entries for
+  // upstream ids (e.g. authorityProofId/recognitionDecisionId) this packet's
+  // enforcement section references but does not itself include -- never a
+  // critical issue.
+  it('6. verifies as verified_with_warnings, with every hash intact and zero critical issues', async () => {
     const { runtime, packageId } = await buildEnterpriseDemoExportFixture();
     const verification = runtime.getPackageVerification(packageId);
-    assert.notEqual(verification?.status, 'failed');
+    assert.equal(verification?.status, 'verified_with_warnings');
+    assert.equal(verification?.verifiedManifest, true);
+    assert.equal(verification?.verifiedPackageHash, true);
+    assert.equal(verification?.verifiedSectionHashes, true);
+    assert.equal(verification?.verifiedItemHashes, true);
+    assert.equal(verification?.verifiedReferenceHashes, true);
+    const criticalIssues = verification?.issues.filter((issue) => issue.severity === 'critical') ?? [];
+    assert.deepEqual(criticalIssues, []);
   });
 });

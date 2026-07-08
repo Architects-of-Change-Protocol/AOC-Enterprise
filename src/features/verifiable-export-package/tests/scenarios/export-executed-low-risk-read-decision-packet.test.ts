@@ -28,9 +28,20 @@ describe('export scenario: executed low-risk read decision packet', () => {
     assert.equal(decisionPacket?.decisionSummary.executed, true);
   });
 
-  it('4. verification status is verified', () => {
+  // The summary section carries a real summary_text item (see
+  // buildSummaryTextItem in export-package-section-builder.ts), so the
+  // required `summary` section is present. This fixture's enforcement
+  // decision carries no unresolved upstream reference ids, so verification
+  // reaches a clean `'verified'` with zero issues.
+  it('4. verification passes cleanly, with every hash intact and zero issues', () => {
     const { runtime, packageId } = buildVerifiableExportDemoFixture();
     const verification = runtime.getPackageVerification(packageId);
     assert.equal(verification?.status, 'verified');
+    assert.equal(verification?.verifiedManifest, true);
+    assert.equal(verification?.verifiedPackageHash, true);
+    assert.equal(verification?.verifiedSectionHashes, true);
+    assert.equal(verification?.verifiedItemHashes, true);
+    assert.equal(verification?.verifiedReferenceHashes, true);
+    assert.deepEqual(verification?.issues, []);
   });
 });

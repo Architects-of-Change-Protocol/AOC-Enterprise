@@ -6,6 +6,7 @@ import { buildDraftClosureEmailGuardInput } from '../../action-enforcement/fixtu
 import type { EnforcementOutcome } from '../../action-enforcement/domain/enforcement-outcome.js';
 import { createExportRuntimeContext, type ExportRuntimeContext } from '../domain/export-runtime-context.js';
 import { ExportPackageRuntime, createExportPackageRuntime } from '../services/export-package-runtime.js';
+import { buildSummaryTextItem } from '../services/export-package-section-builder.js';
 import {
   mapEnforcementDecisionToItem,
   mapEnforcementProofToItem,
@@ -50,7 +51,7 @@ export async function buildEnforcementDecisionPacketFixture(): Promise<Enforceme
     targetType: 'enforcement_decision',
     targetId: outcome.decision.id,
     sections: [
-      { type: 'summary', required: true, items: [] },
+      { type: 'summary', required: true, items: [buildSummaryTextItem(ctx, `${outcome.request.action} was allowed and executed: ${outcome.decision.reason}`)] },
       { type: 'enforcement', required: true, items: [mapEnforcementDecisionToItem(ctx, outcome.decision), mapEnforcementProofToItem(ctx, outcome.proof)] },
       { type: 'execution', required: false, items: [mapExecutionResultToItem(ctx, outcome.result)] },
       { type: 'events', required: false, items: events.map((event) => mapEnforcementEventToItem(ctx, event)) },

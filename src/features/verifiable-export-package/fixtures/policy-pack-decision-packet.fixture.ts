@@ -11,6 +11,7 @@ import { createEvidenceRuntime, type EvidenceRuntime } from '../../evidence-sour
 import type { EvidenceProof } from '../../evidence-source-runtime/domain/evidence-proof.js';
 import { createExportRuntimeContext, type ExportRuntimeContext } from '../domain/export-runtime-context.js';
 import { ExportPackageRuntime, createExportPackageRuntime } from '../services/export-package-runtime.js';
+import { buildSummaryTextItem } from '../services/export-package-section-builder.js';
 import { mapPolicyDecisionToItem, mapPolicyProofToItem } from '../integrations/policy-pack-export-adapter.js';
 import { mapEnforcementDecisionToItem } from '../integrations/action-enforcement-export-adapter.js';
 import { mapEvidenceProofToItem } from '../integrations/evidence-export-adapter.js';
@@ -68,7 +69,11 @@ export async function buildPolicyPackDecisionPacketFixture(): Promise<PolicyPack
     targetType: 'policy_decision',
     targetId: policyDecision.id,
     sections: [
-      { type: 'summary', required: true, items: [] },
+      {
+        type: 'summary',
+        required: true,
+        items: [buildSummaryTextItem(ctx, `${outcome.request.action} was blocked by the payments-basic policy pack pending finance review: ${policyDecision.reason}`)],
+      },
       { type: 'policy', required: true, items: [mapPolicyDecisionToItem(ctx, policyDecision), mapPolicyProofToItem(ctx, policyProof)] },
       { type: 'enforcement', required: false, items: [mapEnforcementDecisionToItem(ctx, outcome.decision)] },
       { type: 'evidence', required: false, items: [mapEvidenceProofToItem(ctx, evidenceProof)] },

@@ -12,6 +12,7 @@ export {
 
 export {
   buildSection,
+  buildSummaryTextItem,
   applyMissingReferences,
   buildSummarySection,
   buildRecognitionSection,

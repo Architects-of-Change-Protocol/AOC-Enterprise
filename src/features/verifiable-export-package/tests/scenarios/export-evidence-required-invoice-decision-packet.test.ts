@@ -2,12 +2,33 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { EnforcementDecision } from '../../../action-enforcement/domain/enforcement-decision.js';
-import { createExportRuntimeContext } from '../../domain/export-runtime-context.js';
+import { createDigest } from '../../domain/export-package.js';
+import { createExportRuntimeContext, type ExportRuntimeContext } from '../../domain/export-runtime-context.js';
+import type { ExportPackageItem } from '../../domain/export-package-item.js';
 import { createExportPackageRuntime } from '../../services/export-package-runtime.js';
 import { mapEnforcementDecisionToItem } from '../../integrations/action-enforcement-export-adapter.js';
 
 const NOW = '2026-02-01T00:00:00.000Z';
 const TRUST_DOMAIN_ID = 'trust-domain-datasys-agent-republic';
+
+// The REQUIRED_SECTIONS_BY_PACKAGE_TYPE list always requires a non-empty
+// `summary` section (regardless of the `required` flag passed when building
+// it), so every hand-built package here carries one real summary_text item.
+function buildSummaryItem(ctx: ExportRuntimeContext, sourceId: string, text: string): ExportPackageItem {
+  const payload = { text };
+  return {
+    id: ctx.ids.nextId('export-item'),
+    type: 'summary_text',
+    sourceModule: 'verifiable_export_package',
+    sourceId,
+    title: 'Summary',
+    summary: text,
+    payload,
+    payloadHash: createDigest(payload),
+    references: [],
+    createdAt: ctx.clock.now(),
+  };
+}
 
 const INVOICE_EVIDENCE_REQUIRED_DECISION: EnforcementDecision = {
   id: 'enforcement-decision-invoice-evidence-001',
@@ -25,6 +46,7 @@ function buildEvidenceRequiredInvoicePackage() {
   const runtime = createExportPackageRuntime(ctx);
 
   const enforcementDecisionItem = mapEnforcementDecisionToItem(ctx, INVOICE_EVIDENCE_REQUIRED_DECISION);
+  const summaryItem = buildSummaryItem(ctx, 'summary-invoice-evidence-001', 'prepare_invoice_support is blocked pending purchase_order evidence.');
 
   const { pkg } = runtime.createEnforcementDecisionPacket({
     title: 'Enforcement decision packet: prepare_invoice_support (evidence required)',
@@ -33,7 +55,7 @@ function buildEvidenceRequiredInvoicePackage() {
     targetType: 'enforcement_decision',
     targetId: INVOICE_EVIDENCE_REQUIRED_DECISION.id,
     sections: [
-      { type: 'summary', required: true, items: [] },
+      { type: 'summary', required: true, items: [summaryItem] },
       { type: 'enforcement', required: true, items: [enforcementDecisionItem] },
       { type: 'evidence', required: false, items: [] },
     ],
