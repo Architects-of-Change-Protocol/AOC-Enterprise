@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 import { assertNoJurisdictionOverclaim, evaluateJurisdictionClaimSafety } from '../jurisdiction-pack-claim-safety.js';
 import { assertNoPolicyPackOverclaim } from '../../../policy-pack-foundation/validation/policy-pack-no-overclaim.js';
@@ -24,17 +24,18 @@ describe('Jurisdiction Pack Runtime uses the universal no-overclaim harness', ()
       baselinePackId: baseline.id,
       availableManifests: [baseline],
     });
-    assert.doesNotThrow(() => assertNoPolicyPackOverclaim(composition));
+    // A thrown error here fails the test on its own -- no doesNotThrow wrapper needed.
+    assertNoPolicyPackOverclaim(composition);
 
     const exportMetadata = createJurisdictionExportMetadata({ exportId: 'test-export', composition, capabilities });
-    assert.doesNotThrow(() => assertNoPolicyPackOverclaim(exportMetadata));
+    assertNoPolicyPackOverclaim(exportMetadata);
 
     const controlPlaneSummary = createJurisdictionControlPlaneSummary({ composition, capabilities });
-    assert.doesNotThrow(() => assertNoPolicyPackOverclaim(controlPlaneSummary));
+    assertNoPolicyPackOverclaim(controlPlaneSummary);
   });
 
   it('assertNoJurisdictionOverclaim delegates to assertNoPolicyPackOverclaim (identical failure behavior)', () => {
-    assert.doesNotThrow(() => assertNoJurisdictionOverclaim({ note: 'not legal advice; partial policy model' }));
+    assertNoJurisdictionOverclaim({ note: 'not legal advice; partial policy model' });
     assert.throws(() => assertNoJurisdictionOverclaim({ note: 'This pack is legally compliant.' }));
     assert.throws(() => assertNoPolicyPackOverclaim({ note: 'This pack is legally compliant.' }));
   });

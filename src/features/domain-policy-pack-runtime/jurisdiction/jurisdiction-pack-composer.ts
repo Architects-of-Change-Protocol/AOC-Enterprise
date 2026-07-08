@@ -27,6 +27,6 @@ export function composeJurisdictionWithBaseline(input: ComposeJurisdictionWithBa
     rootPackId: input.jurisdictionPack.manifest.id,
     requestedPackIds: [input.baselinePackId],
     availableManifests: [input.jurisdictionPack.manifest, ...input.availableManifests],
-    requiredValidationStatus: input.requiredValidationStatus,
+    ...(input.requiredValidationStatus !== undefined ? { requiredValidationStatus: input.requiredValidationStatus } : {}),
   });
 }

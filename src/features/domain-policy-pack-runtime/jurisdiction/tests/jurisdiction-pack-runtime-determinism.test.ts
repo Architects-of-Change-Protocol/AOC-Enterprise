@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 // Hardcoded, not filesystem-scanned -- mirrors
 // policy-pack-foundation/tests/policy-pack-foundation-determinism.test.ts.

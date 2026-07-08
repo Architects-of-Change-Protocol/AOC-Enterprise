@@ -73,7 +73,7 @@ export function createJurisdictionPack(input: CreateJurisdictionPackInput): Juri
     optionalPackIds: input.optionalPackIds,
     evidenceRequirements,
     approvalRequirements: reviewRequirements,
-    scope: isDemoFixture ? { demoOnly: true } : undefined,
+    ...(isDemoFixture ? { scope: { demoOnly: true } } : {}),
     safeFraming: {
       noJurisdictionalComplianceClaim: true,
       ...(requiresCounselReviewWhenApplicable ? { requiresCounselReviewWhenApplicable: true } : {}),
