@@ -10,6 +10,7 @@
     { "path": "./packages/governance-treaties" },
     { "path": "./packages/integration-runtime" },
     { "path": "./packages/org-boundary" },
+    { "path": "./packages/pmfreak-agent-passport-foundation" },
     { "path": "./packages/policy-runtime" },
     { "path": "./packages/runtime-negotiation" },
     { "path": "./packages/tenant-governance" }
