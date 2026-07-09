@@ -18,10 +18,13 @@ const SRC_RELATIVE_FILES: readonly string[] = [
   'domain/pmfreak-evidence-requirement-mirror.ts',
   'domain/pmfreak-approval-requirement-mirror.ts',
   'domain/pmfreak-capability-token-mirror.ts',
+  'domain/pmfreak-authority-scope.ts',
+  'domain/pmfreak-passport-action-decision.ts',
   'services/pmfreak-agent-enrollment-builder.ts',
   'services/pmfreak-agent-passport-issuance-service.ts',
   'services/pmfreak-agent-runtime-guard-service.ts',
   'services/pmfreak-passport-attestation-service.ts',
+  'services/pmfreak-agent-passport-resolution-service.ts',
   'fixtures/pmfreak-agent-role-fixtures.ts',
   'fixtures/pmfreak-passport-scenario-fixtures.ts',
   'index.ts',
@@ -32,6 +35,7 @@ const TEST_RELATIVE_FILES: readonly string[] = [
   'pmfreak-agent-runtime-guard.test.ts',
   'pmfreak-passport-validation-status.test.ts',
   'pmfreak-passport-attestation.test.ts',
+  'pmfreak-agent-passport-resolution.test.ts',
   'pmfreak-structural-mirrors.test.ts',
 ];
 

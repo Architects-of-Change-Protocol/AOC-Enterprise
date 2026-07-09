@@ -20,7 +20,13 @@ Concretely, this package:
 2. References -- but does not implement or import -- evidence, approval,
    and capability-token requirements via locally-defined **structural mirror
    types** (see "Why structural mirrors, not imports" below).
-3. Adds a passport validation-status lattice mirroring
+3. Resolves whether a specific action attempt is authorized --
+   `resolvePMFreakAgentPassportAction` combines the real Runtime Guard Lite
+   result with this package's capability-token, evidence-requirement,
+   approval-requirement, and authority-scope checks into one
+   priority-ordered decision (`allow` / `hold` / `deny` / a `require_*`
+   review). See "Action resolution" below.
+4. Adds a passport validation-status lattice mirroring
    `PolicyPackValidationStatus`'s 15-value trust lattice
    (`src/features/policy-pack-foundation`), and a new
    `PMFreakPassportAttestation` schema -- this repository had zero
@@ -64,10 +70,34 @@ is different: it genuinely is exported from `@aoc-enterprise/agent-governance`'s
 public surface, so this package calls it for real -- there is no mirror for
 runtime enforcement.
 
+## Action resolution
+
+`resolvePMFreakAgentPassportAction` ports the demo pack's
+`resolvePMFreakAgentPassportAction`
+(`src/features/aoc-enterprise-demo/pmfreak-agent-passport/pmfreak-passport-resolver.ts`)
+decision logic onto this package's real dependencies. It is not a copy: the
+demo resolver looks up a passport's flat `allowedActionIds`/authority-scope
+booleans and evidence/approval **id lists** from an in-memory registry; this
+package's resolver instead (a) calls the real `evaluateAgentRuntimeGuard`
+for passport/policy-manifest/tool/data/risk-tier gating, and (b) separately
+resolves this package's own `PMFreakCapabilityTokenMirror`,
+`PMFreakEvidenceRequirementMirror`, and `PMFreakApprovalRequirementMirror`
+objects (plus a freshly-authored `PMFreakAuthorityScope`, since
+`AgentPassport` carries no workspace/project/customer/phase scoping of its
+own) to determine capability, evidence, and approval satisfaction. Both
+signals feed the same priority-ordered decision set the demo pack uses
+(`deny > require_legal_review > ... > require_evidence > hold > allow`), so
+the *vocabulary* callers see is unchanged even though the *inputs* are now
+real. See `domain/pmfreak-passport-action-decision.ts` and
+`services/pmfreak-agent-passport-resolution-service.ts`.
+
 ## What this package does NOT do
 
-- No real evidence/approval/capability-token *enforcement* -- only
-  structural mirror types for a future integration.
+- No real evidence/approval/capability-token *enforcement engine* beyond
+  `resolvePMFreakAgentPassportAction`'s satisfaction checks -- there is
+  still no code anywhere that actually collects evidence, records an
+  approval, or issues a capability token; those objects must be
+  caller-supplied.
 - No real cryptographic signing keys. Passport issuance defaults to
   `@aoc-enterprise/agent-governance`'s own `createTestSigner`, whose own
   code comment marks it "for use in tests; not for production use" -- an
@@ -117,9 +147,12 @@ runtime enforcement.
 | `domain/pmfreak-evidence-requirement-mirror.ts` | Structural mirror of `EvidenceRequirement` |
 | `domain/pmfreak-approval-requirement-mirror.ts` | Structural mirror of `ApprovalRequirement` |
 | `domain/pmfreak-capability-token-mirror.ts` | Structural mirror of `RecognitionCapabilityToken` |
+| `domain/pmfreak-authority-scope.ts` | Fresh, self-authored `PMFreakAuthorityScope`/`PMFreakProjectPhase` model and scope-check helpers |
+| `domain/pmfreak-passport-action-decision.ts` | `PMFreakPassportActionDecision` and its priority ordering |
 | `services/pmfreak-agent-enrollment-builder.ts` | `buildPMFreakAgentEnrollmentInput` -- builds a real `AgentEnrollmentInput` |
 | `services/pmfreak-agent-passport-issuance-service.ts` | `issuePMFreakAgentPassport` -- wraps the real `issueAgentPassport` end to end |
 | `services/pmfreak-agent-runtime-guard-service.ts` | Builds a real `AgentRuntimeActionRequest` and calls the real Runtime Guard Lite |
+| `services/pmfreak-agent-passport-resolution-service.ts` | `resolvePMFreakAgentPassportAction` -- the action decision engine (see "Action resolution") |
 | `services/pmfreak-passport-attestation-service.ts` | `createPMFreakPassportAttestation` |
 | `fixtures/pmfreak-agent-role-fixtures.ts` | Fresh, self-authored role profiles for the six PMFreak roles |
 | `fixtures/pmfreak-passport-scenario-fixtures.ts` | Deterministic full enrollment scenarios per role, for this package's own tests |
@@ -135,5 +168,13 @@ Before any of this could move beyond foundation stage:
   with real imports.
 - Build a real signer (replacing `createTestSigner`) and a real persistent
   store (replacing `createInMemoryAgentPassportStore`).
+- Migrate `src/features/aoc-enterprise-demo/pmfreak-project-governance-scenarios`
+  and `src/features/aoc-enterprise-demo/pmfreak-demo-control-plane-view` --
+  the demo pack's only two consumers -- onto
+  `resolvePMFreakAgentPassportAction`, reconciling their demo-domain role
+  literals (e.g. `'planning_agent'`) and id-list evidence/approval model
+  with this package's shapes. Not done in this sprint: both directories are
+  demo-only and not consumed by any app, so this is a larger, separate,
+  higher-risk follow-up rather than part of the foundation-layer work here.
 - Decide how (and whether) to wire this into `apps/agent-passport-web` or a
   PMFreak-facing surface -- out of scope for this sprint.
