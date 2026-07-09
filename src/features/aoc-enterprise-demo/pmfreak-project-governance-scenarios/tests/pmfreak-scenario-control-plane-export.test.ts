@@ -1,33 +1,38 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPMFreakAgentPassportRegistryFixture, PMFREAK_AGENT_PASSPORT_DEMO_PACK_ID } from '../../pmfreak-agent-passport/index.js';
 import { runPMFreakProjectGovernanceScenario } from '../pmfreak-scenario-runner.js';
+import type { PMFreakScenarioRunnerDeps } from '../pmfreak-scenario-runner.js';
 import { createPMFreakProjectGovernanceScenarioRegistry } from '../pmfreak-scenario-registry.js';
-import { demoPMFreakProjectGovernanceScenarios } from '../scenarios/index.js';
-import { PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID, PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID } from '../pmfreak-project-governance-scenario-constants.js';
+import { billingReadinessCheckReadinessScenario, demoPMFreakProjectGovernanceScenarios } from '../scenarios/index.js';
+import { getPMFreakRealAgentPassportFixtures } from '../pmfreak-real-agent-passport-fixtures.js';
+import { PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID, PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID } from '../pmfreak-project-governance-scenario-constants.js';
 import { PMFREAK_SCENARIO_CONTROL_PLANE_SAFE_LABELS, createPMFreakProjectGovernanceScenarioControlPlaneSummary } from '../pmfreak-scenario-control-plane-summary.js';
 import { createPMFreakProjectGovernanceScenarioExportMetadata } from '../pmfreak-scenario-export-metadata.js';
 import { assertNoPMFreakScenarioOverclaim } from '../pmfreak-scenario-claim-safety.js';
 
 const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
-const passportRegistry = buildPMFreakAgentPassportRegistryFixture();
+let runnerDeps: PMFreakScenarioRunnerDeps;
+
+before(async () => {
+  runnerDeps = { fixtures: await getPMFreakRealAgentPassportFixtures() };
+});
 
 function runFullBillingReadiness() {
   return runPMFreakProjectGovernanceScenario(
     {
-      scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID,
-      overrideEvidenceIds: ['pmfreak.evidence.deliverable_evidence', 'pmfreak.evidence.customer_acceptance_record'],
-      overrideApprovalIds: ['pmfreak.approval.pm_approval', 'pmfreak.approval.billing_review'],
+      scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID,
+      overrideEvidenceIds: [...billingReadinessCheckReadinessScenario.baselineEvidenceIds],
+      overrideApprovalIds: [...billingReadinessCheckReadinessScenario.baselineApprovalIds],
     },
     scenarioRegistry,
-    passportRegistry,
+    runnerDeps,
   );
 }
 
 describe('Control Plane summary is claim-safe', () => {
-  it('31. carries every documented safe label and no unsafe claim', () => {
-    const summary = createPMFreakProjectGovernanceScenarioControlPlaneSummary(runFullBillingReadiness());
+  it('31. carries every documented safe label and no unsafe claim', async () => {
+    const summary = createPMFreakProjectGovernanceScenarioControlPlaneSummary(await runFullBillingReadiness());
 
     for (const label of [
       'PMFreak project governance scenario',
@@ -55,14 +60,14 @@ describe('Control Plane summary is claim-safe', () => {
 });
 
 describe('Export metadata is claim-safe', () => {
-  it('32. includes the scenario id, passport resolution, missing evidence/approvals, and trace, and passes overclaim scanning', () => {
-    const result = runFullBillingReadiness();
-    const scenario = scenarioRegistry.findByScenarioId(PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID);
+  it('32. includes the scenario id, passport resolution, missing evidence/approvals, and trace, and passes overclaim scanning', async () => {
+    const result = await runFullBillingReadiness();
+    const scenario = scenarioRegistry.findByScenarioId(PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID);
     assert.ok(scenario !== undefined);
 
     const metadata = createPMFreakProjectGovernanceScenarioExportMetadata(result, scenario!.projectContext);
 
-    assert.equal(metadata.scenarioId, PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID);
+    assert.equal(metadata.scenarioId, PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID);
     assert.equal(metadata.packId, PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID);
     assert.deepEqual(metadata.passportResolution, result.passportResolution);
     assert.deepEqual([...metadata.missingEvidenceIds], []);
@@ -76,8 +81,8 @@ describe('Export metadata is claim-safe', () => {
 });
 
 describe('Scenario results preserve jurisdiction and policy pack references', () => {
-  it('33. preserves the Costa Rica jurisdiction pack reference as jurisdiction context only', () => {
-    const result = runFullBillingReadiness();
+  it('33. preserves the Costa Rica jurisdiction pack reference as jurisdiction context only', async () => {
+    const result = await runFullBillingReadiness();
     assert.ok(result.jurisdictionPackIds.includes('aoc.jurisdiction.costa_rica.base.v1'));
 
     // Jurisdiction context reference only -- never a Costa Rica compliance claim.
@@ -87,10 +92,17 @@ describe('Scenario results preserve jurisdiction and policy pack references', ()
     }
   });
 
-  it('34. preserves both the agent-passport and project-governance-scenario policy pack ids', () => {
-    const result = runFullBillingReadiness();
+  /**
+   * The old demo pack's `appliedPolicyPackIds` carried both a governing agent-passport pack id and
+   * this scenario pack's own id. Under the real model, `@aoc-enterprise/pmfreak-agent-passport-foundation`
+   * is a workspace code dependency, not a `PolicyPackManifest`-shaped pack -- there is no
+   * agent-passport-specific policy pack id to look for. `appliedPolicyPackIds` is now computed
+   * entirely by the runner from this scenario pack's own id plus the scenario's own project
+   * context `policyPackIds`.
+   */
+  it('34. preserves the project-governance-scenario policy pack id', async () => {
+    const result = await runFullBillingReadiness();
 
-    assert.ok(result.appliedPolicyPackIds.includes(PMFREAK_AGENT_PASSPORT_DEMO_PACK_ID));
     assert.ok(result.appliedPolicyPackIds.includes(PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID));
   });
 });

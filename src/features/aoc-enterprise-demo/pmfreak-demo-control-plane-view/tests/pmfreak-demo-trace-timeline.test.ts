@@ -1,17 +1,22 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPMFreakAgentPassportRegistryFixture } from '../../pmfreak-agent-passport/index.js';
 import {
-  PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID,
+  PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID,
   createPMFreakProjectGovernanceScenarioRegistry,
   demoPMFreakProjectGovernanceScenarios,
+  getPMFreakRealAgentPassportFixtures,
   runPMFreakProjectGovernanceScenario,
 } from '../../pmfreak-project-governance-scenarios/index.js';
+import type { PMFreakScenarioRunnerDeps } from '../../pmfreak-project-governance-scenarios/index.js';
 import { createPMFreakDemoTraceTimeline } from '../pmfreak-demo-trace-timeline.js';
 
 const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
-const passportRegistry = buildPMFreakAgentPassportRegistryFixture();
+let runnerDeps: PMFreakScenarioRunnerDeps;
+
+before(async () => {
+  runnerDeps = { fixtures: await getPMFreakRealAgentPassportFixtures() };
+});
 
 const EXPECTED_LABELS = [
   'Scenario loaded',
@@ -28,8 +33,8 @@ const EXPECTED_LABELS = [
 ];
 
 describe('createPMFreakDemoTraceTimeline', () => {
-  it('15. preserves the scenario trace order with the canonical step labels', () => {
-    const result = runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID }, scenarioRegistry, passportRegistry);
+  it('15. preserves the scenario trace order with the canonical step labels', async () => {
+    const result = await runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID }, scenarioRegistry, runnerDeps);
     const timeline = createPMFreakDemoTraceTimeline(result);
 
     assert.deepEqual(
@@ -42,11 +47,11 @@ describe('createPMFreakDemoTraceTimeline', () => {
     );
   });
 
-  it('16. uses safe language -- no legal breach, invoice, customer-acceptance-certification, or compliance claims', () => {
-    const result = runPMFreakProjectGovernanceScenario(
-      { scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID, overrideEvidenceIds: [], overrideApprovalIds: [] },
+  it('16. uses safe language -- no legal breach, invoice, customer-acceptance-certification, or compliance claims', async () => {
+    const result = await runPMFreakProjectGovernanceScenario(
+      { scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID, overrideEvidenceIds: [], overrideApprovalIds: [] },
       scenarioRegistry,
-      passportRegistry,
+      runnerDeps,
     );
     const timeline = createPMFreakDemoTraceTimeline(result);
     const text = JSON.stringify(timeline).toLowerCase();

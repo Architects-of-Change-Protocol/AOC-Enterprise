@@ -1,20 +1,12 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 import { assertNoPMFreakDemoControlPlaneOverclaim, evaluatePMFreakDemoControlPlaneClaimSafety } from '../pmfreak-demo-control-plane-claim-safety.js';
 import { PMFREAK_DEMO_CONTROL_PLANE_SAFE_LABELS } from '../pmfreak-demo-control-plane-view-constants.js';
-import {
-  demoBillingReadinessAllowedView,
-  demoBillingReadinessComparison,
-  demoBillingReadinessMissingApprovalView,
-  demoBillingReadinessMissingEvidenceView,
-  demoChangeControlDeniedView,
-  demoClientCommunicationApprovalRequiredView,
-  demoPMFreakControlPlaneDashboard,
-  demoScheduleApplyDeniedView,
-} from '../pmfreak-demo-control-plane-fixtures.js';
+import { buildPMFreakDemoControlPlaneFixtures } from '../pmfreak-demo-control-plane-fixtures.js';
+import type { PMFreakDemoControlPlaneFixtures } from '../pmfreak-demo-control-plane-fixtures.js';
 
 const UNSAFE_PHRASES = [
   'fully trusted agent',
@@ -45,18 +37,24 @@ const SAFE_PHRASES = [
   'Costa Rica jurisdiction context referenced',
 ];
 
+let fixtures: PMFreakDemoControlPlaneFixtures;
+
+before(async () => {
+  fixtures = await buildPMFreakDemoControlPlaneFixtures();
+});
+
 describe('PMFreak Demo Control Plane View -- claim safety', () => {
   it('29. every view fixture passes assertNoPMFreakDemoControlPlaneOverclaim', () => {
     // A thrown error here fails the test on its own -- no doesNotThrow wrapper needed.
     for (const fixture of [
-      demoBillingReadinessMissingEvidenceView,
-      demoBillingReadinessMissingApprovalView,
-      demoBillingReadinessAllowedView,
-      demoScheduleApplyDeniedView,
-      demoClientCommunicationApprovalRequiredView,
-      demoChangeControlDeniedView,
-      demoPMFreakControlPlaneDashboard,
-      demoBillingReadinessComparison,
+      fixtures.demoBillingReadinessMissingEvidenceView,
+      fixtures.demoBillingReadinessMissingApprovalView,
+      fixtures.demoBillingReadinessAllowedView,
+      fixtures.demoScheduleApplyDeniedView,
+      fixtures.demoClientCommunicationApprovalRequiredView,
+      fixtures.demoChangeControlDeniedView,
+      fixtures.demoPMFreakControlPlaneDashboard,
+      fixtures.demoBillingReadinessComparison,
     ]) {
       assertNoPMFreakDemoControlPlaneOverclaim(fixture);
     }
@@ -90,10 +88,10 @@ describe('PMFreak Demo Control Plane View -- claim safety', () => {
     // anywhere in this module"), matching the sibling packs' READMEs -- so the word itself is
     // expected in that negated sentence. Fixture/dashboard *data*, by contrast, must never carry
     // a real Datasys/PMFreak identifier at all.
-    const dashboardText = JSON.stringify(demoPMFreakControlPlaneDashboard);
+    const dashboardText = JSON.stringify(fixtures.demoPMFreakControlPlaneDashboard);
     assert.ok(!/datasys/i.test(dashboardText));
 
-    const comparisonText = JSON.stringify(demoBillingReadinessComparison);
+    const comparisonText = JSON.stringify(fixtures.demoBillingReadinessComparison);
     assert.ok(!/datasys/i.test(comparisonText));
   });
 });

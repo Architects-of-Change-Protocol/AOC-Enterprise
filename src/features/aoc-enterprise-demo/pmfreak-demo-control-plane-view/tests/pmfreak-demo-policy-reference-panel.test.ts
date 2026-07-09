@@ -1,29 +1,41 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPMFreakAgentPassportRegistryFixture } from '../../pmfreak-agent-passport/index.js';
 import {
-  PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID,
+  PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID,
+  PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID,
   createPMFreakProjectGovernanceScenarioRegistry,
   demoPMFreakProjectGovernanceScenarios,
+  getPMFreakRealAgentPassportFixtures,
   runPMFreakProjectGovernanceScenario,
 } from '../../pmfreak-project-governance-scenarios/index.js';
+import type { PMFreakScenarioRunnerDeps } from '../../pmfreak-project-governance-scenarios/index.js';
 import { createPMFreakDemoPolicyReferencePanel } from '../pmfreak-demo-policy-reference-panel.js';
 
 const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
-const passportRegistry = buildPMFreakAgentPassportRegistryFixture();
+let runnerDeps: PMFreakScenarioRunnerDeps;
+
+before(async () => {
+  runnerDeps = { fixtures: await getPMFreakRealAgentPassportFixtures() };
+});
 
 describe('createPMFreakDemoPolicyReferencePanel', () => {
-  it('17. preserves the applied policy pack ids from both underlying packs', () => {
-    const result = runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID }, scenarioRegistry, passportRegistry);
+  /**
+   * Changed under the real model: `appliedPolicyPackIds` is now computed entirely by the scenario
+   * runner from this scenario pack's own id plus the scenario's project-context policy pack ids --
+   * `@aoc-enterprise/pmfreak-agent-passport-foundation` is a workspace code dependency, not a
+   * `PolicyPackManifest`-shaped pack, so there is no separate "agent passport" policy pack id to
+   * preserve here anymore.
+   */
+  it('17. preserves the applied project-governance-scenario policy pack id', async () => {
+    const result = await runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID }, scenarioRegistry, runnerDeps);
     const panel = createPMFreakDemoPolicyReferencePanel(result);
 
-    assert.ok(panel.appliedPolicyPackIds.includes('aoc.demo.pmfreak.agent_passport.v1'));
-    assert.ok(panel.appliedPolicyPackIds.includes('aoc.demo.pmfreak.project_governance_scenarios.v1'));
+    assert.ok(panel.appliedPolicyPackIds.includes(PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID));
   });
 
-  it('18. preserves the Costa Rica jurisdiction context reference safely, never as a compliance claim', () => {
-    const result = runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID }, scenarioRegistry, passportRegistry);
+  it('18. preserves the Costa Rica jurisdiction context reference safely, never as a compliance claim', async () => {
+    const result = await runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID }, scenarioRegistry, runnerDeps);
     const panel = createPMFreakDemoPolicyReferencePanel(result);
 
     assert.ok(panel.jurisdictionPackIds.includes('aoc.jurisdiction.costa_rica.base.v1'));

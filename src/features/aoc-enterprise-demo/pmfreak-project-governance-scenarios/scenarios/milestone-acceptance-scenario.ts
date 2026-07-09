@@ -15,10 +15,12 @@ const PRIMARY_ACTION_ID = 'pmfreak.foundation.action.evidence.classify';
  * that requires that evidence. This scenario never re-implements that gate
  * here.
  *
- * `evidence.prepare_bundle` (this scenario's earlier target) is flagged in
- * the real Evidence role profile's `humanApprovalRequiredFor`, so it can
- * never reach a bare `allow`; this scenario targets `evidence.classify`
- * instead so it can still demonstrate the allow path.
+ * This scenario targets `evidence.classify` rather than
+ * `evidence.prepare_bundle` (this scenario's earlier, demo-resolver
+ * version) to keep the attempted action itself lower-risk while still
+ * demonstrating the full evidence-gating path; preparing a bundle for
+ * downstream sign-off is a separate action this pack does not attempt
+ * here.
  */
 export const milestoneAcceptanceValidateAcceptanceScenario: PMFreakProjectGovernanceScenario = {
   scenarioId: PMFREAK_SCENARIO_MILESTONE_ACCEPTANCE_VALIDATE_ACCEPTANCE_ID,

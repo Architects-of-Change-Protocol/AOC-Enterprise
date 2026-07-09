@@ -1,21 +1,26 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPMFreakAgentPassportRegistryFixture } from '../../pmfreak-agent-passport/index.js';
 import {
-  PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID,
+  PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID,
   createPMFreakProjectGovernanceScenarioRegistry,
   demoPMFreakProjectGovernanceScenarios,
+  getPMFreakRealAgentPassportFixtures,
   runPMFreakProjectGovernanceScenario,
 } from '../../pmfreak-project-governance-scenarios/index.js';
+import type { PMFreakScenarioRunnerDeps } from '../../pmfreak-project-governance-scenarios/index.js';
 import { createPMFreakDemoExportPanel } from '../pmfreak-demo-export-panel.js';
 
 const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
-const passportRegistry = buildPMFreakAgentPassportRegistryFixture();
+let runnerDeps: PMFreakScenarioRunnerDeps;
+
+before(async () => {
+  runnerDeps = { fixtures: await getPMFreakRealAgentPassportFixtures() };
+});
 
 describe('createPMFreakDemoExportPanel', () => {
-  it('19. shows an audit-ready demo export safely, never a certified-export claim', () => {
-    const result = runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID }, scenarioRegistry, passportRegistry);
+  it('19. shows an audit-ready demo export safely, never a certified-export claim', async () => {
+    const result = await runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID }, scenarioRegistry, runnerDeps);
     const panel = createPMFreakDemoExportPanel(result);
 
     assert.equal(panel.exportReady, true);

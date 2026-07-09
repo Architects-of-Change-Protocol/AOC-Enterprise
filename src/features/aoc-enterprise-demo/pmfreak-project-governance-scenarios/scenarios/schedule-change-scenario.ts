@@ -12,11 +12,11 @@ const APPLY_ACTION_ID = 'pmfreak.foundation.action.schedule.apply_change';
  * This requires schedule-baseline and dependency evidence; it never
  * requires an approval on its own.
  *
- * (`schedule.propose_change`, this scenario's earlier target, is flagged in
- * the real Planning role profile's `humanApprovalRequiredFor`, so it can
- * never reach a bare `allow`; this scenario targets `schedule.detect_variance`
- * instead so it can still demonstrate the allow path. Proposing -- and
- * applying -- a replan both remain gated separately.)
+ * (This scenario targets `schedule.detect_variance` rather than
+ * `schedule.propose_change`, this scenario's earlier, demo-resolver target,
+ * to keep the attempted action itself read-only while still demonstrating
+ * the full evidence-gating path. Proposing -- and applying -- a replan both
+ * remain separate actions this pack does not attempt here.)
  */
 export const scheduleChangeDetectVarianceScenario: PMFreakProjectGovernanceScenario = {
   scenarioId: PMFREAK_SCENARIO_SCHEDULE_CHANGE_DETECT_VARIANCE_ID,

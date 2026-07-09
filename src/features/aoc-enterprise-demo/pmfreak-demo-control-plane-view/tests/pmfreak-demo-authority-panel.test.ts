@@ -1,36 +1,48 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPMFreakAgentPassportRegistryFixture } from '../../pmfreak-agent-passport/index.js';
 import {
   PMFREAK_SCENARIO_RISK_ESCALATION_PREPARE_ESCALATION_ID,
   createPMFreakProjectGovernanceScenarioRegistry,
   demoPMFreakProjectGovernanceScenarios,
+  getPMFreakRealAgentPassportFixtures,
   runPMFreakProjectGovernanceScenario,
 } from '../../pmfreak-project-governance-scenarios/index.js';
+import type { PMFreakScenarioRunnerDeps } from '../../pmfreak-project-governance-scenarios/index.js';
 import { createPMFreakDemoAuthorityScopePanel } from '../pmfreak-demo-authority-panel.js';
 
 const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
-const passportRegistry = buildPMFreakAgentPassportRegistryFixture();
+let runnerDeps: PMFreakScenarioRunnerDeps;
+
+before(async () => {
+  runnerDeps = { fixtures: await getPMFreakRealAgentPassportFixtures() };
+});
 
 describe('createPMFreakDemoAuthorityScopePanel', () => {
-  it('shows an in-scope attempt as satisfied', () => {
-    const result = runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_RISK_ESCALATION_PREPARE_ESCALATION_ID }, scenarioRegistry, passportRegistry);
+  it('shows an in-scope attempt as satisfied', async () => {
+    const result = await runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_RISK_ESCALATION_PREPARE_ESCALATION_ID }, scenarioRegistry, runnerDeps);
     const panel = createPMFreakDemoAuthorityScopePanel(result);
 
     assert.equal(panel.allowedByAuthorityScope, true);
     assert.equal(panel.status, 'satisfied');
   });
 
-  it('12. shows a failed scope safely for an out-of-scope demo passport, with no production authorization claim', () => {
-    const result = runPMFreakProjectGovernanceScenario(
+  it('12. shows a failed scope safely for an out-of-scope authority override, with no production authorization claim', async () => {
+    const result = await runPMFreakProjectGovernanceScenario(
       {
         scenarioId: PMFREAK_SCENARIO_RISK_ESCALATION_PREPARE_ESCALATION_ID,
-        overridePassportId: 'aoc.passport.pmfreak.risk.out_of_scope.v1',
-        overrideAgentId: 'pmfreak.agent.risk.out_of_scope',
+        // The real model separates authority scope from passport identity entirely -- there is no
+        // "out of scope passport" fixture; overrideAuthorityScope exercises the same denial by
+        // scoping this attempt to a workspace/project the scenario's real project context is not in.
+        overrideAuthorityScope: {
+          workspaceIds: ['workspace.demo.out-of-scope-harbor'],
+          projectIds: ['project.demo.out-of-scope-harbor'],
+          customerIds: [],
+          allowedProjectPhases: ['initiation', 'planning', 'execution', 'monitoring', 'closure', 'billing'],
+        },
       },
       scenarioRegistry,
-      passportRegistry,
+      runnerDeps,
     );
 
     assert.equal(result.passportResolution.allowedByAuthorityScope, false);

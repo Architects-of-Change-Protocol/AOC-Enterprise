@@ -9,12 +9,12 @@ const APPROVE_ACTION_ID = 'pmfreak.foundation.action.change_control.approve_requ
  * Change Control -- Request Supporting Evidence.
  *
  * The Change Control Agent requests supporting evidence for the scope
- * adjustment change request ahead of classification. `change_control.classify_request`
- * (this scenario's earlier target) is flagged in the real Change Control
- * role profile's `humanApprovalRequiredFor`, so it can never reach a bare
- * `allow`; this scenario targets `evidence.request` instead so it can still
- * demonstrate the allow path. Classifying and routing the request remain
- * gated separately, unconditionally, by the real role profile.
+ * adjustment change request ahead of classification. This scenario targets
+ * `evidence.request` rather than `change_control.classify_request` (this
+ * scenario's earlier, demo-resolver target) to keep the attempted action
+ * itself lower-risk while still demonstrating the full evidence-gating
+ * path; classifying and routing the request remain separate actions this
+ * pack does not attempt here.
  */
 export const changeControlRequestEvidenceScenario: PMFreakProjectGovernanceScenario = {
   scenarioId: PMFREAK_SCENARIO_CHANGE_CONTROL_REQUEST_EVIDENCE_ID,

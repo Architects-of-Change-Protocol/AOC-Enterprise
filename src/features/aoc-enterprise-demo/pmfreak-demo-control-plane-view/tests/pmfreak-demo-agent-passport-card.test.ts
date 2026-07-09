@@ -1,66 +1,77 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { PMFreakAgentPassportResolution, PMFreakAgentPassportStatus } from '../../pmfreak-agent-passport/index.js';
+import type { AgentPassportStatus } from '@aoc-enterprise/agent-governance';
+import {
+  PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID,
+  createPMFreakProjectGovernanceScenarioRegistry,
+  demoPMFreakProjectGovernanceScenarios,
+  getPMFreakRealAgentPassportFixtures,
+  runPMFreakProjectGovernanceScenario,
+} from '../../pmfreak-project-governance-scenarios/index.js';
+import type { PMFreakProjectGovernanceScenarioRunResult, PMFreakScenarioRunnerDeps } from '../../pmfreak-project-governance-scenarios/index.js';
 import { createPMFreakDemoAgentPassportCard } from '../pmfreak-demo-agent-passport-card.js';
 
-function buildResolution(passportStatus: PMFreakAgentPassportStatus, overrides?: Partial<PMFreakAgentPassportResolution>): PMFreakAgentPassportResolution {
+const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
+let baseResult: PMFreakProjectGovernanceScenarioRunResult;
+
+before(async () => {
+  const runnerDeps: PMFreakScenarioRunnerDeps = { fixtures: await getPMFreakRealAgentPassportFixtures() };
+  baseResult = await runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID }, scenarioRegistry, runnerDeps);
+});
+
+/**
+ * `createPMFreakDemoAgentPassportCard` only relabels an already-computed `passportResolution` --
+ * it never re-derives passport status or gate outcomes. Rather than re-authoring a whole
+ * hand-built `PMFreakAgentPassportResolution` (a shape now owned by the real
+ * `@aoc-enterprise/pmfreak-agent-passport-foundation` package), this swaps only the fields that
+ * differ by passport status on top of one real, fully-resolved run result.
+ */
+function withPassportStatus(passportStatus: AgentPassportStatus): PMFreakProjectGovernanceScenarioRunResult {
+  const allowed = passportStatus === 'active';
   return {
-    actionAttemptId: 'attempt.demo.1',
-    agentId: 'pmfreak.agent.billing_readiness',
-    passportId: 'aoc.passport.pmfreak.billing_readiness.demo.v1',
-    actionId: 'pmfreak.action.billing.mark_ready',
-    role: 'billing_readiness_agent',
-    passportStatus,
-    decision: passportStatus === 'active' ? 'allow' : passportStatus === 'suspended' ? 'hold' : 'deny',
-    allowedByPassport: passportStatus === 'active',
-    allowedByCapability: passportStatus === 'active',
-    allowedByAuthorityScope: passportStatus === 'active',
-    evidenceSatisfied: true,
-    approvalsSatisfied: true,
-    missingEvidenceIds: [],
-    missingApprovalIds: [],
-    requiredEvidenceIds: [],
-    requiredApprovalIds: [],
-    appliedPolicyPackIds: ['aoc.demo.pmfreak.agent_passport.v1'],
-    jurisdictionPackIds: [],
-    warnings: [],
-    errors: [],
-    ...overrides,
+    ...baseResult,
+    passportResolution: {
+      ...baseResult.passportResolution,
+      passportStatus,
+      allowedByRuntimeGuard: allowed,
+      allowedByCapabilityToken: allowed,
+      allowedByAuthorityScope: allowed,
+    },
   };
 }
 
 describe('createPMFreakDemoAgentPassportCard', () => {
   it('8. reflects an active passport as success', () => {
-    const card = createPMFreakDemoAgentPassportCard(buildResolution('active'));
+    const card = createPMFreakDemoAgentPassportCard(withPassportStatus('active'));
 
     assert.equal(card.passportStatus, 'active');
     assert.equal(card.statusSeverity, 'success');
-    assert.equal(card.allowedByPassport, true);
+    assert.equal(card.allowedByRuntimeGuard, true);
   });
 
   it('9. reflects a revoked passport as danger', () => {
-    const card = createPMFreakDemoAgentPassportCard(buildResolution('revoked'));
+    const card = createPMFreakDemoAgentPassportCard(withPassportStatus('revoked'));
 
     assert.equal(card.passportStatus, 'revoked');
     assert.equal(card.statusSeverity, 'danger');
   });
 
   it('10. reflects a suspended passport as warning', () => {
-    const card = createPMFreakDemoAgentPassportCard(buildResolution('suspended'));
+    const card = createPMFreakDemoAgentPassportCard(withPassportStatus('suspended'));
 
     assert.equal(card.passportStatus, 'suspended');
     assert.equal(card.statusSeverity, 'warning');
   });
 
   it('reflects an expired passport as danger', () => {
-    const card = createPMFreakDemoAgentPassportCard(buildResolution('expired'));
+    const card = createPMFreakDemoAgentPassportCard(withPassportStatus('expired'));
 
     assert.equal(card.statusSeverity, 'danger');
   });
 
   it('never claims full trust, certification, or production authorization', () => {
-    const card = createPMFreakDemoAgentPassportCard(buildResolution('active'));
+    const card = createPMFreakDemoAgentPassportCard(withPassportStatus('active'));
     const text = JSON.stringify(card).toLowerCase();
 
     assert.ok(!text.includes('fully trusted'));

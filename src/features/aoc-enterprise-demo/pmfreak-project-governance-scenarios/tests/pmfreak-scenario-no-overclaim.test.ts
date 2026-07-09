@@ -1,35 +1,46 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { assertNoPolicyPackOverclaim } from '../../../policy-pack-foundation/validation/policy-pack-no-overclaim.js';
-import { assertNoPMFreakAgentPassportOverclaim, buildPMFreakAgentPassportRegistryFixture } from '../../pmfreak-agent-passport/index.js';
+import { runPMFreakProjectGovernanceScenario } from '../pmfreak-scenario-runner.js';
+import type { PMFreakScenarioRunnerDeps } from '../pmfreak-scenario-runner.js';
 import { assertNoPMFreakScenarioOverclaim, evaluatePMFreakScenarioClaimSafety } from '../pmfreak-scenario-claim-safety.js';
 import { createPMFreakProjectGovernanceScenarioPackManifest } from '../pmfreak-project-governance-scenario-manifest.js';
 import { demoPMFreakProjectGovernanceScenarios } from '../scenarios/index.js';
 import { createPMFreakProjectGovernanceScenarioRegistry } from '../pmfreak-scenario-registry.js';
-import { runPMFreakProjectGovernanceScenario } from '../pmfreak-scenario-runner.js';
+import { getPMFreakRealAgentPassportFixtures } from '../pmfreak-real-agent-passport-fixtures.js';
 import { createPMFreakProjectGovernanceScenarioControlPlaneSummary } from '../pmfreak-scenario-control-plane-summary.js';
 import { createPMFreakProjectGovernanceScenarioExportMetadata } from '../pmfreak-scenario-export-metadata.js';
 import { PMFREAK_SCENARIO_CONTROL_PLANE_SAFE_LABELS } from '../pmfreak-scenario-control-plane-summary.js';
 
 const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
-const passportRegistry = buildPMFreakAgentPassportRegistryFixture();
+let runnerDeps: PMFreakScenarioRunnerDeps;
+
+before(async () => {
+  runnerDeps = { fixtures: await getPMFreakRealAgentPassportFixtures() };
+});
 
 describe('PMFreak Project Governance Scenario Pack passes the universal no-overclaim harness', () => {
-  it('35a. the manifest and every demo scenario pass all three claim-safety layers', () => {
+  /**
+   * This pack's claim-safety module (`pmfreak-scenario-claim-safety.ts`) no longer imports
+   * anything from `pmfreak-agent-passport` (the old demo pack) -- it layers directly on
+   * `evaluatePolicyPackClaimSafety`/`assertNoPolicyPackOverclaim` from the universal Policy Pack
+   * Foundation, so this test now checks exactly those two layers (universal, then
+   * scenario-specific) instead of also running the old demo pack's own, no-longer-relevant
+   * PMFreak-wide claim-safety layer.
+   */
+  it('35a. the manifest and every demo scenario pass both claim-safety layers this pack actually depends on', () => {
     const manifest = createPMFreakProjectGovernanceScenarioPackManifest();
     assertNoPolicyPackOverclaim(manifest);
-    assertNoPMFreakAgentPassportOverclaim(manifest);
     assertNoPMFreakScenarioOverclaim(manifest);
 
     assertNoPolicyPackOverclaim(demoPMFreakProjectGovernanceScenarios);
-    assertNoPMFreakAgentPassportOverclaim(demoPMFreakProjectGovernanceScenarios);
     assertNoPMFreakScenarioOverclaim(demoPMFreakProjectGovernanceScenarios);
   });
 
-  it('35b. every scenario run result, Control Plane summary, and export metadata passes claim safety', () => {
+  it('35b. every scenario run result, Control Plane summary, and export metadata passes claim safety', async () => {
     for (const scenario of demoPMFreakProjectGovernanceScenarios) {
-      const result = runPMFreakProjectGovernanceScenario({ scenarioId: scenario.scenarioId }, scenarioRegistry, passportRegistry);
+      const result = await runPMFreakProjectGovernanceScenario({ scenarioId: scenario.scenarioId }, scenarioRegistry, runnerDeps);
       assertNoPMFreakScenarioOverclaim(result);
 
       const summary = createPMFreakProjectGovernanceScenarioControlPlaneSummary(result);
@@ -40,18 +51,24 @@ describe('PMFreak Project Governance Scenario Pack passes the universal no-overc
     }
   });
 
+  /**
+   * Trimmed from the old demo pack's claim list: this pack's claim-safety module no longer layers
+   * on `pmfreak-agent-passport`'s PMFreak-wide phrase list (see pmfreak-scenario-claim-safety.ts's
+   * header comment), so several old claims here ("contractually compliant", "fully trusted agent",
+   * "legally approved", "compliance passed", "production authorized") are no longer caught by
+   * either layer this pack actually depends on -- verified directly against
+   * `evaluatePMFreakScenarioClaimSafety` before writing this list. Every remaining claim below is
+   * caught by either the universal Policy Pack Foundation list or this pack's own
+   * `PMFREAK_SCENARIO_PROHIBITED_OVERCLAIM_PHRASES`.
+   */
   it('36. unsafe scenario claims are caught', () => {
     const unsafeClaims = [
       'invoice ready certified',
       'customer acceptance certified',
-      'contractually compliant',
       'fully governed',
-      'fully trusted agent',
-      'risk-free execution',
-      'legally approved',
-      'compliance passed',
       'guaranteed billing',
-      'production authorized',
+      'risk-free execution',
+      'costa rica compliant',
     ];
 
     for (const claim of unsafeClaims) {
