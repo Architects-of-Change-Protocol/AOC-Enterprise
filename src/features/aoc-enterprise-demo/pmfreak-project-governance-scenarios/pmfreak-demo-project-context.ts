@@ -1,4 +1,4 @@
-import type { PMFreakProjectPhase } from '../pmfreak-agent-passport/index.js';
+import type { PMFreakProjectPhase } from '@aoc-enterprise/pmfreak-agent-passport-foundation';
 import {
   PMFREAK_DEMO_CHANGE_REQUEST_SCOPE_ADJUSTMENT_ID,
   PMFREAK_DEMO_MILESTONE_PHASE_1_DELIVERY_ID,

@@ -1,4 +1,4 @@
-import { PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID } from '../pmfreak-project-governance-scenarios/index.js';
+import { PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID } from '../pmfreak-project-governance-scenarios/index.js';
 
 /**
  * AOC PMFreak Demo Control Plane View v1 -- shared identifiers.
@@ -21,7 +21,7 @@ export const PMFREAK_DEMO_CONTROL_PLANE_VIEW_VERSION = '1.0.0' as const;
  * constant, never redeclared, so it can never drift from the scenario it
  * names.
  */
-export const PMFREAK_DEMO_CONTROL_PLANE_PRIMARY_SCENARIO_ID = PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID;
+export const PMFREAK_DEMO_CONTROL_PLANE_PRIMARY_SCENARIO_ID = PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID;
 
 /** Stable ids for each Control Plane view section, for demo navigation/anchors only -- never a routing or authorization concern. */
 export const PMFREAK_DEMO_CONTROL_PLANE_SECTION_IDS = {

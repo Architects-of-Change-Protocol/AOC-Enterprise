@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 import { createPMFreakProjectGovernanceScenarioPackManifest } from '../pmfreak-project-governance-scenario-manifest.js';
 import { PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID } from '../pmfreak-project-governance-scenario-constants.js';
-import { PMFREAK_AGENT_PASSPORT_DEMO_PACK_ID } from '../../pmfreak-agent-passport/index.js';
 
 describe('PMFreak Project Governance Scenario Pack manifest', () => {
   it('1. creates a manifest with the documented id, domain, status, and scope', () => {
@@ -34,10 +33,17 @@ describe('PMFreak Project Governance Scenario Pack manifest', () => {
     assert.equal(manifest.safeFraming.requiresDomainExpertReviewWhenApplicable, true);
   });
 
-  it('declares the PMFreak Agent Passport Demo Pack as a required pack -- it never re-declares that pack\'s manifest', () => {
+  /**
+   * Changed under the real model: `@aoc-enterprise/pmfreak-agent-passport-foundation` (the real
+   * resolver this pack now consumes, see pmfreak-scenario-runner.ts) is a workspace code
+   * dependency, not a `PolicyPackManifest`-shaped pack, so it is never listed in
+   * `requiredPackIds` -- there is no longer a sibling demo pack manifest for this manifest to
+   * declare as required.
+   */
+  it('declares no required policy packs -- its real passport/runtime-guard dependency is a workspace code package, not a PolicyPackManifest-shaped pack', () => {
     const manifest = createPMFreakProjectGovernanceScenarioPackManifest();
 
-    assert.ok(manifest.requiredPackIds.includes(PMFREAK_AGENT_PASSPORT_DEMO_PACK_ID));
+    assert.deepEqual([...manifest.requiredPackIds], []);
   });
 
   it('labels include the documented safe vocabulary and never a certification/production claim', () => {

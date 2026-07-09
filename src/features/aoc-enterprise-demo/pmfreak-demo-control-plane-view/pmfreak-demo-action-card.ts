@@ -1,4 +1,3 @@
-import { findPMFreakAction } from '../pmfreak-agent-passport/index.js';
 import { demoPMFreakProjectGovernanceScenarios } from '../pmfreak-project-governance-scenarios/index.js';
 import type { PMFreakProjectGovernanceScenarioContext, PMFreakProjectGovernanceScenarioRunResult } from '../pmfreak-project-governance-scenarios/index.js';
 import { assertNoPMFreakDemoControlPlaneOverclaim } from './pmfreak-demo-control-plane-claim-safety.js';
@@ -48,12 +47,10 @@ const SAFE_DESCRIPTION = 'The agent attempted a demo project-governance action. 
  * context flags.
  */
 export function createPMFreakDemoAttemptedActionCard(result: PMFreakProjectGovernanceScenarioRunResult): PMFreakDemoAttemptedActionCard {
-  const action = findPMFreakAction(result.actionId);
-
   const card: PMFreakDemoAttemptedActionCard = {
     actionAttemptId: result.actionAttemptId,
     actionId: result.actionId,
-    actionLabel: action?.title ?? humanizeActionId(result.actionId),
+    actionLabel: humanizeActionId(result.actionId),
     projectId: result.projectId,
     workspaceId: result.workspaceId,
     ...(result.customerId !== undefined ? { customerId: result.customerId } : {}),

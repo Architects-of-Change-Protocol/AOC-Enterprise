@@ -37,7 +37,7 @@ export function createPMFreakDemoControlPlaneViewModel(scenarioRunResult: PMFrea
 
     decisionBadge,
 
-    agentPassportCard: createPMFreakDemoAgentPassportCard(scenarioRunResult.passportResolution),
+    agentPassportCard: createPMFreakDemoAgentPassportCard(scenarioRunResult),
     attemptedActionCard: createPMFreakDemoAttemptedActionCard(scenarioRunResult),
 
     authorityScopePanel: createPMFreakDemoAuthorityScopePanel(scenarioRunResult),

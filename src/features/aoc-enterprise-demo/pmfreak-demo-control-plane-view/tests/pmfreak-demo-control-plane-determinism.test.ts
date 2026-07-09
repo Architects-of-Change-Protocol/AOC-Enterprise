@@ -1,26 +1,19 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-import {
-  demoBillingReadinessAllowedView,
-  demoBillingReadinessComparison,
-  demoBillingReadinessMissingApprovalView,
-  demoBillingReadinessMissingEvidenceView,
-  demoChangeControlDeniedView,
-  demoClientCommunicationApprovalRequiredView,
-  demoPMFreakControlPlaneDashboard,
-  demoScheduleApplyDeniedView,
-} from '../pmfreak-demo-control-plane-fixtures.js';
+import { buildPMFreakDemoControlPlaneFixtures } from '../pmfreak-demo-control-plane-fixtures.js';
+import type { PMFreakDemoControlPlaneFixtures } from '../pmfreak-demo-control-plane-fixtures.js';
 import { createPMFreakDemoControlPlaneViewModel } from '../pmfreak-demo-control-plane-view-model.js';
-import { buildPMFreakAgentPassportRegistryFixture } from '../../pmfreak-agent-passport/index.js';
 import {
-  PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID,
+  PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID,
   createPMFreakProjectGovernanceScenarioRegistry,
   demoPMFreakProjectGovernanceScenarios,
+  getPMFreakRealAgentPassportFixtures,
   runPMFreakProjectGovernanceScenario,
 } from '../../pmfreak-project-governance-scenarios/index.js';
+import type { PMFreakScenarioRunnerDeps } from '../../pmfreak-project-governance-scenarios/index.js';
 
 // Hardcoded, not filesystem-scanned: this repo prefers deterministic static
 // lists over directory walks, and the pinned 'fs' type shim used here does
@@ -75,6 +68,15 @@ function readModuleFile(relativePath: string): string {
   return readFileSync(resolve(process.cwd(), 'src/features/aoc-enterprise-demo/pmfreak-demo-control-plane-view', relativePath), 'utf8');
 }
 
+let fixtures: PMFreakDemoControlPlaneFixtures;
+let runnerDeps: PMFreakScenarioRunnerDeps;
+const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
+
+before(async () => {
+  runnerDeps = { fixtures: await getPMFreakRealAgentPassportFixtures() };
+  fixtures = await buildPMFreakDemoControlPlaneFixtures();
+});
+
 describe('PMFreak Demo Control Plane View -- determinism and offline execution', () => {
   it('33 & 35. never uses network/LLM/OCR/PDF/web-lookup/nondeterministic-clock calls, and defines no real-mutation function', () => {
     assert.ok(MODULE_RELATIVE_FILES.length > 10);
@@ -90,28 +92,31 @@ describe('PMFreak Demo Control Plane View -- determinism and offline execution',
     assert.deepEqual(violations, []);
   });
 
-  it('28. fixtures are deterministic -- stable ids, and repeated builder calls on the same input produce identical output', () => {
+  it('28. fixtures are deterministic -- stable ids, and repeated builder calls on the same input produce identical output', async () => {
     for (const fixture of [
-      demoBillingReadinessMissingEvidenceView,
-      demoBillingReadinessMissingApprovalView,
-      demoBillingReadinessAllowedView,
-      demoScheduleApplyDeniedView,
-      demoClientCommunicationApprovalRequiredView,
-      demoChangeControlDeniedView,
+      fixtures.demoBillingReadinessMissingEvidenceView,
+      fixtures.demoBillingReadinessMissingApprovalView,
+      fixtures.demoBillingReadinessAllowedView,
+      fixtures.demoScheduleApplyDeniedView,
+      fixtures.demoClientCommunicationApprovalRequiredView,
+      fixtures.demoChangeControlDeniedView,
     ]) {
       assert.ok(fixture.scenarioId.startsWith('pmfreak.scenario.'));
     }
-    assert.equal(demoBillingReadinessMissingEvidenceView.scenarioId, PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID);
+    assert.equal(fixtures.demoBillingReadinessMissingEvidenceView.scenarioId, PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID);
 
-    assert.ok(demoPMFreakControlPlaneDashboard.dashboardId.length > 0);
-    assert.ok(demoBillingReadinessComparison.comparisonId.length > 0);
+    assert.ok(fixtures.demoPMFreakControlPlaneDashboard.dashboardId.length > 0);
+    assert.ok(fixtures.demoBillingReadinessComparison.comparisonId.length > 0);
 
-    const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
-    const passportRegistry = buildPMFreakAgentPassportRegistryFixture();
-    const result = runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID }, scenarioRegistry, passportRegistry);
+    // buildPMFreakDemoControlPlaneFixtures() is memoized process-wide -- calling it again returns
+    // the exact same already-built fixtures object.
+    const second = await buildPMFreakDemoControlPlaneFixtures();
+    assert.equal(second, fixtures);
+
+    const result = await runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID }, scenarioRegistry, runnerDeps);
 
     const first = createPMFreakDemoControlPlaneViewModel(result);
-    const second = createPMFreakDemoControlPlaneViewModel(result);
-    assert.deepEqual(first, second);
+    const repeat = createPMFreakDemoControlPlaneViewModel(result);
+    assert.deepEqual(first, repeat);
   });
 });

@@ -52,11 +52,11 @@ export const PMFREAK_DEMO_CHANGE_REQUEST_SCOPE_ADJUSTMENT_ID = 'change.demo.scop
 // Deterministic scenario ids
 // ---------------------------------------------------------------------------
 
-export const PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID = 'pmfreak.scenario.billing_readiness.mark_milestone_ready' as const;
+export const PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID = 'pmfreak.scenario.billing_readiness.check_readiness' as const;
 
 export const PMFREAK_SCENARIO_MILESTONE_ACCEPTANCE_VALIDATE_ACCEPTANCE_ID = 'pmfreak.scenario.milestone_acceptance.validate_acceptance' as const;
 
-export const PMFREAK_SCENARIO_SCHEDULE_CHANGE_PROPOSE_REPLAN_ID = 'pmfreak.scenario.schedule_change.propose_replan' as const;
+export const PMFREAK_SCENARIO_SCHEDULE_CHANGE_DETECT_VARIANCE_ID = 'pmfreak.scenario.schedule_change.detect_variance' as const;
 
 export const PMFREAK_SCENARIO_SCHEDULE_CHANGE_APPLY_REPLAN_ID = 'pmfreak.scenario.schedule_change.apply_replan' as const;
 
@@ -66,7 +66,7 @@ export const PMFREAK_SCENARIO_CLIENT_COMMUNICATION_DRAFT_STATUS_UPDATE_ID = 'pmf
 
 export const PMFREAK_SCENARIO_CLIENT_COMMUNICATION_SEND_STATUS_UPDATE_ID = 'pmfreak.scenario.client_communication.send_status_update' as const;
 
-export const PMFREAK_SCENARIO_CHANGE_CONTROL_CLASSIFY_CHANGE_REQUEST_ID = 'pmfreak.scenario.change_control.classify_change_request' as const;
+export const PMFREAK_SCENARIO_CHANGE_CONTROL_REQUEST_EVIDENCE_ID = 'pmfreak.scenario.change_control.request_evidence' as const;
 
 export const PMFREAK_SCENARIO_CHANGE_CONTROL_APPROVE_CHANGE_REQUEST_ID = 'pmfreak.scenario.change_control.approve_change_request' as const;
 

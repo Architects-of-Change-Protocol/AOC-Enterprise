@@ -21,7 +21,7 @@ export function createPMFreakProjectGovernanceScenarioExportMetadata(
     category: result.category,
     projectContext,
     agentId: result.agentId,
-    passportId: result.passportId,
+    ...(result.role !== undefined ? { role: result.role } : {}),
     actionId: result.actionId,
     passportResolution: result.passportResolution,
     decision: result.decision,

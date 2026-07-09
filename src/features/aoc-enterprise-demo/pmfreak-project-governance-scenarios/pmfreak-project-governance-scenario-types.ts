@@ -5,18 +5,34 @@
  * action inside a realistic project-governance scenario: billing readiness,
  * milestone acceptance, schedule change, risk escalation, client
  * communication, and change control. It never re-implements passport,
- * authority-scope, capability, evidence, or approval gating -- every
- * scenario run is decided by `resolvePMFreakAgentPassportAction` from the
- * PMFreak Agent Passport Demo Pack; this pack only orchestrates scenarios
- * around that resolver and projects its result into scenario-shaped,
- * claim-safe records.
+ * runtime-guard, capability, evidence, or approval gating -- every scenario
+ * run is decided by `resolvePMFreakAgentPassportAction` from
+ * `@aoc-enterprise/pmfreak-agent-passport-foundation` (the real Agent
+ * Passport Core wiring for PMFreak's six agent roles); this pack only
+ * orchestrates scenarios around that resolver and projects its result into
+ * scenario-shaped, claim-safe records.
  *
  * This is a deterministic demo domain model. It does not integrate with a
  * real PMFreak API, does not read or mutate real project, customer,
  * schedule, or billing data, and does not send real communications.
  */
 
-import type { PMFreakAgentPassportDecision, PMFreakAgentPassportResolution, PMFreakProjectPhase } from '../pmfreak-agent-passport/index.js';
+import type {
+  AgentRuntimeActionCategory,
+} from '@aoc-enterprise/agent-governance';
+import type {
+  PMFreakAgentRole,
+  PMFreakApprovalRequirementType,
+  PMFreakApprovalRiskLevel,
+  PMFreakAuthorityScope,
+  PMFreakCapabilityTokenRiskLevel,
+  PMFreakEvidenceRequirementType,
+  PMFreakPassportActionDecision,
+  PMFreakAgentPassportResolution,
+  PMFreakProjectPhase,
+} from '@aoc-enterprise/pmfreak-agent-passport-foundation';
+
+export type { PMFreakAgentRole, PMFreakAuthorityScope, PMFreakPassportActionDecision, PMFreakAgentPassportResolution, PMFreakProjectPhase };
 
 // ---------------------------------------------------------------------------
 // Demo project context
@@ -103,16 +119,49 @@ export interface PMFreakDemoChangeRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Scenario action request template
+// ---------------------------------------------------------------------------
+
+/** The real `AgentRuntimeActionRequest` shape a scenario's primary action attempt declares. */
+export interface PMFreakProjectGovernanceScenarioActionRequest {
+  readonly actionId: string;
+  readonly actionCategory: AgentRuntimeActionCategory;
+  readonly toolName?: string;
+  readonly dataCategories?: readonly string[];
+}
+
+/** Template for a `PMFreakCapabilityTokenMirror` -- `passportId` and `issuedAt` are filled in by the runner. */
+export interface PMFreakProjectGovernanceScenarioCapabilityTokenTemplate {
+  readonly id: string;
+  readonly capability: string;
+  readonly resourceScopes: readonly string[];
+  readonly riskLevel: PMFreakCapabilityTokenRiskLevel;
+}
+
+/** Template for a `PMFreakEvidenceRequirementMirror` -- `passportId`/`role`/`status`/`createdAt` are filled in by the runner. */
+export interface PMFreakProjectGovernanceScenarioEvidenceRequirementTemplate {
+  readonly id: string;
+  readonly type: PMFreakEvidenceRequirementType;
+  readonly description: string;
+}
+
+/** Template for a `PMFreakApprovalRequirementMirror` -- `passportId`/`role` are filled in by the runner. */
+export interface PMFreakProjectGovernanceScenarioApprovalRequirementTemplate {
+  readonly id: string;
+  readonly type: PMFreakApprovalRequirementType;
+  readonly riskLevel: PMFreakApprovalRiskLevel;
+}
+
+// ---------------------------------------------------------------------------
 // Scenario
 // ---------------------------------------------------------------------------
 
 export type PMFreakProjectGovernanceScenarioCategory = 'billing_readiness' | 'milestone_acceptance' | 'schedule_change' | 'risk_escalation' | 'client_communication' | 'change_control';
 
 /**
- * The subset of `ResolvePMFreakAgentPassportActionInput['context']` a
- * scenario declares. Every flag is passed through unchanged to
- * `resolvePMFreakAgentPassportAction` -- this pack never re-interprets or
- * re-gates on these flags itself.
+ * The subset of the real resolver's `context` input a scenario declares.
+ * Every flag is passed through unchanged to `resolvePMFreakAgentPassportAction`
+ * -- this pack never re-interprets or re-gates on these flags itself.
  */
 export interface PMFreakProjectGovernanceScenarioContext {
   readonly customerFacing?: boolean;
@@ -131,16 +180,22 @@ export interface PMFreakProjectGovernanceScenario {
   readonly description: string;
   readonly category: PMFreakProjectGovernanceScenarioCategory;
 
-  readonly primaryAgentId: string;
-  readonly primaryPassportId: string;
-  readonly primaryActionId: string;
+  /** Free-form display/actor identifier -- not a passport lookup key (the real passport is looked up by `primaryRole`). */
+  readonly agentId: string;
+  readonly primaryRole: PMFreakAgentRole;
+  readonly action: PMFreakProjectGovernanceScenarioActionRequest;
 
   readonly projectContext: PMFreakDemoProjectContext;
 
-  readonly requiredEvidenceIds: readonly string[];
-  readonly requiredApprovalIds: readonly string[];
+  readonly capabilityToken: PMFreakProjectGovernanceScenarioCapabilityTokenTemplate;
+  readonly evidenceRequirements: readonly PMFreakProjectGovernanceScenarioEvidenceRequirementTemplate[];
+  readonly approvalRequirements: readonly PMFreakProjectGovernanceScenarioApprovalRequirementTemplate[];
 
-  readonly expectedDecision: PMFreakAgentPassportDecision;
+  /** Evidence/approval requirement ids (from the two lists above) already collected/granted in this scenario's baseline run. */
+  readonly baselineEvidenceIds: readonly string[];
+  readonly baselineApprovalIds: readonly string[];
+
+  readonly expectedDecision: PMFreakPassportActionDecision;
 
   readonly context: PMFreakProjectGovernanceScenarioContext;
 
@@ -151,15 +206,21 @@ export interface PMFreakProjectGovernanceScenario {
 // Scenario run input / result
 // ---------------------------------------------------------------------------
 
+export type PMFreakProjectGovernanceScenarioPassportVariant = 'active' | 'revoked' | 'suspended' | 'expired';
+
 export interface RunPMFreakProjectGovernanceScenarioInput {
   readonly scenarioId: string;
 
   readonly overrideEvidenceIds?: readonly string[];
   readonly overrideApprovalIds?: readonly string[];
-  readonly overridePassportId?: string;
-  readonly overrideAgentId?: string;
-  readonly overrideProjectId?: string;
+
+  /** Swaps the scenario's real passport for a same-role fixture transitioned to this status. */
+  readonly overridePassportVariant?: PMFreakProjectGovernanceScenarioPassportVariant;
+  /** Overrides the authority scope evaluated for this attempt -- e.g. to exercise an out-of-scope denial. */
+  readonly overrideAuthorityScope?: PMFreakAuthorityScope;
+
   readonly overrideWorkspaceId?: string;
+  readonly overrideProjectId?: string;
   readonly overrideCustomerId?: string;
 
   readonly requestedAt?: string;
@@ -179,6 +240,9 @@ export interface PMFreakProjectGovernanceScenarioRunResult {
   readonly scenarioTitle: string;
   readonly category: PMFreakProjectGovernanceScenarioCategory;
 
+  /** Whether the scenario id resolved to a registered scenario. When false, every other field reflects a denied not-found attempt. */
+  readonly scenarioFound: boolean;
+
   readonly actionAttemptId: string;
 
   readonly projectId: string;
@@ -186,10 +250,10 @@ export interface PMFreakProjectGovernanceScenarioRunResult {
   readonly customerId?: string;
 
   readonly agentId: string;
-  readonly passportId: string;
+  readonly role?: PMFreakAgentRole;
   readonly actionId: string;
 
-  readonly decision: PMFreakAgentPassportDecision;
+  readonly decision: PMFreakPassportActionDecision;
 
   readonly passportResolution: PMFreakAgentPassportResolution;
 
@@ -235,14 +299,14 @@ export interface PMFreakProjectGovernanceScenarioControlPlaneSummary {
   readonly customerId?: string;
 
   readonly agentId: string;
-  readonly passportId: string;
+  readonly role?: PMFreakAgentRole;
   readonly actionId: string;
 
-  readonly decision: PMFreakAgentPassportDecision;
+  readonly decision: PMFreakPassportActionDecision;
   readonly passportStatus: PMFreakAgentPassportResolution['passportStatus'];
 
-  readonly allowedByPassport: boolean;
-  readonly allowedByCapability: boolean;
+  readonly allowedByRuntimeGuard: boolean;
+  readonly allowedByCapabilityToken: boolean;
   readonly allowedByAuthorityScope: boolean;
   readonly evidenceSatisfied: boolean;
   readonly approvalsSatisfied: boolean;
@@ -272,12 +336,12 @@ export interface PMFreakProjectGovernanceScenarioExportMetadata {
   readonly projectContext: PMFreakDemoProjectContext;
 
   readonly agentId: string;
-  readonly passportId: string;
+  readonly role?: PMFreakAgentRole;
   readonly actionId: string;
 
   readonly passportResolution: PMFreakAgentPassportResolution;
 
-  readonly decision: PMFreakAgentPassportDecision;
+  readonly decision: PMFreakPassportActionDecision;
 
   readonly requiredEvidenceIds: readonly string[];
   readonly missingEvidenceIds: readonly string[];

@@ -1,4 +1,4 @@
-import type { PMFreakAgentPassportDecision } from '../pmfreak-agent-passport/index.js';
+import type { PMFreakPassportActionDecision } from '@aoc-enterprise/pmfreak-agent-passport-foundation';
 import { assertNoPMFreakDemoControlPlaneOverclaim } from './pmfreak-demo-control-plane-claim-safety.js';
 import type { PMFreakDemoDecisionBadge, PMFreakDemoDecisionSeverity } from './pmfreak-demo-control-plane-view-types.js';
 
@@ -7,7 +7,7 @@ import type { PMFreakDemoDecisionBadge, PMFreakDemoDecisionSeverity } from './pm
  * view. This mapping only relabels a decision already computed by
  * `resolvePMFreakAgentPassportAction`; it never decides anything itself.
  */
-const DECISION_SEVERITY: Record<PMFreakAgentPassportDecision, PMFreakDemoDecisionSeverity> = {
+const DECISION_SEVERITY: Record<PMFreakPassportActionDecision, PMFreakDemoDecisionSeverity> = {
   allow: 'success',
   hold: 'warning',
   deny: 'danger',
@@ -21,7 +21,7 @@ const DECISION_SEVERITY: Record<PMFreakAgentPassportDecision, PMFreakDemoDecisio
   require_executive_approval: 'warning',
 };
 
-const DECISION_LABEL: Record<PMFreakAgentPassportDecision, string> = {
+const DECISION_LABEL: Record<PMFreakPassportActionDecision, string> = {
   allow: 'Allowed',
   hold: 'On hold',
   deny: 'Denied',
@@ -35,7 +35,7 @@ const DECISION_LABEL: Record<PMFreakAgentPassportDecision, string> = {
   require_executive_approval: 'Executive approval required',
 };
 
-const DECISION_DESCRIPTION: Record<PMFreakAgentPassportDecision, string> = {
+const DECISION_DESCRIPTION: Record<PMFreakPassportActionDecision, string> = {
   allow: 'AOC Enterprise allows the governed demo action to proceed based on the configured passport, evidence, and approvals.',
   hold: 'AOC Enterprise holds the demo action pending passport reinstatement.',
   deny: 'AOC Enterprise denies the demo action based on passport, capability, or authority-scope gating.',
@@ -51,10 +51,10 @@ const DECISION_DESCRIPTION: Record<PMFreakAgentPassportDecision, string> = {
 
 /**
  * Builds a claim-safe decision badge for an already-computed
- * `PMFreakAgentPassportDecision`. Never re-derives the decision -- only
+ * `PMFreakPassportActionDecision`. Never re-derives the decision -- only
  * relabels it for presentation.
  */
-export function createPMFreakDemoDecisionBadge(decision: PMFreakAgentPassportDecision): PMFreakDemoDecisionBadge {
+export function createPMFreakDemoDecisionBadge(decision: PMFreakPassportActionDecision): PMFreakDemoDecisionBadge {
   const badge: PMFreakDemoDecisionBadge = {
     decision,
     severity: DECISION_SEVERITY[decision],
