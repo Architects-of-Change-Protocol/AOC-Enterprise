@@ -9,9 +9,25 @@ import { evaluatePolicyPackClaimSafety } from '../../policy-pack-foundation/vali
  * `@aoc-enterprise/pmfreak-agent-passport-foundation` package, see
  * `pmfreak-scenario-runner.ts`), so this module layers directly on the
  * universal Policy Pack Foundation claim-safety harness rather than through
- * that demo pack's own wrapper.
+ * that demo pack's own wrapper -- but it still carries a copy of that demo
+ * pack's own PMFreak-wide prohibited-phrase list (`PMFREAK_PROHIBITED_OVERCLAIM_PHRASES`
+ * in `pmfreak-agent-passport/pmfreak-claim-safety.ts`) below, so dropping the
+ * import doesn't silently drop that coverage: scenario run/export/manifest
+ * output must still never claim to be, e.g., a "fully trusted agent" or
+ * "production authorized", even though this pack no longer imports the demo
+ * pack's resolver or its claim-safety wrapper.
  */
 export const PMFREAK_SCENARIO_PROHIBITED_OVERCLAIM_PHRASES = [
+  'fully trusted agent',
+  'autonomous approval granted',
+  'certified enterprise compliant',
+  'risk-free execution',
+  'production authorized',
+  'invoice-ready certified',
+  'contractually compliant',
+  'guaranteed safe',
+  'legally approved',
+  'compliance passed',
   'invoice ready certified',
   'customer acceptance certified',
   'fully governed',

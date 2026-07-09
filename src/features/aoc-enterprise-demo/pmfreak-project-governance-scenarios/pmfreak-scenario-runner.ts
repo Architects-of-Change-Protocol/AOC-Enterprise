@@ -8,6 +8,7 @@ import type {
   PMFreakProjectPhase,
   ResolvePMFreakAgentPassportActionInput,
 } from '@aoc-enterprise/pmfreak-agent-passport-foundation';
+import { transitionAgentPassportStatus } from '@aoc-enterprise/agent-governance';
 import type { AgentPassport, AgentPolicyManifest, AgentRuntimeSeal } from '@aoc-enterprise/agent-governance';
 import type { PMFreakRealAgentPassportFixtures } from './pmfreak-real-agent-passport-fixtures.js';
 import { PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID } from './pmfreak-project-governance-scenario-constants.js';
@@ -79,6 +80,16 @@ interface ResolvedPassportContext {
   readonly runtimeSeal: AgentRuntimeSeal | null;
 }
 
+/**
+ * Resolves the passport/policy-manifest/runtime-seal triple for a scenario's
+ * attempted role, transitioned to the requested status. Works for every
+ * role -- not just the three roles this pack's own negative-path scenarios
+ * happen to exercise (billing_readiness/revoked, client_communication/suspended,
+ * planning/expired) -- so any scenario can exercise any status override.
+ * `transitionAgentPassportStatus` itself still enforces the real status
+ * lattice (e.g. 'active' -> 'revoked' is valid, 'revoked' -> anything is
+ * not), so an illegal transition still throws, just not a role-specific one.
+ */
 function resolvePassportContext(
   scenario: PMFreakProjectGovernanceScenario,
   variant: PMFreakProjectGovernanceScenarioPassportVariant,
@@ -89,22 +100,24 @@ function resolvePassportContext(
   if (variant === 'active') {
     return { passport: roleEntry.passport, policyManifest: roleEntry.policyManifest, runtimeSeal: roleEntry.runtimeSeal };
   }
-  if (variant === 'revoked') {
-    if (scenario.primaryRole !== 'billing_readiness') throw new Error(`PMFreak Project Governance Scenario Pack: no "revoked" passport fixture for role "${scenario.primaryRole}".`);
-    return { passport: fixtures.revokedBillingReadinessPassport, policyManifest: roleEntry.policyManifest, runtimeSeal: null };
-  }
-  if (variant === 'suspended') {
-    if (scenario.primaryRole !== 'client_communication') throw new Error(`PMFreak Project Governance Scenario Pack: no "suspended" passport fixture for role "${scenario.primaryRole}".`);
-    return { passport: fixtures.suspendedClientCommunicationPassport, policyManifest: roleEntry.policyManifest, runtimeSeal: null };
-  }
-  if (scenario.primaryRole !== 'planning') throw new Error(`PMFreak Project Governance Scenario Pack: no "expired" passport fixture for role "${scenario.primaryRole}".`);
-  return { passport: fixtures.expiredPlanningPassport, policyManifest: roleEntry.policyManifest, runtimeSeal: null };
+
+  const passport = transitionAgentPassportStatus(roleEntry.passport, variant);
+  return { passport, policyManifest: roleEntry.policyManifest, runtimeSeal: null };
 }
 
-function buildAuthorityScope(projectContext: PMFreakDemoProjectContext, workspaceId: string, projectId: string): PMFreakAuthorityScope {
+/**
+ * The default authority scope always reflects the scenario's OWN declared
+ * workspace/project -- never the effective (possibly `overrideWorkspaceId`/
+ * `overrideProjectId`-overridden) attempt target. Building the default scope
+ * from the overridden target would trivially authorize whatever project a
+ * caller points the attempt at, defeating the purpose of an
+ * out-of-scope-authority override test; callers who want a specific,
+ * deliberately mismatched scope should pass `overrideAuthorityScope`.
+ */
+function buildAuthorityScope(projectContext: PMFreakDemoProjectContext): PMFreakAuthorityScope {
   return {
-    workspaceIds: [workspaceId],
-    projectIds: [projectId],
+    workspaceIds: [projectContext.workspaceId],
+    projectIds: [projectContext.projectId],
     customerIds: [],
     allowedProjectPhases: ALL_PROJECT_PHASES,
   };
@@ -310,9 +323,14 @@ export async function runPMFreakProjectGovernanceScenario(
   const variant = input.overridePassportVariant ?? 'active';
 
   const { passport, policyManifest, runtimeSeal } = resolvePassportContext(scenario, variant, runnerDeps.fixtures);
-  const authorityScope = input.overrideAuthorityScope ?? buildAuthorityScope(scenario.projectContext, workspaceId, projectId);
+  const authorityScope = input.overrideAuthorityScope ?? buildAuthorityScope(scenario.projectContext);
 
-  const actionAttemptId = `${scenario.scenarioId}::${passport.passportId}::${projectId}`;
+  // Deliberately built from the scenario id/role/variant/project, never from `passport.passportId`
+  // (real, randomized per issuance -- see pmfreak-real-agent-passport-fixtures.ts) -- so this
+  // attempt id, and every exported/dashboard identifier derived from it, stays stable across
+  // process restarts. The real, non-reproducible passport id is still available, correctly, on
+  // `passportResolution.passportId`.
+  const actionAttemptId = `${scenario.scenarioId}::${scenario.primaryRole}::${variant}::${projectId}`;
 
   const request = buildPMFreakAgentRuntimeActionRequest({
     requestId: actionAttemptId,

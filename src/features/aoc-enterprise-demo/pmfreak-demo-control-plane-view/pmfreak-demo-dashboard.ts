@@ -89,7 +89,7 @@ export async function buildDefaultPMFreakDemoControlPlaneDashboard(
 ): Promise<PMFreakDemoControlPlaneDashboard> {
   const deps: PMFreakScenarioRunnerDeps = runnerDeps ?? { fixtures: await getPMFreakRealAgentPassportFixtures() };
 
-  const scenarioResults = await Promise.all(demoPMFreakProjectGovernanceScenarios.map((scenario) => runPMFreakProjectGovernanceScenario({ scenarioId: scenario.scenarioId }, scenarioRegistry, deps)));
+  const scenarioResults = await Promise.all(scenarioRegistry.scenarios.map((scenario) => runPMFreakProjectGovernanceScenario({ scenarioId: scenario.scenarioId }, scenarioRegistry, deps)));
 
   return createPMFreakDemoControlPlaneDashboard(scenarioResults);
 }

@@ -52,14 +52,11 @@ describe('PMFreak Project Governance Scenario Pack passes the universal no-overc
   });
 
   /**
-   * Trimmed from the old demo pack's claim list: this pack's claim-safety module no longer layers
-   * on `pmfreak-agent-passport`'s PMFreak-wide phrase list (see pmfreak-scenario-claim-safety.ts's
-   * header comment), so several old claims here ("contractually compliant", "fully trusted agent",
-   * "legally approved", "compliance passed", "production authorized") are no longer caught by
-   * either layer this pack actually depends on -- verified directly against
-   * `evaluatePMFreakScenarioClaimSafety` before writing this list. Every remaining claim below is
-   * caught by either the universal Policy Pack Foundation list or this pack's own
-   * `PMFREAK_SCENARIO_PROHIBITED_OVERCLAIM_PHRASES`.
+   * This pack's claim-safety module no longer imports `pmfreak-agent-passport`'s PMFreak-wide
+   * phrase list (see pmfreak-scenario-claim-safety.ts's header comment), but it carries its own
+   * copy of that same list, so PMFreak-wide claims stay caught. Every claim below is caught by
+   * either the universal Policy Pack Foundation list or this pack's own
+   * `PMFREAK_SCENARIO_PROHIBITED_OVERCLAIM_PHRASES` (which now includes the PMFreak-wide list).
    */
   it('36. unsafe scenario claims are caught', () => {
     const unsafeClaims = [
@@ -69,6 +66,12 @@ describe('PMFreak Project Governance Scenario Pack passes the universal no-overc
       'guaranteed billing',
       'risk-free execution',
       'costa rica compliant',
+      'fully trusted agent',
+      'autonomous approval granted',
+      'production authorized',
+      'contractually compliant',
+      'legally approved',
+      'compliance passed',
     ];
 
     for (const claim of unsafeClaims) {
