@@ -1,4 +1,4 @@
-import type { PMFreakAgentPassportDecision, PMFreakAgentRole } from '../pmfreak-agent-passport/index.js';
+import type { PMFreakAgentRole, PMFreakPassportActionDecision } from '@aoc-enterprise/pmfreak-agent-passport-foundation';
 import type { PMFreakProjectGovernanceScenarioCategory } from '../pmfreak-project-governance-scenarios/index.js';
 
 /**
@@ -20,7 +20,7 @@ import type { PMFreakProjectGovernanceScenarioCategory } from '../pmfreak-projec
 export type PMFreakDemoDecisionSeverity = 'success' | 'info' | 'warning' | 'danger';
 
 export interface PMFreakDemoDecisionBadge {
-  readonly decision: PMFreakAgentPassportDecision;
+  readonly decision: PMFreakPassportActionDecision;
   readonly severity: PMFreakDemoDecisionSeverity;
   readonly label: string;
   readonly description: string;
@@ -36,8 +36,8 @@ export interface PMFreakDemoAgentPassportCard {
   readonly passportStatus: string;
   readonly statusLabel: string;
   readonly statusSeverity: PMFreakDemoDecisionSeverity;
-  readonly allowedByPassport: boolean;
-  readonly allowedByCapability: boolean;
+  readonly allowedByRuntimeGuard: boolean;
+  readonly allowedByCapabilityToken: boolean;
   readonly allowedByAuthorityScope: boolean;
   readonly capabilityTokenStatus: PMFreakDemoCapabilityTokenStatus;
   readonly authorityStatus: PMFreakDemoAuthorityStatus;

@@ -1,6 +1,5 @@
 import type { PolicyPackManifest, PolicyPackSourceStatus, PolicyPackValidationStatus } from '../../policy-pack-foundation/manifest/policy-pack-manifest-types.js';
 import { createPolicyPackManifest } from '../../policy-pack-foundation/manifest/policy-pack-manifest-factory.js';
-import { PMFREAK_AGENT_PASSPORT_DEMO_PACK_ID } from '../pmfreak-agent-passport/index.js';
 import {
   PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID,
   PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_NAME,
@@ -18,10 +17,12 @@ import { PMFREAK_SCENARIO_CONTROL_PLANE_REQUIREMENT } from './pmfreak-scenario-c
  *
  * Built entirely on the Policy Pack Foundation's `createPolicyPackManifest`
  * -- this pack never re-implements the manifest standard, the
- * validation-status lattice, or the safe-framing shape. It declares the
- * PMFreak Agent Passport Demo Pack as a required pack: every scenario is
- * decided by that pack's `resolvePMFreakAgentPassportAction`, never by a
- * duplicate resolver in this module.
+ * validation-status lattice, or the safe-framing shape. Every scenario is
+ * decided by `resolvePMFreakAgentPassportAction` from the real
+ * `@aoc-enterprise/pmfreak-agent-passport-foundation` package (a workspace
+ * code dependency, not a `PolicyPackManifest`-shaped pack, so it is not
+ * listed in `requiredPackIds`), never by a duplicate resolver in this
+ * module.
  *
  * Default `status`/`sourceStatus` are the safe, non-production baseline
  * (`demo_baseline` / `system_authored`). This pack does not integrate with
@@ -38,7 +39,7 @@ export interface CreatePMFreakProjectGovernanceScenarioPackManifestInput {
 }
 
 const DESCRIPTION =
-  'AOC PMFreak Project Governance Scenario Pack v1 demonstrates how AOC Enterprise governs PMFreak project agents inside realistic project-governance scenarios: billing readiness, milestone acceptance, schedule change, risk escalation, client communication, and change control. It builds on the PMFreak Agent Passport Demo Pack -- every scenario decision comes from that pack\'s resolver, never a duplicate. It does not integrate with PMFreak production, does not access real PMFreak/Datasys data, does not mutate real projects, schedules, or billing, and does not send real client communications.';
+  'AOC PMFreak Project Governance Scenario Pack v1 demonstrates how AOC Enterprise governs PMFreak project agents inside realistic project-governance scenarios: billing readiness, milestone acceptance, schedule change, risk escalation, client communication, and change control. It builds on the real @aoc-enterprise/pmfreak-agent-passport-foundation package -- every scenario decision comes from that package\'s resolver, never a duplicate. It does not integrate with PMFreak production, does not access real PMFreak/Datasys data, does not mutate real projects, schedules, or billing, and does not send real client communications.';
 
 const SAFETY_NOTE =
   'This pack does not implement real PMFreak API integration, real PMFreak authentication, real project/schedule/billing mutation, real communication sending, or real invoice creation. It does not certify customer acceptance, does not certify invoice or billing readiness, does not provide legal advice, and does not certify compliance -- including Costa Rica jurisdiction context, which is carried only as an opaque routing reference.';
@@ -56,7 +57,7 @@ export function createPMFreakProjectGovernanceScenarioPackManifest(input?: Creat
     status,
     sourceStatus,
     description: DESCRIPTION,
-    requiredPackIds: [PMFREAK_AGENT_PASSPORT_DEMO_PACK_ID],
+    requiredPackIds: [],
     scope: {
       global: false,
       jurisdictionSpecific: false,

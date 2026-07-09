@@ -13,19 +13,24 @@ export {
   PMFREAK_DEMO_MILESTONE_PHASE_1_DELIVERY_ID,
   PMFREAK_DEMO_RISK_UNCONFIRMED_CUSTOMER_ACCEPTANCE_ID,
   PMFREAK_DEMO_CHANGE_REQUEST_SCOPE_ADJUSTMENT_ID,
-  PMFREAK_SCENARIO_BILLING_READINESS_MARK_MILESTONE_READY_ID,
+  PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID,
   PMFREAK_SCENARIO_MILESTONE_ACCEPTANCE_VALIDATE_ACCEPTANCE_ID,
-  PMFREAK_SCENARIO_SCHEDULE_CHANGE_PROPOSE_REPLAN_ID,
+  PMFREAK_SCENARIO_SCHEDULE_CHANGE_DETECT_VARIANCE_ID,
   PMFREAK_SCENARIO_SCHEDULE_CHANGE_APPLY_REPLAN_ID,
   PMFREAK_SCENARIO_RISK_ESCALATION_PREPARE_ESCALATION_ID,
   PMFREAK_SCENARIO_CLIENT_COMMUNICATION_DRAFT_STATUS_UPDATE_ID,
   PMFREAK_SCENARIO_CLIENT_COMMUNICATION_SEND_STATUS_UPDATE_ID,
-  PMFREAK_SCENARIO_CHANGE_CONTROL_CLASSIFY_CHANGE_REQUEST_ID,
+  PMFREAK_SCENARIO_CHANGE_CONTROL_REQUEST_EVIDENCE_ID,
   PMFREAK_SCENARIO_CHANGE_CONTROL_APPROVE_CHANGE_REQUEST_ID,
   PMFREAK_PROJECT_GOVERNANCE_DEMO_REQUESTED_AT,
 } from './pmfreak-project-governance-scenario-constants.js';
 
 export type {
+  PMFreakAgentRole,
+  PMFreakAuthorityScope,
+  PMFreakPassportActionDecision,
+  PMFreakAgentPassportResolution,
+  PMFreakProjectPhase,
   PMFreakDemoProjectStatus,
   PMFreakDemoProjectContext,
   PMFreakDemoMilestoneStatus,
@@ -37,7 +42,12 @@ export type {
   PMFreakDemoChangeRequest,
   PMFreakProjectGovernanceScenarioCategory,
   PMFreakProjectGovernanceScenarioContext,
+  PMFreakProjectGovernanceScenarioActionRequest,
+  PMFreakProjectGovernanceScenarioCapabilityTokenTemplate,
+  PMFreakProjectGovernanceScenarioEvidenceRequirementTemplate,
+  PMFreakProjectGovernanceScenarioApprovalRequirementTemplate,
   PMFreakProjectGovernanceScenario,
+  PMFreakProjectGovernanceScenarioPassportVariant,
   RunPMFreakProjectGovernanceScenarioInput,
   PMFreakProjectGovernanceScenarioTraceStepStatus,
   PMFreakProjectGovernanceScenarioTraceStep,
@@ -56,19 +66,23 @@ export { demoPMFreakMilestones, demoPMFreakRisks, demoPMFreakChangeRequests, fin
 
 export {
   demoPMFreakProjectGovernanceScenarios,
-  billingReadinessMarkMilestoneReadyScenario,
+  billingReadinessCheckReadinessScenario,
   milestoneAcceptanceValidateAcceptanceScenario,
-  scheduleChangeProposeReplanScenario,
+  scheduleChangeDetectVarianceScenario,
   scheduleChangeApplyReplanScenario,
   riskEscalationPrepareEscalationScenario,
   clientCommunicationDraftStatusUpdateScenario,
   clientCommunicationSendStatusUpdateScenario,
-  changeControlClassifyChangeRequestScenario,
+  changeControlRequestEvidenceScenario,
   changeControlApproveChangeRequestScenario,
 } from './scenarios/index.js';
 
 export { createPMFreakProjectGovernanceScenarioRegistry } from './pmfreak-scenario-registry.js';
 
+export type { PMFreakRealAgentPassportFixtureEntry, PMFreakRealAgentPassportFixtures } from './pmfreak-real-agent-passport-fixtures.js';
+export { getPMFreakRealAgentPassportFixtures } from './pmfreak-real-agent-passport-fixtures.js';
+
+export type { PMFreakScenarioRunnerDeps } from './pmfreak-scenario-runner.js';
 export { runPMFreakProjectGovernanceScenario } from './pmfreak-scenario-runner.js';
 
 export {

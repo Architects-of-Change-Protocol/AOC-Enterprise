@@ -1,11 +1,15 @@
-import { buildPMFreakAgentPassportRegistryFixture } from '../pmfreak-agent-passport/index.js';
 import {
   createPMFreakProjectGovernanceScenarioRegistry,
   demoPMFreakProjectGovernanceScenarios,
+  getPMFreakRealAgentPassportFixtures,
   runPMFreakProjectGovernanceScenario,
 } from '../pmfreak-project-governance-scenarios/index.js';
-import type { PMFreakAgentPassportDecision } from '../pmfreak-agent-passport/index.js';
-import type { PMFreakProjectGovernanceScenarioRunResult } from '../pmfreak-project-governance-scenarios/index.js';
+import type {
+  PMFreakPassportActionDecision,
+  PMFreakProjectGovernanceScenarioRegistry,
+  PMFreakProjectGovernanceScenarioRunResult,
+  PMFreakScenarioRunnerDeps,
+} from '../pmfreak-project-governance-scenarios/index.js';
 import { createPMFreakDemoControlPlaneViewModel } from './pmfreak-demo-control-plane-view-model.js';
 import { assertNoPMFreakDemoControlPlaneOverclaim } from './pmfreak-demo-control-plane-claim-safety.js';
 import {
@@ -15,7 +19,7 @@ import {
 } from './pmfreak-demo-control-plane-view-constants.js';
 import type { PMFreakDemoControlPlaneDashboard, PMFreakDemoControlPlaneDashboardMetrics } from './pmfreak-demo-control-plane-view-types.js';
 
-const APPROVAL_REVIEW_DECISIONS: ReadonlySet<PMFreakAgentPassportDecision> = new Set([
+const APPROVAL_REVIEW_DECISIONS: ReadonlySet<PMFreakPassportActionDecision> = new Set([
   'require_pm_approval',
   'require_customer_validation',
   'require_contract_review',
@@ -74,16 +78,18 @@ export function createPMFreakDemoControlPlaneDashboard(scenarioResults: readonly
 
 /**
  * Runs every deterministic demo scenario (via the existing scenario runner
- * and demo registries -- never a real PMFreak API) and builds the resulting
- * dashboard. This is the only place in this module that calls
- * `runPMFreakProjectGovernanceScenario`; every other builder in this module
- * only consumes already-run results.
+ * and the real PMFreak Agent Passport Foundation resolver -- never a real
+ * PMFreak API) and builds the resulting dashboard. This is the only place in
+ * this module that calls `runPMFreakProjectGovernanceScenario`; every other
+ * builder in this module only consumes already-run results.
  */
-export function createDefaultPMFreakDemoControlPlaneDashboard(): PMFreakDemoControlPlaneDashboard {
-  const scenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios);
-  const passportRegistry = buildPMFreakAgentPassportRegistryFixture();
+export async function buildDefaultPMFreakDemoControlPlaneDashboard(
+  scenarioRegistry: PMFreakProjectGovernanceScenarioRegistry = createPMFreakProjectGovernanceScenarioRegistry(demoPMFreakProjectGovernanceScenarios),
+  runnerDeps?: PMFreakScenarioRunnerDeps,
+): Promise<PMFreakDemoControlPlaneDashboard> {
+  const deps: PMFreakScenarioRunnerDeps = runnerDeps ?? { fixtures: await getPMFreakRealAgentPassportFixtures() };
 
-  const scenarioResults = demoPMFreakProjectGovernanceScenarios.map((scenario) => runPMFreakProjectGovernanceScenario({ scenarioId: scenario.scenarioId }, scenarioRegistry, passportRegistry));
+  const scenarioResults = await Promise.all(demoPMFreakProjectGovernanceScenarios.map((scenario) => runPMFreakProjectGovernanceScenario({ scenarioId: scenario.scenarioId }, scenarioRegistry, deps)));
 
   return createPMFreakDemoControlPlaneDashboard(scenarioResults);
 }

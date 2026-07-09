@@ -3,36 +3,29 @@ import { assertNoPMFreakDemoControlPlaneOverclaim } from './pmfreak-demo-control
 import type { PMFreakDemoAuthorityScopePanel, PMFreakDemoPanelFinding } from './pmfreak-demo-control-plane-view-types.js';
 
 /**
- * A passport or action could not be resolved at all, so authority scope was
- * never actually evaluated by the resolver -- distinct from an authority
- * scope evaluation that ran and failed.
- */
-function wasAuthorityScopeEvaluated(result: PMFreakProjectGovernanceScenarioRunResult): boolean {
-  return !result.passportResolution.errors.some((error) => error.includes('Unknown PMFreak action') || error.includes('No PMFreak agent passport found'));
-}
-
-/**
  * Builds a claim-safe authority scope panel from a scenario run result.
  * Never re-derives authority-scope membership -- only presents
  * `allowedByAuthorityScope`, already computed by
- * `resolvePMFreakAgentPassportAction`.
+ * `resolvePMFreakAgentPassportAction`. Authority scope is evaluated for
+ * every real resolution; the only case where it never ran is the runner's
+ * own scenario-not-found short-circuit (`result.scenarioFound === false`).
  */
 export function createPMFreakDemoAuthorityScopePanel(result: PMFreakProjectGovernanceScenarioRunResult): PMFreakDemoAuthorityScopePanel {
   const { allowedByAuthorityScope } = result.passportResolution;
-  const evaluated = wasAuthorityScopeEvaluated(result);
+  const evaluated = result.scenarioFound;
 
   const finding: PMFreakDemoPanelFinding = evaluated
     ? {
         id: 'authority_scope',
         label: 'Authority scope',
         status: allowedByAuthorityScope ? 'passed' : 'failed',
-        detail: allowedByAuthorityScope ? "The attempt is within the demo passport's authority scope." : "The attempt is outside the demo passport's authority scope.",
+        detail: allowedByAuthorityScope ? 'The attempt is within the authority scope evaluated for this run.' : 'The attempt is outside the authority scope evaluated for this run.',
       }
     : {
         id: 'authority_scope',
         label: 'Authority scope',
         status: 'not_applicable',
-        detail: 'Authority scope could not be evaluated because no matching demo passport or action was found.',
+        detail: 'Authority scope could not be evaluated because no matching demo scenario was found.',
       };
 
   const panel: PMFreakDemoAuthorityScopePanel = {

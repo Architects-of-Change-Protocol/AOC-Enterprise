@@ -52,7 +52,7 @@ export { createPMFreakDemoExportPanel } from './pmfreak-demo-export-panel.js';
 
 export { createPMFreakDemoControlPlaneViewModel } from './pmfreak-demo-control-plane-view-model.js';
 
-export { createPMFreakDemoControlPlaneDashboard, createDefaultPMFreakDemoControlPlaneDashboard } from './pmfreak-demo-dashboard.js';
+export { createPMFreakDemoControlPlaneDashboard, buildDefaultPMFreakDemoControlPlaneDashboard } from './pmfreak-demo-dashboard.js';
 
 export { createPMFreakDemoControlPlaneComparison } from './pmfreak-demo-comparison.js';
 
@@ -63,13 +63,5 @@ export {
   assertNoPMFreakDemoControlPlaneOverclaim,
 } from './pmfreak-demo-control-plane-claim-safety.js';
 
-export {
-  demoBillingReadinessMissingEvidenceView,
-  demoBillingReadinessMissingApprovalView,
-  demoBillingReadinessAllowedView,
-  demoScheduleApplyDeniedView,
-  demoClientCommunicationApprovalRequiredView,
-  demoChangeControlDeniedView,
-  demoPMFreakControlPlaneDashboard,
-  demoBillingReadinessComparison,
-} from './pmfreak-demo-control-plane-fixtures.js';
+export type { PMFreakDemoControlPlaneFixtures } from './pmfreak-demo-control-plane-fixtures.js';
+export { buildPMFreakDemoControlPlaneFixtures } from './pmfreak-demo-control-plane-fixtures.js';

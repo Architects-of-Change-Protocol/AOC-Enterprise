@@ -58,6 +58,9 @@
       "default": "./dist/src/runtime/index.js"
     }
   },
+  "dependencies": {
+    "@aoc-enterprise/pmfreak-agent-passport-foundation": "*"
+  },
   "peerDependencies": {
     "@aoc/protocol": ">=0.1.0",
     "react": ">=18.3.1",
