@@ -1,0 +1,29 @@
+export type { ActorReference, ActionDescriptor, TargetReference, OrganizationReference, KernelEvaluationRequest } from './kernel-request.js';
+export type { KernelEvaluationOptions } from './kernel-options.js';
+export type {
+  KernelDecisionStatus,
+  RecognitionEvaluation,
+  AuthorityEvaluation,
+  PolicyEvaluation,
+  ApprovalEvaluation,
+  ApprovalStatus,
+  EvidenceEvaluation,
+  KernelEvaluationResult,
+} from './kernel-result.js';
+export type { KernelTrace, KernelTraceStep, KernelTraceStepStatus } from './kernel-trace.js';
+export type { KernelExecutionStatus, KernelExecutionOutcome, KernelEnforcementResult } from './kernel-enforcement-result.js';
+export type {
+  RecognitionProvider,
+  RecognitionVerificationInput,
+  RecognitionVerificationResult,
+  PolicyPackProvider,
+  KernelClock,
+  KernelIdGenerator,
+} from './ports.js';
+
+/** Contract identifiers for the v1 kernel surface -- only the exported public contracts are versioned, not every internal module. */
+export const KERNEL_CONTRACT_IDS = {
+  evaluationRequest: 'aoc.kernel.evaluation-request.v1',
+  evaluationResult: 'aoc.kernel.evaluation-result.v1',
+  trace: 'aoc.kernel.trace.v1',
+} as const;
