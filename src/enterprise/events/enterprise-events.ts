@@ -1,4 +1,5 @@
 import type { KernelEvaluationResult } from '../../kernel/index.js';
+import type { EnterpriseLifecycleEvent } from '../lifecycle/lifecycle-events.js';
 
 /**
  * The AOC Enterprise Host's own event catalog. These are
@@ -44,7 +45,13 @@ export interface GovernanceEvaluationCompletedEvent extends EnterpriseEventBase 
   readonly kernelVersion: string;
 }
 
-export type EnterpriseEvent = GovernanceEvaluationRequestedEvent | GovernanceEvaluationCompletedEvent;
+/**
+ * `EnterpriseLifecycleEvent` (`../lifecycle/lifecycle-events.ts`) is folded
+ * into this same publisher's event union so lifecycle events flow through
+ * the one Enterprise event system the mission asks for -- no second event
+ * bus. Existing `GovernanceEvaluation*` event names/shapes are unchanged.
+ */
+export type EnterpriseEvent = GovernanceEvaluationRequestedEvent | GovernanceEvaluationCompletedEvent | EnterpriseLifecycleEvent;
 
 export interface EnterpriseEventPublisher {
   publish(event: EnterpriseEvent): Promise<void>;

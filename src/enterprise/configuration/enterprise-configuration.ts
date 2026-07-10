@@ -22,6 +22,20 @@ export interface EnterpriseFeatureFlags {
   readonly requireAuthentication: boolean;
 }
 
+/**
+ * Timeouts the module lifecycle actually enforces (mission section 29:
+ * "only implement timeouts that are actually enforced"). No separate
+ * graceful-shutdown-drain timeout exists because this PR does not implement
+ * in-flight-evaluation draining (see the Module Lifecycle doc's
+ * "Limitations" section) -- `shutdownTimeoutMs` bounds each module's own
+ * `shutdown()` call, which is all v1 needs.
+ */
+export interface EnterpriseLifecycleConfiguration {
+  readonly startupTimeoutMs: number;
+  readonly shutdownTimeoutMs: number;
+  readonly healthCheckTimeoutMs: number;
+}
+
 export interface EnterpriseConfiguration {
   readonly environment: EnterpriseEnvironment;
   readonly enterpriseVersion: string;
@@ -45,11 +59,19 @@ export interface EnterpriseConfiguration {
     readonly port: number;
     readonly host: string;
   };
+  readonly lifecycle: EnterpriseLifecycleConfiguration;
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   return value === '1' || value.toLowerCase() === 'true';
+}
+
+/** Parses a positive-integer millisecond timeout, falling back to `fallback` for anything missing, non-numeric, zero, or negative -- an unreasonable value is never silently allowed to disable a timeout. */
+function parsePositiveIntMs(value: string | undefined, fallback: number): number {
+  if (value === undefined) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function parseEnvironment(value: string | undefined): EnterpriseEnvironment {
@@ -104,6 +126,11 @@ export function loadEnterpriseConfiguration(env: Readonly<Record<string, string 
     http: {
       port: Number.parseInt(env.AOC_ENTERPRISE_HTTP_PORT ?? '8787', 10),
       host: env.AOC_ENTERPRISE_HTTP_HOST ?? '0.0.0.0',
+    },
+    lifecycle: {
+      startupTimeoutMs: parsePositiveIntMs(env.AOC_ENTERPRISE_STARTUP_TIMEOUT_MS, 30_000),
+      shutdownTimeoutMs: parsePositiveIntMs(env.AOC_ENTERPRISE_SHUTDOWN_TIMEOUT_MS, 30_000),
+      healthCheckTimeoutMs: parsePositiveIntMs(env.AOC_ENTERPRISE_HEALTH_CHECK_TIMEOUT_MS, 5_000),
     },
   };
 }

@@ -43,7 +43,12 @@ function writeJson(res: ServerResponse, statusCode: number, body: unknown): void
 function writeError(res: ServerResponse, error: unknown, enterprise: AocEnterprise): void {
   if (error instanceof EnterpriseHttpError) {
     writeJson(res, error.httpStatus, {
-      error: { code: error.code, message: error.message, ...(error.details !== undefined ? { details: error.details } : {}) },
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(error.details !== undefined ? { details: error.details } : {}),
+        ...(error.extra ?? {}),
+      },
     });
     return;
   }
@@ -67,6 +72,18 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
         .health()
         .then((report) => writeJson(res, report.status === 'unhealthy' ? 503 : 200, report))
         .catch((error: unknown) => writeError(res, error, enterprise));
+      return;
+    }
+
+    if (method === 'GET' && url.pathname === '/live') {
+      const live = enterprise.isLive();
+      writeJson(res, live ? 200 : 503, { live, lifecycleState: enterprise.lifecycleState() });
+      return;
+    }
+
+    if (method === 'GET' && url.pathname === '/ready') {
+      const ready = enterprise.isReady();
+      writeJson(res, ready ? 200 : 503, { ready, lifecycleState: enterprise.lifecycleState() });
       return;
     }
 
