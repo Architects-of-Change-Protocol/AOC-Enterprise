@@ -11,6 +11,7 @@
     "build": "tsc -b --pretty false",
     "lint": "node scripts/check-node16-imports.mjs && node scripts/lint-architecture.mjs && node scripts/lint-public-surface.mjs",
     "test": "npm run build && node --test",
+    "start:kernel-host": "node scripts/run-kernel-host.mjs",
     "clean": "node scripts/clean.mjs",
     "validate:invalid-imports": "node scripts/assert-invalid-imports.mjs",
     "validate:publishability": "node scripts/validate-publishability.mjs",
@@ -60,6 +61,10 @@
     "./kernel": {
       "types": "./dist/src/kernel/index.d.ts",
       "default": "./dist/src/kernel/index.js"
+    },
+    "./kernel-host": {
+      "types": "./dist/src/kernel-host/index.d.ts",
+      "default": "./dist/src/kernel-host/index.js"
     }
   },
   "peerDependencies": {
@@ -71,9 +76,13 @@
     "react": { "optional": true },
     "react-dom": { "optional": true }
   },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1"
+  },
   "devDependencies": {
     "@aoc-enterprise/pmfreak-agent-passport-foundation": "*",
     "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "react": "^18.3.1",
