@@ -14,7 +14,9 @@ export type EnterpriseHttpErrorCode =
   | 'AUTHORIZATION_FAILED'
   | 'CONCURRENCY_CONFLICT'
   | 'INFRASTRUCTURE_FAILURE'
-  | 'PROVIDER_UNAVAILABLE';
+  | 'PROVIDER_UNAVAILABLE'
+  /** The Enterprise Module Lifecycle is not `ready` (still starting, degraded-blocking, shutting down, or stopped) -- a readiness failure, never a Kernel denial (mission section 16/37). */
+  | 'ENTERPRISE_NOT_READY';
 
 export class EnterpriseHttpError extends Error {
   constructor(
@@ -22,6 +24,8 @@ export class EnterpriseHttpError extends Error {
     readonly code: EnterpriseHttpErrorCode,
     message: string,
     readonly details?: readonly string[],
+    /** Additional structured fields merged into the wire error body (e.g. `{ lifecycleState }` for `ENTERPRISE_NOT_READY`, per mission section 16). Never secrets. */
+    readonly extra?: Readonly<Record<string, unknown>>,
   ) {
     super(message);
     this.name = 'EnterpriseHttpError';
@@ -35,4 +39,6 @@ export const EnterpriseHttpErrors = {
   concurrencyConflict: (message: string) => new EnterpriseHttpError(409, 'CONCURRENCY_CONFLICT', message),
   infrastructureFailure: (message = 'An unexpected Enterprise Host failure occurred.') => new EnterpriseHttpError(500, 'INFRASTRUCTURE_FAILURE', message),
   providerUnavailable: (message = 'A configured provider is unavailable.') => new EnterpriseHttpError(503, 'PROVIDER_UNAVAILABLE', message),
+  enterpriseNotReady: (lifecycleState: string) =>
+    new EnterpriseHttpError(503, 'ENTERPRISE_NOT_READY', 'AOC Enterprise is not ready to evaluate governance requests.', undefined, { lifecycleState }),
 };
