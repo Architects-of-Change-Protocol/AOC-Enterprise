@@ -4,8 +4,13 @@ import type { KernelTrace } from './kernel-trace.js';
  * Coarse, stable status bucket. The wrapped engine's `EnforcementDecisionType`
  * has 11 variants; this collapses them into 4 per the kernel's public
  * contract. The mapping (documented in `reason-codes/reason-codes.ts`) is:
- *   - allowed            <- execute_allowed, dry_run_allowed, duplicate_suppressed
- *   - denied             <- execution_blocked, adapter_denied, emergency_denied, expired, invalid_request
+ *   - allowed            <- execute_allowed, dry_run_allowed
+ *   - denied             <- execution_blocked, adapter_denied, emergency_denied, expired,
+ *                           invalid_request, duplicate_suppressed (already executed once under
+ *                           this idempotency key; the engine deliberately will not run it again --
+ *                           `allowedToExecute` is false for this decision type in the wrapped engine
+ *                           too, see `EXECUTABLE_DECISION_TYPES`. `ACTION_DUPLICATE_SUPPRESSED` in
+ *                           `reasonCodes` distinguishes it from a genuine governance denial.)
  *   - approval_required  <- approval_required, evidence_required, external_handshake_required
  *   - indeterminate      <- a kernel-boundary failure (e.g. an unhandled throw from the
  *                           recognition provider) that the wrapped engine itself does not

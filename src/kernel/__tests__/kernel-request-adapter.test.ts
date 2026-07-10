@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import type { KernelEvaluationRequest } from '../contracts/kernel-request.js';
 import { KernelValidationError } from '../errors/kernel-errors.js';
 import { toGuardActionRequestInput, validateKernelEvaluationRequest } from '../orchestration/request-adapter.js';
+import { assertThrowsInstance } from './assert-helpers.js';
 
 const BASE_REQUEST: KernelEvaluationRequest = {
   requestId: 'req-1',
@@ -14,31 +15,31 @@ const BASE_REQUEST: KernelEvaluationRequest = {
 
 describe('validateKernelEvaluationRequest', () => {
   it('accepts a well-formed request', () => {
-    assert.doesNotThrow(() => validateKernelEvaluationRequest(BASE_REQUEST));
+    validateKernelEvaluationRequest(BASE_REQUEST);
   });
 
   it('rejects an empty requestId', () => {
-    assert.throws(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, requestId: '' }), KernelValidationError);
+    assertThrowsInstance(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, requestId: '' }), KernelValidationError);
   });
 
   it('rejects a missing actor id', () => {
-    assert.throws(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, actor: { ...BASE_REQUEST.actor, id: '' } }), KernelValidationError);
+    assertThrowsInstance(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, actor: { ...BASE_REQUEST.actor, id: '' } }), KernelValidationError);
   });
 
   it('rejects a missing trustDomainId', () => {
-    assert.throws(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, actor: { ...BASE_REQUEST.actor, trustDomainId: '' } }), KernelValidationError);
+    assertThrowsInstance(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, actor: { ...BASE_REQUEST.actor, trustDomainId: '' } }), KernelValidationError);
   });
 
   it('rejects a missing action type', () => {
-    assert.throws(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, action: { ...BASE_REQUEST.action, type: '' } }), KernelValidationError);
+    assertThrowsInstance(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, action: { ...BASE_REQUEST.action, type: '' } }), KernelValidationError);
   });
 
   it('rejects a missing resourceScope', () => {
-    assert.throws(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, action: { ...BASE_REQUEST.action, resourceScope: '' } }), KernelValidationError);
+    assertThrowsInstance(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, action: { ...BASE_REQUEST.action, resourceScope: '' } }), KernelValidationError);
   });
 
   it('rejects an invalid requestedAt', () => {
-    assert.throws(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, requestedAt: 'not-a-date' }), KernelValidationError);
+    assertThrowsInstance(() => validateKernelEvaluationRequest({ ...BASE_REQUEST, requestedAt: 'not-a-date' }), KernelValidationError);
   });
 });
 
@@ -54,7 +55,7 @@ describe('toGuardActionRequestInput', () => {
 
   it('never mutates the input request', () => {
     const frozen: KernelEvaluationRequest = Object.freeze({ ...BASE_REQUEST, context: Object.freeze({ passportId: 'passport-victor' }) });
-    assert.doesNotThrow(() => toGuardActionRequestInput(frozen, { dryRun: true }));
+    toGuardActionRequestInput(frozen, { dryRun: true });
   });
 
   it('sets mode to dry_run only when options.dryRun is true', () => {

@@ -19,10 +19,9 @@ function decision(overrides: Partial<EnforcementDecision>): EnforcementDecision 
 }
 
 describe('mapDecisionTypeToStatus', () => {
-  it('maps execute_allowed, dry_run_allowed, and duplicate_suppressed to allowed', () => {
+  it('maps execute_allowed and dry_run_allowed to allowed', () => {
     assert.equal(mapDecisionTypeToStatus('execute_allowed'), 'allowed');
     assert.equal(mapDecisionTypeToStatus('dry_run_allowed'), 'allowed');
-    assert.equal(mapDecisionTypeToStatus('duplicate_suppressed'), 'allowed');
   });
 
   it('maps approval_required, evidence_required, and external_handshake_required to approval_required', () => {
@@ -35,6 +34,10 @@ describe('mapDecisionTypeToStatus', () => {
     for (const type of ['execution_blocked', 'adapter_denied', 'emergency_denied', 'expired', 'invalid_request']) {
       assert.equal(mapDecisionTypeToStatus(type), 'denied');
     }
+  });
+
+  it('maps duplicate_suppressed to denied -- it must never look proceed-able to a caller gating its own side effect on status alone', () => {
+    assert.equal(mapDecisionTypeToStatus('duplicate_suppressed'), 'denied');
   });
 
   it('fails closed (denied) for an unrecognized decision type', () => {
@@ -81,6 +84,28 @@ describe('mapDecisionToReasonCodes', () => {
       }),
     );
     assert.ok(result.includes(AOC_KERNEL_REASON_CODES.ADAPTER_DENIED));
+  });
+
+  it('maps a recognition_required failure (no recognition result at all) to RECOGNITION_MISSING, not a generic denial', () => {
+    const result = mapDecisionToReasonCodes(
+      decision({
+        type: 'execution_blocked',
+        // No recognitionDecisionType at all -- mirrors a caller-supplied RecognitionProvider
+        // that returned nothing usable, so there is no recognition type to refine through.
+        policyResults: [{ policyId: 'recognition_required', passed: false, reasonCode: 'RECOGNITION_MISSING', reason: 'No Recognition Runtime verification result is available for this request.', severity: 'critical' }],
+      }),
+    );
+    assert.equal(result[0], AOC_KERNEL_REASON_CODES.RECOGNITION_MISSING);
+  });
+
+  it('maps a malformed recognition result (RECOGNITION_INVALID) to RECOGNITION_MISSING as well', () => {
+    const result = mapDecisionToReasonCodes(
+      decision({
+        type: 'execution_blocked',
+        policyResults: [{ policyId: 'recognition_required', passed: false, reasonCode: 'RECOGNITION_INVALID', reason: 'Recognition Runtime returned a malformed verification result.', severity: 'critical' }],
+      }),
+    );
+    assert.equal(result[0], AOC_KERNEL_REASON_CODES.RECOGNITION_MISSING);
   });
 
   it('maps a plain execute_allowed decision to ACTION_ALLOWED', () => {

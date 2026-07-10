@@ -30,10 +30,15 @@ const kernel = createAocKernel({
 
 `AocKernelOptions` only exposes ports with real, direct backing at the kernel's own composition boundary:
 `recognitionProvider` (required), `policyPackProvider`, `clock`, `idGenerator`, `emergencyDeny`,
-`allowIdempotencyRetryAfterFailure`, `policies`. Authority Graph, Approval Runtime, and evidence checking are not
-separate kernel ports -- they are reached transitively inside whatever `recognitionProvider` you inject, exactly as
-in the pre-extraction engine. See `docs/kernel/AOC_KERNEL_INVARIANTS_V1.md` for why those ports are intentionally
-not introduced at this layer.
+`allowIdempotencyRetryAfterFailure`, `policies`, `adapters`. Authority Graph, Approval Runtime, and evidence checking
+are not separate kernel ports -- they are reached transitively inside whatever `recognitionProvider` you inject,
+exactly as in the pre-extraction engine. See `docs/kernel/AOC_KERNEL_INVARIANTS_V1.md` for why those ports are
+intentionally not introduced at this layer.
+
+If any request you evaluate names a `target.adapterId`, register that adapter -- either via `adapters` at
+construction time or `kernel.registerAdapter(...)` afterward -- so `AdapterPermissionPolicy` can actually enforce
+its allow/deny lists. Without a registered adapter, that policy finds nothing to check and passes with
+`NO_ADAPTER_REGISTERED`, which is more permissive than a directly-configured `ActionEnforcementRuntime` would be.
 
 ## 3. Request construction
 
@@ -88,12 +93,15 @@ switch (result.status) {
 ```
 
 ### Handling allowed
-`result.status === 'allowed'` covers `execute_allowed`, `dry_run_allowed`, and `duplicate_suppressed` from the
-wrapped engine -- see `docs/kernel/AOC_KERNEL_INVARIANTS_V1.md` for the exact mapping and its rationale.
+`result.status === 'allowed'` covers `execute_allowed` and `dry_run_allowed` from the wrapped engine -- see
+`docs/kernel/AOC_KERNEL_INVARIANTS_V1.md` for the exact mapping and its rationale.
 
 ### Handling denied
 `result.reasonCodes` carries the stable taxonomy (`docs/kernel/AOC_KERNEL_CURRENT_EXECUTION_MODEL.md` §10,
 `src/kernel/reason-codes/reason-codes.ts`); `result.policies` carries every policy that actually ran, in order.
+`denied` also covers `duplicate_suppressed` (an idempotency replay the wrapped engine refuses to run again) --
+check for `ACTION_DUPLICATE_SUPPRESSED` in `reasonCodes` to distinguish it from a genuine governance denial; do
+not re-attempt the side effect yourself in either case.
 
 ### Handling approval required
 `result.approval.status` distinguishes `pending` from `granted`; `result.evidence` distinguishes an evidence-gated

@@ -1,5 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from 'crypto';
 
+import type { EnforcementAdapter } from '../features/action-enforcement/domain/enforcement-adapter.js';
 import type { EnforcementDecision } from '../features/action-enforcement/domain/enforcement-decision.js';
 import type { EnforcementPolicy } from '../features/action-enforcement/domain/enforcement-verification.js';
 import {
@@ -8,14 +9,15 @@ import {
   type ActionEnforcementRuntimeOptions,
 } from '../features/action-enforcement/runtime/action-enforcement-runtime.js';
 import type { EnforcementRuntimeContext } from '../features/action-enforcement/runtime/enforcement-runtime-context.js';
+import { PostExecutionRecordMissingError } from '../features/action-enforcement/runtime/enforcement-runtime-errors.js';
 import { AocGuard, createAocGuard } from '../features/action-enforcement/sdk/aoc-guard.js';
 import type { KernelEnforcementResult } from './contracts/kernel-enforcement-result.js';
 import type { KernelEvaluationOptions } from './contracts/kernel-options.js';
 import type { KernelClock, KernelIdGenerator, PolicyPackProvider, RecognitionProvider } from './contracts/ports.js';
 import type { KernelEvaluationRequest } from './contracts/kernel-request.js';
 import type { KernelEvaluationResult } from './contracts/kernel-result.js';
-import { KernelConfigurationError, KernelDependencyError } from './errors/kernel-errors.js';
-import { assertKernelInvariants } from './orchestration/kernel-invariants.js';
+import { KernelConfigurationError, KernelDependencyError, KernelExecutionError } from './errors/kernel-errors.js';
+import { assertKernelInvariants, cloneKernelEvaluationRequest } from './orchestration/kernel-invariants.js';
 import { toGuardActionRequestInput, validateKernelEvaluationRequest } from './orchestration/request-adapter.js';
 import { toKernelEnforcementResult, toKernelEvaluationResult } from './orchestration/result-adapter.js';
 import { AOC_KERNEL_REASON_CODES } from './reason-codes/reason-codes.js';
@@ -34,6 +36,8 @@ export interface AocKernelOptions {
   readonly allowIdempotencyRetryAfterFailure?: boolean;
   /** Overrides the wrapped engine's default 13-policy enforcement chain. Only pass this when you have a specific, tested replacement chain -- see `createDefaultEnforcementPolicyChain`. */
   readonly policies?: readonly EnforcementPolicy[];
+  /** Adapters registered up front so `AdapterPermissionPolicy` can enforce their allow/deny lists -- without this, a request naming `target.adapterId` would find no registered adapter and pass with `NO_ADAPTER_REGISTERED`, which is more permissive than a directly-configured `ActionEnforcementRuntime`. Use `registerAdapter()` to add more after construction. */
+  readonly adapters?: readonly EnforcementAdapter[];
 }
 
 function createRealClock(): KernelClock {
@@ -42,10 +46,6 @@ function createRealClock(): KernelClock {
 
 function createRealIdGenerator(): KernelIdGenerator {
   return { nextId: (prefix: string) => `${prefix}-${randomUUID()}` };
-}
-
-function snapshot(request: KernelEvaluationRequest): KernelEvaluationRequest {
-  return JSON.parse(JSON.stringify(request)) as KernelEvaluationRequest;
 }
 
 /**
@@ -88,13 +88,23 @@ export class AocKernel {
 
     this.runtime = createActionEnforcementRuntime(this.ctx, options.recognitionProvider, runtimeOptions);
     this.guard = createAocGuard(this.runtime);
+
+    for (const adapter of options.adapters ?? []) {
+      this.runtime.registerAdapter(adapter);
+    }
+  }
+
+  /** Registers an adapter after construction -- mirrors `ActionEnforcementRuntime.registerAdapter`, for callers that discover adapters dynamically rather than up front via `AocKernelOptions.adapters`. */
+  registerAdapter(adapter: EnforcementAdapter): EnforcementAdapter {
+    return this.runtime.registerAdapter(adapter);
   }
 
   private buildIndeterminateResult(request: KernelEvaluationRequest, error: unknown): KernelEvaluationResult {
     const message = error instanceof Error ? error.message : String(error);
+    const decisionId = this.ctx.ids.nextId('kernel-indeterminate');
     return {
       requestId: request.requestId,
-      decisionId: this.ctx.ids.nextId('kernel-indeterminate'),
+      decisionId,
       status: 'indeterminate',
       reasonCodes: [AOC_KERNEL_REASON_CODES.KERNEL_INDETERMINATE],
       summary: `Kernel evaluation could not complete: ${message}`,
@@ -103,7 +113,7 @@ export class AocKernel {
       policies: [],
       approval: { performed: false, status: 'not_applicable' },
       evidence: [],
-      trace: { steps: [], decisionId: 'indeterminate', kernelVersion: AOC_KERNEL_VERSION },
+      trace: { steps: [], decisionId, kernelVersion: AOC_KERNEL_VERSION },
       evaluatedAt: this.ctx.clock.now(),
       kernelVersion: AOC_KERNEL_VERSION,
       ...(request.correlationId !== undefined ? { correlationId: request.correlationId } : {}),
@@ -119,7 +129,7 @@ export class AocKernel {
    */
   async evaluate(request: KernelEvaluationRequest, options?: KernelEvaluationOptions): Promise<KernelEvaluationResult> {
     validateKernelEvaluationRequest(request);
-    const requestSnapshot = snapshot(request);
+    const requestSnapshot = cloneKernelEvaluationRequest(request);
 
     let decision: EnforcementDecision;
     try {
@@ -137,20 +147,41 @@ export class AocKernel {
    * Preflights the request exactly as `evaluate()` does, then invokes
    * `executor` exactly once, and only when the evaluation allows it --
    * identical semantics to `AocGuard.enforce()`, which this wraps directly.
+   *
+   * `guard.enforce()` can throw from exactly two places (see
+   * `AOC_KERNEL_CURRENT_EXECUTION_MODEL.md` sec. 14): an uncaught
+   * `recognitionProvider` failure during preflight (before `executor` ever
+   * runs -- safe to report as `not_executed`), or a
+   * `PostExecutionRecordMissingError` raised *after* `executor` has already
+   * run. Only the former is reported as `status: 'indeterminate'` /
+   * `execution.executed: false`; the latter is rethrown as a
+   * `KernelExecutionError` rather than risk telling a caller it is safe to
+   * retry a side effect that may have already happened.
    */
   async enforce<T>(request: KernelEvaluationRequest, executor: () => Promise<T> | T, options?: KernelEvaluationOptions): Promise<KernelEnforcementResult<T>> {
     validateKernelEvaluationRequest(request);
-    const requestSnapshot = snapshot(request);
+    const requestSnapshot = cloneKernelEvaluationRequest(request);
 
+    let outcome;
     try {
-      const outcome = await this.guard.enforce(toGuardActionRequestInput(request, options), executor);
-      const result = toKernelEnforcementResult(request.requestId, outcome.decision, outcome.result, options, request.correlationId);
-      assertKernelInvariants(request, requestSnapshot, result);
-      return result;
+      outcome = await this.guard.enforce(toGuardActionRequestInput(request, options), executor);
     } catch (error) {
+      if (error instanceof PostExecutionRecordMissingError) {
+        throw new KernelExecutionError(
+          'A post-execution invariant was violated after the executor may have already run; the execution outcome cannot be safely reported as not executed.',
+          error,
+        );
+      }
       const indeterminate = this.buildIndeterminateResult(request, new KernelDependencyError('recognitionProvider failed during enforcement', error));
       return { ...indeterminate, execution: { status: 'not_executed', executed: false } };
     }
+
+    // Outside the try/catch above: outcome now definitely exists, so any error from here on
+    // (adaptation or an invariant violation) must propagate rather than be reported as
+    // 'indeterminate' / not_executed, which would misrepresent whether executor already ran.
+    const result = toKernelEnforcementResult(request.requestId, outcome.decision, outcome.result, options, request.correlationId);
+    assertKernelInvariants(request, requestSnapshot, result);
+    return result;
   }
 }
 

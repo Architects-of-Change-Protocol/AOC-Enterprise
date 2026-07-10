@@ -62,6 +62,21 @@ const RECOGNITION_TYPE_TO_REASON_CODE: Readonly<Record<string, AocKernelReasonCo
 /** Policy ids from action-enforcement's own chain (`createDefaultEnforcementPolicyChain`) that gate directly on the recognition verdict -- their failure reason is best explained by refining through `recognitionResult.type`. */
 const RECOGNITION_GATED_POLICY_IDS: ReadonlySet<string> = new Set(['recognition_required', 'allow_decision_required']);
 
+/**
+ * `recognition_required` fails when there is no usable recognition result at
+ * all (`context.recognitionResult` missing or structurally malformed) --
+ * `decision.recognitionDecisionType` is then `undefined` (or garbage), so
+ * `RECOGNITION_TYPE_TO_REASON_CODE` has nothing to refine through. The
+ * policy's own reasonCode (`RECOGNITION_MISSING`/`RECOGNITION_INVALID`,
+ * see `recognition-required-policy.ts`) is the only signal available in
+ * that case, so it is mapped directly rather than falling back to a vague
+ * generic denial code.
+ */
+const RECOGNITION_REQUIRED_FAILURE_REASON_CODE: Readonly<Record<string, AocKernelReasonCode>> = {
+  RECOGNITION_MISSING: AOC_KERNEL_REASON_CODES.RECOGNITION_MISSING,
+  RECOGNITION_INVALID: AOC_KERNEL_REASON_CODES.RECOGNITION_MISSING,
+};
+
 const POLICY_ID_TO_REASON_CODE: Readonly<Record<string, AocKernelReasonCode>> = {
   emergency_deny: AOC_KERNEL_REASON_CODES.EMERGENCY_DENIED,
   approval_pending: AOC_KERNEL_REASON_CODES.APPROVAL_PENDING,
@@ -78,7 +93,6 @@ const POLICY_ID_TO_REASON_CODE: Readonly<Record<string, AocKernelReasonCode>> = 
 const DECISION_TYPE_STATUS: Readonly<Record<string, KernelDecisionStatus>> = {
   execute_allowed: 'allowed',
   dry_run_allowed: 'allowed',
-  duplicate_suppressed: 'allowed',
   approval_required: 'approval_required',
   evidence_required: 'approval_required',
   external_handshake_required: 'approval_required',
@@ -87,6 +101,19 @@ const DECISION_TYPE_STATUS: Readonly<Record<string, KernelDecisionStatus>> = {
   emergency_denied: 'denied',
   expired: 'denied',
   invalid_request: 'denied',
+  /**
+   * `duplicate_suppressed` carries `allowedToExecute: false` in the wrapped
+   * engine (see `EXECUTABLE_DECISION_TYPES` in
+   * `enforcement-decision-service.ts` -- only `execute_allowed` is
+   * executable). Mapping it to `allowed` would let a caller using
+   * `evaluate()` to gate a side effect it manages itself re-run an action
+   * the engine has already executed once under this idempotency key and is
+   * deliberately refusing to run again. `denied` here means "do not
+   * proceed" -- `ACTION_DUPLICATE_SUPPRESSED` in `reasonCodes` (and
+   * `execution.status === 'duplicate'` from `enforce()`) still lets a
+   * caller distinguish this from a genuine governance denial.
+   */
+  duplicate_suppressed: 'denied',
 };
 
 const DECISION_TYPE_REASON_CODE: Readonly<Record<string, AocKernelReasonCode>> = {
@@ -122,7 +149,12 @@ export function mapDecisionToReasonCodes(decision: EnforcementDecision): readonl
   const firstFailed = decision.policyResults.find((result) => !result.passed);
 
   if (firstFailed) {
-    if (RECOGNITION_GATED_POLICY_IDS.has(firstFailed.policyId) && decision.recognitionDecisionType !== undefined) {
+    if (firstFailed.policyId === 'recognition_required') {
+      const refined = RECOGNITION_REQUIRED_FAILURE_REASON_CODE[firstFailed.reasonCode];
+      if (refined !== undefined) {
+        codes.push(refined);
+      }
+    } else if (RECOGNITION_GATED_POLICY_IDS.has(firstFailed.policyId) && decision.recognitionDecisionType !== undefined) {
       const refined = RECOGNITION_TYPE_TO_REASON_CODE[decision.recognitionDecisionType];
       if (refined !== undefined) {
         codes.push(refined);

@@ -16,6 +16,7 @@ import { createAocGuard, type GuardActionRequestInput } from '../../../features/
 import type { EnforcementPolicyPackEvaluationInput, EnforcementPolicyPackEvaluationResult, EnforcementPolicyPackIntegration } from '../../../features/action-enforcement/domain/policy-pack-enforcement.js';
 import { AocKernel } from '../../AocKernel.js';
 import { KernelValidationError } from '../../errors/kernel-errors.js';
+import { assertRejectsInstance } from '../assert-helpers.js';
 import { NOW, buildKernelParityWorld, toKernelRequest } from './support.js';
 
 /**
@@ -101,7 +102,7 @@ describe('Kernel characterization: policy denial', () => {
 describe('Kernel characterization: invalid request', () => {
   it('rejects a request with a missing/empty actor id before reaching the wrapped engine', async () => {
     const { kernel } = buildKernelParityWorld();
-    await assert.rejects(
+    await assertRejectsInstance(
       () => kernel.evaluate({ requestId: 'req-1', actor: { id: '', trustDomainId: TRUST_DOMAIN_ID }, action: { type: 'draft_closure_email', resourceScope: PROJECT_SCOPE }, requestedAt: NOW }),
       KernelValidationError,
     );
@@ -109,7 +110,7 @@ describe('Kernel characterization: invalid request', () => {
 
   it('rejects a request with a missing action type', async () => {
     const { kernel } = buildKernelParityWorld();
-    await assert.rejects(
+    await assertRejectsInstance(
       () => kernel.evaluate({ requestId: 'req-2', actor: { id: VICTOR_ACTOR_ID, trustDomainId: TRUST_DOMAIN_ID }, action: { type: '', resourceScope: PROJECT_SCOPE }, requestedAt: NOW }),
       KernelValidationError,
     );
@@ -117,7 +118,7 @@ describe('Kernel characterization: invalid request', () => {
 
   it('rejects a request with a missing resourceScope', async () => {
     const { kernel } = buildKernelParityWorld();
-    await assert.rejects(
+    await assertRejectsInstance(
       () => kernel.evaluate({ requestId: 'req-3', actor: { id: VICTOR_ACTOR_ID, trustDomainId: TRUST_DOMAIN_ID }, action: { type: 'draft_closure_email', resourceScope: '' }, requestedAt: NOW }),
       KernelValidationError,
     );
@@ -125,7 +126,7 @@ describe('Kernel characterization: invalid request', () => {
 
   it('rejects a request with an invalid requestedAt timestamp', async () => {
     const { kernel } = buildKernelParityWorld();
-    await assert.rejects(
+    await assertRejectsInstance(
       () =>
         kernel.evaluate({
           requestId: 'req-4',

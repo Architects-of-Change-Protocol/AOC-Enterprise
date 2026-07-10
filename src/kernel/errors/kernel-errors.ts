@@ -42,7 +42,7 @@ export class KernelDependencyError extends KernelError {
   readonly code = 'KERNEL_DEPENDENCY_ERROR';
   constructor(
     message: string,
-    readonly cause?: unknown,
+    override readonly cause?: unknown,
   ) {
     super(message);
     this.name = 'KernelDependencyError';
@@ -63,7 +63,7 @@ export class KernelExecutionError extends KernelError {
   readonly code = 'KERNEL_EXECUTION_ERROR';
   constructor(
     message: string,
-    readonly cause?: unknown,
+    override readonly cause?: unknown,
   ) {
     super(message);
     this.name = 'KernelExecutionError';

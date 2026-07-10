@@ -26,9 +26,21 @@ export function assertReasonCodesPresent(result: KernelEvaluationResult): void {
   }
 }
 
+/**
+ * Deliberately not JSON-based: `KernelEvaluationRequest.context`/
+ * `action.parameters` are typed `Record<string, unknown>`, so a caller may
+ * legitimately put a `Date`, `NaN`, or `BigInt` in there. A JSON round-trip
+ * would silently coerce a `Date` to a string, drop `undefined`, and throw on
+ * `BigInt` -- turning an untouched request into a false "mutated" positive
+ * (or a crash) before evaluation ever runs. `Object.is` (not `===`) makes
+ * `NaN` compare equal to itself; `Date` is compared by epoch value.
+ */
 function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) {
+  if (Object.is(a, b)) {
     return true;
+  }
+  if (a instanceof Date || b instanceof Date) {
+    return a instanceof Date && b instanceof Date && a.getTime() === b.getTime();
   }
   if (typeof a !== typeof b || a === null || b === null || typeof a !== 'object') {
     return false;
@@ -44,6 +56,36 @@ function deepEqual(a: unknown, b: unknown): boolean {
     return false;
   }
   return aKeys.every((key) => deepEqual(aRecord[key], bRecord[key]));
+}
+
+/**
+ * Clones a `KernelEvaluationRequest` for the "no mutation of input"
+ * invariant check without lossy JSON coercion (see `deepEqual` above for
+ * why JSON round-tripping is unsafe here). Recurses through plain objects
+ * and arrays, copies `Date` instances, and otherwise keeps the original
+ * reference (functions, `Map`/`Set`/`RegExp`, symbols, `BigInt`) -- those
+ * are never mutated by the kernel's own adapters, so a reference copy is
+ * sufficient for detecting kernel-caused mutation.
+ */
+export function cloneKernelEvaluationRequest(request: KernelEvaluationRequest): KernelEvaluationRequest {
+  return cloneValue(request) as KernelEvaluationRequest;
+}
+
+function cloneValue(value: unknown): unknown {
+  if (value instanceof Date) {
+    return new Date(value.getTime());
+  }
+  if (Array.isArray(value)) {
+    return value.map(cloneValue);
+  }
+  if (value !== null && typeof value === 'object' && value.constructor === Object) {
+    const cloned: Record<string, unknown> = {};
+    for (const [key, entryValue] of Object.entries(value as Record<string, unknown>)) {
+      cloned[key] = cloneValue(entryValue);
+    }
+    return cloned;
+  }
+  return value;
 }
 
 /**
