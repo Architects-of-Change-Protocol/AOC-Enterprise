@@ -56,6 +56,10 @@
     "./runtime-host": {
       "types": "./dist/src/runtime/index.d.ts",
       "default": "./dist/src/runtime/index.js"
+    },
+    "./kernel": {
+      "types": "./dist/src/kernel/index.d.ts",
+      "default": "./dist/src/kernel/index.js"
     }
   },
   "peerDependencies": {
