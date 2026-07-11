@@ -134,3 +134,70 @@ describe('Structural boundaries: Governance Store (PR-004)', () => {
     assert.deepEqual(leaks, [], 'the registry stays module-agnostic');
   });
 });
+
+describe('Structural boundaries: Agent Passport Runtime (PR-006)', () => {
+  it('the Kernel never imports the Agent Passport Runtime — it decides, the Passport identifies', () => {
+    const kernelFiles = walkTsFiles('src/kernel');
+    const leaks = importsMatching(kernelFiles, /from ['"].*\/passport\//);
+    assert.deepEqual(leaks, [], 'src/kernel must not know the Agent Passport Runtime exists');
+  });
+
+  it('the Governance Store never imports the Agent Passport Runtime — Passport references the Store, never the reverse', () => {
+    const storeFiles = walkTsFiles('src/enterprise/governance-store');
+    const leaks = importsMatching(storeFiles, /from ['"].*\/passport\//);
+    assert.deepEqual(leaks, [], 'the Governance Store must not depend on the Passport Runtime');
+  });
+
+  it('the Evidence Runtime never imports the Agent Passport Runtime — Passport references Evidence, never the reverse', () => {
+    const evidenceFiles = walkTsFiles('src/enterprise/evidence');
+    const leaks = importsMatching(evidenceFiles, /from ['"].*\/passport\//);
+    assert.deepEqual(leaks, [], 'the Evidence Runtime must not depend on the Passport Runtime');
+  });
+
+  it('the Passport Runtime references public Governance Store and Evidence contracts, never their SQL/internal implementation', () => {
+    const passportFiles = walkTsFiles('src/enterprise/passport');
+    assert.ok(passportFiles.length > 0);
+    const sqlLeaks = importsMatching(passportFiles, /better-sqlite3/).filter((file) => !file.endsWith('sqlite-passport-store.ts'));
+    assert.deepEqual(sqlLeaks, [], 'only sqlite-passport-store.ts may reference better-sqlite3');
+    const references = importsMatching(passportFiles, /from ['"]\.\.\/governance-store\/(digest|canonical-json)\.js['"]/);
+    assert.ok(references.length > 0, 'the Passport Runtime reuses the Governance Store\'s canonical serialization/digest primitives rather than redefining them');
+  });
+
+  it('the Passport Runtime never evaluates governance — it never imports the decision engine or calls kernel.evaluate', () => {
+    const passportFiles = walkTsFiles('src/enterprise/passport');
+    const engineImports = importsMatching(passportFiles, /from ['"].*features\/action-enforcement/);
+    assert.deepEqual(engineImports, [], 'the Passport Runtime must never reach into the decision engine');
+    const evaluateCalls = importsMatching(passportFiles, /kernel\.evaluate|\.evaluate\(/);
+    assert.deepEqual(evaluateCalls, [], 'the Passport Runtime must never invoke an evaluation');
+  });
+
+  it('HTTP handlers execute no Passport SQL — better-sqlite3 and SQL strings stay inside the Store', () => {
+    const adapterFiles = walkTsFiles('src/enterprise/adapters').concat(walkTsFiles('src/enterprise/host'));
+    const sqlLeaks = importsMatching(adapterFiles, /better-sqlite3|SELECT |INSERT INTO agent_passport|CREATE TABLE agent_passport/);
+    assert.deepEqual(sqlLeaks, [], 'no HTTP-facing module may touch the Passport database directly');
+  });
+
+  it('the public Passport contracts expose no better-sqlite3 types', () => {
+    for (const file of ['src/enterprise/passport/contracts.ts', 'src/enterprise/passport/passport-store.ts', 'src/enterprise/passport/errors.ts']) {
+      const text = readFileSync(file, 'utf8');
+      assert.ok(!text.includes('better-sqlite3'), `${file} must not reference the SQLite driver`);
+    }
+  });
+
+  it('the Passport Store interface exposes no public update or delete methods (append-only, mission section 10)', () => {
+    const text = readFileSync('src/enterprise/passport/passport-store.ts', 'utf8');
+    assert.ok(!/\b(update|delete|remove|purge)\w*\s*\(/i.test(text), 'the AgentPassportStore interface must stay append-oriented');
+  });
+
+  it('both providers reconstruct through the same shared fold (no drift by construction)', () => {
+    for (const file of ['src/enterprise/passport/in-memory-passport-store.ts', 'src/enterprise/passport/sqlite-passport-store.ts']) {
+      const text = readFileSync(file, 'utf8');
+      assert.ok(text.includes('reconstructAgentPassportFromEvents'), `${file} must reconstruct state through the shared fold`);
+    }
+  });
+
+  it('Passport disclosure views are built only through the shared projector — the service never assembles a view field set by hand', () => {
+    const text = readFileSync('src/enterprise/passport/service.ts', 'utf8');
+    assert.ok(text.includes('buildAgentPassportView'), 'service.ts must delegate view construction to disclosure.ts');
+  });
+});

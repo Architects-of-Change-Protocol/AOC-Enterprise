@@ -38,6 +38,24 @@ export interface EnterpriseMetricsSnapshot {
   readonly storeVerificationCount: number;
   readonly storeIntegrityFailureCount: number;
   readonly storeCorruptedRecordCount: number;
+  /** PR-006 Agent Passport Runtime counters (mission section 57). */
+  readonly passportIssuedCount: number;
+  readonly passportActivationCount: number;
+  readonly passportSuspensionCount: number;
+  readonly passportReactivationCount: number;
+  readonly passportRevocationCount: number;
+  readonly passportExpirationCount: number;
+  readonly passportRetirementCount: number;
+  readonly passportEventAppendFailureCount: number;
+  readonly passportReconstructionCount: number;
+  readonly passportReconstructionFailureCount: number;
+  readonly passportVerificationCount: number;
+  readonly passportVerificationFailureCount: number;
+  readonly passportEvidenceLinkCount: number;
+  readonly passportGovernanceLinkCount: number;
+  readonly passportViewGenerationCount: number;
+  readonly passportIdempotentReplayCount: number;
+  readonly passportIdempotencyConflictCount: number;
 }
 
 export interface EnterpriseTelemetry {
@@ -59,6 +77,24 @@ export interface EnterpriseTelemetry {
   /** One integrity verification run; `valid: false` also increments the integrity-failure counter. */
   recordStoreVerification(valid: boolean): void;
   recordStoreCorruptedRecord(): void;
+
+  /** PR-006 Agent Passport Runtime counters (mission section 57). One call per successful lifecycle transition; idempotent replays are not double-counted as new issuances. */
+  recordPassportIssued(): void;
+  recordPassportActivation(): void;
+  recordPassportSuspension(): void;
+  recordPassportReactivation(): void;
+  recordPassportRevocation(): void;
+  recordPassportExpiration(): void;
+  recordPassportRetirement(): void;
+  recordPassportEventAppendFailure(): void;
+  recordPassportReconstruction(success: boolean): void;
+  recordPassportVerification(valid: boolean): void;
+  recordPassportEvidenceLink(): void;
+  recordPassportGovernanceLink(): void;
+  recordPassportViewGeneration(): void;
+  recordPassportIdempotentReplay(): void;
+  recordPassportIdempotencyConflict(): void;
+
   snapshot(): EnterpriseMetricsSnapshot;
 }
 
@@ -87,6 +123,23 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
   let storeVerificationCount = 0;
   let storeIntegrityFailureCount = 0;
   let storeCorruptedRecordCount = 0;
+  let passportIssuedCount = 0;
+  let passportActivationCount = 0;
+  let passportSuspensionCount = 0;
+  let passportReactivationCount = 0;
+  let passportRevocationCount = 0;
+  let passportExpirationCount = 0;
+  let passportRetirementCount = 0;
+  let passportEventAppendFailureCount = 0;
+  let passportReconstructionCount = 0;
+  let passportReconstructionFailureCount = 0;
+  let passportVerificationCount = 0;
+  let passportVerificationFailureCount = 0;
+  let passportEvidenceLinkCount = 0;
+  let passportGovernanceLinkCount = 0;
+  let passportViewGenerationCount = 0;
+  let passportIdempotentReplayCount = 0;
+  let passportIdempotencyConflictCount = 0;
 
   return {
     recordEvaluation(status, durationMs) {
@@ -149,6 +202,53 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
     recordStoreCorruptedRecord() {
       storeCorruptedRecordCount += 1;
     },
+    recordPassportIssued() {
+      passportIssuedCount += 1;
+    },
+    recordPassportActivation() {
+      passportActivationCount += 1;
+    },
+    recordPassportSuspension() {
+      passportSuspensionCount += 1;
+    },
+    recordPassportReactivation() {
+      passportReactivationCount += 1;
+    },
+    recordPassportRevocation() {
+      passportRevocationCount += 1;
+    },
+    recordPassportExpiration() {
+      passportExpirationCount += 1;
+    },
+    recordPassportRetirement() {
+      passportRetirementCount += 1;
+    },
+    recordPassportEventAppendFailure() {
+      passportEventAppendFailureCount += 1;
+    },
+    recordPassportReconstruction(success) {
+      passportReconstructionCount += 1;
+      if (!success) passportReconstructionFailureCount += 1;
+    },
+    recordPassportVerification(valid) {
+      passportVerificationCount += 1;
+      if (!valid) passportVerificationFailureCount += 1;
+    },
+    recordPassportEvidenceLink() {
+      passportEvidenceLinkCount += 1;
+    },
+    recordPassportGovernanceLink() {
+      passportGovernanceLinkCount += 1;
+    },
+    recordPassportViewGeneration() {
+      passportViewGenerationCount += 1;
+    },
+    recordPassportIdempotentReplay() {
+      passportIdempotentReplayCount += 1;
+    },
+    recordPassportIdempotencyConflict() {
+      passportIdempotencyConflictCount += 1;
+    },
     snapshot(): EnterpriseMetricsSnapshot {
       return {
         evaluationCount,
@@ -175,6 +275,23 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
         storeVerificationCount,
         storeIntegrityFailureCount,
         storeCorruptedRecordCount,
+        passportIssuedCount,
+        passportActivationCount,
+        passportSuspensionCount,
+        passportReactivationCount,
+        passportRevocationCount,
+        passportExpirationCount,
+        passportRetirementCount,
+        passportEventAppendFailureCount,
+        passportReconstructionCount,
+        passportReconstructionFailureCount,
+        passportVerificationCount,
+        passportVerificationFailureCount,
+        passportEvidenceLinkCount,
+        passportGovernanceLinkCount,
+        passportViewGenerationCount,
+        passportIdempotentReplayCount,
+        passportIdempotencyConflictCount,
       };
     },
   };

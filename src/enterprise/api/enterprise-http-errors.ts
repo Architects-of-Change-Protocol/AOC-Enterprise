@@ -1,5 +1,6 @@
 import type { GovernanceStoreError } from '../governance-store/errors.js';
 import type { EvidenceError } from '../evidence/errors.js';
+import type { AgentPassportError } from '../passport/errors.js';
 
 /**
  * The AOC Enterprise Host's own HTTP error taxonomy (mission's "Enterprise
@@ -38,7 +39,23 @@ export type EnterpriseHttpErrorCode =
   | 'EVIDENCE_ACCESS_SCOPE_VIOLATION'
   | 'EVIDENCE_TENANT_SCOPE_REQUIRED'
   | 'EVIDENCE_STORE_UNAVAILABLE'
-  | 'EVIDENCE_BUNDLE_ALREADY_EXISTS';
+  | 'EVIDENCE_BUNDLE_ALREADY_EXISTS'
+  /** Agent Passport Runtime error codes surfaced on the wire (PR-006), mirroring how Governance Store and Evidence errors are handled. */
+  | 'PASSPORT_NOT_FOUND'
+  | 'PASSPORT_ALREADY_EXISTS'
+  | 'PASSPORT_IDEMPOTENCY_CONFLICT'
+  | 'PASSPORT_INVALID_STATE_TRANSITION'
+  | 'PASSPORT_ALREADY_REVOKED'
+  | 'PASSPORT_EXPIRED'
+  | 'PASSPORT_TENANT_SCOPE_REQUIRED'
+  | 'PASSPORT_ACCESS_SCOPE_VIOLATION'
+  | 'PASSPORT_REFERENCE_INVALID'
+  | 'PASSPORT_EVIDENCE_NOT_FOUND'
+  | 'PASSPORT_GOVERNANCE_RECORD_NOT_FOUND'
+  | 'PASSPORT_INTEGRITY_FAILED'
+  | 'PASSPORT_STORE_UNAVAILABLE'
+  | 'PASSPORT_VERSION_UNSUPPORTED'
+  | 'PASSPORT_VALIDATION_ERROR';
 
 export class EnterpriseHttpError extends Error {
   constructor(
@@ -117,5 +134,34 @@ export function mapEvidenceErrorToHttp(error: EvidenceError): EnterpriseHttpErro
       return new EnterpriseHttpError(503, error.code, error.message);
     case 'EVIDENCE_BUNDLE_ALREADY_EXISTS':
       return new EnterpriseHttpError(409, error.code, error.message);
+  }
+}
+
+/** Maps an `AgentPassportError` onto the wire (PR-006), mirroring `mapEvidenceErrorToHttp`. */
+export function mapAgentPassportErrorToHttp(error: AgentPassportError): EnterpriseHttpError {
+  const extra = error.details;
+  switch (error.code) {
+    case 'PASSPORT_VALIDATION_ERROR':
+    case 'PASSPORT_REFERENCE_INVALID':
+      return new EnterpriseHttpError(400, error.code, error.message, undefined, extra);
+    case 'PASSPORT_NOT_FOUND':
+    case 'PASSPORT_EVIDENCE_NOT_FOUND':
+    case 'PASSPORT_GOVERNANCE_RECORD_NOT_FOUND':
+      return new EnterpriseHttpError(404, error.code, error.message, undefined, extra);
+    case 'PASSPORT_TENANT_SCOPE_REQUIRED':
+    case 'PASSPORT_ACCESS_SCOPE_VIOLATION':
+      return new EnterpriseHttpError(403, error.code, error.message, undefined, extra);
+    case 'PASSPORT_ALREADY_EXISTS':
+    case 'PASSPORT_IDEMPOTENCY_CONFLICT':
+    case 'PASSPORT_INVALID_STATE_TRANSITION':
+    case 'PASSPORT_ALREADY_REVOKED':
+    case 'PASSPORT_EXPIRED':
+      return new EnterpriseHttpError(409, error.code, error.message, undefined, extra);
+    case 'PASSPORT_VERSION_UNSUPPORTED':
+      return new EnterpriseHttpError(422, error.code, error.message, undefined, extra);
+    case 'PASSPORT_INTEGRITY_FAILED':
+      return new EnterpriseHttpError(500, error.code, error.message, undefined, extra);
+    case 'PASSPORT_STORE_UNAVAILABLE':
+      return new EnterpriseHttpError(503, error.code, error.message, undefined, extra);
   }
 }

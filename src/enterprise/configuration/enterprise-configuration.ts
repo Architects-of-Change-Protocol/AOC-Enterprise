@@ -69,6 +69,13 @@ export interface EnterpriseConfiguration {
     readonly host: string;
   };
   readonly lifecycle: EnterpriseLifecycleConfiguration;
+  /** PR-006: Agent Passport Runtime configuration (mission section 52 -- module criticality is deployment-configurable, never hardcoded). */
+  readonly passport: {
+    /** SQLite path for the Passport Store when `persistence.provider === 'sqlite'`. Independent of `persistence.sqlitePath` -- a distinct on-disk database file, since the Passport Store is an independent store (mission section 9). */
+    readonly sqlitePath: string;
+    /** When `true`, a Passport Store outage makes the Enterprise Host not-ready (`criticality: 'required'`). Defaults to `false`: Passport-backed agent recognition degrades gracefully rather than blocking governance evaluation. */
+    readonly required: boolean;
+  };
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
@@ -148,6 +155,10 @@ export function loadEnterpriseConfiguration(env: Readonly<Record<string, string 
       shutdownTimeoutMs: parsePositiveIntMs(env.AOC_ENTERPRISE_SHUTDOWN_TIMEOUT_MS, 30_000),
       healthCheckTimeoutMs: parsePositiveIntMs(env.AOC_ENTERPRISE_HEALTH_CHECK_TIMEOUT_MS, 5_000),
     },
+    passport: {
+      sqlitePath: env.AOC_ENTERPRISE_PASSPORT_SQLITE_PATH ?? '.data/agent-passport.sqlite',
+      required: parseBoolean(env.AOC_ENTERPRISE_PASSPORT_REQUIRED, false),
+    },
   };
 }
 
@@ -167,6 +178,7 @@ export function computeConfigurationChecksum(config: EnterpriseConfiguration): s
     apiKeyCount: config.authentication.apiKeys.length,
     traceLevel: config.features.traceLevel,
     requireAuthentication: config.features.requireAuthentication,
+    passportRequired: config.passport.required,
   };
   const serialized = JSON.stringify(shape);
   let hash = 0;
