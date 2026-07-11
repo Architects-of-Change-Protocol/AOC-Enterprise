@@ -76,6 +76,13 @@ export interface EnterpriseConfiguration {
     /** When `true`, a Passport Store outage makes the Enterprise Host not-ready (`criticality: 'required'`). Defaults to `false`: Passport-backed agent recognition degrades gracefully rather than blocking governance evaluation. */
     readonly required: boolean;
   };
+  /** PR-007: Assurance Runtime configuration (mission section 57 -- Assurance criticality is deployment-configurable, never hardcoded). */
+  readonly assurance: {
+    /** SQLite path for the Assurance Store when `persistence.provider === 'sqlite'`. Independent of every other store's path -- the Assurance Store is an independent store (mission section 48). */
+    readonly sqlitePath: string;
+    /** When `true`, an Assurance Store outage makes the Enterprise Host not-ready. Defaults to `false`: Assurance degrades gracefully without blocking `POST /api/governance/evaluate`. */
+    readonly required: boolean;
+  };
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
@@ -159,6 +166,10 @@ export function loadEnterpriseConfiguration(env: Readonly<Record<string, string 
       sqlitePath: env.AOC_ENTERPRISE_PASSPORT_SQLITE_PATH ?? '.data/agent-passport.sqlite',
       required: parseBoolean(env.AOC_ENTERPRISE_PASSPORT_REQUIRED, false),
     },
+    assurance: {
+      sqlitePath: env.AOC_ENTERPRISE_ASSURANCE_SQLITE_PATH ?? '.data/assurance.sqlite',
+      required: parseBoolean(env.AOC_ENTERPRISE_ASSURANCE_REQUIRED, false),
+    },
   };
 }
 
@@ -179,6 +190,7 @@ export function computeConfigurationChecksum(config: EnterpriseConfiguration): s
     traceLevel: config.features.traceLevel,
     requireAuthentication: config.features.requireAuthentication,
     passportRequired: config.passport.required,
+    assuranceRequired: config.assurance.required,
   };
   const serialized = JSON.stringify(shape);
   let hash = 0;

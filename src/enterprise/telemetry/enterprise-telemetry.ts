@@ -56,6 +56,36 @@ export interface EnterpriseMetricsSnapshot {
   readonly passportViewGenerationCount: number;
   readonly passportIdempotentReplayCount: number;
   readonly passportIdempotencyConflictCount: number;
+  /** PR-007 Assurance Runtime counters (mission section 70). */
+  readonly assuranceAssessmentsCreatedCount: number;
+  readonly assuranceAssessmentsCompletedCount: number;
+  readonly assuranceAssessmentsFailedCount: number;
+  readonly averageAssuranceAssessmentDurationMs: number;
+  readonly assuranceControlsEvaluatedCount: number;
+  readonly assuranceControlPassCount: number;
+  readonly assuranceControlPartialCount: number;
+  readonly assuranceControlFailCount: number;
+  readonly assuranceControlUnknownCount: number;
+  readonly assuranceControlManualReviewCount: number;
+  readonly assuranceFindingsCreatedCount: number;
+  readonly assuranceFindingsCriticalCount: number;
+  readonly assuranceFindingsHighCount: number;
+  readonly assuranceFindingsMediumCount: number;
+  readonly assuranceFindingsLowCount: number;
+  readonly assuranceFindingsClosedCount: number;
+  readonly assuranceEvidenceResolutionsCount: number;
+  readonly assuranceEvidenceRejectionsCount: number;
+  readonly assuranceEvidenceInsufficientCount: number;
+  readonly assuranceEvidenceContradictionsCount: number;
+  readonly assuranceEligibilityEvaluationsCount: number;
+  readonly assuranceEligibilityPassCount: number;
+  readonly assuranceEligibilityFailCount: number;
+  readonly assuranceEligibilityProvisionalCount: number;
+  readonly assuranceSignalsReceivedCount: number;
+  readonly assuranceAssessmentsMarkedStaleCount: number;
+  readonly assuranceReassessmentsRequestedCount: number;
+  readonly assuranceIntegrityVerificationsCount: number;
+  readonly assuranceIntegrityFailuresCount: number;
 }
 
 export interface EnterpriseTelemetry {
@@ -94,6 +124,20 @@ export interface EnterpriseTelemetry {
   recordPassportViewGeneration(): void;
   recordPassportIdempotentReplay(): void;
   recordPassportIdempotencyConflict(): void;
+
+  /** PR-007 Assurance Runtime counters (mission section 70): `assurance_assessments_created_total` etc. Statuses/severities are flat counters, matching every other counter in this snapshot. */
+  recordAssuranceAssessmentCreated(): void;
+  recordAssuranceAssessmentCompleted(durationMs: number): void;
+  recordAssuranceAssessmentFailed(): void;
+  recordAssuranceControlEvaluated(status: 'pass' | 'partial' | 'fail' | 'unknown' | 'not_applicable' | 'manual_review_required'): void;
+  recordAssuranceFindingCreated(severity: 'critical' | 'high' | 'medium' | 'low' | 'informational'): void;
+  recordAssuranceFindingClosed(): void;
+  recordAssuranceEvidenceResolution(rejections: number, contradictions: number, insufficient: boolean): void;
+  recordAssuranceEligibilityEvaluated(outcome: 'pass' | 'fail' | 'provisional'): void;
+  recordAssuranceSignalReceived(): void;
+  recordAssuranceAssessmentMarkedStale(): void;
+  recordAssuranceReassessmentRequested(): void;
+  recordAssuranceVerification(valid: boolean): void;
 
   snapshot(): EnterpriseMetricsSnapshot;
 }
@@ -140,6 +184,35 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
   let passportViewGenerationCount = 0;
   let passportIdempotentReplayCount = 0;
   let passportIdempotencyConflictCount = 0;
+  let assuranceAssessmentsCreatedCount = 0;
+  let assuranceAssessmentsCompletedCount = 0;
+  let assuranceAssessmentsFailedCount = 0;
+  let assuranceAssessmentTotalDurationMs = 0;
+  let assuranceControlsEvaluatedCount = 0;
+  let assuranceControlPassCount = 0;
+  let assuranceControlPartialCount = 0;
+  let assuranceControlFailCount = 0;
+  let assuranceControlUnknownCount = 0;
+  let assuranceControlManualReviewCount = 0;
+  let assuranceFindingsCreatedCount = 0;
+  let assuranceFindingsCriticalCount = 0;
+  let assuranceFindingsHighCount = 0;
+  let assuranceFindingsMediumCount = 0;
+  let assuranceFindingsLowCount = 0;
+  let assuranceFindingsClosedCount = 0;
+  let assuranceEvidenceResolutionsCount = 0;
+  let assuranceEvidenceRejectionsCount = 0;
+  let assuranceEvidenceInsufficientCount = 0;
+  let assuranceEvidenceContradictionsCount = 0;
+  let assuranceEligibilityEvaluationsCount = 0;
+  let assuranceEligibilityPassCount = 0;
+  let assuranceEligibilityFailCount = 0;
+  let assuranceEligibilityProvisionalCount = 0;
+  let assuranceSignalsReceivedCount = 0;
+  let assuranceAssessmentsMarkedStaleCount = 0;
+  let assuranceReassessmentsRequestedCount = 0;
+  let assuranceIntegrityVerificationsCount = 0;
+  let assuranceIntegrityFailuresCount = 0;
 
   return {
     recordEvaluation(status, durationMs) {
@@ -249,6 +322,85 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
     recordPassportIdempotencyConflict() {
       passportIdempotencyConflictCount += 1;
     },
+    recordAssuranceAssessmentCreated() {
+      assuranceAssessmentsCreatedCount += 1;
+    },
+    recordAssuranceAssessmentCompleted(durationMs) {
+      assuranceAssessmentsCompletedCount += 1;
+      assuranceAssessmentTotalDurationMs += durationMs;
+    },
+    recordAssuranceAssessmentFailed() {
+      assuranceAssessmentsFailedCount += 1;
+    },
+    recordAssuranceControlEvaluated(status) {
+      assuranceControlsEvaluatedCount += 1;
+      switch (status) {
+        case 'pass':
+          assuranceControlPassCount += 1;
+          break;
+        case 'partial':
+          assuranceControlPartialCount += 1;
+          break;
+        case 'fail':
+          assuranceControlFailCount += 1;
+          break;
+        case 'unknown':
+          assuranceControlUnknownCount += 1;
+          break;
+        case 'manual_review_required':
+          assuranceControlManualReviewCount += 1;
+          break;
+        case 'not_applicable':
+          break;
+      }
+    },
+    recordAssuranceFindingCreated(severity) {
+      assuranceFindingsCreatedCount += 1;
+      switch (severity) {
+        case 'critical':
+          assuranceFindingsCriticalCount += 1;
+          break;
+        case 'high':
+          assuranceFindingsHighCount += 1;
+          break;
+        case 'medium':
+          assuranceFindingsMediumCount += 1;
+          break;
+        case 'low':
+          assuranceFindingsLowCount += 1;
+          break;
+        case 'informational':
+          break;
+      }
+    },
+    recordAssuranceFindingClosed() {
+      assuranceFindingsClosedCount += 1;
+    },
+    recordAssuranceEvidenceResolution(rejections, contradictions, insufficient) {
+      assuranceEvidenceResolutionsCount += 1;
+      assuranceEvidenceRejectionsCount += rejections;
+      assuranceEvidenceContradictionsCount += contradictions;
+      if (insufficient) assuranceEvidenceInsufficientCount += 1;
+    },
+    recordAssuranceEligibilityEvaluated(outcome) {
+      assuranceEligibilityEvaluationsCount += 1;
+      if (outcome === 'pass') assuranceEligibilityPassCount += 1;
+      else if (outcome === 'fail') assuranceEligibilityFailCount += 1;
+      else assuranceEligibilityProvisionalCount += 1;
+    },
+    recordAssuranceSignalReceived() {
+      assuranceSignalsReceivedCount += 1;
+    },
+    recordAssuranceAssessmentMarkedStale() {
+      assuranceAssessmentsMarkedStaleCount += 1;
+    },
+    recordAssuranceReassessmentRequested() {
+      assuranceReassessmentsRequestedCount += 1;
+    },
+    recordAssuranceVerification(valid) {
+      assuranceIntegrityVerificationsCount += 1;
+      if (!valid) assuranceIntegrityFailuresCount += 1;
+    },
     snapshot(): EnterpriseMetricsSnapshot {
       return {
         evaluationCount,
@@ -292,6 +444,35 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
         passportViewGenerationCount,
         passportIdempotentReplayCount,
         passportIdempotencyConflictCount,
+        assuranceAssessmentsCreatedCount,
+        assuranceAssessmentsCompletedCount,
+        assuranceAssessmentsFailedCount,
+        averageAssuranceAssessmentDurationMs: assuranceAssessmentsCompletedCount === 0 ? 0 : assuranceAssessmentTotalDurationMs / assuranceAssessmentsCompletedCount,
+        assuranceControlsEvaluatedCount,
+        assuranceControlPassCount,
+        assuranceControlPartialCount,
+        assuranceControlFailCount,
+        assuranceControlUnknownCount,
+        assuranceControlManualReviewCount,
+        assuranceFindingsCreatedCount,
+        assuranceFindingsCriticalCount,
+        assuranceFindingsHighCount,
+        assuranceFindingsMediumCount,
+        assuranceFindingsLowCount,
+        assuranceFindingsClosedCount,
+        assuranceEvidenceResolutionsCount,
+        assuranceEvidenceRejectionsCount,
+        assuranceEvidenceInsufficientCount,
+        assuranceEvidenceContradictionsCount,
+        assuranceEligibilityEvaluationsCount,
+        assuranceEligibilityPassCount,
+        assuranceEligibilityFailCount,
+        assuranceEligibilityProvisionalCount,
+        assuranceSignalsReceivedCount,
+        assuranceAssessmentsMarkedStaleCount,
+        assuranceReassessmentsRequestedCount,
+        assuranceIntegrityVerificationsCount,
+        assuranceIntegrityFailuresCount,
       };
     },
   };

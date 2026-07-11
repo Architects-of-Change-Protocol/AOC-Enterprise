@@ -228,6 +228,171 @@ export type {
 export { createAgentPassportModule, AGENT_PASSPORT_MODULE_ID } from './modules/passport-module.js';
 export { mapAgentPassportErrorToHttp } from './api/enterprise-http-errors.js';
 
+// -- AOC Enterprise Assurance Runtime v1 (PR-007) ----------------------------
+
+export {
+  AOC_ASSURANCE_RUNTIME_VERSION,
+  ASSURANCE_STORE_SCHEMA_VERSION,
+  ASSURANCE_EVALUATOR_VERSION,
+  ASSURANCE_RESOLVER_VERSION,
+  ASSURANCE_SCORING_VERSION,
+  ASSURANCE_ELIGIBILITY_VERSION,
+  ASSURANCE_CONTRACT_IDS,
+  ASSURANCE_CONTROL_STATUSES,
+  ASSURANCE_SUBJECT_TYPES,
+  ASSURANCE_EVIDENCE_TYPES,
+  ASSURANCE_FINDING_SEVERITIES,
+  ASSURANCE_SIGNAL_TYPES,
+  ASSURANCE_REPORT_VIEWS,
+  ASSURANCE_TERMINAL_STATUSES,
+} from './assurance/contracts.js';
+export type {
+  AssuranceFrameworkStatus,
+  AssuranceFramework,
+  AssuranceFrameworkSummary,
+  AssuranceDomainDefinition,
+  AssuranceControlType,
+  AssuranceControlCriticality,
+  AssuranceEvaluationMethod,
+  AssuranceControlApplicability,
+  AssuranceControlDefinition,
+  AssuranceControlScoring,
+  AssuranceSeverityMapping,
+  AssuranceBooleanCriteria,
+  AssuranceThresholdOperator,
+  AssuranceThresholdCriteria,
+  AssuranceEvidencePresenceCriteria,
+  AssuranceCompositeOperator,
+  AssuranceCompositeCriteria,
+  AssuranceManualReviewCriteria,
+  AssuranceControlCriteria,
+  AssuranceControlStatus,
+  AssuranceSubjectType,
+  AssuranceSubject,
+  AssuranceScope,
+  AssuranceEvidenceContradictionPolicy,
+  AssuranceEvidenceRequirement,
+  AssuranceEvidenceType,
+  AssuranceEvidenceProvenance,
+  AssuranceEvidenceReference,
+  AssuranceEvidenceRejectionCode,
+  AssuranceRejectedEvidence,
+  AssuranceEvidenceContradiction,
+  AssuranceEvidenceResolutionStatus,
+  AssuranceEvidenceResolution,
+  AssuranceConfidence,
+  AssuranceCriteriaResult,
+  AssuranceManualReviewRequirement,
+  AssuranceControlEvaluation,
+  AssuranceManualReviewOutcome,
+  AssuranceManualReviewRecord,
+  AssuranceFindingType,
+  AssuranceFindingSeverity,
+  AssuranceFindingStatus,
+  AssurancePriority,
+  AssuranceRemediationGuidance,
+  AssuranceFinding,
+  AssuranceFindingEventType,
+  AssuranceFindingEvent,
+  AssuranceDomainStatus,
+  AssuranceDomainAssessment,
+  AssuranceUnknownPolicy,
+  AssuranceManualReviewPolicy,
+  AssuranceBlockingRule,
+  AssuranceScoringModel,
+  AssuranceScoreContribution,
+  AssuranceDomainScoreContribution,
+  AssuranceDomainScoreReference,
+  AssuranceScore,
+  AssuranceEligibilityProfile,
+  AssuranceEligibilityResult,
+  AssuranceEligibilityCandidate,
+  AssuranceAssessmentStatus,
+  AssuranceModuleSnapshot,
+  AssuranceAssessmentProvenance,
+  AssuranceAssessmentIntegrity,
+  AssuranceAssessment,
+  AssuranceSignalType,
+  AssuranceSignalSeverity,
+  AssuranceSignal,
+  AssuranceSignalOutcome,
+  AssuranceSignalProcessingResult,
+  ContinuousAssuranceStateKind,
+  ContinuousAssuranceState,
+  AssuranceVerificationFailure,
+  AssuranceAssessmentVerificationResult,
+  AssuranceReportView,
+  AssuranceExecutiveSummary,
+  AssuranceDomainReport,
+  AssuranceControlReport,
+  AssuranceFindingReport,
+  AssuranceEvidenceIndexEntry,
+  AssuranceReportProvenance,
+  AssuranceReportIntegrity,
+  AssuranceReport,
+  AssuranceAccessContext,
+  AssuranceAssessmentQuery,
+  AssuranceAssessmentSummary,
+  AssuranceAssessmentQueryResult,
+  AssuranceSignalQuery,
+  AssuranceStoreHealth,
+  AssuranceFrameworkValidationIssue,
+  AssuranceFrameworkValidationResult,
+} from './assurance/contracts.js';
+export { AssuranceError, isAssuranceError } from './assurance/errors.js';
+export type { AssuranceErrorCode } from './assurance/errors.js';
+export { validateAssuranceFramework } from './assurance/framework-validation.js';
+export { createAssuranceFrameworkRegistry, resolveFrameworkForAssessment } from './assurance/framework-registry.js';
+export type { AssuranceFrameworkRegistry } from './assurance/framework-registry.js';
+export { AOC_SAF_FRAMEWORK_V1, AOC_SAF_FRAMEWORK_ID, AOC_SAF_FRAMEWORK_VERSION } from './assurance/saf-framework.js';
+export { createAssuranceEvidenceResolver } from './assurance/evidence-resolver.js';
+export type { AssuranceEvidenceResolver, AssuranceEvidenceSources, AssuranceRuntimeHealthSnapshot } from './assurance/evidence-resolver.js';
+export { deriveAssuranceMetrics } from './assurance/metrics.js';
+export { createAssuranceControlEvaluator } from './assurance/control-evaluator.js';
+export type { AssuranceControlEvaluator, AssuranceEvaluationContext } from './assurance/control-evaluator.js';
+export { deriveFindingsFromEvaluations, deriveFindingSeverity, applyFindingTransition, foldFindingStatus, buildFindingEvent } from './assurance/findings.js';
+export { computeDomainAssessments, computeOverallScore, roundScore } from './assurance/scoring.js';
+export { evaluateEligibility } from './assurance/eligibility.js';
+export { assertAssessmentTransition, computeAssessmentIntegrity, recomputeAssessmentIntegrity } from './assurance/assessment.js';
+export { verifyAssuranceAssessment } from './assurance/verification.js';
+export {
+  ASSURANCE_SIGNAL_SEVERITIES,
+  ASSURANCE_SIGNAL_OUTCOMES,
+  buildAssuranceSignal,
+  isAssuranceSignalType,
+  deriveStaleReasons,
+  deriveContinuousAssuranceState,
+} from './assurance/signals.js';
+export type { BuildAssuranceSignalInput } from './assurance/signals.js';
+export { buildAssuranceReport, isAssuranceReportView, ASSURANCE_REPORT_ENGINE_VERSION } from './assurance/report.js';
+export type { AssuranceStore } from './assurance/assurance-store.js';
+export { canAccessAssuranceOrganization, requireAccessToAssuranceOrganization, requireAssuranceTenantScope } from './assurance/assurance-store.js';
+export { createInMemoryAssuranceStore } from './assurance/in-memory-assurance-store.js';
+export type { CreateInMemoryAssuranceStoreOptions } from './assurance/in-memory-assurance-store.js';
+export { createSqliteAssuranceStore } from './assurance/sqlite-assurance-store.js';
+export type { CreateSqliteAssuranceStoreOptions } from './assurance/sqlite-assurance-store.js';
+export { createAssuranceService } from './assurance/service.js';
+export type {
+  AssuranceService,
+  AssuranceServiceDependencies,
+  CreateAssuranceAssessmentInput,
+  RecordManualReviewInput,
+  AppendFindingEventInput,
+  RequestReassessmentInput,
+  CollectEvidenceOptions,
+} from './assurance/service.js';
+export { createAssuranceModule, ASSURANCE_MODULE_ID } from './modules/assurance-module.js';
+export { mapAssuranceErrorToHttp } from './api/enterprise-http-errors.js';
+export {
+  validateCreateAssessmentRequestBody,
+  validateEvaluateAssessmentRequestBody,
+  validateFindingEventRequestBody,
+  validateManualReviewRequestBody,
+  validateSignalRequestBody,
+  validateReassessRequestBody,
+} from './api/assurance-contract.js';
+export type { AssuranceEnterpriseEvent, AssuranceEnterpriseEventType } from './events/enterprise-events.js';
+
 export { computeEnterpriseHealth } from './health/health-check.js';
 export type { EnterpriseHealthReport, EnterpriseHealthState, EnterpriseHealthDependencies } from './health/health-check.js';
 
