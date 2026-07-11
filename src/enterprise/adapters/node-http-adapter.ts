@@ -1,7 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import { EnterpriseHttpError } from '../api/enterprise-http-errors.js';
+import { EnterpriseHttpError, mapEvidenceErrorToHttp } from '../api/enterprise-http-errors.js';
 import type { AocEnterprise } from '../composition/composition-root.js';
+import { validateEvidenceBuildRequestBody, validateEvidenceVerifyRequestBody, toEvidenceBundleResponseBody, toEvidenceVerifyResponseBody } from '../api/evidence-contract.js';
+import { isEvidenceError } from '../evidence/errors.js';
 
 const MAX_BODY_BYTES = 1024 * 1024; // 1 MiB -- generous for a governance-evaluation payload, small enough to bound memory per request.
 
@@ -41,13 +43,14 @@ function writeJson(res: ServerResponse, statusCode: number, body: unknown): void
 }
 
 function writeError(res: ServerResponse, error: unknown, enterprise: AocEnterprise): void {
-  if (error instanceof EnterpriseHttpError) {
-    writeJson(res, error.httpStatus, {
+  const httpError = error instanceof EnterpriseHttpError ? error : isEvidenceError(error) ? mapEvidenceErrorToHttp(error) : undefined;
+  if (httpError !== undefined) {
+    writeJson(res, httpError.httpStatus, {
       error: {
-        code: error.code,
-        message: error.message,
-        ...(error.details !== undefined ? { details: error.details } : {}),
-        ...(error.extra ?? {}),
+        code: httpError.code,
+        message: httpError.message,
+        ...(httpError.details !== undefined ? { details: httpError.details } : {}),
+        ...(httpError.extra ?? {}),
       },
     });
     return;
@@ -100,6 +103,43 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
         .then((outcome) => writeJson(res, outcome.httpStatus, outcome.body))
         .catch((error: unknown) => writeError(res, error, enterprise));
       return;
+    }
+
+    // -- PR-005 Evidence Bundle endpoints. Tenant scoping is resolved
+    // entirely inside `enterprise.evidence` (never here), the same way the
+    // PR-004 governance-read routes below defer to `governanceReads`.
+    if (method === 'POST' && url.pathname === '/api/evidence/build') {
+      readRequestBody(req)
+        .then((rawBody) => enterprise.evidence.build(req.headers.authorization, validateEvidenceBuildRequestBody(rawBody)))
+        .then((record) => writeJson(res, 201, toEvidenceBundleResponseBody(record)))
+        .catch((error: unknown) => writeError(res, error, enterprise));
+      return;
+    }
+
+    if (method === 'POST' && url.pathname === '/api/evidence/verify') {
+      readRequestBody(req)
+        .then((rawBody) => enterprise.evidence.verify(req.headers.authorization, validateEvidenceVerifyRequestBody(rawBody).bundleId))
+        .then((result) => writeJson(res, 200, toEvidenceVerifyResponseBody(result)))
+        .catch((error: unknown) => writeError(res, error, enterprise));
+      return;
+    }
+
+    if (method === 'GET') {
+      const evidenceMatch = /^\/api\/evidence\/([^/]+)$/.exec(url.pathname);
+      if (evidenceMatch?.[1] !== undefined) {
+        const bundleId = decodeURIComponent(evidenceMatch[1]);
+        enterprise.evidence
+          .getByBundleId(req.headers.authorization, bundleId)
+          .then((record) => {
+            if (record === null) {
+              writeJson(res, 404, { error: { code: 'EVIDENCE_BUNDLE_NOT_FOUND', message: `No Evidence Bundle for bundleId '${bundleId}'.` } });
+              return;
+            }
+            writeJson(res, 200, toEvidenceBundleResponseBody(record));
+          })
+          .catch((error: unknown) => writeError(res, error, enterprise));
+        return;
+      }
     }
 
     // -- PR-004 Governance Store read/verify endpoints. All access-context

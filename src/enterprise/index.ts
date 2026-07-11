@@ -100,6 +100,64 @@ export { toKernelTrace, toKernelEvaluationResult } from './governance-store/stor
 export { createGovernanceReadService, resolveGovernanceAccessContext } from './orchestration/governance-read-service.js';
 export type { GovernanceReadService } from './orchestration/governance-read-service.js';
 
+// -- AOC Enterprise Evidence Bundle v1 (PR-005) -----------------------------
+
+export {
+  AOC_EVIDENCE_BUNDLE_VERSION,
+  EVIDENCE_BUNDLE_SCHEMA_VERSION,
+  EVIDENCE_PROJECTION_ENGINE_VERSION,
+  EVIDENCE_CONTRACT_IDS,
+  EVIDENCE_FIELD_KEYS,
+} from './evidence/contracts.js';
+export type {
+  DisclosureLevel,
+  DisclosurePolicy,
+  EvidenceFieldKey,
+  EvidenceDisclosureMetadata,
+  EvidenceSource,
+  EvidenceSubject,
+  EvidenceSubjectType,
+  EvidenceTraceStep,
+  EvidenceEventSummary,
+  EvidenceContent,
+  EvidenceIntegrityMetadata,
+  EvidenceProvenance,
+  EvidenceReference,
+  EvidenceReferenceType,
+  EvidenceBundle,
+  EvidenceBundleState,
+  EvidenceBundleRecord,
+  EvidenceIntegrityFailure,
+  EvidenceVerificationResult,
+} from './evidence/contracts.js';
+export { EvidenceError, isEvidenceError } from './evidence/errors.js';
+export type { EvidenceErrorCode } from './evidence/errors.js';
+export {
+  FULL_DISCLOSURE_POLICY,
+  AUDITOR_DISCLOSURE_POLICY,
+  PARTNER_DISCLOSURE_POLICY,
+  CUSTOMER_DISCLOSURE_POLICY,
+  PUBLIC_DISCLOSURE_POLICY,
+  getDisclosurePolicy,
+  findDisclosurePolicyById,
+  listDisclosurePolicies,
+} from './evidence/disclosure-policies.js';
+export { buildEvidenceBundle, EVIDENCE_DISCLOSURE_REDACTED_VALUE } from './evidence/projector.js';
+export type { EvidenceProjectionDependencies } from './evidence/projector.js';
+export { verifyEvidenceBundle } from './evidence/verifier.js';
+export { createInMemoryEvidenceStore } from './evidence/evidence-store.js';
+export type { EvidenceStore, CreateEvidenceStoreOptions } from './evidence/evidence-store.js';
+export { createEvidenceService } from './evidence/evidence-service.js';
+export type { EvidenceService, EvidenceServiceDependencies, BuildEvidenceBundleInput } from './evidence/evidence-service.js';
+export {
+  validateEvidenceBuildRequestBody,
+  validateEvidenceVerifyRequestBody,
+  toEvidenceBundleResponseBody,
+  toEvidenceVerifyResponseBody,
+} from './api/evidence-contract.js';
+export type { EvidenceBuildRequestBody, EvidenceBundleResponseBody, EvidenceVerifyRequestBody } from './api/evidence-contract.js';
+export { mapEvidenceErrorToHttp } from './api/enterprise-http-errors.js';
+
 export { computeEnterpriseHealth } from './health/health-check.js';
 export type { EnterpriseHealthReport, EnterpriseHealthState, EnterpriseHealthDependencies } from './health/health-check.js';
 

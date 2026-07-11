@@ -1,4 +1,5 @@
 import type { GovernanceStoreError } from '../governance-store/errors.js';
+import type { EvidenceError } from '../evidence/errors.js';
 
 /**
  * The AOC Enterprise Host's own HTTP error taxonomy (mission's "Enterprise
@@ -28,7 +29,16 @@ export type EnterpriseHttpErrorCode =
   | 'GOVERNANCE_RECORD_NOT_FOUND'
   | 'GOVERNANCE_RECORD_CORRUPTED'
   | 'GOVERNANCE_RECORD_TOO_LARGE'
-  | 'GOVERNANCE_ACCESS_SCOPE_VIOLATION';
+  | 'GOVERNANCE_ACCESS_SCOPE_VIOLATION'
+  /** Evidence Bundle error codes surfaced on the wire (PR-005). The Evidence module's own taxonomy is preserved verbatim, mirroring how Governance Store errors are handled. */
+  | 'EVIDENCE_VALIDATION_ERROR'
+  | 'EVIDENCE_SOURCE_RECORD_NOT_FOUND'
+  | 'EVIDENCE_DISCLOSURE_POLICY_UNKNOWN'
+  | 'EVIDENCE_BUNDLE_NOT_FOUND'
+  | 'EVIDENCE_ACCESS_SCOPE_VIOLATION'
+  | 'EVIDENCE_TENANT_SCOPE_REQUIRED'
+  | 'EVIDENCE_STORE_UNAVAILABLE'
+  | 'EVIDENCE_BUNDLE_ALREADY_EXISTS';
 
 export class EnterpriseHttpError extends Error {
   constructor(
@@ -88,5 +98,24 @@ export function mapGovernanceStoreErrorToHttp(error: GovernanceStoreError, optio
         : new EnterpriseHttpError(500, 'GOVERNANCE_STORE_VALIDATION_ERROR', 'The Governance Store rejected an internally-built record; see server logs.');
     case 'GOVERNANCE_SCHEMA_VERSION_UNSUPPORTED':
       return new EnterpriseHttpError(500, 'GOVERNANCE_STORE_TRANSACTION_FAILED', 'The Governance Store schema version is unsupported by this build.');
+  }
+}
+
+/** Maps an `EvidenceError` onto the wire (PR-005), mirroring `mapGovernanceStoreErrorToHttp`. */
+export function mapEvidenceErrorToHttp(error: EvidenceError): EnterpriseHttpError {
+  switch (error.code) {
+    case 'EVIDENCE_VALIDATION_ERROR':
+    case 'EVIDENCE_DISCLOSURE_POLICY_UNKNOWN':
+      return new EnterpriseHttpError(400, error.code, error.message);
+    case 'EVIDENCE_SOURCE_RECORD_NOT_FOUND':
+    case 'EVIDENCE_BUNDLE_NOT_FOUND':
+      return new EnterpriseHttpError(404, error.code, error.message);
+    case 'EVIDENCE_ACCESS_SCOPE_VIOLATION':
+    case 'EVIDENCE_TENANT_SCOPE_REQUIRED':
+      return new EnterpriseHttpError(403, error.code, error.message);
+    case 'EVIDENCE_STORE_UNAVAILABLE':
+      return new EnterpriseHttpError(503, error.code, error.message);
+    case 'EVIDENCE_BUNDLE_ALREADY_EXISTS':
+      return new EnterpriseHttpError(409, error.code, error.message);
   }
 }
