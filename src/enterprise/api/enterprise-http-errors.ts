@@ -1,3 +1,5 @@
+import type { GovernanceStoreError } from '../governance-store/errors.js';
+
 /**
  * The AOC Enterprise Host's own HTTP error taxonomy (mission's "Enterprise
  * Error Model"). A denied/approval-required/indeterminate governance
@@ -16,7 +18,17 @@ export type EnterpriseHttpErrorCode =
   | 'INFRASTRUCTURE_FAILURE'
   | 'PROVIDER_UNAVAILABLE'
   /** The Enterprise Module Lifecycle is not `ready` (still starting, degraded-blocking, shutting down, or stopped) -- a readiness failure, never a Kernel denial (mission section 16/37). */
-  | 'ENTERPRISE_NOT_READY';
+  | 'ENTERPRISE_NOT_READY'
+  | 'NOT_FOUND'
+  /** Governance Store error codes surfaced on the wire (PR-004 section 43). The Store's own taxonomy is preserved verbatim so callers see one stable vocabulary. */
+  | 'GOVERNANCE_IDEMPOTENCY_CONFLICT'
+  | 'GOVERNANCE_STORE_UNAVAILABLE'
+  | 'GOVERNANCE_STORE_TRANSACTION_FAILED'
+  | 'GOVERNANCE_STORE_VALIDATION_ERROR'
+  | 'GOVERNANCE_RECORD_NOT_FOUND'
+  | 'GOVERNANCE_RECORD_CORRUPTED'
+  | 'GOVERNANCE_RECORD_TOO_LARGE'
+  | 'GOVERNANCE_ACCESS_SCOPE_VIOLATION';
 
 export class EnterpriseHttpError extends Error {
   constructor(
@@ -42,3 +54,39 @@ export const EnterpriseHttpErrors = {
   enterpriseNotReady: (lifecycleState: string) =>
     new EnterpriseHttpError(503, 'ENTERPRISE_NOT_READY', 'AOC Enterprise is not ready to evaluate governance requests.', undefined, { lifecycleState }),
 };
+
+/**
+ * Maps a `GovernanceStoreError` onto the wire (PR-004 section 43). Raw
+ * driver/database details never reach the response — only the Store's own
+ * taxonomy and message. Store validation errors default to 500 (they signal
+ * a Host programming error, not caller input) unless the caller-input flag
+ * says the offending value came off the wire (e.g. a bad query cursor).
+ */
+export function mapGovernanceStoreErrorToHttp(error: GovernanceStoreError, options: { readonly callerInput?: boolean } = {}): EnterpriseHttpError {
+  switch (error.code) {
+    case 'GOVERNANCE_IDEMPOTENCY_CONFLICT':
+      return new EnterpriseHttpError(409, 'GOVERNANCE_IDEMPOTENCY_CONFLICT', error.message);
+    case 'GOVERNANCE_STORE_UNAVAILABLE':
+      return new EnterpriseHttpError(503, 'GOVERNANCE_STORE_UNAVAILABLE', 'The Governance Store is unavailable; the evaluation was not durably recorded.');
+    case 'GOVERNANCE_STORE_TRANSACTION_FAILED':
+      return new EnterpriseHttpError(500, 'GOVERNANCE_STORE_TRANSACTION_FAILED', 'The Governance Store transaction failed; the evaluation was not durably recorded.');
+    case 'GOVERNANCE_RECORD_NOT_FOUND':
+      return new EnterpriseHttpError(404, 'GOVERNANCE_RECORD_NOT_FOUND', error.message);
+    case 'GOVERNANCE_RECORD_CORRUPTED':
+    case 'GOVERNANCE_INTEGRITY_VERIFICATION_FAILED':
+      return new EnterpriseHttpError(500, 'GOVERNANCE_RECORD_CORRUPTED', 'A stored governance record is corrupted; see server logs.');
+    case 'GOVERNANCE_RECORD_TOO_LARGE':
+    case 'GOVERNANCE_TRACE_LIMIT_EXCEEDED':
+    case 'GOVERNANCE_EVENT_PAYLOAD_TOO_LARGE':
+      return new EnterpriseHttpError(413, 'GOVERNANCE_RECORD_TOO_LARGE', error.message);
+    case 'GOVERNANCE_TENANT_SCOPE_REQUIRED':
+    case 'GOVERNANCE_ACCESS_SCOPE_VIOLATION':
+      return new EnterpriseHttpError(403, 'GOVERNANCE_ACCESS_SCOPE_VIOLATION', error.message);
+    case 'GOVERNANCE_STORE_VALIDATION_ERROR':
+      return options.callerInput === true
+        ? new EnterpriseHttpError(400, 'INVALID_REQUEST', error.message)
+        : new EnterpriseHttpError(500, 'GOVERNANCE_STORE_VALIDATION_ERROR', 'The Governance Store rejected an internally-built record; see server logs.');
+    case 'GOVERNANCE_SCHEMA_VERSION_UNSUPPORTED':
+      return new EnterpriseHttpError(500, 'GOVERNANCE_STORE_TRANSACTION_FAILED', 'The Governance Store schema version is unsupported by this build.');
+  }
+}

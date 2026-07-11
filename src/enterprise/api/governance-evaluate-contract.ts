@@ -34,6 +34,11 @@ export interface GovernanceEvaluateResponseBody {
   readonly evaluatedAt: string;
   readonly kernelVersion: string;
   readonly correlationId?: string;
+  /** Backward-compatible addition (PR-004 section 97): the durable Governance Record this response was committed as. Absent only if the Host was composed without record identification. */
+  readonly governanceRecord?: {
+    readonly evaluationId: string;
+    readonly aggregateDigest: string;
+  };
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -114,7 +119,10 @@ export function toKernelEvaluationOptions(body: GovernanceEvaluateRequestBody, d
   };
 }
 
-export function toGovernanceEvaluateResponseBody(result: KernelEvaluationResult): GovernanceEvaluateResponseBody {
+export function toGovernanceEvaluateResponseBody(
+  result: KernelEvaluationResult,
+  governanceRecord?: { readonly evaluationId: string; readonly aggregateDigest: string },
+): GovernanceEvaluateResponseBody {
   return {
     requestId: result.requestId,
     decisionId: result.decisionId,
@@ -125,6 +133,7 @@ export function toGovernanceEvaluateResponseBody(result: KernelEvaluationResult)
     evaluatedAt: result.evaluatedAt,
     kernelVersion: result.kernelVersion,
     ...(result.correlationId !== undefined ? { correlationId: result.correlationId } : {}),
+    ...(governanceRecord !== undefined ? { governanceRecord } : {}),
   };
 }
 

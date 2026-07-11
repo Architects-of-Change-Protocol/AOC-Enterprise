@@ -85,3 +85,52 @@ describe('Structural boundaries: src/enterprise, src/runtime, src/kernel', () =>
     assert.ok(enterpriseImportsKernel.length > 0, 'Enterprise importing Kernel is the one legitimate direction');
   });
 });
+
+describe('Structural boundaries: Governance Store (PR-004)', () => {
+  it('the Kernel never imports the Governance Store — it remains persistence-independent', () => {
+    const kernelFiles = walkTsFiles('src/kernel');
+    const leaks = importsMatching(kernelFiles, /from ['"].*governance-store/);
+    assert.deepEqual(leaks, [], 'src/kernel must not know the Governance Store exists');
+  });
+
+  it('the Governance Store contains no decision logic — it never imports the wrapped engine or evaluates anything', () => {
+    const storeFiles = walkTsFiles('src/enterprise/governance-store');
+    assert.ok(storeFiles.length > 0);
+    const engineImports = importsMatching(storeFiles, /from ['"].*features\/action-enforcement/);
+    assert.deepEqual(engineImports, [], 'the Store records decisions; it must never reach into the decision engine');
+    const evaluateCalls = importsMatching(storeFiles, /kernel\.evaluate|\.evaluate\(/);
+    assert.deepEqual(evaluateCalls, [], 'the Store must never invoke an evaluation');
+  });
+
+  it('HTTP handlers execute no SQL — better-sqlite3 and SQL strings stay inside the Store', () => {
+    const adapterFiles = walkTsFiles('src/enterprise/adapters').concat(walkTsFiles('src/enterprise/host'));
+    const sqlLeaks = importsMatching(adapterFiles, /better-sqlite3|SELECT |INSERT INTO|CREATE TABLE/);
+    assert.deepEqual(sqlLeaks, [], 'no HTTP-facing module may touch the database directly');
+  });
+
+  it('the public Store contracts expose no better-sqlite3 types', () => {
+    for (const file of ['src/enterprise/governance-store/contracts.ts', 'src/enterprise/governance-store/governance-store.ts', 'src/enterprise/governance-store/errors.ts']) {
+      const text = readFileSync(file, 'utf8');
+      assert.ok(!text.includes('better-sqlite3'), `${file} must not reference the SQLite driver`);
+    }
+  });
+
+  it('the Store interface exposes no public update or delete methods', () => {
+    const text = readFileSync('src/enterprise/governance-store/governance-store.ts', 'utf8');
+    assert.ok(!/\b(update|delete|remove|purge)\w*\s*\(/.test(text), 'the GovernanceStore interface must stay append-oriented');
+  });
+
+  it('both providers implement the same interface via the same shared projection (no drift by construction)', () => {
+    for (const file of ['src/enterprise/governance-store/in-memory-governance-store.ts', 'src/enterprise/governance-store/sqlite-governance-store.ts']) {
+      const text = readFileSync(file, 'utf8');
+      assert.ok(text.includes('buildGovernanceAggregate'), `${file} must build aggregates through the shared projection`);
+      assert.ok(text.includes('verifyGovernanceRecordIntegrity'), `${file} must verify through the shared verification`);
+    }
+  });
+
+  it('the module registry remains generic — it never mentions the Governance Store', () => {
+    const registryFiles = walkTsFiles('src/enterprise/registry');
+    const leaks = importsMatching(registryFiles, /governance-store/);
+    assert.deepEqual(leaks, [], 'the registry stays module-agnostic');
+  });
+});

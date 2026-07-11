@@ -16,7 +16,11 @@ export type EnterpriseEventType =
   | 'GovernanceEvaluationCompleted'
   | 'GovernanceEvaluationDenied'
   | 'GovernanceEvaluationApprovalRequired'
-  | 'GovernanceEvaluationFailed';
+  | 'GovernanceEvaluationFailed'
+  /** Post-commit only (PR-004): the Governance Store durably committed this evaluation's aggregate. Never published before the transaction commits. */
+  | 'GovernanceRecordCommitted'
+  /** The Governance Store transaction failed and rolled back; the evaluation was NOT durably recorded and the caller received an infrastructure failure. */
+  | 'GovernanceRecordCommitFailed';
 
 export interface EnterpriseEventBase {
   readonly eventId: string;
@@ -45,13 +49,32 @@ export interface GovernanceEvaluationCompletedEvent extends EnterpriseEventBase 
   readonly kernelVersion: string;
 }
 
+/** Published only after the Governance Store transaction commits (mission PR-004 section 63) — event timing is part of the persistence invariant, not decoration. */
+export interface GovernanceRecordCommittedEvent extends EnterpriseEventBase {
+  readonly type: 'GovernanceRecordCommitted';
+  readonly decisionId: string;
+  readonly evaluationId: string;
+  readonly aggregateDigest: string;
+}
+
+/** Published (best-effort) when the Governance Store commit fails; the evaluation response is an infrastructure failure, never a governed success. */
+export interface GovernanceRecordCommitFailedEvent extends EnterpriseEventBase {
+  readonly type: 'GovernanceRecordCommitFailed';
+  readonly errorCode: string;
+}
+
 /**
  * `EnterpriseLifecycleEvent` (`../lifecycle/lifecycle-events.ts`) is folded
  * into this same publisher's event union so lifecycle events flow through
  * the one Enterprise event system the mission asks for -- no second event
  * bus. Existing `GovernanceEvaluation*` event names/shapes are unchanged.
  */
-export type EnterpriseEvent = GovernanceEvaluationRequestedEvent | GovernanceEvaluationCompletedEvent | EnterpriseLifecycleEvent;
+export type EnterpriseEvent =
+  | GovernanceEvaluationRequestedEvent
+  | GovernanceEvaluationCompletedEvent
+  | GovernanceRecordCommittedEvent
+  | GovernanceRecordCommitFailedEvent
+  | EnterpriseLifecycleEvent;
 
 export interface EnterpriseEventPublisher {
   publish(event: EnterpriseEvent): Promise<void>;

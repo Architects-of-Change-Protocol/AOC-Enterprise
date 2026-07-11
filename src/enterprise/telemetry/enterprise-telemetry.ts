@@ -24,6 +24,20 @@ export interface EnterpriseMetricsSnapshot {
   readonly shutdownFailureCount: number;
   /** `enterprise_module_failures_total`. */
   readonly moduleFailureCount: number;
+  /** `governance_store_append_total` / `governance_store_append_failures_total` / `governance_store_append_duration_ms` (PR-004 section 75). */
+  readonly storeAppendCount: number;
+  readonly storeAppendFailureCount: number;
+  readonly averageStoreAppendDurationMs: number;
+  /** `governance_store_idempotent_replays_total` / `governance_store_idempotency_conflicts_total`. */
+  readonly storeIdempotentReplayCount: number;
+  readonly storeIdempotencyConflictCount: number;
+  /** `governance_store_queries_total` / `governance_store_query_duration_ms`. */
+  readonly storeQueryCount: number;
+  readonly averageStoreQueryDurationMs: number;
+  /** `governance_store_integrity_verifications_total` / `governance_store_integrity_failures_total` / `governance_store_corrupted_records_total`. */
+  readonly storeVerificationCount: number;
+  readonly storeIntegrityFailureCount: number;
+  readonly storeCorruptedRecordCount: number;
 }
 
 export interface EnterpriseTelemetry {
@@ -37,6 +51,14 @@ export interface EnterpriseTelemetry {
   recordShutdown(success: boolean): void;
   /** `enterprise_module_failures_total`, tagged by module id via the log line this call triggers -- the counter itself stays a flat total, matching every other counter in this snapshot. */
   recordModuleFailure(moduleId: string): void;
+  /** One committed-or-replayed Governance Store append. `idempotentReplay: true` means an equivalent aggregate already existed and nothing new was written. */
+  recordStoreAppend(durationMs: number, idempotentReplay: boolean): void;
+  recordStoreAppendFailure(): void;
+  recordStoreIdempotencyConflict(): void;
+  recordStoreQuery(durationMs: number): void;
+  /** One integrity verification run; `valid: false` also increments the integrity-failure counter. */
+  recordStoreVerification(valid: boolean): void;
+  recordStoreCorruptedRecord(): void;
   snapshot(): EnterpriseMetricsSnapshot;
 }
 
@@ -55,6 +77,16 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
   let shutdownCount = 0;
   let shutdownFailureCount = 0;
   let moduleFailureCount = 0;
+  let storeAppendCount = 0;
+  let storeAppendFailureCount = 0;
+  let storeAppendTotalDurationMs = 0;
+  let storeIdempotentReplayCount = 0;
+  let storeIdempotencyConflictCount = 0;
+  let storeQueryCount = 0;
+  let storeQueryTotalDurationMs = 0;
+  let storeVerificationCount = 0;
+  let storeIntegrityFailureCount = 0;
+  let storeCorruptedRecordCount = 0;
 
   return {
     recordEvaluation(status, durationMs) {
@@ -95,6 +127,28 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
     recordModuleFailure() {
       moduleFailureCount += 1;
     },
+    recordStoreAppend(durationMs, idempotentReplay) {
+      storeAppendCount += 1;
+      storeAppendTotalDurationMs += durationMs;
+      if (idempotentReplay) storeIdempotentReplayCount += 1;
+    },
+    recordStoreAppendFailure() {
+      storeAppendFailureCount += 1;
+    },
+    recordStoreIdempotencyConflict() {
+      storeIdempotencyConflictCount += 1;
+    },
+    recordStoreQuery(durationMs) {
+      storeQueryCount += 1;
+      storeQueryTotalDurationMs += durationMs;
+    },
+    recordStoreVerification(valid) {
+      storeVerificationCount += 1;
+      if (!valid) storeIntegrityFailureCount += 1;
+    },
+    recordStoreCorruptedRecord() {
+      storeCorruptedRecordCount += 1;
+    },
     snapshot(): EnterpriseMetricsSnapshot {
       return {
         evaluationCount,
@@ -111,6 +165,16 @@ export function createEnterpriseTelemetry(): EnterpriseTelemetry {
         shutdownCount,
         shutdownFailureCount,
         moduleFailureCount,
+        storeAppendCount,
+        storeAppendFailureCount,
+        averageStoreAppendDurationMs: storeAppendCount === 0 ? 0 : storeAppendTotalDurationMs / storeAppendCount,
+        storeIdempotentReplayCount,
+        storeIdempotencyConflictCount,
+        storeQueryCount,
+        averageStoreQueryDurationMs: storeQueryCount === 0 ? 0 : storeQueryTotalDurationMs / storeQueryCount,
+        storeVerificationCount,
+        storeIntegrityFailureCount,
+        storeCorruptedRecordCount,
       };
     },
   };

@@ -35,19 +35,70 @@ export type { EnterpriseEvent, EnterpriseEventType, EnterpriseEventPublisher, Go
 export { createDefaultKernelProviders } from './providers/kernel-provider-composition.js';
 export type { KernelProviderSet, KernelWorldHandles } from './providers/kernel-provider-composition.js';
 
-export { createInMemoryGovernanceStore } from './persistence/in-memory-governance-store.js';
-export { createSqliteGovernanceStore } from './persistence/sqlite-governance-store.js';
+// -- AOC Enterprise Governance Store v1 (PR-004) ----------------------------
+
+export { createInMemoryGovernanceStore } from './governance-store/in-memory-governance-store.js';
+export type { CreateGovernanceStoreOptions } from './governance-store/in-memory-governance-store.js';
+export { createSqliteGovernanceStore } from './governance-store/sqlite-governance-store.js';
+export type { CreateSqliteGovernanceStoreOptions } from './governance-store/sqlite-governance-store.js';
 export type {
   GovernanceStore,
-  GovernanceRequestRecord,
-  GovernanceEvaluationRecord,
-  GovernanceTraceRecord,
+  GovernanceDecisionTraceRecord,
   EnterpriseEventRecord,
   EnterpriseVersionRecord,
   PersistEvaluationInput,
   PersistEvaluationResult,
   PersistEvaluationOutcome,
-} from './persistence/governance-store.js';
+} from './governance-store/governance-store.js';
+export {
+  AOC_GOVERNANCE_STORE_VERSION,
+  GOVERNANCE_STORE_SCHEMA_VERSION,
+  GOVERNANCE_STORE_CONTRACT_IDS,
+  GOVERNANCE_MIGRATION_SOURCE_PR_002,
+  toGovernanceReplayMetadata,
+} from './governance-store/contracts.js';
+export type {
+  GovernanceRecord,
+  GovernanceRequestRecord,
+  GovernanceEvaluationRecord,
+  GovernanceTraceRecord,
+  GovernanceReasonRecord,
+  GovernanceEventRecord,
+  GovernanceEventAggregateType,
+  GovernanceModuleSnapshot,
+  GovernanceProviderSnapshot,
+  GovernanceRecordMetadata,
+  GovernanceIntegrityMetadata,
+  GovernanceReferenceRecord,
+  GovernanceCorrectionRecord,
+  GovernanceReplayMetadata,
+  GovernanceStoreAccessContext,
+  GovernanceIdempotencyContext,
+  GovernanceIdempotencyRecord,
+  GovernanceIdempotencyProbe,
+  GovernanceIdempotencyResolution,
+  GovernanceEnterpriseContext,
+  AppendGovernanceEvaluationInput,
+  AppendGovernanceEvaluationResult,
+  GovernanceStoreQuery,
+  GovernanceStoreQueryResult,
+  GovernanceRecordSummary,
+  GovernanceIntegrityFailure,
+  GovernanceRecordVerificationResult,
+  GovernanceRecordLoadResult,
+  GovernanceStoreHealth,
+} from './governance-store/contracts.js';
+export { GovernanceStoreError, isGovernanceStoreError } from './governance-store/errors.js';
+export type { GovernanceStoreErrorCode, GovernanceIdempotencyConflictKind } from './governance-store/errors.js';
+export { AOC_CANONICALIZATION_VERSION, canonicalSerialize, CanonicalSerializationError } from './governance-store/canonical-json.js';
+export { computeDigest, isWellFormedDigest, GOVERNANCE_DIGEST_ALGORITHM } from './governance-store/digest.js';
+export { redactSensitiveValues, isSensitiveKey, DEFAULT_SENSITIVE_KEY_TERMS, GOVERNANCE_REDACTED_VALUE } from './governance-store/redaction.js';
+export { DEFAULT_GOVERNANCE_STORE_LIMITS, computeGovernanceRequestPayloadDigest } from './governance-store/projection.js';
+export type { GovernanceStoreLimits } from './governance-store/projection.js';
+export { verifyGovernanceRecordIntegrity } from './governance-store/verification.js';
+export { toKernelTrace, toKernelEvaluationResult } from './governance-store/store-common.js';
+export { createGovernanceReadService, resolveGovernanceAccessContext } from './orchestration/governance-read-service.js';
+export type { GovernanceReadService } from './orchestration/governance-read-service.js';
 
 export { computeEnterpriseHealth } from './health/health-check.js';
 export type { EnterpriseHealthReport, EnterpriseHealthState, EnterpriseHealthDependencies } from './health/health-check.js';
@@ -60,7 +111,7 @@ export {
   mapDecisionStatusToHttpStatus,
 } from './api/governance-evaluate-contract.js';
 export type { GovernanceEvaluateRequestBody, GovernanceEvaluateResponseBody } from './api/governance-evaluate-contract.js';
-export { EnterpriseHttpError, EnterpriseHttpErrors } from './api/enterprise-http-errors.js';
+export { EnterpriseHttpError, EnterpriseHttpErrors, mapGovernanceStoreErrorToHttp } from './api/enterprise-http-errors.js';
 export type { EnterpriseHttpErrorCode } from './api/enterprise-http-errors.js';
 
 export { evaluateGovernanceRequest } from './orchestration/evaluate-governance-request.js';
@@ -91,7 +142,7 @@ export type {
 } from './modules/enterprise-module.js';
 export { createKernelModule, KERNEL_MODULE_ID } from './modules/kernel-module.js';
 export { createProvidersModule, PROVIDERS_MODULE_ID } from './modules/providers-module.js';
-export { createPersistenceModule, PERSISTENCE_MODULE_ID } from './modules/persistence-module.js';
+export { createGovernanceStoreModule, createPersistenceModule, GOVERNANCE_STORE_MODULE_ID, PERSISTENCE_MODULE_ID } from './modules/governance-store-module.js';
 export { createEventsModule, EVENTS_MODULE_ID } from './modules/events-module.js';
 export { createTelemetryModule, TELEMETRY_MODULE_ID } from './modules/telemetry-module.js';
 
