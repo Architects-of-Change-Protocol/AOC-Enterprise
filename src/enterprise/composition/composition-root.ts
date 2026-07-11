@@ -14,6 +14,8 @@ import { createSqliteGovernanceStore } from '../governance-store/sqlite-governan
 import type { GovernanceStore } from '../governance-store/governance-store.js';
 import type { GovernanceEnterpriseContext } from '../governance-store/contracts.js';
 import { createGovernanceReadService, type GovernanceReadService } from '../orchestration/governance-read-service.js';
+import { createInMemoryEvidenceStore, type EvidenceStore } from '../evidence/evidence-store.js';
+import { createEvidenceService, type EvidenceService } from '../evidence/evidence-service.js';
 import { createDefaultKernelProviders, type KernelProviderSet } from '../providers/kernel-provider-composition.js';
 import { createEnterpriseLogger, type EnterpriseLogger } from '../telemetry/enterprise-logger.js';
 import { createEnterpriseTelemetry, type EnterpriseTelemetry } from '../telemetry/enterprise-telemetry.js';
@@ -60,6 +62,8 @@ export interface CreateEnterpriseOptions {
   readonly kernelProviders?: KernelProviderSet;
   readonly policyPackProvider?: PolicyPackProvider;
   readonly persistence?: GovernanceStore;
+  /** PR-005: the Evidence Bundle Store. Independent of `persistence` (the Governance Store) by design -- Bundles are never stored inside the Governance Store. */
+  readonly evidenceStore?: EvidenceStore;
   readonly eventPublisher?: EnterpriseEventPublisher;
   readonly telemetry?: EnterpriseTelemetry;
   readonly logger?: EnterpriseLogger;
@@ -89,6 +93,10 @@ export interface AocEnterprise {
   readonly persistence: GovernanceStore;
   /** Authenticated, tenant-scoped read/verify surface over the Governance Store (PR-004). HTTP handlers and embedders consume this instead of building store queries directly. */
   readonly governanceReads: GovernanceReadService;
+  /** PR-005: the Evidence Bundle Store, independent of the Governance Store. */
+  readonly evidenceStore: EvidenceStore;
+  /** PR-005: build/read/verify surface for Evidence Bundles. HTTP handlers and embedders consume this instead of calling the projector/verifier directly. */
+  readonly evidence: EvidenceService;
   readonly eventPublisher: EnterpriseEventPublisher;
   readonly telemetry: EnterpriseTelemetry;
   readonly logger: EnterpriseLogger;
@@ -154,6 +162,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   const configuration = options.configuration ?? loadEnterpriseConfiguration();
   const kernelProviders = options.kernelProviders ?? createDefaultKernelProviders();
   const persistence = options.persistence ?? (await buildStore(configuration, kernelProviders.clock.now));
+  const evidenceStore = options.evidenceStore ?? createInMemoryEvidenceStore({ now: kernelProviders.clock.now });
   const eventPublisher = options.eventPublisher ?? createInProcessEventPublisher();
   const telemetry = options.telemetry ?? createEnterpriseTelemetry();
   const logger = options.logger ?? createEnterpriseLogger(configuration.logLevel);
@@ -225,6 +234,13 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   });
 
   const governanceReads = createGovernanceReadService(persistence, configuration, telemetry);
+  const evidence = createEvidenceService({
+    governanceStore: persistence,
+    evidenceStore,
+    configuration,
+    now: kernelProviders.clock.now,
+    nextId: eventIdGenerator.nextId,
+  });
 
   const enterprise: AocEnterprise = {
     configuration,
@@ -232,6 +248,8 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     kernelProviders,
     persistence,
     governanceReads,
+    evidenceStore,
+    evidence,
     eventPublisher,
     telemetry,
     logger,
@@ -277,10 +295,12 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     close: async () => {
       await lifecycle.shutdown();
       unsubscribeLifecyclePersistence();
+      await evidenceStore.close();
     },
     stop: async () => {
       await lifecycle.shutdown();
       unsubscribeLifecyclePersistence();
+      await evidenceStore.close();
     },
   };
 
