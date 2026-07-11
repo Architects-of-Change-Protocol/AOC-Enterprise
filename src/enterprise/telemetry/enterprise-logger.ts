@@ -9,6 +9,11 @@ export interface EnterpriseLogContext {
   readonly correlationId?: string;
   readonly requestId?: string;
   readonly decisionId?: string;
+  /** PR-004 Governance Store fields: the appended aggregate's identity and append outcome. Still a closed set -- never payloads, never raw context. */
+  readonly evaluationId?: string;
+  readonly created?: boolean;
+  readonly idempotentReplay?: boolean;
+  readonly errorCode?: string;
   readonly durationMs?: number;
   readonly kernelVersion?: string;
   readonly enterpriseVersion?: string;

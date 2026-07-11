@@ -43,6 +43,15 @@ export interface EnterpriseConfiguration {
   readonly persistence: {
     readonly provider: EnterprisePersistenceProviderKind;
     readonly sqlitePath: string;
+    /** Bounded wait (ms) on a locked SQLite file before failing, instead of an immediate SQLITE_BUSY. Enforced via `PRAGMA busy_timeout`. */
+    readonly busyTimeoutMs: number;
+    /** Enforced Governance Store persistence limits (PR-004 section 38) — every value here is actually applied on append; none is decorative. */
+    readonly limits: {
+      readonly maxRequestPayloadBytes: number;
+      readonly maxResultPayloadBytes: number;
+      readonly maxEventPayloadBytes: number;
+      readonly maxTraceSteps: number;
+    };
   };
   readonly eventPublishing: {
     readonly enabled: boolean;
@@ -109,6 +118,13 @@ export function loadEnterpriseConfiguration(env: Readonly<Record<string, string 
     persistence: {
       provider: env.AOC_ENTERPRISE_PERSISTENCE_PROVIDER === 'sqlite' ? 'sqlite' : 'memory',
       sqlitePath: env.AOC_ENTERPRISE_SQLITE_PATH ?? '.data/enterprise-host.sqlite',
+      busyTimeoutMs: parsePositiveIntMs(env.AOC_ENTERPRISE_STORE_BUSY_TIMEOUT_MS, 5_000),
+      limits: {
+        maxRequestPayloadBytes: parsePositiveIntMs(env.AOC_ENTERPRISE_STORE_MAX_REQUEST_PAYLOAD_BYTES, 262_144),
+        maxResultPayloadBytes: parsePositiveIntMs(env.AOC_ENTERPRISE_STORE_MAX_RESULT_PAYLOAD_BYTES, 524_288),
+        maxEventPayloadBytes: parsePositiveIntMs(env.AOC_ENTERPRISE_STORE_MAX_EVENT_PAYLOAD_BYTES, 65_536),
+        maxTraceSteps: parsePositiveIntMs(env.AOC_ENTERPRISE_STORE_MAX_TRACE_STEPS, 500),
+      },
     },
     eventPublishing: {
       enabled: parseBoolean(env.AOC_ENTERPRISE_EVENTS_ENABLED, true),

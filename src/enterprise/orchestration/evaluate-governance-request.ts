@@ -1,4 +1,4 @@
-import type { AocKernel, KernelClock, KernelIdGenerator } from '../../kernel/index.js';
+import type { AocKernel, KernelClock, KernelIdGenerator, KernelEvaluationResult } from '../../kernel/index.js';
 import { KernelValidationError } from '../../kernel/index.js';
 import {
   mapDecisionStatusToHttpStatus,
@@ -8,17 +8,23 @@ import {
   validateGovernanceEvaluateRequestBody,
   type GovernanceEvaluateResponseBody,
 } from '../api/governance-evaluate-contract.js';
-import { EnterpriseHttpErrors } from '../api/enterprise-http-errors.js';
+import { EnterpriseHttpError, EnterpriseHttpErrors, mapGovernanceStoreErrorToHttp } from '../api/enterprise-http-errors.js';
 import type { EnterpriseConfiguration } from '../configuration/enterprise-configuration.js';
-import type { EnterpriseEventPublisher } from '../events/enterprise-events.js';
-import type { GovernanceStore } from '../persistence/governance-store.js';
+import type { EnterpriseEvent, EnterpriseEventPublisher, GovernanceEvaluationRequestedEvent } from '../events/enterprise-events.js';
+import type { GovernanceStore } from '../governance-store/governance-store.js';
+import { isGovernanceStoreError } from '../governance-store/errors.js';
+import { computeGovernanceRequestPayloadDigest } from '../governance-store/projection.js';
+import { toKernelEvaluationResult } from '../governance-store/store-common.js';
+import type { GovernanceEnterpriseContext, GovernanceIdempotencyContext, GovernanceRecord, GovernanceStoreAccessContext } from '../governance-store/contracts.js';
 import type { EnterpriseLogger } from '../telemetry/enterprise-logger.js';
 import type { EnterpriseTelemetry } from '../telemetry/enterprise-telemetry.js';
 
-/** Transport-level input to one evaluation call -- the not-yet-validated wire body plus the caller's auth header. Validated internally against `GovernanceEvaluateRequestBody`. */
+/** Transport-level input to one evaluation call -- the not-yet-validated wire body plus the caller's auth header and optional `Idempotency-Key` header value. */
 export interface EvaluateGovernanceRequestInput {
   readonly rawBody: unknown;
   readonly authorizationHeader?: string;
+  /** Caller-supplied `Idempotency-Key` header (PR-004 section 44). Scoped to the authenticated organization context by the orchestrator; never trusted as globally unique on its own. */
+  readonly idempotencyKey?: string;
 }
 
 export interface EvaluateGovernanceRequestDependencies {
@@ -26,20 +32,15 @@ export interface EvaluateGovernanceRequestDependencies {
   readonly clock: KernelClock;
   /** Used only to fill in a caller-omitted `requestId` on the `KernelEvaluationRequest` itself -- this is the same id generator the Kernel was constructed with. */
   readonly idGenerator: KernelIdGenerator;
-  /**
-   * A separate id source for the Enterprise Host's own bookkeeping
-   * (`EnterpriseEvent.eventId`). Deliberately independent of `idGenerator`:
-   * event ids are an Enterprise-internal concern, and consuming the
-   * Kernel's own id generator for them would perturb the id sequence
-   * `AocKernel` uses internally for `decisionId`/recognition ids, for no
-   * governance-relevant reason.
-   */
+  /** A separate id source for the Enterprise Host's own bookkeeping (`EnterpriseEvent.eventId`) -- deliberately independent of the Kernel's own id sequence. */
   readonly eventIdGenerator: KernelIdGenerator;
   readonly store: GovernanceStore;
   readonly eventPublisher: EnterpriseEventPublisher;
   readonly telemetry: EnterpriseTelemetry;
   readonly logger: EnterpriseLogger;
   readonly configuration: EnterpriseConfiguration;
+  /** Live Enterprise context (lifecycle state, module snapshot, providers) captured into every appended aggregate. Supplied by the composition root. */
+  readonly enterpriseContext: () => GovernanceEnterpriseContext;
 }
 
 /** The Enterprise Host's evaluation response -- an HTTP status derived from `KernelDecisionStatus`, plus the wire response body. */
@@ -78,13 +79,21 @@ function authenticateAndAuthorize(
   }
 }
 
+/** Idempotency scope: always tenant-qualified so one organization's key can never collide with another's (PR-004 section 15). Requests naming no organization share the explicit global scope. */
+function idempotencyScopeFor(organizationId: string | undefined): string {
+  return organizationId !== undefined ? `org:${organizationId}` : 'global';
+}
+
 /**
- * The full lifecycle the mission specifies: Authentication -> Enterprise
- * Validation -> Kernel Request Adapter -> `kernel.evaluate()` -> Persistence
- * -> Audit -> Event Publication -> HTTP Response. Framework-agnostic on
- * purpose -- `adapters/node-http-adapter.ts` is the only piece that knows
- * about `IncomingMessage`/`ServerResponse`; this function (and therefore
- * every test in `__tests__/`) never does.
+ * The PR-004 evaluation flow: Authentication -> Validation -> Idempotency
+ * Resolution (before the Kernel is re-run) -> `kernel.evaluate()` -> one
+ * atomic Governance Store aggregate append -> post-commit event publication
+ * -> HTTP response.
+ *
+ * Persistence invariant (PR-004 section 64): no successful governance
+ * response is ever returned when the required Governance Store commit
+ * failed. The Kernel result may exist transiently, but AOC Enterprise does
+ * not claim governed completion it cannot durably prove.
  */
 export async function evaluateGovernanceRequest(
   input: EvaluateGovernanceRequestInput,
@@ -100,32 +109,55 @@ export async function evaluateGovernanceRequest(
   const request = toKernelEvaluationRequest(body, deps.clock, deps.idGenerator);
   const options = toKernelEvaluationOptions(body, deps.configuration.features.traceLevel);
 
+  const organizationId = request.organization?.id;
+  const accessContext: GovernanceStoreAccessContext = {
+    system: true,
+    ...(organizationId !== undefined ? { organizationId } : {}),
+    actorId: request.actor.id,
+  };
+  const idempotency: GovernanceIdempotencyContext | undefined =
+    input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey, scope: idempotencyScopeFor(organizationId) } : undefined;
+
   deps.logger.info('governance.evaluate.requested', {
     requestId: request.requestId,
     ...(request.correlationId !== undefined ? { correlationId: request.correlationId } : {}),
     route: 'POST /api/governance/evaluate',
   });
 
+  // -- Idempotency resolution BEFORE re-running the Kernel (PR-004 section 44).
+  // Advisory only: the authoritative enforcement is the append transaction's
+  // own uniqueness constraints; a racer that misses here still cannot
+  // double-commit.
+  const payloadDigest = computeGovernanceRequestPayloadDigest(request);
+  const resolution = await deps.store.resolveIdempotency(accessContext, {
+    requestId: request.requestId,
+    payloadDigest,
+    ...(idempotency !== undefined ? { idempotency } : {}),
+  });
+  if (resolution.kind === 'conflict') {
+    deps.telemetry.recordStoreIdempotencyConflict();
+    throw idempotencyConflictError(resolution.conflictKind, request.requestId);
+  }
+  if (resolution.kind === 'replay') {
+    return replayResponse(resolution.record, deps, Date.now() - startedAtMs);
+  }
+
+  // -- Operational pre-evaluation event: published in-process only; its
+  // durable copy is embedded in the aggregate below and committed atomically
+  // with the evaluation (PR-004 section 63/65, Option A).
+  let requestedEvent: GovernanceEvaluationRequestedEvent | undefined;
   if (deps.configuration.eventPublishing.enabled) {
-    const requestedEvent = {
+    requestedEvent = {
       eventId: deps.eventIdGenerator.nextId('enterprise-event'),
-      type: 'GovernanceEvaluationRequested' as const,
+      type: 'GovernanceEvaluationRequested',
       occurredAt: receivedAt,
       requestId: request.requestId,
       ...(request.correlationId !== undefined ? { correlationId: request.correlationId } : {}),
     };
     await deps.eventPublisher.publish(requestedEvent);
-    await deps.store.appendEnterpriseEvent({
-      eventId: requestedEvent.eventId,
-      eventType: requestedEvent.type,
-      requestId: requestedEvent.requestId,
-      ...(requestedEvent.correlationId !== undefined ? { correlationId: requestedEvent.correlationId } : {}),
-      occurredAt: requestedEvent.occurredAt,
-      payload: {},
-    });
   }
 
-  let result;
+  let result: KernelEvaluationResult;
   try {
     result = await deps.kernel.evaluate(request, options);
   } catch (error) {
@@ -140,60 +172,144 @@ export async function evaluateGovernanceRequest(
   const durationMs = Date.now() - startedAtMs;
   deps.telemetry.recordEvaluation(result.status, durationMs);
 
-  let persisted;
+  const completionEvent = deps.configuration.eventPublishing.enabled
+    ? {
+        eventId: deps.eventIdGenerator.nextId('enterprise-event'),
+        type: eventTypeForStatus(result.status),
+        occurredAt: result.evaluatedAt,
+        requestId: result.requestId,
+        decisionId: result.decisionId,
+        status: result.status,
+        reasonCodes: result.reasonCodes,
+        kernelVersion: result.kernelVersion,
+        ...(result.correlationId !== undefined ? { correlationId: result.correlationId } : {}),
+      }
+    : undefined;
+  const aggregateEvents: EnterpriseEvent[] = [];
+  if (requestedEvent !== undefined) aggregateEvents.push(requestedEvent);
+  if (completionEvent !== undefined) aggregateEvents.push(completionEvent);
+
+  // -- One atomic Governance Store aggregate append.
+  const appendStartedAtMs = Date.now();
+  let appended;
   try {
-    persisted = await deps.store.persistEvaluation({ request, result, receivedAt });
-  } catch {
+    appended = await deps.store.appendEvaluation({
+      request,
+      result,
+      receivedAt,
+      enterpriseContext: deps.enterpriseContext(),
+      events: aggregateEvents,
+      ...(idempotency !== undefined ? { idempotency } : {}),
+      accessContext,
+    });
+  } catch (error) {
     deps.telemetry.recordPersistenceFailure();
+    deps.telemetry.recordStoreAppendFailure();
+    deps.logger.error('governance.store.append_failed', {
+      requestId: request.requestId,
+      decisionId: result.decisionId,
+      ...(isGovernanceStoreError(error) ? { errorCode: error.code } : {}),
+      route: 'POST /api/governance/evaluate',
+    });
+    if (deps.configuration.eventPublishing.enabled) {
+      // Best-effort failure signal; publication failure here must not mask the original error.
+      try {
+        await deps.eventPublisher.publish({
+          eventId: deps.eventIdGenerator.nextId('enterprise-event'),
+          type: 'GovernanceRecordCommitFailed',
+          occurredAt: deps.clock.now(),
+          requestId: request.requestId,
+          errorCode: isGovernanceStoreError(error) ? error.code : 'GOVERNANCE_STORE_TRANSACTION_FAILED',
+          ...(request.correlationId !== undefined ? { correlationId: request.correlationId } : {}),
+        });
+      } catch {
+        // swallowed by design
+      }
+    }
+    if (isGovernanceStoreError(error)) {
+      if (error.code === 'GOVERNANCE_IDEMPOTENCY_CONFLICT') {
+        deps.telemetry.recordStoreIdempotencyConflict();
+        throw idempotencyConflictError(error.details?.conflictKind === 'idempotency-key' ? 'idempotency-key' : 'request-id', request.requestId);
+      }
+      throw mapGovernanceStoreErrorToHttp(error);
+    }
     throw EnterpriseHttpErrors.infrastructureFailure('The evaluation could not be persisted.');
   }
+  deps.telemetry.recordStoreAppend(Date.now() - appendStartedAtMs, appended.idempotentReplay);
 
-  if (persisted.outcome === 'conflict') {
-    throw EnterpriseHttpErrors.concurrencyConflict(
-      `requestId '${request.requestId}' was already submitted with a different payload; a request id must uniquely identify one governance request.`,
-    );
+  // A concurrent racer committed the equivalent aggregate first — answer
+  // with the stored original, exactly like the pre-Kernel replay path.
+  if (appended.idempotentReplay && appended.existingRecord !== undefined) {
+    return replayResponse(appended.existingRecord, deps, Date.now() - startedAtMs);
   }
 
-  const finalResult = persisted.outcome === 'idempotent_replay' ? await rehydrateReplayedResult(persisted.evaluation.decisionId, result, deps.store) : result;
-
   deps.logger.info('governance.audit.decision', {
-    requestId: finalResult.requestId,
-    decisionId: finalResult.decisionId,
-    status: finalResult.status,
+    requestId: result.requestId,
+    decisionId: result.decisionId,
+    evaluationId: appended.evaluationId,
+    status: result.status,
     durationMs,
-    kernelVersion: finalResult.kernelVersion,
+    created: appended.created,
+    kernelVersion: result.kernelVersion,
     enterpriseVersion: deps.configuration.enterpriseVersion,
-    ...(finalResult.correlationId !== undefined ? { correlationId: finalResult.correlationId } : {}),
+    ...(result.correlationId !== undefined ? { correlationId: result.correlationId } : {}),
   });
 
+  // -- Post-commit events only (PR-004 section 62/63): nothing named
+  // "committed" or "completed" is published before the transaction commits.
   if (deps.configuration.eventPublishing.enabled) {
-    const completionEvent = {
+    if (completionEvent !== undefined) await deps.eventPublisher.publish(completionEvent);
+    await deps.eventPublisher.publish({
       eventId: deps.eventIdGenerator.nextId('enterprise-event'),
-      type: eventTypeForStatus(finalResult.status),
-      occurredAt: finalResult.evaluatedAt,
-      requestId: finalResult.requestId,
-      decisionId: finalResult.decisionId,
-      status: finalResult.status,
-      reasonCodes: finalResult.reasonCodes,
-      kernelVersion: finalResult.kernelVersion,
-      ...(finalResult.correlationId !== undefined ? { correlationId: finalResult.correlationId } : {}),
-    };
-    await deps.eventPublisher.publish(completionEvent);
-    await deps.store.appendEnterpriseEvent({
-      eventId: completionEvent.eventId,
-      eventType: completionEvent.type,
-      requestId: completionEvent.requestId,
-      decisionId: completionEvent.decisionId,
-      ...(completionEvent.correlationId !== undefined ? { correlationId: completionEvent.correlationId } : {}),
-      occurredAt: completionEvent.occurredAt,
-      payload: { status: completionEvent.status, reasonCodes: completionEvent.reasonCodes },
+      type: 'GovernanceRecordCommitted',
+      occurredAt: appended.persistedAt,
+      requestId: result.requestId,
+      decisionId: result.decisionId,
+      evaluationId: appended.evaluationId,
+      aggregateDigest: appended.aggregateDigest,
+      ...(result.correlationId !== undefined ? { correlationId: result.correlationId } : {}),
     });
   }
 
   return {
-    httpStatus: mapDecisionStatusToHttpStatus(finalResult.status),
-    body: toGovernanceEvaluateResponseBody(finalResult),
+    httpStatus: mapDecisionStatusToHttpStatus(result.status),
+    body: toGovernanceEvaluateResponseBody(result, { evaluationId: appended.evaluationId, aggregateDigest: appended.aggregateDigest }),
   };
+}
+
+/** Rebuilds the HTTP response for an idempotent replay from the stored aggregate — the Kernel is NOT re-run; the answer is the originally persisted decision (PR-004 section 44). */
+function replayResponse(record: GovernanceRecord, deps: EvaluateGovernanceRequestDependencies, durationMs: number): EnterpriseEvaluationResponse {
+  const storedResult = toKernelEvaluationResult(record);
+  deps.telemetry.recordStoreAppend(0, true);
+  deps.logger.info('governance.audit.decision', {
+    requestId: storedResult.requestId,
+    decisionId: storedResult.decisionId,
+    evaluationId: record.evaluation.evaluationId,
+    status: storedResult.status,
+    durationMs,
+    created: false,
+    idempotentReplay: true,
+    kernelVersion: storedResult.kernelVersion,
+    enterpriseVersion: deps.configuration.enterpriseVersion,
+    ...(storedResult.correlationId !== undefined ? { correlationId: storedResult.correlationId } : {}),
+  });
+  return {
+    httpStatus: mapDecisionStatusToHttpStatus(storedResult.status),
+    body: toGovernanceEvaluateResponseBody(storedResult, {
+      evaluationId: record.evaluation.evaluationId,
+      aggregateDigest: record.integrity.aggregateDigest,
+    }),
+  };
+}
+
+/** `request-id` conflicts keep the PR-002 wire contract (409 CONCURRENCY_CONFLICT); caller-key conflicts are the PR-004 409 GOVERNANCE_IDEMPOTENCY_CONFLICT. */
+function idempotencyConflictError(conflictKind: 'idempotency-key' | 'request-id', requestId: string): EnterpriseHttpError {
+  if (conflictKind === 'idempotency-key') {
+    return new EnterpriseHttpError(409, 'GOVERNANCE_IDEMPOTENCY_CONFLICT', 'This Idempotency-Key was already used with a different request payload.');
+  }
+  return EnterpriseHttpErrors.concurrencyConflict(
+    `requestId '${requestId}' was already submitted with a different payload; a request id must uniquely identify one governance request.`,
+  );
 }
 
 function eventTypeForStatus(status: GovernanceEvaluateResponseBody['status']) {
@@ -211,20 +327,4 @@ function eventTypeForStatus(status: GovernanceEvaluateResponseBody['status']) {
 
 function isPlainObjectWithOrganization(value: unknown): value is { organization?: { id?: string } } {
   return typeof value === 'object' && value !== null;
-}
-
-/** An idempotent replay reuses the originally stored evaluation's identity/summary rather than the (structurally identical) newly-computed one, and reconstructs its trace from `GovernanceTraces` since the store's evaluation record does not carry it inline. */
-async function rehydrateReplayedResult(decisionId: string, freshResult: Awaited<ReturnType<AocKernel['evaluate']>>, store: GovernanceStore) {
-  const [evaluation, trace] = await Promise.all([store.getEvaluationByDecisionId(decisionId), store.getTraceByDecisionId(decisionId)]);
-  if (evaluation === undefined || trace === undefined) return freshResult;
-  return {
-    ...freshResult,
-    decisionId: evaluation.decisionId,
-    status: evaluation.status,
-    reasonCodes: evaluation.reasonCodes,
-    summary: evaluation.summary,
-    kernelVersion: evaluation.kernelVersion,
-    evaluatedAt: evaluation.evaluatedAt,
-    trace: trace.trace,
-  };
 }

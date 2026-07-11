@@ -21,7 +21,8 @@ describe('AOC Enterprise Module Lifecycle & Registry (integration via createEnte
 
     const modules = enterprise.modules();
     const ids = modules.map((m) => m.id).sort();
-    assert.deepEqual(ids, ['aoc.enterprise.events', 'aoc.enterprise.persistence', 'aoc.enterprise.providers', 'aoc.enterprise.telemetry', 'aoc.kernel'].sort());
+    // PR-004: 'aoc.enterprise.persistence' evolved into the Governance Store module (documented migration).
+    assert.deepEqual(ids, ['aoc.enterprise.events', 'aoc.enterprise.governance-store', 'aoc.enterprise.providers', 'aoc.enterprise.telemetry', 'aoc.kernel'].sort());
     for (const module of modules) assert.equal(module.state, 'ready');
 
     const kernelModule = modules.find((m) => m.id === 'aoc.kernel');

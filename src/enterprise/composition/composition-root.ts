@@ -9,9 +9,11 @@ import {
   type EnterpriseEvaluationResponse,
   type EvaluateGovernanceRequestInput,
 } from '../orchestration/evaluate-governance-request.js';
-import { createInMemoryGovernanceStore } from '../persistence/in-memory-governance-store.js';
-import { createSqliteGovernanceStore } from '../persistence/sqlite-governance-store.js';
-import type { GovernanceStore } from '../persistence/governance-store.js';
+import { createInMemoryGovernanceStore } from '../governance-store/in-memory-governance-store.js';
+import { createSqliteGovernanceStore } from '../governance-store/sqlite-governance-store.js';
+import type { GovernanceStore } from '../governance-store/governance-store.js';
+import type { GovernanceEnterpriseContext } from '../governance-store/contracts.js';
+import { createGovernanceReadService, type GovernanceReadService } from '../orchestration/governance-read-service.js';
 import { createDefaultKernelProviders, type KernelProviderSet } from '../providers/kernel-provider-composition.js';
 import { createEnterpriseLogger, type EnterpriseLogger } from '../telemetry/enterprise-logger.js';
 import { createEnterpriseTelemetry, type EnterpriseTelemetry } from '../telemetry/enterprise-telemetry.js';
@@ -22,16 +24,17 @@ import { createEnterpriseLifecycleController } from '../lifecycle/enterprise-lif
 import type { EnterpriseLifecycleState, EnterpriseModule, EnterpriseModuleSnapshot } from '../modules/enterprise-module.js';
 import { createTelemetryModule } from '../modules/telemetry-module.js';
 import { createEventsModule } from '../modules/events-module.js';
-import { createPersistenceModule } from '../modules/persistence-module.js';
+import { createGovernanceStoreModule } from '../modules/governance-store-module.js';
 import { createProvidersModule } from '../modules/providers-module.js';
 import { createKernelModule } from '../modules/kernel-module.js';
 
 /** Transport-level input to `AocEnterprise.evaluate()` -- the not-yet-validated wire payload. Validated internally against `GovernanceEvaluateRequestBody`; see `EnterpriseRequestContext` for the side-channel (auth header) that travels alongside it. */
 export type EnterpriseEvaluationRequest = unknown;
 
-/** Side-channel request context `AocEnterprise.evaluate()` accepts alongside the request body -- today, only the caller's `Authorization` header. */
+/** Side-channel request context `AocEnterprise.evaluate()` accepts alongside the request body: the caller's `Authorization` header and (PR-004) the `Idempotency-Key` header value. */
 export interface EnterpriseRequestContext {
   readonly authorizationHeader?: string;
+  readonly idempotencyKey?: string;
 }
 
 /**
@@ -84,6 +87,8 @@ export interface AocEnterprise {
   readonly kernel: AocKernel;
   readonly kernelProviders: KernelProviderSet;
   readonly persistence: GovernanceStore;
+  /** Authenticated, tenant-scoped read/verify surface over the Governance Store (PR-004). HTTP handlers and embedders consume this instead of building store queries directly. */
+  readonly governanceReads: GovernanceReadService;
   readonly eventPublisher: EnterpriseEventPublisher;
   readonly telemetry: EnterpriseTelemetry;
   readonly logger: EnterpriseLogger;
@@ -104,11 +109,16 @@ export interface AocEnterprise {
   stop(): Promise<void>;
 }
 
-async function buildStore(configuration: EnterpriseConfiguration): Promise<GovernanceStore> {
+async function buildStore(configuration: EnterpriseConfiguration, now: () => string): Promise<GovernanceStore> {
+  const storeOptions = {
+    now,
+    limits: configuration.persistence.limits,
+    enterpriseVersion: configuration.enterpriseVersion,
+  };
   if (configuration.persistence.provider === 'sqlite') {
-    return createSqliteGovernanceStore(configuration.persistence.sqlitePath);
+    return createSqliteGovernanceStore(configuration.persistence.sqlitePath, { ...storeOptions, busyTimeoutMs: configuration.persistence.busyTimeoutMs });
   }
-  return createInMemoryGovernanceStore();
+  return createInMemoryGovernanceStore(storeOptions);
 }
 
 /** A dedicated id source for Enterprise-internal bookkeeping (event ids, boot id) -- independent of the Kernel's own `idGenerator`, so Enterprise bookkeeping never perturbs the Kernel's internal id sequence. */
@@ -143,7 +153,7 @@ function createEnterpriseIdGenerator(): KernelIdGenerator {
 export async function createEnterprise(options: CreateEnterpriseOptions = {}): Promise<AocEnterprise> {
   const configuration = options.configuration ?? loadEnterpriseConfiguration();
   const kernelProviders = options.kernelProviders ?? createDefaultKernelProviders();
-  const persistence = options.persistence ?? (await buildStore(configuration));
+  const persistence = options.persistence ?? (await buildStore(configuration, kernelProviders.clock.now));
   const eventPublisher = options.eventPublisher ?? createInProcessEventPublisher();
   const telemetry = options.telemetry ?? createEnterpriseTelemetry();
   const logger = options.logger ?? createEnterpriseLogger(configuration.logLevel);
@@ -166,10 +176,21 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     recordedAt: kernelProviders.clock.now(),
   });
 
+  // Durable lifecycle history (PR-004 section 6): every lifecycle/module
+  // event published from here on is appended to the Governance Store as a
+  // standalone event record (linked by correlation, never by foreign key).
+  // Best-effort by design — operational history must never block or fail
+  // startup/shutdown, and events raced past `close()` are dropped silently.
+  const unsubscribeLifecyclePersistence = eventPublisher.subscribe((event) => {
+    if ('lifecycleCorrelationId' in event) {
+      void persistence.appendLifecycleEvent(event).catch(() => {});
+    }
+  });
+
   const registry = createEnterpriseModuleRegistry();
   registry.register(createTelemetryModule(telemetry, configuration.telemetry.enabled, kernelProviders.clock.now));
   registry.register(createEventsModule(eventPublisher, configuration.eventPublishing.enabled, kernelProviders.clock.now));
-  registry.register(createPersistenceModule(persistence, kernelProviders.clock.now));
+  registry.register(createGovernanceStoreModule(persistence, kernelProviders.clock.now));
   registry.register(createProvidersModule(kernelProviders, kernelProviders.clock.now, options.policyPackProvider !== undefined));
   registry.register(createKernelModule(kernel, kernelProviders.clock.now));
   for (const module of options.modules ?? []) registry.register(module);
@@ -191,11 +212,26 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   // additional `start()` call.
   await lifecycle.start();
 
+  /** Live Enterprise context captured into every appended governance aggregate (PR-004 section 7): lifecycle state, module snapshot, provider snapshot, environment. Bounded — never configuration, credentials, or connection strings. */
+  const enterpriseContext = (): GovernanceEnterpriseContext => ({
+    enterpriseVersion: configuration.enterpriseVersion,
+    lifecycleState: lifecycle.lifecycleState(),
+    modules: lifecycle.modules(),
+    providers: [
+      { providerType: 'recognition', ready: true },
+      ...(options.policyPackProvider !== undefined ? [{ providerType: 'policy-pack', ready: true }] : []),
+    ],
+    environment: configuration.environment,
+  });
+
+  const governanceReads = createGovernanceReadService(persistence, configuration, telemetry);
+
   const enterprise: AocEnterprise = {
     configuration,
     kernel,
     kernelProviders,
     persistence,
+    governanceReads,
     eventPublisher,
     telemetry,
     logger,
@@ -207,6 +243,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
       const input: EvaluateGovernanceRequestInput = {
         rawBody: request,
         ...(context?.authorizationHeader !== undefined ? { authorizationHeader: context.authorizationHeader } : {}),
+        ...(context?.idempotencyKey !== undefined ? { idempotencyKey: context.idempotencyKey } : {}),
       };
       return evaluateGovernanceRequest(input, {
         kernel,
@@ -218,6 +255,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
         telemetry,
         logger,
         configuration,
+        enterpriseContext,
       });
     },
     async health() {
@@ -236,8 +274,14 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     isReady: () => lifecycle.isReady(),
     lifecycleState: () => lifecycle.lifecycleState(),
     modules: () => lifecycle.modules(),
-    close: () => lifecycle.shutdown(),
-    stop: () => lifecycle.shutdown(),
+    close: async () => {
+      await lifecycle.shutdown();
+      unsubscribeLifecyclePersistence();
+    },
+    stop: async () => {
+      await lifecycle.shutdown();
+      unsubscribeLifecyclePersistence();
+    },
   };
 
   return enterprise;

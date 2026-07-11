@@ -5,6 +5,7 @@ import { createEnterprise } from '../composition/composition-root.js';
 import { AocKernel } from '../../kernel/index.js';
 import { createDefaultKernelProviders } from '../providers/kernel-provider-composition.js';
 import { loadEnterpriseConfiguration } from '../configuration/enterprise-configuration.js';
+import { createInMemoryGovernanceStore } from '../governance-store/index.js';
 import { buildAllowedRequestBody, buildTestKernelProviders } from './support.js';
 
 describe('AOC Enterprise Host composition root (createEnterprise)', () => {
@@ -61,24 +62,18 @@ describe('AOC Enterprise Host composition root (createEnterprise)', () => {
   });
 
   it('fails clearly when persistence cannot be constructed (missing/invalid dependency)', async () => {
+    // A real v1 store with its write/boot paths broken — the composition root
+    // must reject rather than come up with unusable persistence.
+    const brokenStore = createInMemoryGovernanceStore();
     await assert.rejects(() =>
       createEnterprise({
         kernelProviders: buildTestKernelProviders(),
         persistence: {
-          providerKind: 'memory',
-          persistEvaluation() {
-            return Promise.reject(new Error('persistence unavailable'));
-          },
-          getRequestById: () => Promise.resolve(undefined),
-          getEvaluationByRequestId: () => Promise.resolve(undefined),
-          getEvaluationByDecisionId: () => Promise.resolve(undefined),
-          getTraceByDecisionId: () => Promise.resolve(undefined),
-          appendEnterpriseEvent: () => Promise.resolve(),
-          listEnterpriseEvents: () => Promise.resolve([]),
+          ...brokenStore,
+          persistEvaluation: () => Promise.reject(new Error('persistence unavailable')),
+          appendEvaluation: () => Promise.reject(new Error('persistence unavailable')),
           recordEnterpriseVersion: () => Promise.reject(new Error('persistence unavailable')),
-          getLatestEnterpriseVersion: () => Promise.resolve(undefined),
           checkConnectivity: () => Promise.resolve(false),
-          close: () => Promise.resolve(),
         },
       }),
     );

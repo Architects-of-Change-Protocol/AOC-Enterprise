@@ -88,13 +88,70 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
     }
 
     if (method === 'POST' && url.pathname === '/api/governance/evaluate') {
+      const idempotencyKeyHeader = req.headers['idempotency-key'];
+      const idempotencyKey = Array.isArray(idempotencyKeyHeader) ? idempotencyKeyHeader[0] : idempotencyKeyHeader;
       readRequestBody(req)
-        .then((rawBody) => enterprise.evaluate(rawBody, req.headers.authorization !== undefined ? { authorizationHeader: req.headers.authorization } : undefined))
+        .then((rawBody) =>
+          enterprise.evaluate(rawBody, {
+            ...(req.headers.authorization !== undefined ? { authorizationHeader: req.headers.authorization } : {}),
+            ...(idempotencyKey !== undefined && idempotencyKey.length > 0 ? { idempotencyKey } : {}),
+          }),
+        )
         .then((outcome) => writeJson(res, outcome.httpStatus, outcome.body))
         .catch((error: unknown) => writeError(res, error, enterprise));
       return;
     }
 
+    // -- PR-004 Governance Store read/verify endpoints. All access-context
+    // resolution and tenant scoping happens inside `enterprise.governanceReads`
+    // (never here); this adapter only routes.
+    if (method === 'GET') {
+      const readMatch = matchGovernanceReadRoute(url.pathname);
+      if (readMatch !== undefined) {
+        const auth = req.headers.authorization;
+        const respond = (promise: Promise<unknown>, notFoundMessage: string) =>
+          promise
+            .then((recordOrResult) => {
+              if (recordOrResult === null) {
+                writeJson(res, 404, { error: { code: 'GOVERNANCE_RECORD_NOT_FOUND', message: notFoundMessage } });
+                return;
+              }
+              writeJson(res, 200, recordOrResult);
+            })
+            .catch((error: unknown) => writeError(res, error, enterprise));
+
+        switch (readMatch.kind) {
+          case 'evaluation':
+            respond(enterprise.governanceReads.getByEvaluationId(auth, readMatch.id), `No governance record for evaluationId '${readMatch.id}'.`);
+            return;
+          case 'evaluation-verify':
+            respond(enterprise.governanceReads.verify(auth, readMatch.id), `No governance record for evaluationId '${readMatch.id}'.`);
+            return;
+          case 'decision':
+            respond(enterprise.governanceReads.getByDecisionId(auth, readMatch.id), `No governance record for decisionId '${readMatch.id}'.`);
+            return;
+          case 'request':
+            respond(enterprise.governanceReads.getByRequestId(auth, readMatch.id), `No governance record for requestId '${readMatch.id}'.`);
+            return;
+        }
+      }
+    }
+
     writeJson(res, 404, { error: { code: 'NOT_FOUND', message: `No route for ${method} ${url.pathname}.` } });
   };
+}
+
+type GovernanceReadRoute =
+  | { readonly kind: 'evaluation' | 'evaluation-verify' | 'decision' | 'request'; readonly id: string };
+
+function matchGovernanceReadRoute(pathname: string): GovernanceReadRoute | undefined {
+  const verifyMatch = /^\/api\/governance\/evaluations\/([^/]+)\/verify$/.exec(pathname);
+  if (verifyMatch?.[1] !== undefined) return { kind: 'evaluation-verify', id: decodeURIComponent(verifyMatch[1]) };
+  const evaluationMatch = /^\/api\/governance\/evaluations\/([^/]+)$/.exec(pathname);
+  if (evaluationMatch?.[1] !== undefined) return { kind: 'evaluation', id: decodeURIComponent(evaluationMatch[1]) };
+  const decisionMatch = /^\/api\/governance\/decisions\/([^/]+)$/.exec(pathname);
+  if (decisionMatch?.[1] !== undefined) return { kind: 'decision', id: decodeURIComponent(decisionMatch[1]) };
+  const requestMatch = /^\/api\/governance\/requests\/([^/]+)$/.exec(pathname);
+  if (requestMatch?.[1] !== undefined) return { kind: 'request', id: decodeURIComponent(requestMatch[1]) };
+  return undefined;
 }
