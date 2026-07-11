@@ -158,6 +158,76 @@ export {
 export type { EvidenceBuildRequestBody, EvidenceBundleResponseBody, EvidenceVerifyRequestBody } from './api/evidence-contract.js';
 export { mapEvidenceErrorToHttp } from './api/enterprise-http-errors.js';
 
+// -- AOC Enterprise Agent Passport Runtime v1 (PR-006) ----------------------
+
+export {
+  AOC_AGENT_PASSPORT_RUNTIME_VERSION,
+  AGENT_PASSPORT_SCHEMA_VERSION,
+  AGENT_PASSPORT_CONTRACT_IDS,
+  AGENT_PASSPORT_TERMINAL_STATUSES,
+} from './passport/contracts.js';
+export type {
+  AgentPassportSubjectType,
+  AgentPassportSubject,
+  AgentPassportOrganizationBinding,
+  AgentPassportStatus,
+  AgentPassportLifecycle,
+  AgentIdentityDescriptor,
+  AgentReferenceStatus,
+  AgentCapabilityReference,
+  AgentAuthorityReference,
+  AgentDelegationReference,
+  PassportGovernanceReference,
+  PassportEvidenceReference,
+  AgentPassportProvenance,
+  AgentPassportIntegrity,
+  AgentPassport,
+  AgentPassportEventType,
+  AgentPassportEvent,
+  AgentPassportClaim,
+  AgentPassportHistorySummary,
+  AgentPassportViewType,
+  AgentPassportViewProvenance,
+  AgentPassportViewIntegrity,
+  AgentPassportView,
+  AgentPassportVerificationMode,
+  PassportVerificationFailure,
+  AgentPassportVerificationResult,
+  PassportAccessContext,
+  AppendPassportEventInput,
+  AppendPassportEventResult,
+  AgentPassportLoadResult,
+  AgentPassportStoreHealth,
+  PassportIdempotencyContext,
+  PassportIdempotencyProbe,
+  PassportIdempotencyResolution,
+} from './passport/contracts.js';
+export { AgentPassportError, isAgentPassportError } from './passport/errors.js';
+export type { AgentPassportErrorCode } from './passport/errors.js';
+export { applyLifecycleTransition, isLifecycleEventType, isTerminalStatus } from './passport/lifecycle.js';
+export { verifyEventChain } from './passport/events.js';
+export { reconstructAgentPassportFromEvents, computePassportHistorySummary } from './passport/reconstruction.js';
+export type { AgentPassportStore } from './passport/passport-store.js';
+export { createInMemoryPassportStore } from './passport/in-memory-passport-store.js';
+export type { CreateInMemoryPassportStoreOptions } from './passport/in-memory-passport-store.js';
+export { createSqlitePassportStore } from './passport/sqlite-passport-store.js';
+export type { CreateSqlitePassportStoreOptions } from './passport/sqlite-passport-store.js';
+export { verifyAgentPassport } from './passport/verification.js';
+export type { PassportReferenceCheckers } from './passport/verification.js';
+export { AGENT_PASSPORT_VIEW_TYPES, buildAgentPassportView, isAgentPassportViewType } from './passport/disclosure.js';
+export { createAgentPassportService } from './passport/service.js';
+export type {
+  AgentPassportService,
+  AgentPassportServiceDependencies,
+  IssueAgentPassportInput,
+  IssueAgentPassportResult,
+  RetireAgentPassportInput,
+  RevokeAgentPassportInput,
+  SuspendAgentPassportInput,
+} from './passport/service.js';
+export { createAgentPassportModule, AGENT_PASSPORT_MODULE_ID } from './modules/passport-module.js';
+export { mapAgentPassportErrorToHttp } from './api/enterprise-http-errors.js';
+
 export { computeEnterpriseHealth } from './health/health-check.js';
 export type { EnterpriseHealthReport, EnterpriseHealthState, EnterpriseHealthDependencies } from './health/health-check.js';
 

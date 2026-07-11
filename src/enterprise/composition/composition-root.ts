@@ -16,6 +16,10 @@ import type { GovernanceEnterpriseContext } from '../governance-store/contracts.
 import { createGovernanceReadService, type GovernanceReadService } from '../orchestration/governance-read-service.js';
 import { createInMemoryEvidenceStore, type EvidenceStore } from '../evidence/evidence-store.js';
 import { createEvidenceService, type EvidenceService } from '../evidence/evidence-service.js';
+import { createInMemoryPassportStore } from '../passport/in-memory-passport-store.js';
+import { createSqlitePassportStore } from '../passport/sqlite-passport-store.js';
+import type { AgentPassportStore } from '../passport/passport-store.js';
+import { createAgentPassportService, type AgentPassportService } from '../passport/service.js';
 import { createDefaultKernelProviders, type KernelProviderSet } from '../providers/kernel-provider-composition.js';
 import { createEnterpriseLogger, type EnterpriseLogger } from '../telemetry/enterprise-logger.js';
 import { createEnterpriseTelemetry, type EnterpriseTelemetry } from '../telemetry/enterprise-telemetry.js';
@@ -29,6 +33,7 @@ import { createEventsModule } from '../modules/events-module.js';
 import { createGovernanceStoreModule } from '../modules/governance-store-module.js';
 import { createProvidersModule } from '../modules/providers-module.js';
 import { createKernelModule } from '../modules/kernel-module.js';
+import { createAgentPassportModule } from '../modules/passport-module.js';
 
 /** Transport-level input to `AocEnterprise.evaluate()` -- the not-yet-validated wire payload. Validated internally against `GovernanceEvaluateRequestBody`; see `EnterpriseRequestContext` for the side-channel (auth header) that travels alongside it. */
 export type EnterpriseEvaluationRequest = unknown;
@@ -64,6 +69,8 @@ export interface CreateEnterpriseOptions {
   readonly persistence?: GovernanceStore;
   /** PR-005: the Evidence Bundle Store. Independent of `persistence` (the Governance Store) by design -- Bundles are never stored inside the Governance Store. */
   readonly evidenceStore?: EvidenceStore;
+  /** PR-006: the Agent Passport Store. Independent of `persistence` and `evidenceStore` -- Passport events are never stored inside the Governance Store or the Evidence Bundle Store. */
+  readonly passportStore?: AgentPassportStore;
   readonly eventPublisher?: EnterpriseEventPublisher;
   readonly telemetry?: EnterpriseTelemetry;
   readonly logger?: EnterpriseLogger;
@@ -97,6 +104,10 @@ export interface AocEnterprise {
   readonly evidenceStore: EvidenceStore;
   /** PR-005: build/read/verify surface for Evidence Bundles. HTTP handlers and embedders consume this instead of calling the projector/verifier directly. */
   readonly evidence: EvidenceService;
+  /** PR-006: the Agent Passport Store, independent of the Governance Store and Evidence Bundle Store. */
+  readonly passportStore: AgentPassportStore;
+  /** PR-006: issue/lifecycle/reference/verify/view surface for Agent Passports. HTTP handlers and embedders consume this instead of calling the Passport Store directly. */
+  readonly passports: AgentPassportService;
   readonly eventPublisher: EnterpriseEventPublisher;
   readonly telemetry: EnterpriseTelemetry;
   readonly logger: EnterpriseLogger;
@@ -127,6 +138,15 @@ async function buildStore(configuration: EnterpriseConfiguration, now: () => str
     return createSqliteGovernanceStore(configuration.persistence.sqlitePath, { ...storeOptions, busyTimeoutMs: configuration.persistence.busyTimeoutMs });
   }
   return createInMemoryGovernanceStore(storeOptions);
+}
+
+/** Mirrors `buildStore`, but for the independent Passport Store (mission section 9) -- a distinct on-disk file from the Governance Store even when both use `sqlite`. */
+async function buildPassportStore(configuration: EnterpriseConfiguration, now: () => string, nextId: (prefix: string) => string): Promise<AgentPassportStore> {
+  const storeOptions = { now, nextId, enterpriseVersion: configuration.enterpriseVersion };
+  if (configuration.persistence.provider === 'sqlite') {
+    return createSqlitePassportStore(configuration.passport.sqlitePath, { ...storeOptions, busyTimeoutMs: configuration.persistence.busyTimeoutMs });
+  }
+  return createInMemoryPassportStore(storeOptions);
 }
 
 /** A dedicated id source for Enterprise-internal bookkeeping (event ids, boot id) -- independent of the Kernel's own `idGenerator`, so Enterprise bookkeeping never perturbs the Kernel's internal id sequence. */
@@ -161,12 +181,13 @@ function createEnterpriseIdGenerator(): KernelIdGenerator {
 export async function createEnterprise(options: CreateEnterpriseOptions = {}): Promise<AocEnterprise> {
   const configuration = options.configuration ?? loadEnterpriseConfiguration();
   const kernelProviders = options.kernelProviders ?? createDefaultKernelProviders();
+  const eventIdGenerator = createEnterpriseIdGenerator();
   const persistence = options.persistence ?? (await buildStore(configuration, kernelProviders.clock.now));
   const evidenceStore = options.evidenceStore ?? createInMemoryEvidenceStore({ now: kernelProviders.clock.now });
+  const passportStore = options.passportStore ?? (await buildPassportStore(configuration, kernelProviders.clock.now, eventIdGenerator.nextId));
   const eventPublisher = options.eventPublisher ?? createInProcessEventPublisher();
   const telemetry = options.telemetry ?? createEnterpriseTelemetry();
   const logger = options.logger ?? createEnterpriseLogger(configuration.logLevel);
-  const eventIdGenerator = createEnterpriseIdGenerator();
 
   const kernel =
     options.kernel ??
@@ -202,6 +223,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   registry.register(createGovernanceStoreModule(persistence, kernelProviders.clock.now));
   registry.register(createProvidersModule(kernelProviders, kernelProviders.clock.now, options.policyPackProvider !== undefined));
   registry.register(createKernelModule(kernel, kernelProviders.clock.now));
+  registry.register(createAgentPassportModule(passportStore, kernelProviders.clock.now, configuration.passport.required));
   for (const module of options.modules ?? []) registry.register(module);
   registry.freeze();
 
@@ -241,6 +263,14 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     now: kernelProviders.clock.now,
     nextId: eventIdGenerator.nextId,
   });
+  const passports = createAgentPassportService({
+    store: passportStore,
+    governanceStore: persistence,
+    evidenceStore,
+    telemetry,
+    now: kernelProviders.clock.now,
+    nextId: eventIdGenerator.nextId,
+  });
 
   const enterprise: AocEnterprise = {
     configuration,
@@ -250,6 +280,8 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     governanceReads,
     evidenceStore,
     evidence,
+    passportStore,
+    passports,
     eventPublisher,
     telemetry,
     logger,

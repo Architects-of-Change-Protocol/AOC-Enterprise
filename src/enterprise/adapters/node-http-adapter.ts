@@ -1,9 +1,22 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import { EnterpriseHttpError, mapEvidenceErrorToHttp } from '../api/enterprise-http-errors.js';
+import { EnterpriseHttpError, mapEvidenceErrorToHttp, mapAgentPassportErrorToHttp } from '../api/enterprise-http-errors.js';
 import type { AocEnterprise } from '../composition/composition-root.js';
 import { validateEvidenceBuildRequestBody, validateEvidenceVerifyRequestBody, toEvidenceBundleResponseBody, toEvidenceVerifyResponseBody } from '../api/evidence-contract.js';
 import { isEvidenceError } from '../evidence/errors.js';
+import { resolveGovernanceAccessContext } from '../orchestration/governance-read-service.js';
+import {
+  validateActorRequestBody,
+  validateBuildViewRequestBody,
+  validateIssuePassportRequestBody,
+  validateLinkEvidenceRequestBody,
+  validateLinkGovernanceRequestBody,
+  validateRetireRequestBody,
+  validateRevokeRequestBody,
+  validateSuspendRequestBody,
+  validateVerifyRequestBody,
+} from '../api/passport-contract.js';
+import { isAgentPassportError } from '../passport/errors.js';
 
 const MAX_BODY_BYTES = 1024 * 1024; // 1 MiB -- generous for a governance-evaluation payload, small enough to bound memory per request.
 
@@ -43,7 +56,14 @@ function writeJson(res: ServerResponse, statusCode: number, body: unknown): void
 }
 
 function writeError(res: ServerResponse, error: unknown, enterprise: AocEnterprise): void {
-  const httpError = error instanceof EnterpriseHttpError ? error : isEvidenceError(error) ? mapEvidenceErrorToHttp(error) : undefined;
+  const httpError =
+    error instanceof EnterpriseHttpError
+      ? error
+      : isEvidenceError(error)
+        ? mapEvidenceErrorToHttp(error)
+        : isAgentPassportError(error)
+          ? mapAgentPassportErrorToHttp(error)
+          : undefined;
   if (httpError !== undefined) {
     writeJson(res, httpError.httpStatus, {
       error: {
@@ -177,6 +197,119 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
       }
     }
 
+    // -- PR-006 Agent Passport Runtime endpoints. Tenant scoping is resolved
+    // entirely inside `enterprise.passports` (never here), the same way
+    // Evidence and Governance-read routes above defer to their services.
+    if (method === 'POST' && url.pathname === '/api/passports') {
+      const context = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+      readRequestBody(req)
+        .then((rawBody) => enterprise.passports.issuePassport(context, validateIssuePassportRequestBody(rawBody)))
+        .then((result) => writeJson(res, result.created ? 201 : 200, result))
+        .catch((error: unknown) => writeError(res, error, enterprise));
+      return;
+    }
+
+    if (method === 'GET') {
+      const match = matchPassportRoute(url.pathname);
+      if (match !== undefined) {
+        const context = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+        if (match.kind === 'passport') {
+          enterprise.passports
+            .getPassport(context, match.id)
+            .then((load) => writeJson(res, load.status === 'complete' ? 200 : 500, load))
+            .catch((error: unknown) => writeError(res, error, enterprise));
+          return;
+        }
+        if (match.kind === 'events') {
+          enterprise.passports
+            .getEvents(context, match.id)
+            .then((events) => writeJson(res, 200, { passportId: match.id, events }))
+            .catch((error: unknown) => writeError(res, error, enterprise));
+          return;
+        }
+        if (match.kind === 'history') {
+          enterprise.passports
+            .getHistorySummary(context, match.id)
+            .then((summary) => writeJson(res, 200, summary))
+            .catch((error: unknown) => writeError(res, error, enterprise));
+          return;
+        }
+      }
+    }
+
+    if (method === 'POST') {
+      const match = matchPassportActionRoute(url.pathname);
+      if (match !== undefined) {
+        const context = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+        const { passports } = enterprise;
+        switch (match.action) {
+          case 'activate':
+            readRequestBody(req)
+              .then((rawBody) => passports.activatePassport(context, match.id, validateActorRequestBody(rawBody).actorId))
+              .then((passport) => writeJson(res, 200, passport))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+          case 'suspend':
+            readRequestBody(req)
+              .then((rawBody) => passports.suspendPassport(context, match.id, validateSuspendRequestBody(rawBody)))
+              .then((passport) => writeJson(res, 200, passport))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+          case 'reactivate':
+            readRequestBody(req)
+              .then((rawBody) => passports.reactivatePassport(context, match.id, validateActorRequestBody(rawBody, 'reactivatedBy').actorId))
+              .then((passport) => writeJson(res, 200, passport))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+          case 'revoke':
+            readRequestBody(req)
+              .then((rawBody) => passports.revokePassport(context, match.id, validateRevokeRequestBody(rawBody)))
+              .then((passport) => writeJson(res, 200, passport))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+          case 'retire':
+            readRequestBody(req)
+              .then((rawBody) => passports.retirePassport(context, match.id, validateRetireRequestBody(rawBody)))
+              .then((passport) => writeJson(res, 200, passport))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+          case 'verify':
+            readRequestBody(req)
+              .then((rawBody) => passports.verifyPassport(context, match.id, validateVerifyRequestBody(rawBody).mode))
+              .then((result) => writeJson(res, result.valid ? 200 : 409, result))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+          case 'evidence':
+            readRequestBody(req)
+              .then((rawBody) => {
+                const body = validateLinkEvidenceRequestBody(rawBody);
+                return passports.linkEvidenceBundle(context, match.id, body.reference, body.actorId);
+              })
+              .then((passport) => writeJson(res, 200, passport))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+          case 'governance':
+            readRequestBody(req)
+              .then((rawBody) => {
+                const body = validateLinkGovernanceRequestBody(rawBody);
+                return passports.linkGovernanceRecord(context, match.id, body.reference, body.actorId);
+              })
+              .then((passport) => writeJson(res, 200, passport))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+          case 'views':
+            readRequestBody(req)
+              .then((rawBody) => {
+                const body = validateBuildViewRequestBody(rawBody);
+                return passports.buildView(context, match.id, body.viewType, body.generatedBy);
+              })
+              .then((view) => writeJson(res, 201, view))
+              .catch((error: unknown) => writeError(res, error, enterprise));
+            return;
+        }
+      }
+    }
+
     writeJson(res, 404, { error: { code: 'NOT_FOUND', message: `No route for ${method} ${url.pathname}.` } });
   };
 }
@@ -194,4 +327,33 @@ function matchGovernanceReadRoute(pathname: string): GovernanceReadRoute | undef
   const requestMatch = /^\/api\/governance\/requests\/([^/]+)$/.exec(pathname);
   if (requestMatch?.[1] !== undefined) return { kind: 'request', id: decodeURIComponent(requestMatch[1]) };
   return undefined;
+}
+
+type PassportReadRoute = { readonly kind: 'passport' | 'events' | 'history'; readonly id: string };
+
+/** `GET /api/passports/{id}`, `GET /api/passports/{id}/events`, `GET /api/passports/{id}/history`. */
+function matchPassportRoute(pathname: string): PassportReadRoute | undefined {
+  const eventsMatch = /^\/api\/passports\/([^/]+)\/events$/.exec(pathname);
+  if (eventsMatch?.[1] !== undefined) return { kind: 'events', id: decodeURIComponent(eventsMatch[1]) };
+  const historyMatch = /^\/api\/passports\/([^/]+)\/history$/.exec(pathname);
+  if (historyMatch?.[1] !== undefined) return { kind: 'history', id: decodeURIComponent(historyMatch[1]) };
+  const passportMatch = /^\/api\/passports\/([^/]+)$/.exec(pathname);
+  if (passportMatch?.[1] !== undefined) return { kind: 'passport', id: decodeURIComponent(passportMatch[1]) };
+  return undefined;
+}
+
+type PassportActionRoute = {
+  readonly action: 'activate' | 'suspend' | 'reactivate' | 'revoke' | 'retire' | 'verify' | 'evidence' | 'governance' | 'views';
+  readonly id: string;
+};
+
+const PASSPORT_ACTIONS: readonly PassportActionRoute['action'][] = ['activate', 'suspend', 'reactivate', 'revoke', 'retire', 'verify', 'evidence', 'governance', 'views'];
+
+/** `POST /api/passports/{id}/{action}` for every mutating/derived Passport action. */
+function matchPassportActionRoute(pathname: string): PassportActionRoute | undefined {
+  const match = /^\/api\/passports\/([^/]+)\/([^/]+)$/.exec(pathname);
+  if (match?.[1] === undefined || match[2] === undefined) return undefined;
+  const action = match[2];
+  if (!(PASSPORT_ACTIONS as readonly string[]).includes(action)) return undefined;
+  return { action: action as PassportActionRoute['action'], id: decodeURIComponent(match[1]) };
 }
