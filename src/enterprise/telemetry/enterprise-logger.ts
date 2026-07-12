@@ -20,6 +20,20 @@ export interface EnterpriseLogContext {
   readonly status?: string;
   readonly route?: string;
   readonly httpStatus?: number;
+  /** PR-007 Assurance Runtime fields (mission section 71). Still a closed set -- ids, statuses, and scores only; never evidence payloads, Bundles, Passport details, or secrets. */
+  readonly assessmentId?: string;
+  readonly frameworkId?: string;
+  readonly frameworkVersion?: string;
+  readonly subjectId?: string;
+  readonly subjectType?: string;
+  readonly organizationId?: string;
+  readonly controlId?: string;
+  readonly domainId?: string;
+  readonly findingId?: string;
+  readonly severity?: string;
+  readonly normalizedScore?: number;
+  readonly findingCount?: number;
+  readonly evaluatorVersion?: string;
 }
 
 export type EnterpriseLogLevel = 'debug' | 'info' | 'warn' | 'error';

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import { EnterpriseHttpError, mapEvidenceErrorToHttp, mapAgentPassportErrorToHttp } from '../api/enterprise-http-errors.js';
+import { EnterpriseHttpError, mapEvidenceErrorToHttp, mapAgentPassportErrorToHttp, mapAssuranceErrorToHttp } from '../api/enterprise-http-errors.js';
 import type { AocEnterprise } from '../composition/composition-root.js';
 import { validateEvidenceBuildRequestBody, validateEvidenceVerifyRequestBody, toEvidenceBundleResponseBody, toEvidenceVerifyResponseBody } from '../api/evidence-contract.js';
 import { isEvidenceError } from '../evidence/errors.js';
@@ -17,6 +17,15 @@ import {
   validateVerifyRequestBody,
 } from '../api/passport-contract.js';
 import { isAgentPassportError } from '../passport/errors.js';
+import { isAssuranceError } from '../assurance/errors.js';
+import {
+  validateCreateAssessmentRequestBody,
+  validateEvaluateAssessmentRequestBody,
+  validateFindingEventRequestBody,
+  validateManualReviewRequestBody,
+  validateReassessRequestBody,
+  validateSignalRequestBody,
+} from '../api/assurance-contract.js';
 
 const MAX_BODY_BYTES = 1024 * 1024; // 1 MiB -- generous for a governance-evaluation payload, small enough to bound memory per request.
 
@@ -63,7 +72,9 @@ function writeError(res: ServerResponse, error: unknown, enterprise: AocEnterpri
         ? mapEvidenceErrorToHttp(error)
         : isAgentPassportError(error)
           ? mapAgentPassportErrorToHttp(error)
-          : undefined;
+          : isAssuranceError(error)
+            ? mapAssuranceErrorToHttp(error)
+            : undefined;
   if (httpError !== undefined) {
     writeJson(res, httpError.httpStatus, {
       error: {
@@ -193,6 +204,118 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
           case 'request':
             respond(enterprise.governanceReads.getByRequestId(auth, readMatch.id), `No governance record for requestId '${readMatch.id}'.`);
             return;
+        }
+      }
+    }
+
+    // -- PR-007 Assurance Runtime endpoints (mission section 58). Tenant
+    // scoping, control logic, evidence selection, scoring, and eligibility
+    // all live inside `enterprise.assurance` -- this adapter only routes.
+    if (url.pathname.startsWith('/api/assurance/')) {
+      const context = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+      const { assurance } = enterprise;
+
+      if (method === 'POST' && url.pathname === '/api/assurance/assessments') {
+        readRequestBody(req)
+          .then((rawBody) => assurance.createAssessment(context, validateCreateAssessmentRequestBody(rawBody)))
+          .then((assessment) => writeJson(res, 201, assessment))
+          .catch((error: unknown) => writeError(res, error, enterprise));
+        return;
+      }
+
+      const assessmentAction = /^\/api\/assurance\/assessments\/([^/]+)\/(evaluate|verify|findings)$/.exec(url.pathname);
+      if (assessmentAction?.[1] !== undefined && assessmentAction[2] !== undefined) {
+        const assessmentId = decodeURIComponent(assessmentAction[1]);
+        if (method === 'POST' && assessmentAction[2] === 'evaluate') {
+          readRequestBody(req)
+            .then(async (rawBody) => {
+              const body = validateEvaluateAssessmentRequestBody(rawBody);
+              let assessment = await assurance.evaluateAssessment(context, assessmentId);
+              if (body.complete !== false && assessment.status === 'evaluating') {
+                assessment = await assurance.completeAssessment(context, assessmentId);
+              }
+              return assessment;
+            })
+            .then((assessment) => writeJson(res, 200, assessment))
+            .catch((error: unknown) => writeError(res, error, enterprise));
+          return;
+        }
+        if (method === 'POST' && assessmentAction[2] === 'verify') {
+          assurance
+            .verifyAssessment(context, assessmentId)
+            .then((result) => writeJson(res, result.valid ? 200 : 409, result))
+            .catch((error: unknown) => writeError(res, error, enterprise));
+          return;
+        }
+        if (method === 'GET' && assessmentAction[2] === 'findings') {
+          assurance
+            .listFindings(context, assessmentId)
+            .then((findings) => writeJson(res, 200, { assessmentId, findings }))
+            .catch((error: unknown) => writeError(res, error, enterprise));
+          return;
+        }
+      }
+
+      const assessmentMatch = /^\/api\/assurance\/assessments\/([^/]+)$/.exec(url.pathname);
+      if (method === 'GET' && assessmentMatch?.[1] !== undefined) {
+        const assessmentId = decodeURIComponent(assessmentMatch[1]);
+        assurance
+          .getAssessment(context, assessmentId)
+          .then((assessment) => {
+            if (assessment === null) {
+              writeJson(res, 404, { error: { code: 'ASSURANCE_ASSESSMENT_NOT_FOUND', message: `No Assurance assessment for assessmentId '${assessmentId}'.` } });
+              return;
+            }
+            writeJson(res, 200, assessment);
+          })
+          .catch((error: unknown) => writeError(res, error, enterprise));
+        return;
+      }
+
+      const findingEventsMatch = /^\/api\/assurance\/findings\/([^/]+)\/events$/.exec(url.pathname);
+      if (method === 'POST' && findingEventsMatch?.[1] !== undefined) {
+        const findingId = decodeURIComponent(findingEventsMatch[1]);
+        readRequestBody(req)
+          .then((rawBody) => assurance.appendFindingEvent(context, validateFindingEventRequestBody(rawBody, findingId)))
+          .then((event) => writeJson(res, 201, event))
+          .catch((error: unknown) => writeError(res, error, enterprise));
+        return;
+      }
+
+      if (method === 'POST' && url.pathname === '/api/assurance/manual-reviews') {
+        readRequestBody(req)
+          .then((rawBody) => assurance.recordManualReview(context, validateManualReviewRequestBody(rawBody)))
+          .then((review) => writeJson(res, 201, review))
+          .catch((error: unknown) => writeError(res, error, enterprise));
+        return;
+      }
+
+      if (method === 'POST' && url.pathname === '/api/assurance/signals') {
+        readRequestBody(req)
+          .then((rawBody) => assurance.processSignal(context, validateSignalRequestBody(rawBody)))
+          .then((result) => writeJson(res, 201, result))
+          .catch((error: unknown) => writeError(res, error, enterprise));
+        return;
+      }
+
+      const subjectMatch = /^\/api\/assurance\/subjects\/([^/]+)\/(state|reassess)$/.exec(url.pathname);
+      if (subjectMatch?.[1] !== undefined && subjectMatch[2] !== undefined) {
+        const subjectId = decodeURIComponent(subjectMatch[1]);
+        if (method === 'GET' && subjectMatch[2] === 'state') {
+          const frameworkId = url.searchParams.get('frameworkId') ?? undefined;
+          const frameworkVersion = url.searchParams.get('frameworkVersion') ?? undefined;
+          assurance
+            .getContinuousState(context, subjectId, frameworkId, frameworkVersion)
+            .then((state) => writeJson(res, 200, state))
+            .catch((error: unknown) => writeError(res, error, enterprise));
+          return;
+        }
+        if (method === 'POST' && subjectMatch[2] === 'reassess') {
+          readRequestBody(req)
+            .then((rawBody) => assurance.requestReassessment(context, validateReassessRequestBody(rawBody, subjectId)))
+            .then((assessment) => writeJson(res, 201, assessment))
+            .catch((error: unknown) => writeError(res, error, enterprise));
+          return;
         }
       }
     }

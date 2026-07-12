@@ -1,6 +1,7 @@
 import type { GovernanceStoreError } from '../governance-store/errors.js';
 import type { EvidenceError } from '../evidence/errors.js';
 import type { AgentPassportError } from '../passport/errors.js';
+import type { AssuranceError } from '../assurance/errors.js';
 
 /**
  * The AOC Enterprise Host's own HTTP error taxonomy (mission's "Enterprise
@@ -55,7 +56,33 @@ export type EnterpriseHttpErrorCode =
   | 'PASSPORT_INTEGRITY_FAILED'
   | 'PASSPORT_STORE_UNAVAILABLE'
   | 'PASSPORT_VERSION_UNSUPPORTED'
-  | 'PASSPORT_VALIDATION_ERROR';
+  | 'PASSPORT_VALIDATION_ERROR'
+  /** Assurance Runtime error codes surfaced on the wire (PR-007 section 59), mirroring how Governance Store, Evidence, and Passport errors are handled. */
+  | 'ASSURANCE_FRAMEWORK_NOT_FOUND'
+  | 'ASSURANCE_FRAMEWORK_VERSION_UNSUPPORTED'
+  | 'ASSURANCE_FRAMEWORK_INVALID'
+  | 'ASSURANCE_SCOPE_INVALID'
+  | 'ASSURANCE_SUBJECT_NOT_FOUND'
+  | 'ASSURANCE_EVIDENCE_INSUFFICIENT'
+  | 'ASSURANCE_EVIDENCE_INVALID'
+  | 'ASSURANCE_EVIDENCE_WRONG_TENANT'
+  | 'ASSURANCE_EVIDENCE_CONTRADICTORY'
+  | 'ASSURANCE_CONTROL_NOT_FOUND'
+  | 'ASSURANCE_CONTROL_EVALUATION_FAILED'
+  | 'ASSURANCE_MANUAL_REVIEW_REQUIRED'
+  | 'ASSURANCE_MANUAL_REVIEW_INVALID'
+  | 'ASSURANCE_ASSESSMENT_NOT_FOUND'
+  | 'ASSURANCE_ASSESSMENT_IMMUTABLE'
+  | 'ASSURANCE_ASSESSMENT_INCOMPLETE'
+  | 'ASSURANCE_FINDING_NOT_FOUND'
+  | 'ASSURANCE_INVALID_FINDING_TRANSITION'
+  | 'ASSURANCE_ELIGIBILITY_NOT_SATISFIED'
+  | 'ASSURANCE_SIGNAL_INVALID'
+  | 'ASSURANCE_INTEGRITY_FAILED'
+  | 'ASSURANCE_STORE_UNAVAILABLE'
+  | 'ASSURANCE_TENANT_SCOPE_REQUIRED'
+  | 'ASSURANCE_ACCESS_SCOPE_VIOLATION'
+  | 'ASSURANCE_VALIDATION_ERROR';
 
 export class EnterpriseHttpError extends Error {
   constructor(
@@ -162,6 +189,50 @@ export function mapAgentPassportErrorToHttp(error: AgentPassportError): Enterpri
     case 'PASSPORT_INTEGRITY_FAILED':
       return new EnterpriseHttpError(500, error.code, error.message, undefined, extra);
     case 'PASSPORT_STORE_UNAVAILABLE':
+      return new EnterpriseHttpError(503, error.code, error.message, undefined, extra);
+  }
+}
+
+/**
+ * Maps an `AssuranceError` onto the wire (PR-007 section 60), mirroring the
+ * other mappers. A failed control is a valid assessment RESULT with a 200
+ * body -- it never reaches this function; only failures *around* the
+ * evaluation do.
+ */
+export function mapAssuranceErrorToHttp(error: AssuranceError): EnterpriseHttpError {
+  const extra = error.details;
+  switch (error.code) {
+    case 'ASSURANCE_SCOPE_INVALID':
+    case 'ASSURANCE_FRAMEWORK_INVALID':
+    case 'ASSURANCE_FRAMEWORK_VERSION_UNSUPPORTED':
+    case 'ASSURANCE_SIGNAL_INVALID':
+    case 'ASSURANCE_EVIDENCE_INVALID':
+    case 'ASSURANCE_MANUAL_REVIEW_INVALID':
+    case 'ASSURANCE_VALIDATION_ERROR':
+      return new EnterpriseHttpError(400, error.code, error.message, undefined, extra);
+    case 'ASSURANCE_TENANT_SCOPE_REQUIRED':
+    case 'ASSURANCE_ACCESS_SCOPE_VIOLATION':
+    case 'ASSURANCE_EVIDENCE_WRONG_TENANT':
+      return new EnterpriseHttpError(403, error.code, error.message, undefined, extra);
+    case 'ASSURANCE_FRAMEWORK_NOT_FOUND':
+    case 'ASSURANCE_ASSESSMENT_NOT_FOUND':
+    case 'ASSURANCE_FINDING_NOT_FOUND':
+    case 'ASSURANCE_SUBJECT_NOT_FOUND':
+    case 'ASSURANCE_CONTROL_NOT_FOUND':
+      return new EnterpriseHttpError(404, error.code, error.message, undefined, extra);
+    case 'ASSURANCE_ASSESSMENT_IMMUTABLE':
+    case 'ASSURANCE_ASSESSMENT_INCOMPLETE':
+    case 'ASSURANCE_INVALID_FINDING_TRANSITION':
+      return new EnterpriseHttpError(409, error.code, error.message, undefined, extra);
+    case 'ASSURANCE_EVIDENCE_INSUFFICIENT':
+    case 'ASSURANCE_EVIDENCE_CONTRADICTORY':
+    case 'ASSURANCE_MANUAL_REVIEW_REQUIRED':
+    case 'ASSURANCE_ELIGIBILITY_NOT_SATISFIED':
+      return new EnterpriseHttpError(422, error.code, error.message, undefined, extra);
+    case 'ASSURANCE_INTEGRITY_FAILED':
+    case 'ASSURANCE_CONTROL_EVALUATION_FAILED':
+      return new EnterpriseHttpError(500, error.code, error.message, undefined, extra);
+    case 'ASSURANCE_STORE_UNAVAILABLE':
       return new EnterpriseHttpError(503, error.code, error.message, undefined, extra);
   }
 }

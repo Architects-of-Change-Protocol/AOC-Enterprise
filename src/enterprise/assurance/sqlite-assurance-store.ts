@@ -1,0 +1,718 @@
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+
+import { AssuranceError } from './errors.js';
+import { verifyAssuranceAssessment } from './verification.js';
+import { applyFindingTransition, foldFindingStatus } from './findings.js';
+import {
+  canAccessAssuranceOrganization,
+  requireAccessToAssuranceOrganization,
+  requireAssuranceTenantScope,
+  type AssuranceStore,
+} from './assurance-store.js';
+import type {
+  AssuranceAccessContext,
+  AssuranceAssessment,
+  AssuranceAssessmentSummary,
+  AssuranceFinding,
+  AssuranceFindingEvent,
+  AssuranceFindingEventType,
+  AssuranceFramework,
+  AssuranceManualReviewRecord,
+  AssuranceSignal,
+} from './contracts.js';
+import { ASSURANCE_STORE_SCHEMA_VERSION, ASSURANCE_TERMINAL_STATUSES } from './contracts.js';
+
+export interface CreateSqliteAssuranceStoreOptions {
+  readonly now?: () => string;
+  readonly busyTimeoutMs?: number;
+}
+
+const DEFAULT_BUSY_TIMEOUT_MS = 5_000;
+
+// ---------------------------------------------------------------------------
+// Schema (`aoc.assurance-store.schema.v1`). The assessment aggregate is
+// canonical in `assessment_json`; the normalized child tables
+// (evidence references, control evaluations, domain assessments, scores,
+// eligibility) are written once, when the assessment reaches a terminal
+// status, purely as queryable projections -- never a second source of truth.
+// Finding events, manual reviews, and signals are append-only.
+// ---------------------------------------------------------------------------
+const SCHEMA_V1 = `
+  CREATE TABLE IF NOT EXISTS assurance_store_versions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    schema_version TEXT NOT NULL,
+    migration_state TEXT NOT NULL,
+    recorded_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS assurance_frameworks (
+    framework_id TEXT NOT NULL,
+    framework_version TEXT NOT NULL,
+    status TEXT NOT NULL,
+    definition_json TEXT NOT NULL,
+    recorded_at TEXT NOT NULL,
+    PRIMARY KEY (framework_id, framework_version)
+  );
+
+  CREATE TABLE IF NOT EXISTS assurance_assessments (
+    assessment_id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
+    subject_id TEXT NOT NULL,
+    subject_type TEXT NOT NULL,
+    framework_id TEXT NOT NULL,
+    framework_version TEXT NOT NULL,
+    status TEXT NOT NULL,
+    normalized_score REAL NOT NULL,
+    created_at TEXT NOT NULL,
+    completed_at TEXT,
+    superseded_by TEXT,
+    assessment_json TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_assurance_assessments_org ON assurance_assessments(organization_id);
+  CREATE INDEX IF NOT EXISTS idx_assurance_assessments_subject ON assurance_assessments(organization_id, subject_id);
+
+  CREATE TABLE IF NOT EXISTS assurance_evidence_references (
+    evidence_reference_id TEXT PRIMARY KEY,
+    assessment_id TEXT NOT NULL REFERENCES assurance_assessments(assessment_id),
+    organization_id TEXT NOT NULL,
+    evidence_type TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    verified INTEGER NOT NULL,
+    reference_json TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_assurance_evidence_assessment ON assurance_evidence_references(assessment_id);
+
+  CREATE TABLE IF NOT EXISTS assurance_control_evaluations (
+    control_evaluation_id TEXT PRIMARY KEY,
+    assessment_id TEXT NOT NULL REFERENCES assurance_assessments(assessment_id),
+    control_id TEXT NOT NULL,
+    domain_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    evaluation_json TEXT NOT NULL,
+    UNIQUE(assessment_id, control_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS assurance_domain_assessments (
+    domain_assessment_id TEXT PRIMARY KEY,
+    assessment_id TEXT NOT NULL REFERENCES assurance_assessments(assessment_id),
+    domain_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    normalized_score REAL NOT NULL,
+    domain_json TEXT NOT NULL,
+    UNIQUE(assessment_id, domain_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS assurance_scores (
+    assessment_id TEXT PRIMARY KEY REFERENCES assurance_assessments(assessment_id),
+    normalized_score REAL NOT NULL,
+    methodology_id TEXT NOT NULL,
+    methodology_version TEXT NOT NULL,
+    score_json TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS assurance_eligibility_results (
+    assessment_id TEXT NOT NULL REFERENCES assurance_assessments(assessment_id),
+    profile_id TEXT NOT NULL,
+    eligible INTEGER NOT NULL,
+    provisional INTEGER NOT NULL,
+    result_json TEXT NOT NULL,
+    PRIMARY KEY (assessment_id, profile_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS assurance_findings (
+    finding_id TEXT PRIMARY KEY,
+    assessment_id TEXT NOT NULL REFERENCES assurance_assessments(assessment_id),
+    organization_id TEXT NOT NULL,
+    control_id TEXT NOT NULL,
+    domain_id TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    finding_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_assurance_findings_assessment ON assurance_findings(assessment_id);
+
+  CREATE TABLE IF NOT EXISTS assurance_finding_events (
+    finding_event_id TEXT PRIMARY KEY,
+    finding_id TEXT NOT NULL REFERENCES assurance_findings(finding_id),
+    assessment_id TEXT NOT NULL,
+    organization_id TEXT NOT NULL,
+    sequence INTEGER NOT NULL,
+    event_type TEXT NOT NULL,
+    actor_id TEXT NOT NULL,
+    rationale TEXT,
+    payload_json TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    event_digest TEXT NOT NULL,
+    UNIQUE(finding_id, sequence)
+  );
+
+  CREATE TABLE IF NOT EXISTS assurance_manual_reviews (
+    review_id TEXT PRIMARY KEY,
+    assessment_id TEXT NOT NULL REFERENCES assurance_assessments(assessment_id),
+    organization_id TEXT NOT NULL,
+    control_id TEXT NOT NULL,
+    reviewer_id TEXT NOT NULL,
+    review_json TEXT NOT NULL,
+    reviewed_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_assurance_reviews_assessment ON assurance_manual_reviews(assessment_id);
+
+  CREATE TABLE IF NOT EXISTS assurance_signals (
+    signal_id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
+    subject_id TEXT NOT NULL,
+    subject_type TEXT NOT NULL,
+    signal_type TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    observed_at TEXT NOT NULL,
+    signal_json TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_assurance_signals_subject ON assurance_signals(organization_id, subject_id);
+`;
+
+interface AssessmentRow {
+  readonly assessment_id: string;
+  readonly organization_id: string;
+  readonly status: string;
+  readonly superseded_by: string | null;
+  readonly assessment_json: string;
+}
+
+function resolveOnDisk(dbPath: string): string {
+  const absPath = resolve(dbPath);
+  const dir = dirname(absPath);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return absPath;
+}
+
+function rowToAssessment(row: AssessmentRow): AssuranceAssessment {
+  const assessment = JSON.parse(row.assessment_json) as AssuranceAssessment;
+  // The store-level lifecycle overlay (supersession) lives in columns, not in
+  // the frozen JSON -- overlay it on read (mission section 40).
+  if (row.status === 'superseded' && row.superseded_by !== null) {
+    return { ...assessment, status: 'superseded', supersededByAssessmentId: row.superseded_by };
+  }
+  return assessment;
+}
+
+/**
+ * SQLite-backed Assurance Store (mission sections 50-51): `better-sqlite3`
+ * loaded lazily, hand-written SQL, explicit schema, transactions, prepared
+ * statements, foreign keys, uniqueness constraints, indexes. No SQLite
+ * implementation type escapes this factory.
+ */
+export async function createSqliteAssuranceStore(dbPath: string, options: CreateSqliteAssuranceStoreOptions = {}): Promise<AssuranceStore> {
+  const { default: Database } = await import('better-sqlite3');
+
+  const now = options.now ?? (() => new Date().toISOString());
+  const path = dbPath === ':memory:' ? ':memory:' : resolveOnDisk(dbPath);
+  const db = new Database(path);
+  db.pragma('foreign_keys = ON');
+  db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = FULL');
+  db.pragma(`busy_timeout = ${options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS}`);
+  db.exec(SCHEMA_V1);
+
+  const versionCount = (db.prepare(`SELECT COUNT(*) AS count FROM assurance_store_versions`).get() as { count: number }).count;
+  if (versionCount === 0) {
+    db.prepare(`INSERT INTO assurance_store_versions (schema_version, migration_state, recorded_at) VALUES (?, 'current', ?)`).run(ASSURANCE_STORE_SCHEMA_VERSION, now());
+  }
+
+  const selectAssessment = db.prepare(`SELECT * FROM assurance_assessments WHERE assessment_id = ?`);
+  const upsertAssessment = db.prepare(`INSERT INTO assurance_assessments
+    (assessment_id, organization_id, subject_id, subject_type, framework_id, framework_version, status, normalized_score, created_at, completed_at, superseded_by, assessment_json)
+    VALUES (@assessmentId, @organizationId, @subjectId, @subjectType, @frameworkId, @frameworkVersion, @status, @normalizedScore, @createdAt, @completedAt, NULL, @assessmentJson)
+    ON CONFLICT(assessment_id) DO UPDATE SET status = @status, normalized_score = @normalizedScore, completed_at = @completedAt, assessment_json = @assessmentJson`);
+  const insertFinding = db.prepare(`INSERT INTO assurance_findings (finding_id, assessment_id, organization_id, control_id, domain_id, severity, finding_json, created_at)
+    VALUES (@findingId, @assessmentId, @organizationId, @controlId, @domainId, @severity, @findingJson, @createdAt)`);
+  const selectFinding = db.prepare(`SELECT * FROM assurance_findings WHERE finding_id = ?`);
+  const selectFindingsByAssessment = db.prepare(`SELECT * FROM assurance_findings WHERE assessment_id = ? ORDER BY created_at ASC, finding_id ASC`);
+  const insertFindingEvent = db.prepare(`INSERT INTO assurance_finding_events
+    (finding_event_id, finding_id, assessment_id, organization_id, sequence, event_type, actor_id, rationale, payload_json, occurred_at, event_digest)
+    VALUES (@findingEventId, @findingId, @assessmentId, @organizationId, @sequence, @eventType, @actorId, @rationale, @payloadJson, @occurredAt, @eventDigest)`);
+  const selectFindingEvents = db.prepare(`SELECT * FROM assurance_finding_events WHERE finding_id = ? ORDER BY sequence ASC`);
+  const insertManualReview = db.prepare(`INSERT INTO assurance_manual_reviews (review_id, assessment_id, organization_id, control_id, reviewer_id, review_json, reviewed_at)
+    VALUES (@reviewId, @assessmentId, @organizationId, @controlId, @reviewerId, @reviewJson, @reviewedAt)`);
+  const selectManualReviews = db.prepare(`SELECT review_json FROM assurance_manual_reviews WHERE assessment_id = ? ORDER BY reviewed_at ASC, review_id ASC`);
+  const insertSignal = db.prepare(`INSERT INTO assurance_signals (signal_id, organization_id, subject_id, subject_type, signal_type, severity, occurred_at, observed_at, signal_json)
+    VALUES (@signalId, @organizationId, @subjectId, @subjectType, @signalType, @severity, @occurredAt, @observedAt, @signalJson)`);
+
+  const insertEvidenceReference = db.prepare(`INSERT OR IGNORE INTO assurance_evidence_references (evidence_reference_id, assessment_id, organization_id, evidence_type, external_id, verified, reference_json)
+    VALUES (@evidenceReferenceId, @assessmentId, @organizationId, @evidenceType, @externalId, @verified, @referenceJson)`);
+  const insertControlEvaluation = db.prepare(`INSERT OR IGNORE INTO assurance_control_evaluations (control_evaluation_id, assessment_id, control_id, domain_id, status, evaluation_json)
+    VALUES (@controlEvaluationId, @assessmentId, @controlId, @domainId, @status, @evaluationJson)`);
+  const insertDomainAssessment = db.prepare(`INSERT OR IGNORE INTO assurance_domain_assessments (domain_assessment_id, assessment_id, domain_id, status, normalized_score, domain_json)
+    VALUES (@domainAssessmentId, @assessmentId, @domainId, @status, @normalizedScore, @domainJson)`);
+  const insertScore = db.prepare(`INSERT OR IGNORE INTO assurance_scores (assessment_id, normalized_score, methodology_id, methodology_version, score_json)
+    VALUES (@assessmentId, @normalizedScore, @methodologyId, @methodologyVersion, @scoreJson)`);
+  const insertEligibility = db.prepare(`INSERT OR IGNORE INTO assurance_eligibility_results (assessment_id, profile_id, eligible, provisional, result_json)
+    VALUES (@assessmentId, @profileId, @eligible, @provisional, @resultJson)`);
+
+  let closed = false;
+
+  function assertOpen(): void {
+    if (closed) throw new AssuranceError('ASSURANCE_STORE_UNAVAILABLE', 'The Assurance Store has been closed.');
+  }
+
+  function loadAssessmentRow(assessmentId: string): AssessmentRow | undefined {
+    return selectAssessment.get(assessmentId) as AssessmentRow | undefined;
+  }
+
+  function loadFindingEvents(findingId: string): AssuranceFindingEvent[] {
+    const rows = selectFindingEvents.all(findingId) as {
+      finding_event_id: string;
+      finding_id: string;
+      assessment_id: string;
+      organization_id: string;
+      sequence: number;
+      event_type: string;
+      actor_id: string;
+      rationale: string | null;
+      payload_json: string;
+      occurred_at: string;
+      event_digest: string;
+    }[];
+    return rows.map((row) => ({
+      findingEventId: row.finding_event_id,
+      findingId: row.finding_id,
+      assessmentId: row.assessment_id,
+      organizationId: row.organization_id,
+      eventType: row.event_type as AssuranceFindingEventType,
+      sequence: row.sequence,
+      actorId: row.actor_id,
+      ...(row.rationale !== null ? { rationale: row.rationale } : {}),
+      payload: JSON.parse(row.payload_json) as Readonly<Record<string, unknown>>,
+      occurredAt: row.occurred_at,
+      eventDigest: row.event_digest,
+    }));
+  }
+
+  function findingWithFoldedStatus(finding: AssuranceFinding): AssuranceFinding {
+    const folded = foldFindingStatus(loadFindingEvents(finding.findingId));
+    return folded === undefined ? finding : { ...finding, status: folded };
+  }
+
+  function requireVisibleAssessment(context: AssuranceAccessContext, assessmentId: string): AssuranceAssessment {
+    const row = loadAssessmentRow(assessmentId);
+    if (row === undefined || !canAccessAssuranceOrganization(context, row.organization_id)) {
+      throw new AssuranceError('ASSURANCE_ASSESSMENT_NOT_FOUND', `No Assurance assessment for assessmentId '${assessmentId}' within this scope.`);
+    }
+    return rowToAssessment(row);
+  }
+
+  return {
+    providerKind: 'sqlite',
+
+    async saveFramework(context, framework) {
+      assertOpen();
+      if (!context.system) {
+        throw new AssuranceError('ASSURANCE_ACCESS_SCOPE_VIOLATION', 'Only system callers may persist Assurance framework definitions.');
+      }
+      try {
+        db.prepare(`INSERT INTO assurance_frameworks (framework_id, framework_version, status, definition_json, recorded_at) VALUES (?, ?, ?, ?, ?)`).run(
+          framework.frameworkId,
+          framework.frameworkVersion,
+          framework.status,
+          JSON.stringify(framework),
+          now(),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('UNIQUE') || message.includes('PRIMARY')) {
+          throw new AssuranceError('ASSURANCE_FRAMEWORK_INVALID', `Framework '${framework.frameworkId}@${framework.frameworkVersion}' is already persisted; framework versions are immutable.`);
+        }
+        throw new AssuranceError('ASSURANCE_STORE_UNAVAILABLE', 'The Assurance Store failed to persist the framework definition.');
+      }
+    },
+
+    async getFramework(_context, frameworkId, frameworkVersion) {
+      assertOpen();
+      const row = db.prepare(`SELECT definition_json FROM assurance_frameworks WHERE framework_id = ? AND framework_version = ?`).get(frameworkId, frameworkVersion) as
+        | { definition_json: string }
+        | undefined;
+      return row === undefined ? null : (JSON.parse(row.definition_json) as AssuranceFramework);
+    },
+
+    async listFrameworks(_context) {
+      assertOpen();
+      const rows = db.prepare(`SELECT definition_json FROM assurance_frameworks ORDER BY framework_id ASC, framework_version ASC`).all() as { definition_json: string }[];
+      return rows.map((row) => JSON.parse(row.definition_json) as AssuranceFramework);
+    },
+
+    async saveAssessment(context, assessment) {
+      assertOpen();
+      requireAccessToAssuranceOrganization(context, assessment.subject.organizationId);
+
+      const runSave = db.transaction(() => {
+        const existing = loadAssessmentRow(assessment.assessmentId);
+        if (existing !== undefined) {
+          if (existing.organization_id !== assessment.subject.organizationId) {
+            throw new AssuranceError('ASSURANCE_ACCESS_SCOPE_VIOLATION', `Assessment '${assessment.assessmentId}' belongs to a different organization.`);
+          }
+          if ((ASSURANCE_TERMINAL_STATUSES as readonly string[]).includes(existing.status)) {
+            throw new AssuranceError('ASSURANCE_ASSESSMENT_IMMUTABLE', `Assessment '${assessment.assessmentId}' is '${existing.status}' and immutable; changed evidence or framework versions require a new assessment.`);
+          }
+        }
+        upsertAssessment.run({
+          assessmentId: assessment.assessmentId,
+          organizationId: assessment.subject.organizationId,
+          subjectId: assessment.subject.subjectId,
+          subjectType: assessment.subject.subjectType,
+          frameworkId: assessment.frameworkId,
+          frameworkVersion: assessment.frameworkVersion,
+          status: assessment.status,
+          normalizedScore: assessment.score.normalizedScore,
+          createdAt: assessment.createdAt,
+          completedAt: assessment.completedAt ?? null,
+          assessmentJson: JSON.stringify(assessment),
+        });
+        if ((ASSURANCE_TERMINAL_STATUSES as readonly string[]).includes(assessment.status)) {
+          // Findings rows persist only at the terminal save (re-evaluation
+          // before completion replaces the working findings set; only the
+          // final set gets an append-only lifecycle).
+          for (const finding of assessment.findings) {
+            const existingFinding = selectFinding.get(finding.findingId) as { finding_id: string } | undefined;
+            if (existingFinding === undefined) {
+              insertFinding.run({
+                findingId: finding.findingId,
+                assessmentId: finding.assessmentId,
+                organizationId: assessment.subject.organizationId,
+                controlId: finding.controlId,
+                domainId: finding.domainId,
+                severity: finding.severity,
+                findingJson: JSON.stringify(finding),
+                createdAt: finding.createdAt,
+              });
+            }
+          }
+          // Queryable projections, written exactly once at the terminal save.
+          for (const reference of assessment.evidenceReferences) {
+            insertEvidenceReference.run({
+              evidenceReferenceId: reference.evidenceReferenceId,
+              assessmentId: assessment.assessmentId,
+              organizationId: reference.organizationId,
+              evidenceType: reference.evidenceType,
+              externalId: reference.externalId,
+              verified: reference.verified ? 1 : 0,
+              referenceJson: JSON.stringify(reference),
+            });
+          }
+          for (const evaluation of assessment.controlEvaluations) {
+            insertControlEvaluation.run({
+              controlEvaluationId: evaluation.controlEvaluationId,
+              assessmentId: assessment.assessmentId,
+              controlId: evaluation.controlId,
+              domainId: evaluation.domainId,
+              status: evaluation.status,
+              evaluationJson: JSON.stringify(evaluation),
+            });
+          }
+          for (const domain of assessment.domainAssessments) {
+            insertDomainAssessment.run({
+              domainAssessmentId: domain.domainAssessmentId,
+              assessmentId: assessment.assessmentId,
+              domainId: domain.domainId,
+              status: domain.status,
+              normalizedScore: domain.normalizedScore,
+              domainJson: JSON.stringify(domain),
+            });
+          }
+          insertScore.run({
+            assessmentId: assessment.assessmentId,
+            normalizedScore: assessment.score.normalizedScore,
+            methodologyId: assessment.score.methodologyId,
+            methodologyVersion: assessment.score.methodologyVersion,
+            scoreJson: JSON.stringify(assessment.score),
+          });
+          for (const eligibility of assessment.eligibility) {
+            insertEligibility.run({
+              assessmentId: assessment.assessmentId,
+              profileId: eligibility.profileId,
+              eligible: eligibility.eligible ? 1 : 0,
+              provisional: eligibility.provisional ? 1 : 0,
+              resultJson: JSON.stringify(eligibility),
+            });
+          }
+        }
+      });
+      runSave();
+    },
+
+    async getAssessment(context, assessmentId) {
+      assertOpen();
+      requireAssuranceTenantScope(context);
+      const row = loadAssessmentRow(assessmentId);
+      if (row === undefined || !canAccessAssuranceOrganization(context, row.organization_id)) return null;
+      return rowToAssessment(row);
+    },
+
+    async queryAssessments(context, query) {
+      assertOpen();
+      requireAssuranceTenantScope(context);
+      const clauses: string[] = [];
+      const parameters: (string | number)[] = [];
+      if (!context.system) {
+        clauses.push('organization_id = ?');
+        parameters.push(context.organizationId ?? '');
+      }
+      if (query.subjectId !== undefined) {
+        clauses.push('subject_id = ?');
+        parameters.push(query.subjectId);
+      }
+      if (query.frameworkId !== undefined) {
+        clauses.push('framework_id = ?');
+        parameters.push(query.frameworkId);
+      }
+      if (query.frameworkVersion !== undefined) {
+        clauses.push('framework_version = ?');
+        parameters.push(query.frameworkVersion);
+      }
+      if (query.status !== undefined) {
+        clauses.push('status = ?');
+        parameters.push(query.status);
+      }
+      const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+      const total = (db.prepare(`SELECT COUNT(*) AS count FROM assurance_assessments ${where}`).get(...parameters) as { count: number }).count;
+      const rows = db
+        .prepare(`SELECT * FROM assurance_assessments ${where} ORDER BY created_at DESC, assessment_id DESC LIMIT ?`)
+        .all(...parameters, query.limit ?? 50) as (AssessmentRow & {
+        subject_id: string;
+        subject_type: string;
+        framework_id: string;
+        framework_version: string;
+        normalized_score: number;
+        created_at: string;
+        completed_at: string | null;
+      })[];
+      const summaries: AssuranceAssessmentSummary[] = rows.map((row) => ({
+        assessmentId: row.assessment_id,
+        subjectId: row.subject_id,
+        subjectType: row.subject_type as AssuranceAssessmentSummary['subjectType'],
+        organizationId: row.organization_id,
+        frameworkId: row.framework_id,
+        frameworkVersion: row.framework_version,
+        status: row.status as AssuranceAssessmentSummary['status'],
+        normalizedScore: row.normalized_score,
+        createdAt: row.created_at,
+        ...(row.completed_at !== null ? { completedAt: row.completed_at } : {}),
+      }));
+      return { assessments: summaries, total };
+    },
+
+    async markSuperseded(context, assessmentId, supersededByAssessmentId) {
+      assertOpen();
+      const assessment = requireVisibleAssessment(context, assessmentId);
+      requireAccessToAssuranceOrganization(context, assessment.subject.organizationId);
+      if (assessment.status !== 'completed') {
+        throw new AssuranceError('ASSURANCE_ASSESSMENT_IMMUTABLE', `Only a completed assessment can be marked superseded; '${assessmentId}' is '${assessment.status}'.`);
+      }
+      db.prepare(`UPDATE assurance_assessments SET status = 'superseded', superseded_by = ? WHERE assessment_id = ?`).run(supersededByAssessmentId, assessmentId);
+    },
+
+    async appendFindingEvent(context, event) {
+      assertOpen();
+      requireAccessToAssuranceOrganization(context, event.organizationId);
+      const runAppend = db.transaction(() => {
+        const findingRow = selectFinding.get(event.findingId) as { finding_id: string; organization_id: string } | undefined;
+        if (findingRow === undefined) {
+          throw new AssuranceError('ASSURANCE_FINDING_NOT_FOUND', `No Assurance finding for findingId '${event.findingId}'.`);
+        }
+        if (findingRow.organization_id !== event.organizationId) {
+          throw new AssuranceError('ASSURANCE_ACCESS_SCOPE_VIOLATION', `Finding event organization '${event.organizationId}' does not match finding '${event.findingId}'.`);
+        }
+        const events = loadFindingEvents(event.findingId);
+        if (event.sequence !== events.length + 1) {
+          throw new AssuranceError('ASSURANCE_INVALID_FINDING_TRANSITION', `Finding event sequence ${event.sequence} is not contiguous (expected ${events.length + 1}).`);
+        }
+        applyFindingTransition(foldFindingStatus(events), event.eventType);
+        insertFindingEvent.run({
+          findingEventId: event.findingEventId,
+          findingId: event.findingId,
+          assessmentId: event.assessmentId,
+          organizationId: event.organizationId,
+          sequence: event.sequence,
+          eventType: event.eventType,
+          actorId: event.actorId,
+          rationale: event.rationale ?? null,
+          payloadJson: JSON.stringify(event.payload),
+          occurredAt: event.occurredAt,
+          eventDigest: event.eventDigest,
+        });
+      });
+      runAppend();
+    },
+
+    async listFindingEvents(context, findingId) {
+      assertOpen();
+      requireAssuranceTenantScope(context);
+      return loadFindingEvents(findingId).filter((event) => canAccessAssuranceOrganization(context, event.organizationId));
+    },
+
+    async listFindings(context, assessmentId) {
+      assertOpen();
+      requireAssuranceTenantScope(context);
+      const row = loadAssessmentRow(assessmentId);
+      if (row === undefined || !canAccessAssuranceOrganization(context, row.organization_id)) return [];
+      const rows = selectFindingsByAssessment.all(assessmentId) as { finding_json: string }[];
+      return rows.map((findingRow) => findingWithFoldedStatus(JSON.parse(findingRow.finding_json) as AssuranceFinding));
+    },
+
+    async getFinding(context, findingId) {
+      assertOpen();
+      requireAssuranceTenantScope(context);
+      const row = selectFinding.get(findingId) as { organization_id: string; finding_json: string } | undefined;
+      if (row === undefined || !canAccessAssuranceOrganization(context, row.organization_id)) return null;
+      return findingWithFoldedStatus(JSON.parse(row.finding_json) as AssuranceFinding);
+    },
+
+    async saveFinding(context, finding) {
+      assertOpen();
+      const assessment = requireVisibleAssessment(context, finding.assessmentId);
+      requireAccessToAssuranceOrganization(context, assessment.subject.organizationId);
+      try {
+        insertFinding.run({
+          findingId: finding.findingId,
+          assessmentId: finding.assessmentId,
+          organizationId: assessment.subject.organizationId,
+          controlId: finding.controlId,
+          domainId: finding.domainId,
+          severity: finding.severity,
+          findingJson: JSON.stringify(finding),
+          createdAt: finding.createdAt,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('UNIQUE') || message.includes('PRIMARY')) {
+          throw new AssuranceError('ASSURANCE_VALIDATION_ERROR', `Finding '${finding.findingId}' already exists; finding history is append-only.`);
+        }
+        throw error;
+      }
+    },
+
+    async appendManualReview(context, review) {
+      assertOpen();
+      const assessment = requireVisibleAssessment(context, review.assessmentId);
+      requireAccessToAssuranceOrganization(context, assessment.subject.organizationId);
+      try {
+        insertManualReview.run({
+          reviewId: review.reviewId,
+          assessmentId: review.assessmentId,
+          organizationId: assessment.subject.organizationId,
+          controlId: review.controlId,
+          reviewerId: review.reviewerId,
+          reviewJson: JSON.stringify(review),
+          reviewedAt: review.reviewedAt,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('UNIQUE') || message.includes('PRIMARY')) {
+          throw new AssuranceError('ASSURANCE_MANUAL_REVIEW_INVALID', `Manual review '${review.reviewId}' already exists; reviews are append-only.`);
+        }
+        throw error;
+      }
+    },
+
+    async listManualReviews(context, assessmentId) {
+      assertOpen();
+      requireAssuranceTenantScope(context);
+      const row = loadAssessmentRow(assessmentId);
+      if (row === undefined || !canAccessAssuranceOrganization(context, row.organization_id)) return [];
+      const rows = selectManualReviews.all(assessmentId) as { review_json: string }[];
+      return rows.map((reviewRow) => JSON.parse(reviewRow.review_json) as AssuranceManualReviewRecord);
+    },
+
+    async appendSignal(context, signal) {
+      assertOpen();
+      requireAccessToAssuranceOrganization(context, signal.organizationId);
+      try {
+        insertSignal.run({
+          signalId: signal.signalId,
+          organizationId: signal.organizationId,
+          subjectId: signal.subjectId,
+          subjectType: signal.subjectType,
+          signalType: signal.signalType,
+          severity: signal.severity,
+          occurredAt: signal.occurredAt,
+          observedAt: signal.observedAt,
+          signalJson: JSON.stringify(signal),
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('UNIQUE') || message.includes('PRIMARY')) {
+          throw new AssuranceError('ASSURANCE_SIGNAL_INVALID', `Signal '${signal.signalId}' already exists; signals are append-only.`);
+        }
+        throw error;
+      }
+    },
+
+    async listSignals(context, query) {
+      assertOpen();
+      requireAssuranceTenantScope(context);
+      const clauses: string[] = [];
+      const parameters: (string | number)[] = [];
+      if (!context.system) {
+        clauses.push('organization_id = ?');
+        parameters.push(context.organizationId ?? '');
+      }
+      if (query.subjectId !== undefined) {
+        clauses.push('subject_id = ?');
+        parameters.push(query.subjectId);
+      }
+      if (query.signalType !== undefined) {
+        clauses.push('signal_type = ?');
+        parameters.push(query.signalType);
+      }
+      if (query.since !== undefined) {
+        clauses.push('observed_at >= ?');
+        parameters.push(query.since);
+      }
+      const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+      const rows = db.prepare(`SELECT signal_json FROM assurance_signals ${where} ORDER BY observed_at ASC, signal_id ASC LIMIT ?`).all(...parameters, query.limit ?? 200) as {
+        signal_json: string;
+      }[];
+      return rows.map((row) => JSON.parse(row.signal_json) as AssuranceSignal);
+    },
+
+    async verifyAssessment(context, assessmentId) {
+      assertOpen();
+      const assessment = requireVisibleAssessment(context, assessmentId);
+      const frameworkRow = db
+        .prepare(`SELECT definition_json FROM assurance_frameworks WHERE framework_id = ? AND framework_version = ?`)
+        .get(assessment.frameworkId, assessment.frameworkVersion) as { definition_json: string } | undefined;
+      const framework = frameworkRow === undefined ? undefined : (JSON.parse(frameworkRow.definition_json) as AssuranceFramework);
+      return verifyAssuranceAssessment({ assessment, ...(framework !== undefined ? { framework } : {}), now });
+    },
+
+    async health() {
+      let readable = false;
+      let migrationState = 'unknown';
+      try {
+        const row = db.prepare(`SELECT schema_version, migration_state FROM assurance_store_versions ORDER BY id DESC LIMIT 1`).get() as
+          | { schema_version: string; migration_state: string }
+          | undefined;
+        readable = true;
+        migrationState = row?.migration_state ?? 'unknown';
+      } catch {
+        readable = false;
+      }
+      const writable = readable && !closed;
+      return {
+        status: closed || !readable || !writable ? 'unhealthy' : 'healthy',
+        readable,
+        writable,
+        schemaVersion: ASSURANCE_STORE_SCHEMA_VERSION,
+        migrationState,
+        checkedAt: now(),
+      };
+    },
+
+    async close() {
+      if (!closed) {
+        closed = true;
+        db.close();
+      }
+    },
+  };
+}

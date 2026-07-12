@@ -64,6 +64,46 @@ export interface GovernanceRecordCommitFailedEvent extends EnterpriseEventBase {
 }
 
 /**
+ * PR-007 Assurance Runtime operational events (mission section 69). These
+ * are notifications that Assurance work happened -- the canonical assessment
+ * and finding history lives in the Assurance Store, never here. Deliberately
+ * a distinct shape from `EnterpriseEventBase` (no `requestId`: an assessment
+ * is not a governance evaluation) and without `lifecycleCorrelationId`, so
+ * the composition root's lifecycle-persistence subscription ignores them.
+ */
+export type AssuranceEnterpriseEventType =
+  | 'AssuranceAssessmentCreated'
+  | 'AssuranceEvidenceCollectionStarted'
+  | 'AssuranceEvidenceResolved'
+  | 'AssuranceControlEvaluated'
+  | 'AssuranceFindingCreated'
+  | 'AssuranceManualReviewRequested'
+  | 'AssuranceManualReviewCompleted'
+  | 'AssuranceDomainEvaluated'
+  | 'AssuranceScoreCalculated'
+  | 'AssuranceEligibilityEvaluated'
+  | 'AssuranceAssessmentCompleted'
+  | 'AssuranceAssessmentFailed'
+  | 'AssuranceAssessmentSuperseded'
+  | 'AssuranceAssessmentMarkedStale'
+  | 'AssuranceSignalReceived'
+  | 'AssuranceReassessmentRequested';
+
+export interface AssuranceEnterpriseEvent {
+  readonly eventId: string;
+  readonly type: AssuranceEnterpriseEventType;
+  readonly occurredAt: string;
+  /** The Assurance correlation identity (assessment or subject id). Named `requestId` for union uniformity with governance events -- consumers that read `event.requestId` keep working unchanged. */
+  readonly requestId: string;
+  readonly correlationId?: string;
+  readonly assessmentId?: string;
+  readonly organizationId?: string;
+  readonly subjectId?: string;
+  /** Bounded structured detail (ids, statuses, codes) -- never evidence payloads, scores' full traces, or secrets. */
+  readonly detail?: Readonly<Record<string, unknown>>;
+}
+
+/**
  * `EnterpriseLifecycleEvent` (`../lifecycle/lifecycle-events.ts`) is folded
  * into this same publisher's event union so lifecycle events flow through
  * the one Enterprise event system the mission asks for -- no second event
@@ -74,7 +114,8 @@ export type EnterpriseEvent =
   | GovernanceEvaluationCompletedEvent
   | GovernanceRecordCommittedEvent
   | GovernanceRecordCommitFailedEvent
-  | EnterpriseLifecycleEvent;
+  | EnterpriseLifecycleEvent
+  | AssuranceEnterpriseEvent;
 
 export interface EnterpriseEventPublisher {
   publish(event: EnterpriseEvent): Promise<void>;

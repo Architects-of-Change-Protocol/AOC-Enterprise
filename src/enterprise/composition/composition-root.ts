@@ -34,6 +34,14 @@ import { createGovernanceStoreModule } from '../modules/governance-store-module.
 import { createProvidersModule } from '../modules/providers-module.js';
 import { createKernelModule } from '../modules/kernel-module.js';
 import { createAgentPassportModule } from '../modules/passport-module.js';
+import { createAssuranceModule } from '../modules/assurance-module.js';
+import { createAssuranceFrameworkRegistry, type AssuranceFrameworkRegistry } from '../assurance/framework-registry.js';
+import { AOC_SAF_FRAMEWORK_V1 } from '../assurance/saf-framework.js';
+import { createInMemoryAssuranceStore } from '../assurance/in-memory-assurance-store.js';
+import { createSqliteAssuranceStore } from '../assurance/sqlite-assurance-store.js';
+import type { AssuranceStore } from '../assurance/assurance-store.js';
+import { createAssuranceService, type AssuranceService } from '../assurance/service.js';
+import type { AssuranceFramework } from '../assurance/contracts.js';
 
 /** Transport-level input to `AocEnterprise.evaluate()` -- the not-yet-validated wire payload. Validated internally against `GovernanceEvaluateRequestBody`; see `EnterpriseRequestContext` for the side-channel (auth header) that travels alongside it. */
 export type EnterpriseEvaluationRequest = unknown;
@@ -71,6 +79,10 @@ export interface CreateEnterpriseOptions {
   readonly evidenceStore?: EvidenceStore;
   /** PR-006: the Agent Passport Store. Independent of `persistence` and `evidenceStore` -- Passport events are never stored inside the Governance Store or the Evidence Bundle Store. */
   readonly passportStore?: AgentPassportStore;
+  /** PR-007: the Assurance Store. Independent of every other store -- assessments are never persisted inside the Governance, Evidence, or Passport stores (mission section 48). */
+  readonly assuranceStore?: AssuranceStore;
+  /** PR-007: additional Assurance frameworks registered alongside the built-in `aoc.saf` 1.0.0. Each is validated at registration; an invalid framework fails composition. */
+  readonly assuranceFrameworks?: readonly AssuranceFramework[];
   readonly eventPublisher?: EnterpriseEventPublisher;
   readonly telemetry?: EnterpriseTelemetry;
   readonly logger?: EnterpriseLogger;
@@ -108,6 +120,12 @@ export interface AocEnterprise {
   readonly passportStore: AgentPassportStore;
   /** PR-006: issue/lifecycle/reference/verify/view surface for Agent Passports. HTTP handlers and embedders consume this instead of calling the Passport Store directly. */
   readonly passports: AgentPassportService;
+  /** PR-007: the Assurance Store, independent of every other store. */
+  readonly assuranceStore: AssuranceStore;
+  /** PR-007: assess/verify/findings/eligibility/signals/report surface for the Assurance Runtime. HTTP handlers and embedders consume this instead of touching the engines directly. */
+  readonly assurance: AssuranceService;
+  /** PR-007: the frozen Assurance Framework Registry (read surface: `get`/`list`/`validate`). */
+  readonly assuranceFrameworks: AssuranceFrameworkRegistry;
   readonly eventPublisher: EnterpriseEventPublisher;
   readonly telemetry: EnterpriseTelemetry;
   readonly logger: EnterpriseLogger;
@@ -149,6 +167,14 @@ async function buildPassportStore(configuration: EnterpriseConfiguration, now: (
   return createInMemoryPassportStore(storeOptions);
 }
 
+/** Mirrors `buildPassportStore`, but for the independent Assurance Store (PR-007 section 48) -- again a distinct on-disk file. */
+async function buildAssuranceStore(configuration: EnterpriseConfiguration, now: () => string): Promise<AssuranceStore> {
+  if (configuration.persistence.provider === 'sqlite') {
+    return createSqliteAssuranceStore(configuration.assurance.sqlitePath, { now, busyTimeoutMs: configuration.persistence.busyTimeoutMs });
+  }
+  return createInMemoryAssuranceStore({ now });
+}
+
 /** A dedicated id source for Enterprise-internal bookkeeping (event ids, boot id) -- independent of the Kernel's own `idGenerator`, so Enterprise bookkeeping never perturbs the Kernel's internal id sequence. */
 function createEnterpriseIdGenerator(): KernelIdGenerator {
   return { nextId: (prefix: string) => `${prefix}-${randomUUID()}` };
@@ -185,6 +211,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   const persistence = options.persistence ?? (await buildStore(configuration, kernelProviders.clock.now));
   const evidenceStore = options.evidenceStore ?? createInMemoryEvidenceStore({ now: kernelProviders.clock.now });
   const passportStore = options.passportStore ?? (await buildPassportStore(configuration, kernelProviders.clock.now, eventIdGenerator.nextId));
+  const assuranceStore = options.assuranceStore ?? (await buildAssuranceStore(configuration, kernelProviders.clock.now));
   const eventPublisher = options.eventPublisher ?? createInProcessEventPublisher();
   const telemetry = options.telemetry ?? createEnterpriseTelemetry();
   const logger = options.logger ?? createEnterpriseLogger(configuration.logLevel);
@@ -217,6 +244,21 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     }
   });
 
+  // PR-007: register Assurance frameworks at composition time (mission
+  // section 46) -- the built-in `aoc.saf` 1.0.0 plus any caller-supplied
+  // frameworks; the registry freezes when the Assurance module initializes.
+  const assuranceFrameworkRegistry = createAssuranceFrameworkRegistry();
+  assuranceFrameworkRegistry.register(AOC_SAF_FRAMEWORK_V1);
+  for (const framework of options.assuranceFrameworks ?? []) assuranceFrameworkRegistry.register(framework);
+  for (const framework of assuranceFrameworkRegistry.list()) {
+    const definition = assuranceFrameworkRegistry.get(framework.frameworkId, framework.frameworkVersion);
+    if (definition !== undefined) {
+      // Best-effort persistence of the definition so stored assessments can be
+      // verified against their framework even across process restarts.
+      await assuranceStore.saveFramework({ system: true }, definition).catch(() => {});
+    }
+  }
+
   const registry = createEnterpriseModuleRegistry();
   registry.register(createTelemetryModule(telemetry, configuration.telemetry.enabled, kernelProviders.clock.now));
   registry.register(createEventsModule(eventPublisher, configuration.eventPublishing.enabled, kernelProviders.clock.now));
@@ -224,6 +266,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   registry.register(createProvidersModule(kernelProviders, kernelProviders.clock.now, options.policyPackProvider !== undefined));
   registry.register(createKernelModule(kernel, kernelProviders.clock.now));
   registry.register(createAgentPassportModule(passportStore, kernelProviders.clock.now, configuration.passport.required));
+  registry.register(createAssuranceModule(assuranceStore, assuranceFrameworkRegistry, kernelProviders.clock.now, configuration.assurance.required));
   for (const module of options.modules ?? []) registry.register(module);
   registry.freeze();
 
@@ -271,6 +314,28 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     now: kernelProviders.clock.now,
     nextId: eventIdGenerator.nextId,
   });
+  const assurance = createAssuranceService({
+    store: assuranceStore,
+    registry: assuranceFrameworkRegistry,
+    evidenceSources: {
+      governanceStore: persistence,
+      evidenceStore,
+      passportStore,
+      runtimeHealth: async () => ({
+        ready: lifecycle.isReady(),
+        lifecycleState: lifecycle.lifecycleState(),
+        modules: lifecycle.modules().map((module) => ({ moduleId: module.id, version: module.version, status: module.state })),
+        observedAt: kernelProviders.clock.now(),
+      }),
+    },
+    telemetry,
+    eventPublisher,
+    logger,
+    now: kernelProviders.clock.now,
+    nextId: eventIdGenerator.nextId,
+    enterpriseVersion: configuration.enterpriseVersion,
+    moduleSnapshot: () => lifecycle.modules().map((module) => ({ moduleId: module.id, version: module.version, status: module.state })),
+  });
 
   const enterprise: AocEnterprise = {
     configuration,
@@ -282,6 +347,9 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     evidence,
     passportStore,
     passports,
+    assuranceStore,
+    assurance,
+    assuranceFrameworks: assuranceFrameworkRegistry,
     eventPublisher,
     telemetry,
     logger,

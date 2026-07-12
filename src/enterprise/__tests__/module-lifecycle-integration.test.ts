@@ -23,9 +23,18 @@ describe('AOC Enterprise Module Lifecycle & Registry (integration via createEnte
     const ids = modules.map((m) => m.id).sort();
     // PR-004: 'aoc.enterprise.persistence' evolved into the Governance Store module (documented migration).
     // PR-006: 'aoc.enterprise.agent-passport' (Agent Passport Runtime) joined the built-in module set.
+    // PR-007: 'aoc.enterprise.assurance' (Assurance Runtime) joined the built-in module set.
     assert.deepEqual(
       ids,
-      ['aoc.enterprise.agent-passport', 'aoc.enterprise.events', 'aoc.enterprise.governance-store', 'aoc.enterprise.providers', 'aoc.enterprise.telemetry', 'aoc.kernel'].sort(),
+      [
+        'aoc.enterprise.agent-passport',
+        'aoc.enterprise.assurance',
+        'aoc.enterprise.events',
+        'aoc.enterprise.governance-store',
+        'aoc.enterprise.providers',
+        'aoc.enterprise.telemetry',
+        'aoc.kernel',
+      ].sort(),
     );
     for (const module of modules) assert.equal(module.state, 'ready');
 
