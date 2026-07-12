@@ -4,7 +4,7 @@
 
 Canonical runtime contracts follow **semantic versioning** with an emphasis on backward compatibility within major versions.
 
-The current version is tracked in `src/version.ts`:
+The current version is tracked in `packages/canonical-runtime-contracts/src/version.ts`:
 
 ```typescript
 export const CANONICAL_CONTRACTS_VERSION = '0.1.0';

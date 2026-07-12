@@ -1,0 +1,29 @@
+export { createEnterpriseHostClient } from './client.js';
+export type { EnterpriseHostClient } from './client.js';
+export { EnterpriseHostApiError, EnterpriseHostNetworkError, EnterpriseHostTimeoutError, isEnterpriseHostApiError } from './errors.js';
+export type {
+  AgentPassport,
+  AssuranceAssessment,
+  AssuranceSignalRequest,
+  AssuranceVerificationResult,
+  CreateAssessmentRequest,
+  EnterpriseErrorEnvelope,
+  EnterpriseHostClientOptions,
+  EvidenceBuildRequest,
+  EvidenceBundleResponse,
+  EvidenceVerificationResult,
+  FetchLike,
+  FetchResponseLike,
+  GovernanceEvaluateRequest,
+  GovernanceEvaluateResponse,
+  GovernanceRecord,
+  GovernanceVerificationResult,
+  HealthReport,
+  IssuePassportRequest,
+  LivenessResponse,
+  ManualReviewRequest,
+  PassportVerificationResult,
+  PassportVerifyMode,
+  ReadinessResponse,
+  ReassessRequest,
+} from './types.js';

@@ -4,6 +4,7 @@ import type { GovernanceRecord, GovernanceRecordVerificationResult, GovernanceSt
 import { isGovernanceStoreError } from '../governance-store/errors.js';
 import type { GovernanceStore } from '../governance-store/governance-store.js';
 import type { EnterpriseTelemetry } from '../telemetry/enterprise-telemetry.js';
+import { extractBearerToken, matchApiKey } from './credential-matching.js';
 
 /**
  * The Enterprise Host's read/verify surface over the Governance Store.
@@ -26,19 +27,13 @@ export interface GovernanceReadService {
   verify(authorizationHeader: string | undefined, evaluationId: string): Promise<GovernanceRecordVerificationResult>;
 }
 
-function extractBearerToken(authorizationHeader: string | undefined): string | undefined {
-  if (authorizationHeader === undefined) return undefined;
-  const match = /^Bearer\s+(.+)$/i.exec(authorizationHeader.trim());
-  return match?.[1];
-}
-
 /** Resolves the caller's authenticated read scope. Throws 401 for missing/unknown credentials when authentication is required. */
 export function resolveGovernanceAccessContext(authorizationHeader: string | undefined, configuration: EnterpriseConfiguration): GovernanceStoreAccessContext {
   if (!configuration.features.requireAuthentication) return { system: true };
 
   const token = extractBearerToken(authorizationHeader);
   if (token === undefined) throw EnterpriseHttpErrors.authenticationFailed('A Bearer token is required.');
-  const matchedKey = configuration.authentication.apiKeys.find((apiKey) => apiKey.key === token);
+  const matchedKey = matchApiKey(token, configuration.authentication.apiKeys);
   if (matchedKey === undefined) throw EnterpriseHttpErrors.authenticationFailed('The provided credential is not recognized.');
 
   return matchedKey.organizationId !== undefined ? { system: false, organizationId: matchedKey.organizationId } : { system: true };

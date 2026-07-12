@@ -15,7 +15,16 @@ if (!protocolSpec || !protocolSpec.startsWith('file:')) {
 }
 const protocolPath = resolve(root, protocolSpec.slice('file:'.length));
 const protocolPkgJson = resolve(protocolPath, 'package.json');
-await stat(protocolPkgJson);
+try {
+  await stat(protocolPkgJson);
+} catch {
+  console.error(
+    `Publishability validation requires the @aoc/protocol sibling checkout at '${protocolPath}' ` +
+      '(declared as a file: dependency in package.json). Clone Architects_of_Change_Protocol next to this ' +
+      'repository and re-run. This check cannot be skipped: it validates the packed tarball against the real protocol package.',
+  );
+  process.exit(1);
+}
 
 const run = (cmd, args, cwd) => {
   const result = spawnSync(cmd, args, { cwd, stdio: 'pipe', encoding: 'utf8' });

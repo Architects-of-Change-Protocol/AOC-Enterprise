@@ -1,0 +1,86 @@
+{
+  "name": "@aoc-enterprise/runtime",
+  "version": "1.0.0",
+  "generated": {
+    "commit": "ce9c05c46438e6dfe01e03f181db4f78aa5f0403",
+    "branch": "claude/aoc-enterprise-v1-hardening-d9sur9",
+    "node": "v22.22.2"
+  },
+  "runtimeVersions": {
+    "enterpriseHost": "1.0.0",
+    "kernel": "1.0.0",
+    "governanceStore": "1.0.0",
+    "evidenceBundle": "1.0.0",
+    "agentPassportRuntime": "1.0.0",
+    "assuranceRuntime": "1.0.0"
+  },
+  "storeSchemaVersions": {
+    "governance": "aoc.governance-store.schema.v1",
+    "evidence": "evidence.bundle.v1",
+    "agentPassport": "aoc.agent-passport.schema.v1",
+    "assurance": "aoc.assurance-store.schema.v1"
+  },
+  "canonicalizationVersion": "aoc.canonical-json.v1",
+  "frameworks": [
+    {
+      "frameworkId": "aoc.saf",
+      "frameworkVersion": "1.0.0",
+      "status": "active",
+      "digest": "sha256:f10b1bf94624bdb6f093ffcd5dbece7e1b2d1fa3ce33f724425dc67c1bb1bd33"
+    }
+  ],
+  "api": {
+    "surface": "aoc-enterprise-host-http.v1",
+    "documentation": "docs/enterprise/API_STABILITY_V1.md",
+    "endpointCount": 27
+  },
+  "compatibilityMatrix": {
+    "node": ">=22",
+    "better-sqlite3": "^12.11.1",
+    "stores": "A store written by schema version X opens only under a runtime with the same schema version; mismatches are refused at startup (fail closed). See docs/enterprise/MIGRATION_REVIEW_V1.md.",
+    "api": "v1.x guarantees backward-compatible HTTP surface; breaking changes require /v2. See docs/enterprise/API_STABILITY_V1.md."
+  },
+  "artifacts": [
+    {
+      "path": "./dist/src/enterprise/index.js",
+      "checksum": "sha256:751079a4768b7cfa5ebf13a005c75251d3b5eeadeb81c74ec0ef9f772419e3b2"
+    },
+    {
+      "path": "./dist/src/index.js",
+      "checksum": "sha256:218f47035f71d263aeaa868daff5faeaf754471a582e372c16822ff53f477d7d"
+    },
+    {
+      "path": "./dist/src/kernel-host/index.js",
+      "checksum": "sha256:7707f034dff0b5aafcb6075db3190e0460dd6cbfbe21c90e6d0cc6c070ae9730"
+    },
+    {
+      "path": "./dist/src/kernel/index.js",
+      "checksum": "sha256:afa92be4d5ddea31654d35274163fc915b7220b4bba57a9efd4e1fc25768f879"
+    },
+    {
+      "path": "./dist/src/runtime/adapters/index.js",
+      "checksum": "sha256:fc9c6096246805c2075c83ab1b96082eda2fc98c240a2502caa82f1966096b71"
+    },
+    {
+      "path": "./dist/src/runtime/audit/index.js",
+      "checksum": "sha256:3cbd41ab6770cdc605be5ae11ae386b492cb8f43b78080438b8247705f5b19b3"
+    },
+    {
+      "path": "./dist/src/runtime/authorization/index.js",
+      "checksum": "sha256:a1c1c59f5ade18d1c38fdffe97592b1a2fc78dbce864fa05034fe281e39924b3"
+    },
+    {
+      "path": "./dist/src/runtime/crypto/index.js",
+      "checksum": "sha256:9c8b0fa716d59fab4bb28fdfcfca1fa4f5198413df4b8954c34af13707a4d99d"
+    },
+    {
+      "path": "./dist/src/runtime/index.js",
+      "checksum": "sha256:db878720c2502f45819542ffcfebbe0ec514f5f5d100166bd932f2cb2d45a9bc"
+    }
+  ],
+  "generatedArtifacts": [
+    "release/RELEASE_MANIFEST.json",
+    "docs/performance/BENCHMARK_BASELINE_V1.md",
+    "docs/performance/LOAD_TEST_V1.md"
+  ]
+}

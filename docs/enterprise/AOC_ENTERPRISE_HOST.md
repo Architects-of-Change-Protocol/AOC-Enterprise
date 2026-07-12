@@ -393,6 +393,8 @@ npm run build                       # clean
 npm run lint                        # Node16 imports, architecture, public-surface -- all pass
 ```
 
+> Note (2026-07-12 doc audit): the root `npm test` script has since been scoped to `dist/src/**/*.test.js`, `tests/**/*.test.mjs`, and per-workspace suites (`npm test --workspaces --if-present`); the unscoped-discovery issue described in this historical paragraph no longer applies.
+
 `npm test` (the repo-root script, `npm run build && node --test` with no
 scoping) was run and re-confirmed: it discovers **every** package's `.ts`
 test sources directly (no TypeScript loader) in addition to the compiled

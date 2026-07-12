@@ -118,6 +118,8 @@ Use only documented public entrypoints:
 - `@aoc-enterprise/runtime/crypto`
 - `@aoc-enterprise/runtime/adapters`
 
+> Note (2026-07-12 doc audit): the export map has since grown `/runtime`, `/runtime-host`, `/kernel`, `/enterprise`, and `/kernel-host` entrypoints (see `package.json` `exports`; `/kernel-host` is a transitional alias of `/enterprise` per `docs/enterprise/KERNEL_HOST_TO_ENTERPRISE_MIGRATION.md`).
+
 Unsupported import patterns (must remain blocked):
 
 - `@aoc-enterprise/runtime/src/*`

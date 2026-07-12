@@ -12,30 +12,30 @@ test suite instead.
 1. **No action may be allowed for an unrecognized actor.**
    `EnforcementDecisionService.mapRecognitionResult` default-denies any recognition result whose `type` is not in
    `RECOGNITION_TYPE_MAP` and is not explicitly `allowed`/`recognized`. `RecognizedActorPolicy` runs first in
-   recognition-runtime's own chain. Confirmed by `tests/recognition-runtime-integration.test.ts` case 5
+   recognition-runtime's own chain. Confirmed by `src/features/action-enforcement/tests/recognition-runtime-integration.test.ts` case 5
    (`unrecognized_actor` -> `execution_blocked`, `execute()` never called).
 
 2. **Recognition does not itself grant authority.**
    `RecognitionVerifier.verifyAction` calls `authorityGraph.verifyAuthority(...)` as a *separate* step after
    recognition's own chain passes, and an invalid authority result can still downgrade an otherwise-recognized
-   decision. Confirmed by `tests/recognition-runtime-integration.test.ts` case 9 (forged self-issued authority grant
+   decision. Confirmed by `src/features/action-enforcement/tests/recognition-runtime-integration.test.ts` case 9 (forged self-issued authority grant
    still blocks despite an existing capability token).
 
 3. **Authority must be valid for the requested action and scope.**
    `AuthorityGraphRuntime.verifyAuthority` is called with the request's `action`/`resourceScope`; a mismatch
    produces a non-`valid` authority decision, which downgrades the enforcement outcome. Confirmed by
-   `tests/authority-graph-integration.test.ts`.
+   `src/features/action-enforcement/tests/authority-graph-integration.test.ts`.
 
 4. **Authority expiration is evaluated at decision time.**
    Recognition-runtime's `ValidCapabilityPolicy`/capability verification checks token expiry against `ctx.clock.now()`
-   at the moment of the call, not at issuance time. Confirmed by `tests/recognition-runtime-integration.test.ts`
+   at the moment of the call, not at issuance time. Confirmed by `src/features/action-enforcement/tests/recognition-runtime-integration.test.ts`
    case 7 (`expired` capability token -> `expired` decision).
 
 5. **Required approvals cannot be bypassed.**
    `ApprovalPendingPolicy` (action-enforcement chain) independently blocks whenever the mapped decision type is
    `approval_required`; `ApprovalPolicy`/`ApprovalRuntime` (recognition-runtime chain) independently governs whether
    a `require_human_approval` result can be upgraded to `allow`. Two independent layers must each agree before
-   execution proceeds. Confirmed by `tests/recognition-runtime-integration.test.ts` case 3.
+   execution proceeds. Confirmed by `src/features/action-enforcement/tests/recognition-runtime-integration.test.ts` case 3.
 
 6. **A denied policy cannot become allowed merely because another policy allows it, unless explicit precedence rules
    exist.** Both policy chains (`EnforcementPolicyEvaluator.evaluate`, recognition-runtime's `PolicyEvaluator`) are
@@ -46,7 +46,7 @@ test suite instead.
 
 7. **Required evidence must be present before a final allowed decision.**
    `EvidencePolicy` (recognition-runtime) and `EvidenceRequiredPolicy` (action-enforcement) both independently gate
-   on this. Confirmed by `tests/recognition-runtime-integration.test.ts` case 4 (missing invoice-support evidence ->
+   on this. Confirmed by `src/features/action-enforcement/tests/recognition-runtime-integration.test.ts` case 4 (missing invoice-support evidence ->
    `evidence_required`, `execute()` never called).
 
 8. **Every terminal result must contain machine-readable reasons.**
