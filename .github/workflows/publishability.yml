@@ -14,7 +14,7 @@ jobs:
         run: git clone --depth=1 https://github.com/Architects-of-Change-Protocol/Architects_of_Change_Protocol.git $GITHUB_WORKSPACE/../Architects_of_Change_Protocol
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       - name: Build AOC Protocol
         run: npm install && npm run build
