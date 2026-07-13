@@ -4,6 +4,19 @@ Backup strategy for the Enterprise Host's SQLite persistence. Applies
 only to `AOC_ENTERPRISE_PERSISTENCE_PROVIDER=sqlite`; the `memory`
 provider has nothing to back up and loses all state on restart.
 
+**As of the v1.0.0 portability validation, the recommended way to take
+and restore a backup is the automated tooling in**
+`docs/operations/AOC_ENTERPRISE_BACKUP_V1.md` **and**
+`docs/operations/AOC_ENTERPRISE_RESTORE_V1.md` **(`npm run backup:v1`,
+`npm run restore:v1`)** — it performs exactly the consistency-safe
+SQLite copy, integrity check, and verification steps described below,
+plus a versioned manifest, SHA-256 checksums, and fail-closed restore
+validation, as a single command instead of the manual procedure. This
+document remains accurate as the underlying mechanics and as a manual
+fallback (e.g. no Node/npm available on the machine holding the backup
+volume); read it for *why* the consistency model works, and the
+automated docs for *how to run it* day to day.
+
 ## What to back up
 
 Three independent database files (defaults shown; the deployed paths are

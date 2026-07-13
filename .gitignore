@@ -7,6 +7,12 @@ coverage
 .env
 .env.local
 .env.*
+# ...except committed example/reference files -- ".env.*" above would
+# otherwise silently hide every ".env.example" from Git, defeating their
+# purpose as tracked, secret-free configuration documentation (Phase 17 of
+# docs/release/AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md).
+!.env.example
+!**/.env.example
 .vercel
 turbo
 .DS_Store
@@ -21,3 +27,17 @@ apps/agent-passport-web/.data/
 
 # npm pack output (validate-publishability)
 *.tgz
+
+# Real backups produced by `npm run backup:v1` / restore targets / drill
+# scratch output -- never commit an actual backup (see
+# docs/operations/AOC_ENTERPRISE_BACKUP_V1.md, "Security"). Fixture and
+# contract-test backups are written under the OS temp directory, not here,
+# so they are unaffected by this rule.
+/backups/
+*.aoc-enterprise-backup/
+/.portability-drill/
+restore-report.json
+backup-manifest.json
+fixture-manifest.json
+portability-comparison.json
+clean-room-drill-report.json

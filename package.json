@@ -25,8 +25,14 @@
     "check:runtime-vault": "node scripts/check-runtime-vault-boundary.mjs",
     "check:aoc-boundaries": "node scripts/check-aoc-boundaries.mjs",
     "check:release-integrity": "node scripts/check-runtime-release-integrity.mjs",
+    "backup:v1": "node scripts/portability/backup-enterprise-v1.mjs",
+    "restore:v1": "node scripts/portability/restore-enterprise-v1.mjs",
+    "fixture:portability:v1": "node scripts/portability/generate-portability-fixture.mjs",
+    "compare:portability:v1": "node scripts/portability/compare-portability-state.mjs",
+    "check:portability-smoke": "node scripts/portability/check-portability-smoke.mjs",
+    "validate:portability:v1": "node scripts/portability/validate-portability-v1.mjs",
     "validate:release": "npm run typecheck && npm run build && npm run lint && npm test && npm run check:protocol-consumption && npm run check:runtime-state && npm run check:runtime-persistence && npm run check:runtime-vault && npm run check:aoc-boundaries && npm run validate:publishability && npm run check:release-integrity",
-    "validate:v1-release": "npm run typecheck && npm run lint && npm test && npm run check:protocol-consumption && npm run check:runtime-state && npm run check:runtime-persistence && npm run check:runtime-federation && npm run check:runtime-vault && npm run check:aoc-boundaries && npm run check:release-integrity && npm run validate:publishability && node scripts/check-api-freeze.mjs && node scripts/verify-release-manifest.mjs && node scripts/check-release-docs.mjs && node scripts/check-sdk-surface.mjs"
+    "validate:v1-release": "npm run typecheck && npm run lint && npm test && npm run check:protocol-consumption && npm run check:runtime-state && npm run check:runtime-persistence && npm run check:runtime-federation && npm run check:runtime-vault && npm run check:aoc-boundaries && npm run check:release-integrity && npm run validate:publishability && node scripts/check-api-freeze.mjs && node scripts/verify-release-manifest.mjs && node scripts/check-release-docs.mjs && node scripts/check-sdk-surface.mjs && npm run check:portability-smoke"
   },
   "engines": {
     "node": ">=22"

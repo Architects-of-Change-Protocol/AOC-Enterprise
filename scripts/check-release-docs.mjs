@@ -29,6 +29,12 @@ const REQUIRED_DOCS = [
   'docs/release/DOCUMENTATION_AUDIT_V1.md',
   'docs/release/RELEASE_CANDIDATE_V1.md',
   'packages/enterprise-host-sdk/README.md',
+  'docs/release/AOC_ENTERPRISE_V1_PORTABILITY_CURRENT_STATE.md',
+  'docs/release/AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md',
+  'docs/release/AOC_ENTERPRISE_V1_TAGGING_RUNBOOK.md',
+  'docs/operations/AOC_ENTERPRISE_BACKUP_V1.md',
+  'docs/operations/AOC_ENTERPRISE_RESTORE_V1.md',
+  'docs/operations/AOC_ENTERPRISE_CLEAN_ROOM_DRILL.md',
 ];
 
 for (const doc of REQUIRED_DOCS) {
