@@ -3,6 +3,7 @@ export type { EnterpriseHostClient } from './client.js';
 export { EnterpriseHostApiError, EnterpriseHostNetworkError, EnterpriseHostTimeoutError, isEnterpriseHostApiError } from './errors.js';
 export type {
   AgentPassport,
+  AgentPassportSubjectType,
   AssuranceAssessment,
   AssuranceSignalRequest,
   AssuranceVerificationResult,

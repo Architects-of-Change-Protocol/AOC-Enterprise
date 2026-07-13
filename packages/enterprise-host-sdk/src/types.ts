@@ -89,10 +89,24 @@ export type EvidenceVerificationResult = Readonly<Record<string, unknown>> & { r
 
 // -- passports ---------------------------------------------------------------
 
+export type AgentPassportSubjectType = 'autonomous_agent' | 'assistant_agent' | 'workflow_agent' | 'decision_agent' | 'service_agent' | 'external_agent';
+
+/** Mirrors `POST /api/passports`'s actual wire shape (nested `subject`/`organization`, top-level `actorId`) -- see `validateIssuePassportRequestBody`. */
 export interface IssuePassportRequest {
-  readonly organizationId: string;
-  readonly agentId: string;
-  readonly agentType: string;
+  readonly subject: {
+    readonly agentId: string;
+    readonly agentType: AgentPassportSubjectType;
+    readonly [key: string]: unknown;
+  };
+  readonly organization: {
+    readonly organizationId: string;
+    readonly recognizedBy: string;
+    readonly [key: string]: unknown;
+  };
+  readonly actorId: string;
+  readonly actorType?: string;
+  readonly activateImmediately?: boolean;
+  readonly idempotencyKey?: string;
   readonly [key: string]: unknown;
 }
 

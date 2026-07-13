@@ -142,21 +142,26 @@ const environment = {
 const memoryBefore = process.memoryUsage();
 const scenarios = [];
 
-// 1. parallel governance evaluations (writes: Kernel + store append + WAL commit)
+// 1. parallel governance evaluations (writes: Kernel + store append + WAL commit).
+// Every id actually written by THIS concurrent scenario is captured (not a
+// separate sequential seed) so downstream read/verify scenarios and the
+// correctness phase exercise records that were genuinely written under
+// contention -- a corrupted or dropped concurrent write would otherwise be
+// invisible to a verification pass that only ever reads sequentially-seeded data.
+const seededEvaluations = [];
 scenarios.push(
   await loadScenario('parallel governance evaluate (write)', REQUESTS, CONCURRENCY, (i) => ({
     method: 'POST',
     path: '/api/governance/evaluate',
     body: buildAllowedRequestBody({ requestId: `load-eval-${i}`, correlationId: `load-corr-${i}` }),
     expect: 200,
+    onResult: (result) => {
+      if (result.status === 200) seededEvaluations.push(result.body.governanceRecord.evaluationId);
+    },
   })),
 );
-
-// capture some evaluation ids for read/verify scenarios
-const seededEvaluations = [];
-for (let i = 0; i < 20; i += 1) {
-  const result = await fire('POST', '/api/governance/evaluate', buildAllowedRequestBody({ requestId: `load-seed-${i}` }));
-  seededEvaluations.push(result.body.governanceRecord.evaluationId);
+if (seededEvaluations.length === 0) {
+  throw new Error('parallel governance evaluate (write) produced zero successful writes; nothing to verify downstream.');
 }
 
 // 2. parallel verification (reads + digest recomputation)

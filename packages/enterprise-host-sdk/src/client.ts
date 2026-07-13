@@ -186,7 +186,8 @@ export function createEnterpriseHostClient(options: EnterpriseHostClientOptions)
     getPassportHistory: (passportId) => request('GET', `/api/passports/${encode(passportId)}/history`),
     activatePassport: (passportId, actorId) => request('POST', `/api/passports/${encode(passportId)}/activate`, { actorId }),
     suspendPassport: (passportId, body) => request('POST', `/api/passports/${encode(passportId)}/suspend`, body),
-    reactivatePassport: (passportId, actorId) => request('POST', `/api/passports/${encode(passportId)}/reactivate`, { actorId }),
+    // The reactivate route validates the body field as `reactivatedBy`, not `actorId`.
+    reactivatePassport: (passportId, actorId) => request('POST', `/api/passports/${encode(passportId)}/reactivate`, { reactivatedBy: actorId }),
     revokePassport: (passportId, body) => request('POST', `/api/passports/${encode(passportId)}/revoke`, body),
     retirePassport: (passportId, body) => request('POST', `/api/passports/${encode(passportId)}/retire`, body),
     verifyPassport: (passportId, mode) => request('POST', `/api/passports/${encode(passportId)}/verify`, mode !== undefined ? { mode } : {}),

@@ -188,6 +188,10 @@ function resolveBusyTimeoutMs(value: number | undefined): number {
   return timeout;
 }
 
+function tableExists(db: import('better-sqlite3').Database, tableName: string): boolean {
+  return db.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?`).get(tableName) !== undefined;
+}
+
 function isSqliteConstraintViolation(error: unknown): boolean {
   const code = (error as { code?: unknown } | null)?.code;
   return typeof code === 'string' && code.startsWith('SQLITE_CONSTRAINT');
@@ -226,6 +230,21 @@ export async function createSqliteAssuranceStore(dbPath: string, options: Create
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = FULL');
   db.pragma(`busy_timeout = ${resolveBusyTimeoutMs(options.busyTimeoutMs)}`);
+
+  // Check the recorded schema version BEFORE applying SCHEMA_V1 -- see the
+  // matching comment in sqlite-passport-store.ts. A foreign-schema database
+  // must not be mutated just because we were asked to open it.
+  if (tableExists(db, 'assurance_store_versions')) {
+    const existingVersion = db.prepare(`SELECT schema_version FROM assurance_store_versions ORDER BY id DESC LIMIT 1`).get() as { schema_version: string } | undefined;
+    if (existingVersion !== undefined && existingVersion.schema_version !== ASSURANCE_STORE_SCHEMA_VERSION) {
+      db.close();
+      throw new AssuranceError(
+        'ASSURANCE_STORE_UNAVAILABLE',
+        `Assurance Store schema version '${existingVersion.schema_version}' is not supported by this runtime (expected '${ASSURANCE_STORE_SCHEMA_VERSION}'). Refusing to open the store.`,
+      );
+    }
+  }
+
   db.exec(SCHEMA_V1);
 
   const latestVersion = db.prepare(`SELECT schema_version FROM assurance_store_versions ORDER BY id DESC LIMIT 1`).get() as { schema_version: string } | undefined;

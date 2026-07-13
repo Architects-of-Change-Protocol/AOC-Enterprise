@@ -148,6 +148,10 @@ function resolveBusyTimeoutMs(value: number | undefined): number {
   return timeout;
 }
 
+function tableExists(db: import('better-sqlite3').Database, tableName: string): boolean {
+  return db.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?`).get(tableName) !== undefined;
+}
+
 function sqliteErrorCode(error: unknown): string | undefined {
   const code = (error as { code?: unknown } | null)?.code;
   return typeof code === 'string' ? code : undefined;
@@ -186,6 +190,24 @@ export async function createSqlitePassportStore(dbPath: string, options: CreateS
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = FULL');
   db.pragma(`busy_timeout = ${resolveBusyTimeoutMs(options.busyTimeoutMs)}`);
+
+  // Check the recorded schema version BEFORE applying SCHEMA_V1: if an
+  // existing store already has a version row for a different schema, refuse
+  // to open it without ever running `CREATE TABLE IF NOT EXISTS` against it --
+  // a foreign-schema database must not be mutated (e.g. by adding this
+  // runtime's own tables alongside a differently-shaped store) merely because
+  // we were asked to open it.
+  if (tableExists(db, 'agent_passport_store_versions')) {
+    const existingVersion = db.prepare(`SELECT schema_version FROM agent_passport_store_versions ORDER BY id DESC LIMIT 1`).get() as { schema_version: string } | undefined;
+    if (existingVersion !== undefined && existingVersion.schema_version !== AGENT_PASSPORT_SCHEMA_VERSION) {
+      db.close();
+      throw new AgentPassportError(
+        'PASSPORT_STORE_UNAVAILABLE',
+        `Agent Passport Store schema version '${existingVersion.schema_version}' is not supported by this runtime (expected '${AGENT_PASSPORT_SCHEMA_VERSION}'). Refusing to open the store.`,
+      );
+    }
+  }
+
   db.exec(SCHEMA_V1);
 
   const latestVersion = db.prepare(`SELECT schema_version FROM agent_passport_store_versions ORDER BY id DESC LIMIT 1`).get() as { schema_version: string } | undefined;

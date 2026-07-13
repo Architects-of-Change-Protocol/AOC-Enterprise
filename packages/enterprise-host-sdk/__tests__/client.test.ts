@@ -82,6 +82,15 @@ describe('createEnterpriseHostClient', () => {
     assert.equal(JSON.parse(request.body).actor.id, 'a-1');
   });
 
+  it('reactivatePassport posts reactivatedBy (the field the Host route actually validates)', async () => {
+    const client = createEnterpriseHostClient({ baseUrl });
+    await client.reactivatePassport('passport-1', 'actor-1').catch(() => undefined);
+    const request = recorded[recorded.length - 1];
+    if (request === undefined) throw new Error('no request recorded');
+    assert.equal(request.url, '/api/passports/passport-1/reactivate');
+    assert.deepEqual(JSON.parse(request.body), { reactivatedBy: 'actor-1' });
+  });
+
   it('URL-encodes path parameters', async () => {
     const client = createEnterpriseHostClient({ baseUrl });
     await client.getEvaluation('needs encoding/../x').catch(() => undefined);
