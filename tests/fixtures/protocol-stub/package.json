@@ -1,0 +1,15 @@
+{
+  "name": "@aoc/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Type-only stand-in for @aoc/protocol used exclusively by release tooling (scripts/validate-publishability.mjs) when the real sibling checkout is absent. @aoc/protocol is a compile-time type dependency of @aoc-enterprise/runtime; the publishability check independently asserts that no shipped artifact requires it at runtime, which is what makes this stub faithful.",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  }
+}

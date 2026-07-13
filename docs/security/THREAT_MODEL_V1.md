@@ -44,7 +44,7 @@ Companion documents: `SECURITY_HARDENING_V1.md` (what was audited and changed fo
 
 ## 4. Entry points & attack surfaces
 
-1. **HTTP listener** — 27 routes (3 health, 5 governance, 3 evidence, 13 passport, 10 assurance; see `API_STABILITY_V1.md`). The only network surface. No TLS in-process (reverse proxy responsibility, documented).
+1. **HTTP listener** — 34 wired routes (3 health, 5 governance, 3 evidence, 13 passport, 10 assurance; see `API_STABILITY_V1.md`). The only network surface. No TLS in-process (reverse proxy responsibility, documented).
 2. **Environment variables** — parsed once at startup with fail-safe parsers (invalid numerics → defaults; booleans only `1`/`true`).
 3. **SQLite files on disk** — opened at composition; schema version verified fail-closed.
 4. **Composition options** — `assuranceFrameworks`, kernel providers: code-level injection points available only to whoever builds the host binary (operator trust).

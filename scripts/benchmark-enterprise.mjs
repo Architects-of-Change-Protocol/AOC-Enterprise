@@ -43,17 +43,29 @@ function stats(samplesMs) {
   const sorted = [...samplesMs].sort((a, b) => a - b);
   const pick = (q) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
   const sum = sorted.reduce((acc, v) => acc + v, 0);
+  const mean = sum / sorted.length;
+  const variance = sorted.reduce((acc, v) => acc + (v - mean) ** 2, 0) / sorted.length;
+  // Tukey fence: samples beyond q3 + 1.5*IQR are reported (never discarded --
+  // outliers stay in every aggregate; the count just makes tails visible).
+  const q1 = pick(0.25);
+  const q3 = pick(0.75);
+  const upperFence = q3 + 1.5 * (q3 - q1);
   return {
     n: sorted.length,
-    meanMs: round(sum / sorted.length),
+    meanMs: round(mean),
+    stdDevMs: round(Math.sqrt(variance)),
     p50Ms: round(pick(0.5)),
     p95Ms: round(pick(0.95)),
     maxMs: round(sorted[sorted.length - 1]),
-    opsPerSec: round(1000 / (sum / sorted.length)),
+    outliersAboveTukeyFence: sorted.filter((v) => v > upperFence).length,
+    opsPerSec: round(1000 / mean),
   };
 }
 
 const round = (v) => Math.round(v * 1000) / 1000;
+
+// Cyclic array access that also accepts the negative warm-up indexes.
+const at = (array, i) => array[((i % array.length) + array.length) % array.length];
 
 async function timed(fn) {
   const start = performance.now();
@@ -61,7 +73,15 @@ async function timed(fn) {
   return { ms: performance.now() - start, result };
 }
 
-async function series(count, fn) {
+// Each scenario runs WARMUP unrecorded iterations first (JIT, prepared-statement
+// and page-cache warm-up), then `count` recorded iterations. Warm-up calls use
+// negative indexes so id-generating callers produce distinct, non-colliding ids.
+const WARMUP = QUICK ? 3 : 10;
+
+async function series(count, fn, { warmup = WARMUP } = {}) {
+  for (let i = 0; i < warmup; i += 1) {
+    await fn(-1 - i);
+  }
   const samples = [];
   let last;
   for (let i = 0; i < count; i += 1) {
@@ -95,6 +115,7 @@ const environment = {
   totalMemGiB: round(totalmem() / 1024 ** 3),
   quick: QUICK,
   iterations: N,
+  warmupIterationsPerScenario: QUICK ? 3 : 10,
 };
 
 // -- cold start (fresh SQLite files) ----------------------------------------
@@ -138,11 +159,11 @@ const evaluationIds = [];
 
 // -- governance record read + independent verification ----------------------
 {
-  const { samples } = await series(N, (i) => requestJson(baseUrl, 'GET', `/api/governance/evaluations/${evaluationIds[i % evaluationIds.length]}`));
+  const { samples } = await series(N, (i) => requestJson(baseUrl, 'GET', `/api/governance/evaluations/${at(evaluationIds, i)}`));
   results.governanceRead = stats(samples);
 }
 {
-  const { samples } = await series(N, (i) => requestJson(baseUrl, 'GET', `/api/governance/evaluations/${evaluationIds[i % evaluationIds.length]}/verify`));
+  const { samples } = await series(N, (i) => requestJson(baseUrl, 'GET', `/api/governance/evaluations/${at(evaluationIds, i)}/verify`));
   results.governanceVerify = stats(samples);
 }
 
@@ -151,7 +172,7 @@ const bundleIds = [];
 {
   const { samples } = await series(N, async (i) => {
     const response = await requestJson(baseUrl, 'POST', '/api/evidence/build', {
-      evaluationId: evaluationIds[i % evaluationIds.length],
+      evaluationId: at(evaluationIds, i),
       level: 'AUDITOR',
       createdBy: 'bench',
     });
@@ -161,7 +182,7 @@ const bundleIds = [];
   results.evidenceBuild = stats(samples);
 }
 {
-  const { samples } = await series(N, (i) => requestJson(baseUrl, 'POST', '/api/evidence/verify', { bundleId: bundleIds[i % bundleIds.length] }));
+  const { samples } = await series(N, (i) => requestJson(baseUrl, 'POST', '/api/evidence/verify', { bundleId: at(bundleIds, i) }));
   results.evidenceVerify = stats(samples);
 }
 
@@ -180,7 +201,7 @@ const bundleIds = [];
 const assessments = [];
 {
   const { samples } = await series(N, async (i) => {
-    const organizationId = `bench-org-${i % N_TENANTS}`;
+    const organizationId = `bench-org-${Math.abs(i) % N_TENANTS}`;
     const created = await requestJson(baseUrl, 'POST', '/api/assurance/assessments', {
       subject: { subjectId: `bench-subject-${i}`, subjectType: 'organization', organizationId },
       frameworkId: 'aoc.saf',
@@ -197,8 +218,10 @@ const assessments = [];
 // -- assurance: full evaluation (evidence resolution + controls + scoring) ---
 {
   const evalCount = QUICK ? 10 : 50;
+  // One-shot per assessment (evaluation mutates state); warm-up disabled.
   const { samples } = await series(evalCount, (i) =>
     requestJson(baseUrl, 'POST', `/api/assurance/assessments/${assessments[i].assessmentId}/evaluate`, {}),
+    { warmup: 0 },
   );
   results.assuranceEvaluate = stats(samples);
 }
@@ -207,7 +230,7 @@ const assessments = [];
 {
   const verifyCount = QUICK ? 10 : 50;
   const { samples } = await series(verifyCount, async (i) => {
-    const response = await fetch(`${baseUrl}/api/assurance/assessments/${assessments[i].assessmentId}/verify`, { method: 'POST' });
+    const response = await fetch(`${baseUrl}/api/assurance/assessments/${at(assessments, i).assessmentId}/verify`, { method: 'POST' });
     await response.json();
     return response;
   });
@@ -267,12 +290,12 @@ const assessments = [];
 {
   const { samples } = await series(N, (i) =>
     requestJson(baseUrl, 'POST', '/api/assurance/signals', {
-      subjectId: assessments[i % assessments.length].assessmentId === undefined ? 'bench-subject-0' : `bench-subject-${i % N}`,
+      subjectId: `bench-subject-${Math.abs(i) % N}`,
       subjectType: 'organization',
-      organizationId: assessments[i % assessments.length].organizationId,
+      organizationId: at(assessments, i).organizationId,
       signalType: 'control_evidence_expired',
       sourceType: 'enterprise_health',
-      sourceId: `bench-source-${i}`,
+      sourceId: `bench-source-${i}`, // negative warm-up indexes keep ids distinct
       occurredAt: '2026-01-01T00:00:00.000Z',
       details: { reference: `bench-signal-${i}` },
     }),
@@ -302,10 +325,10 @@ if (JSON_ONLY) {
   console.log(JSON.stringify(environment, null, 2));
   console.log('');
   const rows = Object.entries(results).filter(([, v]) => v !== null && typeof v === 'object' && 'p50Ms' in v);
-  console.log('| scenario | n | mean ms | p50 ms | p95 ms | max ms | ops/s |');
-  console.log('|---|---|---|---|---|---|---|');
+  console.log('| scenario | n | mean ms | stddev ms | p50 ms | p95 ms | max ms | outliers>Tukey | ops/s |');
+  console.log('|---|---|---|---|---|---|---|---|---|');
   for (const [name, s] of rows) {
-    console.log(`| ${name} | ${s.n} | ${s.meanMs} | ${s.p50Ms} | ${s.p95Ms} | ${s.maxMs} | ${s.opsPerSec} |`);
+    console.log(`| ${name} | ${s.n} | ${s.meanMs} | ${s.stdDevMs} | ${s.p50Ms} | ${s.p95Ms} | ${s.maxMs} | ${s.outliersAboveTukeyFence} | ${s.opsPerSec} |`);
   }
   console.log('');
   console.log(`coldStartMs=${results.coldStartMs} warmStartMs=${results.warmStartMs}`);

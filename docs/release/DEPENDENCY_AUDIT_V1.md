@@ -10,7 +10,7 @@ The Enterprise runtime (`@aoc-enterprise/runtime`) has exactly **one** productio
 |---|---|---|---|
 | `better-sqlite3` | ^12.11.1 (12.11.1) | The three SQLite stores | Loaded lazily (`await import`) only when the `sqlite` provider is selected; the `memory` provider runs dependency-free. Native module with prebuilt binaries; its transitive tree (`bindings`, `prebuild-install`, `node-gyp` toolchain helpers) is build/install-time only. `prebuild-install` is flagged deprecated upstream — install-time only, no runtime exposure; tracked for replacement when `better-sqlite3` migrates. |
 
-Peer dependencies: `@aoc/protocol` (>=0.1.0, supplied by the consuming environment as a sibling checkout; type-shimmed for isolated builds via `types/aoc-protocol/`), `react`/`react-dom` (optional, only for UI-consuming hosts).
+Peer dependencies: `@aoc/protocol` (>=0.1.0, supplied by the consuming environment — in this repo an optional `file:` dev-link to the sibling checkout; type-shimmed for isolated builds via `types/aoc-protocol/`, and publishability validation falls back to the type-only stub at `tests/fixtures/protocol-stub` when the checkout is absent), `react`/`react-dom` (optional, only for UI-consuming hosts).
 
 Dev dependencies: TypeScript type packages (`@types/better-sqlite3`, `@types/react*`), `react`/`react-dom` (test/dev), workspace self-references. No test framework, no linter framework, no build tool beyond `tsc` — lint checks are plain-Node scripts in `scripts/`.
 

@@ -10,9 +10,9 @@ Hardening-only release: converts the existing AOC Enterprise runtime into a prod
 | typecheck (`npm run typecheck`) | ✅ clean |
 | lint (node16-imports, architecture, public surface) | ✅ clean |
 | tests (`npm test`) | ✅ ~3,700 tests, 0 failures (root dist suites + contract suites + 4 workspace suites) |
-| full release gate (`npm run validate:release`) | ✅ all checks green; `validate:publishability` additionally requires the `@aoc/protocol` sibling checkout (`../Architects_of_Change_Protocol`) — it validates the packed tarball against the real protocol package and now fails with an actionable message when the checkout is absent |
+| full release gate (`npm run validate:release`; consolidated v1 gate: `npm run validate:v1-release`) | ✅ all checks green; `validate:publishability` validates the packed tarball against the `@aoc/protocol` sibling checkout (`../Architects_of_Change_Protocol`) when present, and otherwise falls back to the type-only stub at `tests/fixtures/protocol-stub` while independently asserting that no shipped artifact imports `@aoc/protocol` at runtime — the sibling checkout is no longer required |
 | benchmarks executed | ✅ `docs/performance/BENCHMARK_BASELINE_V1.md` |
-| load tests executed | ✅ `docs/performance/LOAD_TEST_V1.md` (0 errors/timeouts under 32-way load) |
+| load tests executed | ✅ `docs/performance/LOAD_TEST_V1.md` (authentication enabled; 0 errors/timeouts under 32-way load; 9-check correctness phase all green) |
 | APIs documented & frozen | ✅ `docs/enterprise/API_STABILITY_V1.md` (27 endpoints, full error taxonomy, versioning policy) |
 | stores versioned + migrations verified | ✅ `docs/enterprise/MIGRATION_REVIEW_V1.md`; all three stores refuse foreign schema versions |
 | documentation reconciled | ✅ `docs/release/DOCUMENTATION_AUDIT_V1.md` (72 files audited; 6 safe fixes applied; obsolete docs flagged) |
@@ -53,7 +53,7 @@ Hardening-only release: converts the existing AOC Enterprise runtime into a prod
 
 ### Release gate fix
 
-`scripts/check-runtime-release-integrity.mjs` required `ignoreDeprecations: "6.0"`, a value the pinned TypeScript 5.9 rejects (TS5103) — the check was unsatisfiable as shipped (either the check failed or the compiler did). It now requires `"5.0"`, matching the pinned compiler, with a comment to revisit on the TS 6 upgrade. `scripts/validate-publishability.mjs` now fails with an actionable message (instead of a raw ENOENT stack) when the `@aoc/protocol` sibling checkout is missing.
+`scripts/check-runtime-release-integrity.mjs` required `ignoreDeprecations: "6.0"`, a value the pinned TypeScript 5.9 rejects (TS5103) — the check was unsatisfiable as shipped (either the check failed or the compiler did). It now requires `"5.0"`, matching the pinned compiler, with a comment to revisit on the TS 6 upgrade. `scripts/validate-publishability.mjs` no longer requires the `@aoc/protocol` sibling checkout: when the checkout is absent it falls back to the type-only stub package at `tests/fixtures/protocol-stub` and independently asserts that no shipped artifact imports `@aoc/protocol` at runtime.
 
 ### New tooling
 
@@ -77,10 +77,10 @@ Hardening-only release: converts the existing AOC Enterprise runtime into a prod
 
 ## Known risks
 
-1. **SQLite single-writer ceiling.** Write throughput saturates ~160 rps/instance at 32-way concurrency (documented); scaling is vertical or per-tenant-instance. By design; not a defect.
+1. **SQLite single-writer ceiling.** Governance-evaluate write throughput saturates ~130 rps/instance at 32-way concurrency with authentication enabled (documented); scaling is vertical or per-tenant-instance. By design; not a defect.
 2. **`next` advisories in `apps/agent-passport-web`** (private demo app, not part of the runtime deliverable) — upgrade to next 16 is breaking, deferred post-v1.
 3. **First-open cold outliers** (~80 ms first write) — prepared-statement/WAL warmup; p95 unaffected.
-4. **`check:runtime-federation` (standalone script, not part of `validate:release`) fails on `main` and on this branch alike** — `reconciliation_failed:rejected`. The federation contract suite in `tests/runtime-federation.test.mjs` passes, so the script's expected scenario is stale relative to the tested contract; reconciling the script is post-v1 (runtime federation semantics are out of this PR's scope).
+4. **`check:runtime-federation` — resolved.** The standalone script previously failed on `main` and on this branch alike (`reconciliation_failed:rejected`) because its expected scenario had drifted from the envelope contract; the script scenario was fixed (runtime federation code unchanged), it now passes, and it runs as part of `npm run validate:v1-release`. See `docs/release/RUNTIME_FEDERATION_V1.md`.
 5. **Manifest commit reference** — `release/RELEASE_MANIFEST.json` records the commit at generation time; regenerate when cutting the final tag.
 
 ## Accepted risks (full analysis in `THREAT_MODEL_V1.md` §8)
@@ -96,6 +96,5 @@ Auth disabled by default (dev posture; deployment guide mandates enabling); dige
 - `apps/agent-passport-web`: next 16 upgrade; advisories re-audit.
 - Promote or remove stub workspaces (`governance-treaties`, `runtime-negotiation`) and their parked `.test.skip.ts` suites; align `control-plane-sdk` test script with the standard convention.
 - Retire/mark-historical the obsolete docs flagged in `DOCUMENTATION_AUDIT_V1.md` (five `CURRENT_STATE_*` session logs, pre-PR baseline snapshots, `repo-boundaries.md`).
-- Reconcile `scripts/check-runtime-federation.mjs` with the federation contract pinned by `tests/runtime-federation.test.mjs` (script currently fails on `main` too).
 - TypeScript 6 upgrade (then move the `ignoreDeprecations` guard in `check-runtime-release-integrity.mjs` to `"6.0"`).
 - Long-duration soak and large-corpus (millions of rows) performance profiles.

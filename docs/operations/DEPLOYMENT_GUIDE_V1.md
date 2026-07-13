@@ -33,7 +33,7 @@ npm run build            # tsc -b -- compiles to dist/
 Optionally run the full release gate before packaging:
 
 ```bash
-npm run validate:release
+npm run validate:v1-release   # consolidated v1 gate (superset of validate:release)
 ```
 
 ## Start

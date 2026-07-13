@@ -21,6 +21,7 @@ First production release. PR-008 is a hardening-only release: no new products, n
 - **`@aoc-enterprise/enterprise-host-sdk`** — minimal typed HTTP client for the Enterprise Host v1 API (transport only: typed methods per endpoint, error taxonomy, timeouts; retry guidance documented, no business logic).
 - **Performance harness** — `scripts/benchmark-enterprise.mjs` and `scripts/load-test-enterprise.mjs`, with recorded baselines in `docs/performance/`.
 - **Release manifest generator** — `scripts/generate-release-manifest.mjs` → `release/RELEASE_MANIFEST.json` (versions, store schemas, framework digests, artifact checksums, compatibility matrix).
+- **Consolidated v1 release gate** — `npm run validate:v1-release`: the `validate:release` checks plus `check:runtime-federation`, API-freeze verification against `release/api-surface.v1.json`, release-manifest verification, release-documentation check, and SDK-surface check. `validate:publishability` no longer requires the `@aoc/protocol` sibling checkout (falls back to the type-only stub in `tests/fixtures/protocol-stub` and asserts no shipped artifact imports `@aoc/protocol` at runtime).
 - **Release documentation set** — threat model, security hardening report, API stability report (frozen v1 surface), migration review, test strategy, deployment guide, runbooks, backup & recovery guide, dependency audit, documentation audit.
 - Root `engines: { node: ">=22" }`.
 - Regression suites: `http-adapter-hardening.test.ts`, `sqlite-store-version-guard.test.ts`, SDK client tests.
