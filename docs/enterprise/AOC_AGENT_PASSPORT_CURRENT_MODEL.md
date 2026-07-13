@@ -254,7 +254,7 @@ exports its own `Passport`. Neither is re-exported from
 ## 25. Existing documentation claims
 
 `packages/agent-governance/docs/agent-passport-core.md` and
-`docs/runtime-guard-lite.md` document the commercial Passport Core and its
+`packages/agent-governance/docs/runtime-guard-lite.md` document the commercial Passport Core and its
 Runtime Guard Lite; they make no claims about Governance Store/Evidence
 Bundle integration, event sourcing, or disclosure views — none of PR-006's
 claims conflict with them.

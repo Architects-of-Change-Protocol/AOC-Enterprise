@@ -18,6 +18,7 @@ import { toKernelEvaluationResult } from '../governance-store/store-common.js';
 import type { GovernanceEnterpriseContext, GovernanceIdempotencyContext, GovernanceRecord, GovernanceStoreAccessContext } from '../governance-store/contracts.js';
 import type { EnterpriseLogger } from '../telemetry/enterprise-logger.js';
 import type { EnterpriseTelemetry } from '../telemetry/enterprise-telemetry.js';
+import { extractBearerToken, matchApiKey } from './credential-matching.js';
 
 /** Transport-level input to one evaluation call -- the not-yet-validated wire body plus the caller's auth header and optional `Idempotency-Key` header value. */
 export interface EvaluateGovernanceRequestInput {
@@ -49,12 +50,6 @@ export interface EnterpriseEvaluationResponse {
   readonly body: GovernanceEvaluateResponseBody;
 }
 
-function extractBearerToken(authorizationHeader: string | undefined): string | undefined {
-  if (authorizationHeader === undefined) return undefined;
-  const match = /^Bearer\s+(.+)$/i.exec(authorizationHeader.trim());
-  return match?.[1];
-}
-
 /**
  * Enterprise-owned authentication/authorization -- entirely separate from,
  * and prior to, anything the Kernel evaluates. A missing/unknown key is a
@@ -71,7 +66,7 @@ function authenticateAndAuthorize(
   const token = extractBearerToken(authorizationHeader);
   if (token === undefined) throw EnterpriseHttpErrors.authenticationFailed('A Bearer token is required.');
 
-  const matchedKey = configuration.authentication.apiKeys.find((apiKey) => apiKey.key === token);
+  const matchedKey = matchApiKey(token, configuration.authentication.apiKeys);
   if (matchedKey === undefined) throw EnterpriseHttpErrors.authenticationFailed('The provided credential is not recognized.');
 
   if (matchedKey.organizationId !== undefined && organizationId !== undefined && matchedKey.organizationId !== organizationId) {

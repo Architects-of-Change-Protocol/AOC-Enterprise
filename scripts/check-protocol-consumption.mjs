@@ -19,6 +19,10 @@ const protectedSymbols = [
 const allowFiles = new Set([
   'scripts/check-protocol-consumption.mjs',
   'tests/fixtures/external-consumer/types/aoc-protocol/index.d.ts',
+  // Release-tooling stand-in used by validate-publishability.mjs when the
+  // @aoc/protocol sibling checkout is absent; never shipped, never imported
+  // by runtime code (the publishability check enforces both).
+  'tests/fixtures/protocol-stub/index.d.ts',
 ]);
 
 async function walk(dir) {

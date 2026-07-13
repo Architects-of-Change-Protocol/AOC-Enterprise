@@ -437,6 +437,14 @@ function parseJson<T>(json: string, what: string, failures: string[]): T | undef
  * caller, and cross-process writers are serialized by SQLite's own locking
  * plus the uniqueness constraints.
  */
+function resolveBusyTimeoutMs(value: number | undefined): number {
+  const timeout = value ?? DEFAULT_BUSY_TIMEOUT_MS;
+  if (!Number.isSafeInteger(timeout) || timeout <= 0) {
+    throw new RangeError(`busyTimeoutMs must be a positive integer, received '${String(value)}'.`);
+  }
+  return timeout;
+}
+
 export async function createSqliteGovernanceStore(dbPath: string, options: CreateSqliteGovernanceStoreOptions = {}): Promise<GovernanceStore> {
   const { default: Database } = await import('better-sqlite3');
   const resolved = resolveStoreOptions(options);
@@ -446,7 +454,7 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
   db.pragma('foreign_keys = ON');
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = FULL');
-  db.pragma(`busy_timeout = ${options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS}`);
+  db.pragma(`busy_timeout = ${resolveBusyTimeoutMs(options.busyTimeoutMs)}`);
 
   initSchemaAndMigrate(db, resolved.now);
 
@@ -926,7 +934,8 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
     if (code !== undefined && (code === 'SQLITE_BUSY' || code === 'SQLITE_CANTOPEN' || code === 'SQLITE_READONLY' || code === 'SQLITE_IOERR')) {
       throw new GovernanceStoreError('GOVERNANCE_STORE_UNAVAILABLE', 'The Governance Store database is unavailable.', { sqliteCode: code });
     }
-    throw new GovernanceStoreError('GOVERNANCE_STORE_TRANSACTION_FAILED', 'The Governance Store transaction failed and was rolled back.');
+    const message = error instanceof Error ? error.message : String(error);
+    throw new GovernanceStoreError('GOVERNANCE_STORE_TRANSACTION_FAILED', `The Governance Store transaction failed and was rolled back: ${message}`);
   }
 
   // -- standalone event append -------------------------------------------------

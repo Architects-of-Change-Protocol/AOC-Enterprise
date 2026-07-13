@@ -1,0 +1,22 @@
+{
+  "name": "@aoc-enterprise/enterprise-host-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal typed HTTP client for the AOC Enterprise Host v1 API. Transport only: no governance logic, no local decisions.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ]
+}

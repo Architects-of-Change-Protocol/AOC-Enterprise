@@ -180,6 +180,23 @@ interface AssessmentRow {
   readonly assessment_json: string;
 }
 
+function resolveBusyTimeoutMs(value: number | undefined): number {
+  const timeout = value ?? DEFAULT_BUSY_TIMEOUT_MS;
+  if (!Number.isSafeInteger(timeout) || timeout <= 0) {
+    throw new RangeError(`busyTimeoutMs must be a positive integer, received '${String(value)}'.`);
+  }
+  return timeout;
+}
+
+function tableExists(db: import('better-sqlite3').Database, tableName: string): boolean {
+  return db.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?`).get(tableName) !== undefined;
+}
+
+function isSqliteConstraintViolation(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === 'string' && code.startsWith('SQLITE_CONSTRAINT');
+}
+
 function resolveOnDisk(dbPath: string): string {
   const absPath = resolve(dbPath);
   const dir = dirname(absPath);
@@ -212,12 +229,33 @@ export async function createSqliteAssuranceStore(dbPath: string, options: Create
   db.pragma('foreign_keys = ON');
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = FULL');
-  db.pragma(`busy_timeout = ${options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS}`);
+  db.pragma(`busy_timeout = ${resolveBusyTimeoutMs(options.busyTimeoutMs)}`);
+
+  // Check the recorded schema version BEFORE applying SCHEMA_V1 -- see the
+  // matching comment in sqlite-passport-store.ts. A foreign-schema database
+  // must not be mutated just because we were asked to open it.
+  if (tableExists(db, 'assurance_store_versions')) {
+    const existingVersion = db.prepare(`SELECT schema_version FROM assurance_store_versions ORDER BY id DESC LIMIT 1`).get() as { schema_version: string } | undefined;
+    if (existingVersion !== undefined && existingVersion.schema_version !== ASSURANCE_STORE_SCHEMA_VERSION) {
+      db.close();
+      throw new AssuranceError(
+        'ASSURANCE_STORE_UNAVAILABLE',
+        `Assurance Store schema version '${existingVersion.schema_version}' is not supported by this runtime (expected '${ASSURANCE_STORE_SCHEMA_VERSION}'). Refusing to open the store.`,
+      );
+    }
+  }
+
   db.exec(SCHEMA_V1);
 
-  const versionCount = (db.prepare(`SELECT COUNT(*) AS count FROM assurance_store_versions`).get() as { count: number }).count;
-  if (versionCount === 0) {
+  const latestVersion = db.prepare(`SELECT schema_version FROM assurance_store_versions ORDER BY id DESC LIMIT 1`).get() as { schema_version: string } | undefined;
+  if (latestVersion === undefined) {
     db.prepare(`INSERT INTO assurance_store_versions (schema_version, migration_state, recorded_at) VALUES (?, 'current', ?)`).run(ASSURANCE_STORE_SCHEMA_VERSION, now());
+  } else if (latestVersion.schema_version !== ASSURANCE_STORE_SCHEMA_VERSION) {
+    db.close();
+    throw new AssuranceError(
+      'ASSURANCE_STORE_UNAVAILABLE',
+      `Assurance Store schema version '${latestVersion.schema_version}' is not supported by this runtime (expected '${ASSURANCE_STORE_SCHEMA_VERSION}'). Refusing to open the store.`,
+    );
   }
 
   const selectAssessment = db.prepare(`SELECT * FROM assurance_assessments WHERE assessment_id = ?`);
@@ -319,11 +357,11 @@ export async function createSqliteAssuranceStore(dbPath: string, options: Create
           now(),
         );
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes('UNIQUE') || message.includes('PRIMARY')) {
+        if (isSqliteConstraintViolation(error)) {
           throw new AssuranceError('ASSURANCE_FRAMEWORK_INVALID', `Framework '${framework.frameworkId}@${framework.frameworkVersion}' is already persisted; framework versions are immutable.`);
         }
-        throw new AssuranceError('ASSURANCE_STORE_UNAVAILABLE', 'The Assurance Store failed to persist the framework definition.');
+        const message = error instanceof Error ? error.message : String(error);
+        throw new AssuranceError('ASSURANCE_STORE_UNAVAILABLE', `The Assurance Store failed to persist the framework definition: ${message}`);
       }
     },
 
@@ -583,8 +621,7 @@ export async function createSqliteAssuranceStore(dbPath: string, options: Create
           createdAt: finding.createdAt,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes('UNIQUE') || message.includes('PRIMARY')) {
+        if (isSqliteConstraintViolation(error)) {
           throw new AssuranceError('ASSURANCE_VALIDATION_ERROR', `Finding '${finding.findingId}' already exists; finding history is append-only.`);
         }
         throw error;
@@ -606,8 +643,7 @@ export async function createSqliteAssuranceStore(dbPath: string, options: Create
           reviewedAt: review.reviewedAt,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes('UNIQUE') || message.includes('PRIMARY')) {
+        if (isSqliteConstraintViolation(error)) {
           throw new AssuranceError('ASSURANCE_MANUAL_REVIEW_INVALID', `Manual review '${review.reviewId}' already exists; reviews are append-only.`);
         }
         throw error;
@@ -639,8 +675,7 @@ export async function createSqliteAssuranceStore(dbPath: string, options: Create
           signalJson: JSON.stringify(signal),
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes('UNIQUE') || message.includes('PRIMARY')) {
+        if (isSqliteConstraintViolation(error)) {
           throw new AssuranceError('ASSURANCE_SIGNAL_INVALID', `Signal '${signal.signalId}' already exists; signals are append-only.`);
         }
         throw error;
