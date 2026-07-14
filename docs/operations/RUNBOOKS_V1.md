@@ -72,10 +72,16 @@ One runbook per operational situation. Prerequisite reading:
 
 ## 4. Backup
 
-See `docs/operations/BACKUP_RECOVERY_V1.md` for the full strategy. Short
-form:
+**Preferred:** `npm run backup:v1 -- --output <dir>` (see
+`docs/operations/AOC_ENTERPRISE_BACKUP_V1.md`) — a single command that
+performs the consistency-safe SQLite copy, `PRAGMA integrity_check`,
+checksums, and a versioned manifest, and refuses to produce a partial
+backup on any failure.
 
-- Preferred: stop the Host, copy the three database files, restart.
+Manual fallback (see `docs/operations/BACKUP_RECOVERY_V1.md` for the full
+strategy):
+
+- Stop the Host, copy the three database files, restart.
 - Online: `sqlite3 <db> ".backup '<dest>'"` per database file (SQLite's
   online backup API — safe against a live writer). Never plain-`cp` a
   live WAL database.
@@ -86,6 +92,16 @@ form:
 ## 5. Restore
 
 **When:** replacing the live store set with a backup.
+
+**Preferred:** `npm run restore:v1 -- --backup <dir> --target <dir>`
+(see `docs/operations/AOC_ENTERPRISE_RESTORE_V1.md`) — validates the
+backup's format, checksums, SQLite integrity, and schema compatibility
+before touching `--target`; refuses to overwrite existing stores without
+`--force`; takes a pre-restore safety copy; and rolls back on any
+post-restore verification failure. Point
+`AOC_ENTERPRISE_*_SQLITE_PATH` at the restored files afterward.
+
+Manual fallback:
 
 1. Stop the Host.
 2. Move the current database files (all of `<db>`, `<db>-wal`,

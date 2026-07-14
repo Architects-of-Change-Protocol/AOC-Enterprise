@@ -85,6 +85,37 @@ export async function buildReleaseManifest() {
       'docs/performance/BENCHMARK_BASELINE_V1.md',
       'docs/performance/LOAD_TEST_V1.md',
     ],
+    portabilityTooling: buildPortabilityToolingManifest(root, fileChecksum),
   };
 
+}
+
+// Records the presence and checksum of the backup/restore/portability
+// tooling added for the v1.0.0 portability validation
+// (docs/release/AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md, Phase 23). Never
+// includes a real backup -- only the scripts, docs, and fixture generator
+// themselves.
+function buildPortabilityToolingManifest(root, fileChecksum) {
+  const paths = [
+    'scripts/portability/lib-portability.mjs',
+    'scripts/portability/backup-enterprise-v1.mjs',
+    'scripts/portability/restore-enterprise-v1.mjs',
+    'scripts/portability/generate-portability-fixture.mjs',
+    'scripts/portability/compare-portability-state.mjs',
+    'scripts/portability/check-portability-smoke.mjs',
+    'scripts/portability/validate-portability-v1.mjs',
+    'docs/release/AOC_ENTERPRISE_V1_PORTABILITY_CURRENT_STATE.md',
+    'docs/release/AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md',
+    'docs/release/AOC_ENTERPRISE_V1_TAGGING_RUNBOOK.md',
+    'docs/operations/AOC_ENTERPRISE_BACKUP_V1.md',
+    'docs/operations/AOC_ENTERPRISE_RESTORE_V1.md',
+    'docs/operations/AOC_ENTERPRISE_CLEAN_ROOM_DRILL.md',
+  ]
+    .filter((path) => existsSync(resolve(root, path)))
+    .sort();
+
+  return {
+    backupFormat: 'aoc.enterprise.backup.v1',
+    files: paths.map((path) => ({ path, checksum: fileChecksum(path) })),
+  };
 }
