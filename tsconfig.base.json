@@ -25,9 +25,6 @@
     "paths": {
       "@aoc-enterprise/policy-runtime": [
         "types/policy-runtime-bridge.d.ts"
-      ],
-      "@aoc/protocol": [
-        "types/aoc-protocol/index.d.ts"
       ]
     },
     "baseUrl": ".",

@@ -1,15 +1,15 @@
 {
   "$comment": "This is NOT an npm lockfile. It is a small, auditable record of which AOC Protocol commit/artifact AOC Enterprise has actually been validated against. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md for the full upgrade/rollback procedure. Validate this file with `node scripts/protocol/check-compatibility-lock.mjs`.",
   "repository": "Architects-of-Change-Protocol/Architects_of_Change_Protocol",
-  "commit": "7049fadb6144808b78c5102fce490feba324b80f",
+  "commit": "ab2ac6ef573c871a029a67b13d33ba9738cb5939",
   "package": "@aoc/protocol",
   "expectedVersion": "0.1.0",
   "enterpriseSupportedVersion": "1.0.0",
   "peerDependencyRange": ">=0.1.0",
   "tarball": {
     "filename": "aoc-protocol-0.1.0.tgz",
-    "sha256": "4372293666fbec2bd1add4852c0d6f907790776e0001ea93d081888bcc1c9069",
-    "sizeBytes": 35117
+    "sha256": "4e5289b74bc30bcbd63afe87cd00d5417aa6bc665fe50d7c9c1b845bf1896b27",
+    "sizeBytes": 35526
   },
   "verifiedPublicExports": [
     "@aoc/protocol",

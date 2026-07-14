@@ -104,7 +104,7 @@
   },
   "devDependencies": {
     "@aoc-enterprise/pmfreak-agent-passport-foundation": "*",
-    "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol",
+    "@aoc/protocol": "file:./vendor/aoc-protocol-0.1.0.tgz",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
