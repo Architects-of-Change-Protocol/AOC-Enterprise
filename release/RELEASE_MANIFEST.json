@@ -2,7 +2,7 @@
   "name": "@aoc-enterprise/runtime",
   "version": "1.0.0",
   "generated": {
-    "commit": "c8e5cf5fcf07b6a95f9685d265b6c8ffab3c588c",
+    "commit": "be1d90d4f145dedc4e7524f80b8c7d54255d7271",
     "branch": "claude/aoc-v1-release-validation-5jl2ld",
     "node": "v22.22.2"
   },
@@ -104,7 +104,7 @@
       },
       {
         "path": "docs/release/AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md",
-        "checksum": "sha256:b9842975e1a723dfe8693655a93d4fe774bdb5a3569549d33207fdc3e9a822e7"
+        "checksum": "sha256:40d2483475fc6275d3746be1c68efba8be2a2710869a193dfd94b0b01ffc76d4"
       },
       {
         "path": "docs/release/AOC_ENTERPRISE_V1_TAGGING_RUNBOOK.md",
