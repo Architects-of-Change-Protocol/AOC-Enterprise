@@ -1,0 +1,124 @@
+AOC ENTERPRISE — PROPRIETARY SOFTWARE LICENSE
+
+Copyright © 2026 Onchainfest LLC. All Rights Reserved.
+
+> STATUS: DRAFT — PENDING PROFESSIONAL LEGAL REVIEW.
+> This document was prepared as part of an internal legal/IP hardening
+> effort. It is intended to state Onchainfest LLC's ownership position
+> clearly and is not a substitute for review by qualified legal counsel
+> before external distribution, investment due diligence, or execution
+> of a commercial license agreement.
+
+## 1. Ownership
+
+AOC Enterprise (the "Software"), including its source code, object code,
+documentation, schemas, configuration, build tooling, and all associated
+materials contained in this repository, is the proprietary property of
+Onchainfest LLC ("Onchainfest," "we," "us," or "our"), except where a
+specific file, directory, or component is expressly identified as
+third-party or separately licensed material (see Section 5).
+
+This Software is confidential and proprietary to Onchainfest LLC. It is
+made available on a restricted basis and is not open source software.
+
+## 2. No License Granted by Access
+
+Access to this repository — whether through direct grant, an employment
+or contractor relationship, a commercial pilot, a due diligence process,
+or any other means — does **not**, by itself, constitute a license to
+use, copy, modify, distribute, sublicense, or otherwise exploit the
+Software. No rights are granted by implication, estoppel, or otherwise
+except as expressly set forth in a separate written agreement executed
+by an authorized representative of Onchainfest LLC (a "Commercial
+Agreement").
+
+## 3. Restrictions
+
+Except as expressly permitted under a Commercial Agreement, or as
+required by applicable law notwithstanding this restriction, no person
+or entity may, in whole or in part:
+
+- use the Software for any purpose, including internal evaluation
+  beyond what is expressly authorized;
+- copy, reproduce, or create derivative works of the Software;
+- modify, adapt, translate, or prepare derivative works based on the
+  Software;
+- distribute, publish, sell, rent, lease, or sublicense the Software or
+  any portion of it;
+- reverse engineer, decompile, disassemble, or otherwise attempt to
+  derive the source code, underlying ideas, algorithms, structure, or
+  organization of the Software, except to the extent such restriction is
+  prohibited by applicable law;
+- remove, obscure, or alter any proprietary notice, label, or this
+  license from any copy of the Software;
+- use the Software to build a competing product or service.
+
+## 4. Commercial Licensing
+
+Commercial use, deployment, integration, or distribution rights to the
+Software are granted only through a separate, written Commercial
+Agreement negotiated directly with Onchainfest LLC. Nothing in this
+repository, including the mere existence of build scripts, deployment
+guides, or SDK packages, constitutes an offer or grant of such rights.
+Contact Onchainfest LLC to request commercial licensing terms.
+
+Where the Software is provided to a specific counterparty under a signed
+Commercial Agreement, that agreement governs the parties' rights and
+obligations with respect to the Software. In the event of a conflict
+between this file and the terms of an executed Commercial Agreement for
+a given recipient, the executed Commercial Agreement controls for that
+recipient.
+
+## 5. Third-Party and Open Source Components
+
+The Software may incorporate or depend upon third-party software
+components, including open source components, that are licensed under
+their own respective terms. Those components are not owned by
+Onchainfest LLC and remain subject to their original licenses,
+notwithstanding anything else stated in this file. Nothing in this
+license expands, restricts, or otherwise alters the license terms of any
+third-party component. See `NOTICE.md`, `docs/legal/OPEN_SOURCE_DEPENDENCIES.md`,
+and `docs/legal/THIRD_PARTY_NOTICES.md` for the current dependency
+inventory.
+
+## 6. Relationship to AOC Protocol
+
+AOC Enterprise is built on top of, and consumes, AOC Protocol — a
+separate project with its own repository, contributors, and licensing
+terms. This license governs only the AOC Enterprise repository and its
+original contents. It does not grant, restrict, claim, or otherwise
+affect any rights in AOC Protocol. See
+`docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md` for the boundary between
+the two projects.
+
+## 7. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+IN NO EVENT SHALL ONCHAINFEST LLC BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE, EXCEPT AS OTHERWISE
+EXPRESSLY STATED IN A COMMERCIAL AGREEMENT.
+
+## 8. Governing Terms
+
+Where a Commercial Agreement exists between Onchainfest LLC and a
+recipient of the Software, the delivery, support, warranty, liability,
+and usage terms of that Commercial Agreement govern the recipient's use
+of the Software. This LICENSE file states Onchainfest LLC's default
+ownership and access position in the absence of, or to the extent not
+addressed by, such an agreement.
+
+## 9. Contact
+
+For commercial licensing inquiries, contact Onchainfest LLC through the
+official channel designated for that purpose. No specific contact
+address is asserted in this file; a designated licensing contact should
+be added here once formally established.
+
+---
+
+All trademarks, service marks, and product names referenced in this
+repository are the property of their respective owners. See
+`TRADEMARKS.md`.
