@@ -23,7 +23,7 @@
 | Copyright | Disponible — creado en este sprint | `COPYRIGHT.md` | Legal | No |
 | Trademarks | Disponible como declaración interna; **estado de registro real no verificado** (no hay evidencia de registro en ninguna jurisdicción) | `TRADEMARKS.md` | Founder / Legal | Sí, si la transacción depende de marcas registradas específicamente |
 | Domain ownership | No disponible en el repositorio | N/A (fuera del repo) | Founder | Sí, si la transacción incluye activos de dominio |
-| Release artifacts | Disponible — manifest firmado con checksums SHA-256 | `release/RELEASE_MANIFEST.json`, `CHANGELOG.md` | Eng lead | No |
+| Release artifacts | Disponible — manifest con checksums SHA-256 por artefacto (no hay firma criptográfica ni capa de no repudio; ver `docs/release/TECHNICAL_DUE_DILIGENCE_V1.md` Finding DD-4) | `release/RELEASE_MANIFEST.json`, `CHANGELOG.md` | Eng lead | No |
 | SBOM (Software Bill of Materials) | No disponible en formato estándar (SPDX/CycloneDX); existe inventario manual equivalente | `docs/legal/OPEN_SOURCE_DEPENDENCIES.md`, `docs/release/DEPENDENCY_AUDIT_V1.md` | Eng lead | No actualmente, pero recomendable automatizar antes de una transacción formal |
 | Security reports | Disponible — threat model, hardening report, addendum | `docs/security/THREAT_MODEL_V1.md`, `docs/security/THREAT_MODEL_V1_ADDENDUM.md`, `docs/security/SECURITY_HARDENING_V1.md` | Eng lead | No |
 | Customer contracts | No disponible en el repositorio | N/A (fuera del repo) | Founder / Sales / Legal | Sí, si la transacción depende de ingresos o clientes existentes |

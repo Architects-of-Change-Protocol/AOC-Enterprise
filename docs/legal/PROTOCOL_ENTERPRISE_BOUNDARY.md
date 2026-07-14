@@ -117,16 +117,25 @@ The AOC Enterprise Host is designed to be run as a deployed service
 (`scripts/run-enterprise-host.mjs`, `docs/operations/DEPLOYMENT_GUIDE_V1.md`),
 with its own persistence (SQLite or in-memory), health/liveness/readiness
 endpoints, structured logging, and telemetry counters. AOC Protocol, by
-contrast, is not something this repository operates — it is compiled in
-as a dependency, not run as a separate service by AOC Enterprise.
+contrast, is not something this repository operates — it is a
+compile-time dependency of AOC Enterprise, not run as a separate service
+by AOC Enterprise, and not bundled into AOC Enterprise's shipped runtime
+artifacts (see the note on `validate-publishability.mjs` below).
 
 ## What a customer can deploy
 
 A customer with a Commercial Agreement for AOC Enterprise can deploy the
 AOC Enterprise Host (and, where licensed, the Enterprise Runtime, SDK,
-and supporting tooling) as described in the deployment guide. Deploying
-AOC Enterprise necessarily includes AOC Protocol as a compiled-in
-dependency, since AOC Enterprise cannot function without it.
+and supporting tooling) as described in the deployment guide. AOC
+Enterprise is built against AOC Protocol's published contracts at
+compile time, but `scripts/validate-publishability.mjs` treats
+`@aoc/protocol` as a **compile-time type dependency only** and
+independently asserts, on every publishability run, that no shipped/
+packed JS artifact imports `@aoc/protocol` at runtime. A customer
+deployment of AOC Enterprise's built artifacts therefore does not
+necessarily include AOC Protocol's own code at runtime — only Enterprise
+code that was type-checked against Protocol's contracts during the
+build.
 
 ## What a customer does not get by acquiring Enterprise
 
