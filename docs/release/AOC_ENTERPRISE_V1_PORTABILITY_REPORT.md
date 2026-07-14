@@ -191,11 +191,12 @@ inspection:
 
 ## Portability Evidence
 
-- **Commit:** `a9ded65ad086f88d3596d2f58a376e7c4f676f5e` (baseline this
-  validation started from; the working commit at the time this document
-  was written may differ by the additions below — see the exact
-  validation results section for the commit each measurement ran
-  against).
+- **Baseline commit:** `a9ded65ad086f88d3596d2f58a376e7c4f676f5e` (what
+  this validation started from — 3302/3302 tests passing, clean build).
+- **Final validated commit:** `2986d88` (this branch, after all
+  backup/restore/portability tooling, tests, and documentation were
+  added and committed) — this is the exact commit the clean-room drill
+  below ran against.
 - **Node version:** v22.22.2 (`engines.node: ">=22"`).
 - **OS/platform:** Linux (containerized). macOS/Windows are documented as
   **unverified** in this session — see "Dependency and Platform
@@ -214,9 +215,10 @@ inspection:
   - Restore: all three stores opened `healthy` post-restore.
   - Comparison: `overallEquivalent: true` across Governance, Evidence,
     Passport, and Assurance (full detail in "Pre/Post Comparison" below).
-- **Clean-room drill (`npm run validate:portability:v1`):** see "Exact
-  Verification Results" below for the measured, step-by-step timing and
-  outcome from the actual run performed as part of this validation.
+- **Clean-room drill (`npm run validate:portability:v1`): PASS — all 13
+  steps, 383,552ms total**, run against the final validated commit; full
+  step-by-step timing and the backup/restore sizes it produced are in
+  "Exact Verification Results" below.
 
 ## Pre/Post Comparison
 
@@ -399,26 +401,59 @@ working tree:
 | Manual failure injection (10 scenarios, Phase 27) | All 10 failed closed with actionable errors — see "Failure Injection" above |
 | `npm run validate:portability:v1` (full clean-room drill) | See the step-by-step timing table below |
 
-### Clean-room drill, step by step
+### Clean-room drill, step by step (actual measured run)
 
-*(Filled in from the actual run performed during this validation; see
-`clean-room-drill-report.json`, retained via `--keep` for inspection.)*
+Run against commit `2986d88` (the final content commit of this
+validation), worktree clean, `--keep` retained at
+`/tmp/aoc-enterprise-clean-room-XvczUe` for inspection. **Result: PASS,
+all 13 steps, total 383,552ms (~6.4 minutes).**
 
 | Step | Status | Duration |
 |---|---|---|
-| `clean-source-extraction` | PASS | 861ms |
-| `npm-ci` | PASS | ~127s |
-| `build` | *(see report)* | *(see report)* |
-| `typecheck` | *(see report)* | *(see report)* |
-| `lint` | *(see report)* | *(see report)* |
-| `compiled-tests` | *(see report)* | *(see report)* |
-| `synthetic-fixture-generation` | *(see report)* | *(see report)* |
-| `full-backup` | *(see report)* | *(see report)* |
-| `pre-reference-capture` | *(see report)* | *(see report)* |
-| `source-store-destruction` | *(see report)* | *(see report)* |
-| `full-restore` | *(see report)* | *(see report)* |
-| `logical-comparison` | *(see report)* | *(see report)* |
-| `clean-room-release-gate` | *(see report)* | *(see report)* |
+| `clean-source-extraction` (local `git clone` + `git checkout <commit>`) | PASS | 506ms |
+| `npm-ci` | PASS | 122,425ms |
+| `build` | PASS | 19,464ms |
+| `typecheck` | PASS | 399ms |
+| `lint` | PASS | 468ms |
+| `compiled-tests` (`npm run test:root`, 3320 tests / 516 suites) | PASS | 28,381ms |
+| `synthetic-fixture-generation` | PASS | 427ms |
+| `full-backup` | PASS | 248ms |
+| `pre-reference-capture` | PASS | 3ms |
+| `source-store-destruction` | PASS | 1ms |
+| `full-restore` | PASS | 215ms |
+| `logical-comparison` (`overallEquivalent: true`) | PASS | 234ms |
+| `clean-room-release-gate` (`npm run validate:v1-release`, incl. `check:portability-smoke`) | PASS | 210,755ms |
+
+**Backup produced** (from the synthetic fixture): `governance.sqlite`
+245,760 bytes / 3 records; `agent-passport.sqlite` 53,248 bytes /
+7 events; `assurance.sqlite` 237,568 bytes / 1 assessment. All three
+`integrityCheck: "ok"`. **Restored size:** byte-identical to the backup
+(checksums re-verified post-copy).
+
+**RPO/RTO reading of these numbers (synthetic, not production-scale — see
+"Known Limitations"):**
+- Backup duration for this fixture: 248ms. Restore duration: 215ms.
+  Both are dominated by fixed per-store overhead (opening
+  `better-sqlite3`, running `PRAGMA integrity_check`, computing a
+  checksum), not data volume — expect these to scale sub-linearly with
+  store size for realistic production data volumes, but that scaling
+  itself is **untested** here.
+- End-to-end clean-room duration (source extraction through full release
+  gate, entirely from zero): ~6.4 minutes, of which `npm-ci` (~2 min) and
+  the release gate's own test suite (re-run twice: once directly, once
+  inside `validate:v1-release`) account for the large majority. This is
+  the "prove it from nothing" number, not an operational RTO — see below.
+- **Recommended operational RPO:** unchanged from
+  `BACKUP_RECOVERY_V1.md` — your backup interval; this tooling does not
+  add replication or point-in-time recovery.
+- **Recommended operational RTO:** copy-backup-and-start-one-process is
+  still on the order of the pre-existing "RTO = minutes" estimate in
+  `BACKUP_RECOVERY_V1.md` (restore itself measured at 215ms for this
+  fixture; a real deployment's dominant cost is provisioning a
+  replacement host, not the restore command). The clean-room drill's ~6.4
+  minutes is not that number — it additionally rebuilds the software from
+  source, which an operational restore onto an already-provisioned,
+  already-built host does not need to do.
 
 No check was skipped and none is claimed successful without having
 actually run in this session.
