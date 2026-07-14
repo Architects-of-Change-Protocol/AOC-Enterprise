@@ -1,10 +1,9 @@
 # Security Policy
 
 > STATUS: DRAFT — PENDING PROFESSIONAL LEGAL REVIEW.
-> **BLOCKER before external distribution:** the vulnerability reporting
-> channel below is a placeholder and must be replaced with a real,
-> monitored contact before this repository or its releases are shared
-> outside Onchainfest LLC.
+> This document states the founder-designated initial vulnerability
+> reporting channel. It is a governance draft, not legal advice, and has
+> not been reviewed by counsel.
 
 ## Scope
 
@@ -17,24 +16,91 @@ Enterprise's channel below and it will be routed appropriately.
 
 ## Reporting a vulnerability
 
-**Security reporting channel: pending formal designation.**
+Security vulnerabilities affecting AOC Enterprise must be reported
+privately to:
 
-`TODO (BLOCKER before external/public distribution): designate a
-monitored security contact (e.g. a dedicated email alias) and replace
-this placeholder before this repository, a release, or a security
-advisory referencing this file is shared outside Onchainfest LLC.`
+```text
+vicvalch@onchainfest.xyz
+```
 
-Until a formal channel is designated, do not open a public GitHub issue
-for a suspected vulnerability. Contact the Onchainfest LLC engineering
-or security lead directly through an existing internal channel.
+Subject prefix:
+
+```text
+[SECURITY REPORT]
+```
+
+This email address is the canonical reporting channel. Where GitHub
+Private Vulnerability Reporting is enabled for this repository, it may
+also be used to submit a report; the email address above remains the
+canonical channel regardless.
+
+- **Primary security owner:** Víctor Valverde.
+- **Backup security owner:** not yet designated. The absence of a backup
+  owner is a pending operational improvement, not a reason to treat the
+  channel above as unavailable or invalid.
 
 ## Do not open public vulnerability issues
 
-Do not file suspected security vulnerabilities as public GitHub issues
-or in any other public forum. Publicly disclosing an unpatched
-vulnerability before it has been triaged and addressed puts users and
-deployments at risk. Use the reporting channel above (once designated)
-or an existing internal escalation path.
+Do not report a suspected vulnerability through any public channel,
+including:
+
+- public GitHub issues;
+- public GitHub Discussions;
+- social media;
+- public chat rooms or community channels.
+
+Publicly disclosing an unpatched vulnerability before it has been
+triaged and addressed puts users and deployments at risk. Use the email
+channel above (or GitHub Private Vulnerability Reporting, where enabled)
+instead.
+
+## Response targets
+
+The following are operational targets, not guarantees and not
+contractual SLAs:
+
+- human acknowledgment within 2 business days;
+- initial triage within 5 business days;
+- periodic updates during active investigation;
+- coordinated remediation and disclosure.
+
+These targets describe current operational intent. They do not create a
+warranty or service-level commitment beyond what is stated in a separate
+Commercial Agreement, where one exists.
+
+## Report contents
+
+To help triage a report efficiently, include where known:
+
+- product and repository (AOC Enterprise / this repository);
+- affected component;
+- version, release, or commit;
+- description of the issue;
+- reproduction steps;
+- proof of concept, if available;
+- impact assessment;
+- environment (e.g. deployment configuration);
+- data accessed or potentially exposed, if any;
+- suggested mitigation, if any;
+- a contact for follow-up;
+- your proposed disclosure timeline, if any.
+
+## Sensitive information
+
+Do not include the following in the initial report:
+
+- credentials;
+- private keys;
+- customer data;
+- personal data;
+- production secrets or other sensitive material not necessary to
+  demonstrate the issue.
+
+If a secure exchange of such material is later needed to complete
+triage, it will be coordinated directly with the reporter after initial
+contact. No dedicated encrypted-submission mechanism or portal currently
+exists beyond the email channel and GitHub Private Vulnerability
+Reporting (where enabled) described above.
 
 ## Supported versions
 
@@ -49,17 +115,13 @@ as new release lines are cut.
 
 ## Responsible disclosure expectations
 
-- Report suspected vulnerabilities privately through the designated
-  channel before any public disclosure.
-- Provide enough detail to reproduce the issue (affected component,
-  version/commit, steps, and impact) so it can be triaged efficiently.
-- Allow a reasonable period for triage and remediation before any public
-  disclosure. A specific disclosure timeline has not yet been formally
-  adopted; until one is published here, coordinate timing directly with
-  the Onchainfest LLC contact who acknowledges your report.
-- Onchainfest LLC will make reasonable efforts to acknowledge reports
-  and communicate remediation status, once a formal reporting channel is
-  in place.
+- Report suspected vulnerabilities privately through the channel above
+  before any public disclosure.
+- A specific disclosure timeline has not yet been formally adopted;
+  until one is published here, coordinate timing directly with the
+  Onchainfest LLC contact who acknowledges your report.
+- Onchainfest LLC will make reasonable efforts to meet the response
+  targets above and communicate remediation status.
 
 ## Existing security documentation
 

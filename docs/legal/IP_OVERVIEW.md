@@ -123,13 +123,16 @@ The following areas depend on knowledge that is not fully captured in
 this repository and should be treated as a due-diligence gap until
 addressed:
 
-- **Security reporting channel** — `SECURITY.md` currently uses a
-  placeholder; the real contact/process lives outside this repository
-  and needs to be documented.
-- **Commercial licensing terms and contact** — `LICENSE` references a
-  "Commercial Agreement" process, but the actual template, pricing, and
-  point of contact for commercial licensing are not recorded in this
-  repository.
+- **Security reporting channel** — resolved for initial operational
+  purposes: `SECURITY.md` now designates `vicvalch@onchainfest.xyz`
+  (`[SECURITY REPORT]`) with Víctor Valverde as primary owner. A backup
+  security owner is not yet designated, and no operational testing,
+  monitoring, or formal SOC/CISO coverage is claimed or verifiable from
+  this repository; those remain due-diligence gaps.
+- **Commercial licensing terms and contact** — `LICENSE` now designates
+  `vicvalch@onchainfest.xyz` (`[COMMERCIAL LICENSE]`) as the licensing
+  contact, but the actual commercial agreement template, pricing, and
+  negotiation process are not recorded in this repository.
 - **Entity, employment, and IP-assignment records** — this repository
   contains no employment agreements, contractor agreements, or IP
   assignment records; their existence and status cannot be verified from

@@ -183,7 +183,7 @@ independent audit of the Protocol repository.
 | Orchestration | No | Sí | Enterprise-owned | `foundation.md` §3 | — |
 | Control plane | No | Partial — `packages/control-plane` has real logic; `control-plane-sdk` is contracts-only | Enterprise-owned | `packages/control-plane/src/service.ts` | Untested, not externally consumed as of this writing |
 | Tenant management | No | Sí — isolation enforced in the store layer | Enterprise-owned | `docs/release/TECHNICAL_DUE_DILIGENCE_V1.md` §3 | `packages/tenant-governance` itself is contracts-only, not the enforcement logic |
-| Deployment | No | Sí | Enterprise-owned | `docs/operations/DEPLOYMENT_GUIDE_V1.md` | Protocol ships compiled-in as a dependency, not deployed separately by Enterprise |
+| Deployment | No | Sí | Enterprise-owned | `docs/operations/DEPLOYMENT_GUIDE_V1.md` | Protocol is a compile-time dependency of Enterprise, not deployed separately by Enterprise and not bundled into shipped runtime artifacts (`scripts/validate-publishability.mjs` asserts no runtime import) |
 | Adapters | No | Sí | Enterprise-owned | `src/enterprise/adapters`, `src/runtime/adapters` | — |
 | Billing | No | Sí (integration only) | Enterprise-owned | `apps/agent-passport-web` (Stripe dependency) | Private demo app; not part of the shipped runtime deliverable |
 | Metering | No evidence | No evidence found in this repository | Not implemented | — | Do not assume metering exists; none found |
