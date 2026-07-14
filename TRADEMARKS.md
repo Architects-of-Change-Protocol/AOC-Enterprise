@@ -62,7 +62,15 @@ purposes only and does not imply endorsement or affiliation.
 
 Use of the names or logos listed above — including in marketing
 materials, integrations, product names, or public communications —
-requires prior written authorization from Onchainfest LLC. Absence of a
-designated public contact in this document is not authorization to use
-these marks; a formal request channel should be added here once
-established.
+requires prior written authorization from Onchainfest LLC. Requests
+should be sent to:
+
+```text
+vicvalch@onchainfest.xyz
+```
+
+using the subject prefix:
+
+```text
+[TRADEMARK REQUEST]
+```

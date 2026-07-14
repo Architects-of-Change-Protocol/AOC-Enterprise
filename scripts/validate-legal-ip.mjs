@@ -83,6 +83,54 @@ for (const file of ['LICENSE', 'NOTICE.md', 'COPYRIGHT.md']) {
 }
 
 // ---------------------------------------------------------------------------
+// 2b. Founder-designated institutional contact channels are present
+// ---------------------------------------------------------------------------
+
+const INSTITUTIONAL_EMAIL = 'vicvalch@onchainfest.xyz';
+const OBSOLETE_SECURITY_PLACEHOLDER = 'Security reporting channel: pending formal designation';
+
+const CONTACT_REQUIREMENTS = [
+  { file: 'SECURITY.md', prefix: '[SECURITY REPORT]' },
+  { file: 'LICENSE', prefix: '[COMMERCIAL LICENSE]' },
+  { file: 'TRADEMARKS.md', prefix: '[TRADEMARK REQUEST]' },
+  { file: 'CONTRIBUTING.md', prefix: '[CONTRIBUTOR GOVERNANCE]' },
+];
+
+for (const { file, prefix } of CONTACT_REQUIREMENTS) {
+  const path = join(ROOT, file);
+  if (!existsSync(path)) continue; // already reported above
+  const text = await readFile(path, 'utf8');
+  if (!text.includes(INSTITUTIONAL_EMAIL)) {
+    block(`${file} does not mention the designated institutional contact ("${INSTITUTIONAL_EMAIL}")`);
+  }
+  if (!text.includes(prefix)) {
+    block(`${file} does not mention its required subject prefix ("${prefix}")`);
+  }
+}
+
+const securityPath = join(ROOT, 'SECURITY.md');
+if (existsSync(securityPath)) {
+  const text = await readFile(securityPath, 'utf8');
+  if (text.includes(OBSOLETE_SECURITY_PLACEHOLDER)) {
+    block(`SECURITY.md still contains the obsolete placeholder: "${OBSOLETE_SECURITY_PLACEHOLDER}"`);
+  }
+}
+
+// Registered-trademark symbol must not be used to mark a name (e.g. "AOC®")
+// without verified registration evidence. A bare prose mention of the
+// symbol itself (e.g. explaining that it is not used) is not a violation —
+// only flag ® directly attached to a word, which would assert registration.
+const REGISTERED_MARK_USAGE = /\w®/;
+for (const file of [...REQUIRED_ROOT_FILES, ...REQUIRED_LEGAL_DOCS]) {
+  const path = join(ROOT, file);
+  if (!existsSync(path)) continue;
+  const text = await readFile(path, 'utf8');
+  if (REGISTERED_MARK_USAGE.test(text)) {
+    block(`${file} uses the ® symbol attached to a name, which asserts registration; remove unless registration is verified`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 3. Internal markdown links resolve
 // ---------------------------------------------------------------------------
 

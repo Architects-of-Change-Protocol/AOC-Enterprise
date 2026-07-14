@@ -98,5 +98,16 @@ this repository's existing architectural and process conventions:
 
 For questions about whether a specific contribution requires a CLA or IP
 Assignment Agreement, or which instrument applies to a given
-relationship, contact the Onchainfest LLC engineering lead responsible
-for this repository before submitting the contribution.
+relationship, contact:
+
+```text
+vicvalch@onchainfest.xyz
+```
+
+using the subject prefix:
+
+```text
+[CONTRIBUTOR GOVERNANCE]
+```
+
+before submitting the contribution.
