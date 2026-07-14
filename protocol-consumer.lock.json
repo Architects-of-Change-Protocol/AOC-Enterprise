@@ -1,0 +1,48 @@
+{
+  "$comment": "This is NOT an npm lockfile. It is a small, auditable record of which AOC Protocol commit/artifact AOC Enterprise has actually been validated against. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md for the full upgrade/rollback procedure. Validate this file with `node scripts/protocol/check-compatibility-lock.mjs`.",
+  "repository": "Architects-of-Change-Protocol/Architects_of_Change_Protocol",
+  "commit": "7049fadb6144808b78c5102fce490feba324b80f",
+  "package": "@aoc/protocol",
+  "expectedVersion": "0.1.0",
+  "enterpriseSupportedVersion": "1.0.0",
+  "peerDependencyRange": ">=0.1.0",
+  "tarball": {
+    "filename": "aoc-protocol-0.1.0.tgz",
+    "sha256": "4372293666fbec2bd1add4852c0d6f907790776e0001ea93d081888bcc1c9069",
+    "sizeBytes": 35117
+  },
+  "verifiedPublicExports": [
+    "@aoc/protocol",
+    "@aoc/protocol/contracts",
+    "@aoc/protocol/errors",
+    "@aoc/protocol/claims",
+    "@aoc/protocol/adapters",
+    "@aoc/protocol/runtime-registry"
+  ],
+  "knownGaps": [
+    {
+      "id": "aoc-identity-claims-not-exported",
+      "symbol": "AocIdentityClaims",
+      "status": "partial-blocked-by-missing-protocol-export",
+      "description": "AocIdentityClaims is imported from '@aoc/protocol' in 7 Enterprise files but is not exported by any public subpath of the real package.",
+      "runtimeImpact": "none (type-only import, erased at compile time)"
+    },
+    {
+      "id": "scoped-access-request-shape-mismatch",
+      "symbol": "ScopedAccessRequest",
+      "status": "confirmed-incompatibility-not-fixed-this-sprint",
+      "description": "Enterprise reads ScopedAccessRequest['scope'] and '.action'/'.scope' properties; the real type exposes principalId/resource/requestedScope/requestedAt with no 'scope' or 'action' field.",
+      "runtimeImpact": "type-only as currently written, but call sites in src/runtime/host.ts read properties that do not exist on the real type"
+    },
+    {
+      "id": "audit-event-envelope-field-naming-divergence",
+      "symbol": "AuditEventEnvelope",
+      "status": "confirmed-incompatibility-not-fixed-this-sprint",
+      "description": "packages/control-plane/service.ts constructs audit event objects with event_id/occurred_at/subject_id/requester_id/request_id; the real type is eventId/eventType/emittedAt/actorId/payload.",
+      "runtimeImpact": "real runtime field-naming divergence in constructed objects, not just types"
+    }
+  ],
+  "validatedAt": "2026-07-14",
+  "validationEvidence": "docs/release/PROTOCOL_CONSUMPTION_EVIDENCE.md",
+  "updateProcedure": "See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md, section 'Upgrade procedure'."
+}
