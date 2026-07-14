@@ -68,3 +68,12 @@ npm run start:enterprise  # boots the Enterprise Host (see the deployment guide 
 ```
 
 Client SDK: `packages/enterprise-host-sdk` (`@aoc-enterprise/enterprise-host-sdk`).
+
+---
+
+## License and ownership
+
+AOC Enterprise is proprietary software. Copyright © 2026 Onchainfest LLC.
+All Rights Reserved. Commercial use requires a written agreement. See
+`LICENSE` and `NOTICE.md`. AOC Protocol has a separate legal and
+licensing regime — see `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md`.
