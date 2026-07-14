@@ -53,19 +53,23 @@ npm run validate:v1-release       # the routine release gate (includes the bound
 1. **`clean-source-extraction`** — records whether the source worktree is
    clean (`git status --porcelain`; a dirty worktree is *recorded*, not
    blocking, since the drill validates the last commit, not uncommitted
-   work), then runs `git archive --format=tar HEAD` and extracts it into a
-   fresh directory **outside this repository** (`mkdtemp` under the OS
-   temp directory). `git archive` emits exactly the tracked tree at that
-   commit — no `.git`, no `node_modules`, no `dist`, no untracked files,
-   no `.env`, nothing from this Codespace's ambient state. The drill
-   asserts `node_modules`/`dist`/`.data` are all absent from the fresh
-   checkout before proceeding — if the archive somehow included build
-   output, the whole point of proving independence from this Codespace's
-   built artifacts would be undermined, so this is checked, not assumed.
-   A plain recursive copy of the working directory would **not** prove
-   this — it would carry over untracked files, `.env`, and any local
-   build cruft silently. `git archive` is the strongest practical
-   mechanism available without cloning over the network (see
+   work), then runs a local `git clone` of this repository into a fresh
+   directory **outside this repository** (`mkdtemp` under the OS temp
+   directory), followed by an explicit `git checkout <commit>` to pin it
+   to the exact validated commit. A clone only ever materializes tracked
+   files — no `node_modules`, no `dist`, no untracked files, no `.env`,
+   nothing from this Codespace's ambient state — while (unlike
+   `git archive`, which was tried first and rejected) still producing a
+   real `.git` directory. That matters: the existing release-manifest
+   tooling (`scripts/lib-release-manifest.mjs`) shells out to
+   `git rev-parse HEAD`, so the "run the full release gate inside the
+   clean room" step (below) requires the checkout to actually be a git
+   repository. `git clone` is one of the mission's explicitly acceptable
+   clean-source mechanisms. The drill asserts `node_modules`/`dist`/
+   `.data` are all absent from the fresh checkout before proceeding —
+   checked, not assumed. A plain recursive copy of the working directory
+   would **not** prove any of this — it would carry over untracked files,
+   `.env`, and any local build cruft silently (see
    `AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md`, "Clean-Room Method").
 2. **`npm-ci`** — installs dependencies from `package-lock.json` alone,
    inside the clean-room checkout.

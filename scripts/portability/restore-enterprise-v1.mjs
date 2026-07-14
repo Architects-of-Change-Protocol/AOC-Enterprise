@@ -25,7 +25,6 @@ import {
   assertContained,
   assertNotSymlink,
   sqliteIntegrityCheck,
-  cleanupDir,
 } from './lib-portability.mjs';
 
 function parseArgs(argv) {

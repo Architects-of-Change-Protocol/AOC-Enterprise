@@ -43,12 +43,18 @@ Storage / Identity / Blockchain / AI Systems
 | Deployment guide | `docs/operations/DEPLOYMENT_GUIDE_V1.md` |
 | Operational runbooks | `docs/operations/RUNBOOKS_V1.md` |
 | Backup & recovery (RPO/RTO) | `docs/operations/BACKUP_RECOVERY_V1.md` |
+| Automated backup command (`backup:v1`) | `docs/operations/AOC_ENTERPRISE_BACKUP_V1.md` |
+| Automated restore command (`restore:v1`) | `docs/operations/AOC_ENTERPRISE_RESTORE_V1.md` |
+| Clean-room portability drill (`validate:portability:v1`) | `docs/operations/AOC_ENTERPRISE_CLEAN_ROOM_DRILL.md` |
 | Store schema & migration review | `docs/enterprise/MIGRATION_REVIEW_V1.md` |
 | Test strategy | `docs/testing/TEST_STRATEGY_V1.md` |
 | Performance baseline | `docs/performance/BENCHMARK_BASELINE_V1.md` |
 | Load test report | `docs/performance/LOAD_TEST_V1.md` |
 | Dependency audit | `docs/release/DEPENDENCY_AUDIT_V1.md` |
 | Release candidate summary | `docs/release/RELEASE_CANDIDATE_V1.md` |
+| Portability discovery (Phase 0) | `docs/release/AOC_ENTERPRISE_V1_PORTABILITY_CURRENT_STATE.md` |
+| Portability, backup, restore & clean-room drill report | `docs/release/AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md` |
+| v1.0.0 tagging runbook | `docs/release/AOC_ENTERPRISE_V1_TAGGING_RUNBOOK.md` |
 | Changelog | `CHANGELOG.md` |
 | Release manifest | `release/RELEASE_MANIFEST.json` (regenerate via `node scripts/generate-release-manifest.mjs`) |
 

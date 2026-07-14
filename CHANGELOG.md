@@ -30,6 +30,14 @@ First production release. PR-008 is a hardening-only release: no new products, n
 - Root `engines: { node: ">=22" }`.
 - Regression suites: `http-adapter-hardening.test.ts`, `sqlite-store-version-guard.test.ts`, SDK client tests.
 
+### Portability, backup & restore validation (see `docs/release/AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md`)
+- **`npm run backup:v1` / `npm run restore:v1`** — one official, fail-closed backup and restore command for the three independent SQLite stores, replacing the manual `sqlite3 .backup` procedure as the recommended default. Versioned backup format (`aoc.enterprise.backup.v1`), SHA-256 checksums, `PRAGMA integrity_check`, and schema-version compatibility are all validated before any file is copied; restore refuses to overwrite an existing target without `--force`, takes a pre-restore safety copy first, and rolls back on any post-restore verification failure.
+- **`npm run validate:portability:v1`** — a fully automated clean-room drill: extracts the exact tracked commit via `git archive` outside the working tree, installs from the lockfile, builds, tests, seeds a synthetic fixture, backs it up, destroys the source stores, restores from the backup alone, proves full logical equivalence (Governance/Evidence/Passport/Assurance), and reruns the v1 release gate.
+- **`npm run check:portability-smoke`** — a bounded, in-process version of the same backup/restore/compare cycle, now part of `npm run validate:v1-release` for routine coverage.
+- 18 new backup/restore contract tests (`tests/portability-backup-restore.contract.test.mjs`) plus manual failure-injection coverage of tampered checksums, unsupported formats/schema versions, path traversal, symlink attacks, and missing stores.
+- New docs: `AOC_ENTERPRISE_V1_PORTABILITY_CURRENT_STATE.md`, `AOC_ENTERPRISE_BACKUP_V1.md`, `AOC_ENTERPRISE_RESTORE_V1.md`, `AOC_ENTERPRISE_CLEAN_ROOM_DRILL.md`, `AOC_ENTERPRISE_V1_PORTABILITY_REPORT.md`, `AOC_ENTERPRISE_V1_TAGGING_RUNBOOK.md`; threat model extended with a backup/restore threat review (§7.17); root `.env.example` added.
+- No product features, Kernel decisions, Governance/Evidence/Passport/Assurance semantics, SAF controls, storage model, or public API changed.
+
 ### Versioning
 - Package version `0.1.0` → `1.0.0`. Runtime component versions (Enterprise Host 1.0.0, Kernel 1.0.0, Governance Store 1.0.0, Evidence Bundle 1.0.0, Agent Passport Runtime 1.0.0, Assurance Runtime 1.0.0) and store schema identifiers (`aoc.governance-store.schema.v1`, `evidence.bundle.v1`, `aoc.agent-passport.schema.v1`, `aoc.assurance-store.schema.v1`, `aoc.canonical-json.v1`) are unchanged and now frozen.
 

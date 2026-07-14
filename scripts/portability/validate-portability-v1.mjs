@@ -12,7 +12,7 @@
 // Usage:
 //   node scripts/portability/validate-portability-v1.mjs [--keep] [--skip-release-gate]
 
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, cpSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, cpSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execSync, execFileSync } from 'node:child_process';
@@ -71,22 +71,26 @@ export async function runCleanRoomDrill({ keep = false, skipReleaseGate = false 
   const commit = execSync('git rev-parse HEAD', { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
 
   const cleanRoomRoot = mkdtempSync(join(tmpdir(), 'aoc-enterprise-clean-room-'));
+  // Not pre-created: `git clone` requires its destination to not already
+  // exist (or to be empty) and creates it itself.
   const checkoutDir = join(cleanRoomRoot, 'checkout');
   const drillDataDir = join(cleanRoomRoot, 'drill-data');
-  mkdirSync(checkoutDir, { recursive: true });
   mkdirSync(drillDataDir, { recursive: true });
-
-  const archivePath = join(cleanRoomRoot, 'source.tar');
 
   try {
     step(steps, 'clean-source-extraction', () => {
-      // `git archive` emits exactly the tracked tree at `commit` -- no
-      // .git directory, no node_modules/dist, no untracked or ignored
-      // files, no ambient Codespace state. This is the "strongest
-      // practical clean-source mechanism" the mission calls for (Phase 16).
-      execFileSync('git', ['archive', '--format=tar', '--output', archivePath, commit], { cwd: REPO_ROOT });
-      execFileSync('tar', ['-xf', archivePath, '-C', checkoutDir]);
-      unlinkSync(archivePath);
+      // A local `git clone` followed by an explicit checkout of `commit`
+      // gives exactly the tracked tree at that commit -- no node_modules/
+      // dist, no untracked or ignored files, no ambient Codespace state --
+      // while (unlike `git archive`, tried first and rejected here) still
+      // preserving a real `.git`, which the existing release-manifest
+      // tooling (`scripts/lib-release-manifest.mjs`) shells out to
+      // (`git rev-parse HEAD`) and therefore requires to run the full
+      // release gate inside the clean room (Phase 15 step 17). `git clone`
+      // is explicitly one of the mission's acceptable clean-source
+      // mechanisms (Phase 16).
+      execFileSync('git', ['clone', '--quiet', '--no-hardlinks', REPO_ROOT, checkoutDir]);
+      execFileSync('git', ['checkout', '--quiet', commit], { cwd: checkoutDir });
       const forbidden = ['node_modules', 'dist', '.data'].filter((entry) => existsSync(join(checkoutDir, entry)));
       if (forbidden.length > 0) throw new Error(`Clean-room checkout unexpectedly contains: ${forbidden.join(', ')} -- these must come from the build, not the source tree.`);
       return { commit, checkoutDir };

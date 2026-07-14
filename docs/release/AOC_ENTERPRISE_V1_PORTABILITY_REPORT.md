@@ -168,14 +168,18 @@ Comparison" below).
 Hidden local dependencies were excluded by construction, not by
 inspection:
 
-1. `git archive --format=tar HEAD` emits exactly the tracked tree at the
-   validated commit — no `.git`, no `node_modules`, no `dist`, no
+1. A local `git clone` of this repository, followed by an explicit
+   `git checkout <commit>`, pins a fresh checkout to exactly the tracked
+   tree at the validated commit — no `node_modules`, no `dist`, no
    untracked or `.gitignore`d files, no ambient Codespace state of any
    kind. This is stronger than a recursive directory copy, which would
    silently carry over untracked files, `.env`, and local build
-   artifacts.
-2. The archive is extracted into a fresh `mkdtemp` directory **outside
-   this repository's working tree**.
+   artifacts. (`git archive` was tried first and rejected: it produces no
+   `.git` directory at all, which broke the release-manifest tooling's
+   `git rev-parse HEAD` call inside the clean room — see "Exact
+   Verification Results" for that failure and the fix.)
+2. The clone lives in a fresh `mkdtemp` directory **outside this
+   repository's working tree**.
 3. The drill script asserts `node_modules`/`dist`/`.data` are all absent
    from the fresh checkout before proceeding, rather than assuming it.
 4. `npm ci` installs strictly from `package-lock.json` inside that fresh
