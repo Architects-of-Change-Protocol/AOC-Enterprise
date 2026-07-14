@@ -1,9 +1,18 @@
-console.log('protocol consumption check OK');
 import { readdir, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+
+import {
+  ALLOWED_PROTOCOL_SUBPATHS,
+  containsProtocolSiblingPath,
+  declaresProtocolModule,
+  extractProtocolImportSpecifiers,
+  isAllowedProtocolImportSpecifier,
+} from './protocol/lib-protocol-artifact.mjs';
 
 const ROOT = process.cwd();
 const scanRoots = ['src', 'packages', 'types', 'tests', 'scripts'];
+
 const protectedSymbols = [
   'CapabilityToken',
   'ConsentGrant',
@@ -13,9 +22,14 @@ const protectedSymbols = [
   'AgentScope',
   'AuditEventEnvelope',
   'ScopedAccessRequest',
-  'TrustDomainIdentifier'
+  'TrustDomainIdentifier',
 ];
 
+// Files allowed to declare/re-export `@aoc/protocol` module contents outside of a
+// real npm-resolved install. Every entry here is a *documented, non-canonical*
+// exception -- canonical compatibility is proven only by
+// scripts/protocol/validate-enterprise-against-protocol-tarball.mjs against the
+// real tarball recorded in protocol-consumer.lock.json.
 const allowFiles = new Set([
   'scripts/check-protocol-consumption.mjs',
   'tests/fixtures/external-consumer/types/aoc-protocol/index.d.ts',
@@ -23,48 +37,124 @@ const allowFiles = new Set([
   // @aoc/protocol sibling checkout is absent; never shipped, never imported
   // by runtime code (the publishability check enforces both).
   'tests/fixtures/protocol-stub/index.d.ts',
+  // Local-development/CI-independence ambient shim (tsconfig.base.json `paths`
+  // maps `@aoc/protocol` here). This lets `typecheck`/`build` succeed without
+  // either the sibling checkout or a registry install. It is NOT the canonical
+  // compatibility signal -- that is the isolated tarball validation
+  // (scripts/protocol/validate-enterprise-against-protocol-tarball.mjs), which
+  // installs the real pinned tarball and narrows this shim down to only the
+  // documented export gap. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md.
+  'types/aoc-protocol/index.d.ts',
+  // Negative-test fixtures: these contain the forbidden patterns above as
+  // string *data* passed to unit-tested detector functions
+  // (extractProtocolImportSpecifiers/containsProtocolSiblingPath/
+  // declaresProtocolModule in scripts/protocol/lib-protocol-artifact.mjs),
+  // not as real imports or declarations. See tests/protocol-tarball-lock.test.mjs.
+  'tests/protocol-tarball-lock.test.mjs',
 ]);
+
+const violations = [];
+
+// scripts/protocol/** is the tarball build/validation tooling itself: it
+// legitimately contains the literal sibling-path string and `declare module
+// '@aoc/protocol'` snippets it exists to detect/generate (in a throwaway
+// temp copy, never the tracked tree), which would otherwise self-trigger the
+// checks below. It is exempt from source scanning the same way this file
+// exempts itself.
+const EXCLUDED_DIR_NAMES = new Set(['dist', 'dist-test', 'node_modules']);
 
 async function walk(dir) {
   const out = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
-    if (entry.name === 'dist' || entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+    if (EXCLUDED_DIR_NAMES.has(entry.name) || entry.name.startsWith('.')) continue;
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...await walk(full));
-    else if (/\.(ts|d\.ts|mts|cts)$/.test(entry.name)) out.push(full);
+    if (full === join(ROOT, 'scripts', 'protocol')) continue;
+    if (entry.isDirectory()) out.push(...(await walk(full)));
+    else if (/\.(ts|d\.ts|mts|cts|mjs|cjs|js)$/.test(entry.name)) out.push(full);
   }
   return out;
 }
 
-const defs = [];
-const importRe = /from\s+['"]@aoc\/protocol\/contracts['"]/;
+function relPath(file) {
+  return file.slice(ROOT.length + 1).replace(/\\/g, '/');
+}
 
+// --- 1. Peer dependency declared with an explicit, compatible range ---------
+const packageJson = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
+const peerSpec = packageJson.peerDependencies?.['@aoc/protocol'];
+if (!peerSpec) {
+  violations.push('package.json: @aoc/protocol must be declared under peerDependencies.');
+} else if (peerSpec.startsWith('file:') || peerSpec === '*' || peerSpec.trim().length === 0) {
+  violations.push(`package.json: peerDependencies["@aoc/protocol"] = "${peerSpec}" is not an explicit compatible semver range.`);
+} else if (!/^[~^]?\d+\.\d+\.\d+|^>=\s*\d+\.\d+\.\d+/.test(peerSpec)) {
+  violations.push(`package.json: peerDependencies["@aoc/protocol"] = "${peerSpec}" does not look like an explicit semver range.`);
+}
+
+// --- 2. Production "dependencies" must never pin @aoc/protocol to file: -----
+const prodSpec = packageJson.dependencies?.['@aoc/protocol'];
+if (prodSpec?.startsWith('file:')) {
+  violations.push(`package.json: dependencies["@aoc/protocol"] must not resolve via file: (found "${prodSpec}"); @aoc/protocol belongs under peerDependencies (and, for local dev convenience only, devDependencies).`);
+}
+
+// --- 3. Scan source for import specifiers, redefinitions, and sibling paths -
+const defs = [];
 for (const root of scanRoots) {
   const abs = join(ROOT, root);
   let files = [];
-  try { files = await walk(abs); } catch { continue; }
+  try {
+    files = await walk(abs);
+  } catch {
+    continue;
+  }
   for (const file of files) {
-    const rel = file.slice(ROOT.length + 1).replace(/\\/g, '/');
+    const rel = relPath(file);
     if (allowFiles.has(rel)) continue;
     const text = await readFile(file, 'utf8');
-    for (const s of protectedSymbols) {
-      const definitionPattern = new RegExp(`\\b(?:interface|type|class|enum)\\s+${s}\\b`);
-      if (definitionPattern.test(text)) {
-        defs.push(`${rel}: redefines ${s}`);
+
+    if (containsProtocolSiblingPath(text)) {
+      violations.push(`${rel}: references the AOC Protocol sibling-repository path directly; imports must resolve through the '@aoc/protocol' package only.`);
+    }
+
+    for (const specifier of extractProtocolImportSpecifiers(text)) {
+      if (!isAllowedProtocolImportSpecifier(specifier)) {
+        violations.push(`${rel}: imports forbidden/undeclared subpath '${specifier}'. Allowed: ${ALLOWED_PROTOCOL_SUBPATHS.join(', ')}.`);
       }
     }
-    if (/declare module ['"]@aoc\/protocol\/contracts['"]/.test(text)) {
-      defs.push(`${rel}: declares module @aoc/protocol/contracts`);
+
+    if (declaresProtocolModule(text)) {
+      violations.push(`${rel}: declares/augments the '@aoc/protocol' module outside the documented allowlist in scripts/check-protocol-consumption.mjs.`);
     }
-    if (/(CapabilityToken|ConsentGrant|AuditEventEnvelope|ScopedAccessRequest)/.test(text) && !importRe.test(text) && rel.startsWith('src/')) {
-      // soft sanity only for runtime tree
+
+    for (const symbol of protectedSymbols) {
+      const definitionPattern = new RegExp(`\\b(?:interface|type|class|enum)\\s+${symbol}\\b`);
+      if (definitionPattern.test(text)) {
+        defs.push(`${rel}: redefines ${symbol}`);
+      }
+    }
+  }
+}
+violations.push(...defs);
+
+// --- 4. No shipped dist artifact leaks a local/sibling filesystem path ------
+const distDir = join(ROOT, 'dist');
+if (existsSync(distDir)) {
+  const distFiles = await walk(distDir);
+  for (const file of distFiles) {
+    if (!/\.(js|cjs|mjs|d\.ts)$/.test(file)) continue;
+    const rel = relPath(file);
+    const text = await readFile(file, 'utf8');
+    if (text.includes('Architects_of_Change_Protocol') || /\/(home|workspace|tmp)\//.test(text)) {
+      violations.push(`${rel}: shipped artifact leaks a local/sibling filesystem path.`);
+    }
+    if (file.endsWith('.d.ts') && /from\s+['"]@aoc\/protocol\/(?!$)/.test(text)) {
+      violations.push(`${rel}: shipped declaration file contains a deep '@aoc/protocol' import.`);
     }
   }
 }
 
-if (defs.length > 0) {
-  console.error('Protocol consumption check failed. Found forbidden local protocol semantic declarations:');
-  for (const d of defs) console.error(` - ${d}`);
+if (violations.length > 0) {
+  console.error('Protocol consumption check failed:');
+  for (const violation of violations) console.error(` - ${violation}`);
   process.exit(1);
 }
 

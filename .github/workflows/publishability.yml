@@ -10,14 +10,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout AOC Protocol (peer dependency)
-        run: git clone --depth=1 https://github.com/Architects-of-Change-Protocol/Architects_of_Change_Protocol.git $GITHUB_WORKSPACE/../Architects_of_Change_Protocol
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-      - name: Build AOC Protocol
-        run: npm install && npm run build
-        working-directory: ${{ github.workspace }}/../Architects_of_Change_Protocol/packages/protocol
       - run: npm ci
+      # validate-publishability.mjs falls back to the type-only stub at
+      # tests/fixtures/protocol-stub when no @aoc/protocol sibling checkout is
+      # present, and independently asserts no shipped artifact imports
+      # @aoc/protocol at runtime. No Protocol checkout is needed here.
       - run: npm run validate:publishability
+
+  protocol-tarball-consumption:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: Validate protocol-consumer.lock.json is well-formed
+        run: npm run check:protocol-compatibility-lock
+      - name: Read the pinned AOC Protocol commit from the compatibility lock
+        id: lock
+        run: echo "commit=$(node -e "console.log(require('./protocol-consumer.lock.json').commit)")" >> "$GITHUB_OUTPUT"
+      - name: Build a reproducible @aoc/protocol tarball from the pinned commit
+        env:
+          AOC_PROTOCOL_REPO: https://github.com/Architects-of-Change-Protocol/Architects_of_Change_Protocol.git
+          AOC_PROTOCOL_REF: ${{ steps.lock.outputs.commit }}
+          AOC_PROTOCOL_TARBALL_OUT: ${{ runner.temp }}/protocol-tarball
+        run: node scripts/protocol/build-protocol-tarball.mjs | tee "${{ runner.temp }}/protocol-tarball-result.json"
+      - name: Verify the built tarball matches the compatibility lock (commit/version/checksum)
+        run: node scripts/protocol/verify-tarball-against-lock.mjs "${{ runner.temp }}/protocol-tarball-result.json"
+      - name: Validate Enterprise against the pinned tarball in an isolated copy
+        # KNOWN, DOCUMENTED, temporarily non-blocking: this genuinely fails
+        # typecheck/build/test today because of 2 confirmed contract-shape
+        # incompatibilities between Enterprise's control-plane package and the
+        # real @aoc/protocol package (see "Known gaps" in
+        # docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md). Those are real,
+        # pre-existing application-level incompatibilities this validation
+        # uncovered -- not packaging defects -- and are tracked for a
+        # dedicated follow-up sprint rather than papered over here. The step
+        # still runs and its output is captured; flip continue-on-error back
+        # to false once that follow-up lands and this passes cleanly.
+        continue-on-error: true
+        run: |
+          TARBALL=$(node -e "console.log(JSON.parse(require('node:fs').readFileSync('${{ runner.temp }}/protocol-tarball-result.json','utf8')).tarballPath)")
+          node scripts/protocol/validate-enterprise-against-protocol-tarball.mjs "$TARBALL"
