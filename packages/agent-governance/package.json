@@ -29,5 +29,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@aoc-enterprise/identity": "file:../identity"
+  }
 }

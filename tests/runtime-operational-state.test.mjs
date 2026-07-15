@@ -29,7 +29,7 @@ test('state snapshot and hydration roundtrip', () => {
 
 test('runtime integration exposes operational state snapshot methods', async () => {
   const runtime = createAocEnterpriseRuntime(basePorts);
-  await runtime.evaluate({ requestId:'r', actorId:'a', capability:{jti:'j',trust_domain:'td',exp:4102444800}, consentGrants:[], access:{action:'read',resource:'x',scope:['x']}, tenantId:'t', orgId:'o' });
+  await runtime.evaluate({ requestId:'r', actorId:'a', capability:{jti:'j',trust_domain:'td',exp:4102444800}, consentGrants:[], access:{action:'read',resource:{kind:'x',id:'x'},requestedScope:['x']}, tenantId:'t', orgId:'o' });
   const snapshot = runtime.snapshotOperationalState();
   assert.equal(snapshot.counters.authorizationEnforcements >= 1, true);
 });

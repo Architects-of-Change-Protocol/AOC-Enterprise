@@ -8,14 +8,9 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": false,
     "outDir": "dist",
-    "rootDir": "src",
-    "baseUrl": ".",
-    "paths": {
-      "@aoc/protocol": ["types/aoc-protocol/index.d.ts"]
-    }
+    "rootDir": "src"
   },
   "include": [
-    "src/**/*",
-    "types/**/*.d.ts"
+    "src/**/*"
   ]
 }

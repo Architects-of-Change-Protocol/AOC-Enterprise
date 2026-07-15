@@ -5,5 +5,9 @@
     "outDir": "dist/src"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "types/**/*.d.ts"],
-  "references": [{ "path": "./packages/pmfreak-agent-passport-foundation" }]
+  "references": [
+    { "path": "./packages/pmfreak-agent-passport-foundation" },
+    { "path": "./packages/identity" },
+    { "path": "./packages/scoped-access" }
+  ]
 }

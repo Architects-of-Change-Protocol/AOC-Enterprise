@@ -1,25 +1,25 @@
 /**
  * Enterprise policy-runtime orchestration contracts.
  *
- * NOTE: Identity, capability token, consent grant, scoped access grammar,
- * and audit envelope primitives are canonical in AOC-Protocol.
- * Import paths below are placeholders until package wiring is finalized.
+ * NOTE: Capability token, consent grant, scoped access grammar, and audit
+ * envelope primitives are canonical in AOC-Protocol. Verified actor identity
+ * claims are Enterprise-owned (see `@aoc-enterprise/identity`) -- AOC Protocol
+ * governance determined identity claims are not part of its public API.
  */
 
-// Placeholder imports from AOC-Protocol canonical contracts.
 import type {
-  AocIdentityClaims,
   CapabilityToken,
   ConsentGrant,
   ScopedAccessRequest,
   AuditEventEnvelope,
 } from '@aoc/protocol';
+import type { VerifiedActorClaims } from '@aoc-enterprise/identity';
 
 export interface EnterprisePolicyEvaluationRequest {
   requestId: string;
   tenantId: string;
   orgId: string;
-  principal: AocIdentityClaims;
+  principal: VerifiedActorClaims;
   capability: CapabilityToken;
   consentGrants: ConsentGrant[];
   access: ScopedAccessRequest;

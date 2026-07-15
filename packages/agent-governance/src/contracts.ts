@@ -1,16 +1,20 @@
 /**
  * Agent governance orchestration contracts.
  *
- * NOTE: Agent identity and delegated capability semantics come from AOC-Protocol.
+ * NOTE: Delegated capability semantics come from AOC-Protocol. Verified actor
+ * identity claims are Enterprise-owned (see `@aoc-enterprise/identity`) --
+ * AOC Protocol governance determined identity claims are not part of its
+ * public API.
  */
 
-import type { AocIdentityClaims, CapabilityToken } from '@aoc/protocol';
+import type { CapabilityToken } from '@aoc/protocol';
+import type { VerifiedActorClaims } from '@aoc-enterprise/identity';
 
 export interface GovernedAgentProfile {
   agentId: string;
   tenantId: string;
   orgId: string;
-  identity: AocIdentityClaims;
+  identity: VerifiedActorClaims;
   baselineCapabilities: CapabilityToken[];
   riskTier: 'low' | 'medium' | 'high' | 'critical';
 }

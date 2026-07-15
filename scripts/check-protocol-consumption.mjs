@@ -30,21 +30,23 @@ const protectedSymbols = [
 // exception -- canonical compatibility is proven only by
 // scripts/protocol/validate-enterprise-against-protocol-tarball.mjs against the
 // real tarball recorded in protocol-consumer.lock.json.
+//
+// As of the Protocol Contract Adoption sprint, Enterprise resolves
+// `@aoc/protocol` exclusively through the real, vendored, checksummed
+// tarball (see vendor/README.md, protocol-consumer.lock.json) -- there is no
+// longer any ambient shim in the main tree or in the external-consumer
+// fixture. The one remaining allowlisted stand-in
+// (tests/fixtures/protocol-stub/index.d.ts) exists purely as a defensive
+// fallback for scripts/validate-publishability.mjs when neither the vendored
+// tarball nor a sibling checkout can be found on disk; it is never the
+// canonical compatibility signal.
 const allowFiles = new Set([
   'scripts/check-protocol-consumption.mjs',
-  'tests/fixtures/external-consumer/types/aoc-protocol/index.d.ts',
-  // Release-tooling stand-in used by validate-publishability.mjs when the
-  // @aoc/protocol sibling checkout is absent; never shipped, never imported
-  // by runtime code (the publishability check enforces both).
+  // Release-tooling stand-in used by validate-publishability.mjs only when
+  // neither the vendored @aoc/protocol tarball nor a sibling checkout is
+  // present; never shipped, never imported by runtime code (the
+  // publishability check enforces both).
   'tests/fixtures/protocol-stub/index.d.ts',
-  // Local-development/CI-independence ambient shim (tsconfig.base.json `paths`
-  // maps `@aoc/protocol` here). This lets `typecheck`/`build` succeed without
-  // either the sibling checkout or a registry install. It is NOT the canonical
-  // compatibility signal -- that is the isolated tarball validation
-  // (scripts/protocol/validate-enterprise-against-protocol-tarball.mjs), which
-  // installs the real pinned tarball and narrows this shim down to only the
-  // documented export gap. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md.
-  'types/aoc-protocol/index.d.ts',
   // Negative-test fixtures: these contain the forbidden patterns above as
   // string *data* passed to unit-tested detector functions
   // (extractProtocolImportSpecifiers/containsProtocolSiblingPath/

@@ -10,5 +10,6 @@
   "exclude": [
     "**/__tests__/**",
     "dist"
-  ]
+  ],
+  "references": [{ "path": "../identity" }]
 }

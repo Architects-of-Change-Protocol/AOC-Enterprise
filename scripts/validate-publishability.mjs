@@ -8,24 +8,47 @@ const fixtureDir = resolve(root, 'tests/fixtures/external-consumer');
 const tmp = await mkdtemp(join(tmpdir(), 'aoc-publishability-'));
 const consumerDir = join(tmp, 'external-consumer');
 let packedTarballPath;
+const packedWorkspaceTarballPaths = [];
+
+// @aoc-enterprise/identity and @aoc-enterprise/scoped-access are real
+// dependencies of the shipped public API (VerifiedActorClaims and
+// EnterpriseScopedAccessRequest appear in exported .d.ts files, e.g.
+// RuntimeContext, AuthorizationGrantInput). An external consumer needs them
+// resolvable too, so they must be packed and installed exactly like the root
+// package itself -- not left to workspace-only "*" resolution, which only
+// works inside this monorepo.
+const bundledWorkspacePackages = [
+  { name: '@aoc-enterprise/identity', dir: resolve(root, 'packages/identity') },
+  { name: '@aoc-enterprise/scoped-access', dir: resolve(root, 'packages/scoped-access') },
+];
 
 const rootPkg = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 const protocolSpec = rootPkg.devDependencies?.['@aoc/protocol'] ?? rootPkg.dependencies?.['@aoc/protocol'];
 if (!protocolSpec || !protocolSpec.startsWith('file:')) {
   throw new Error('Root devDependency (or dependency) @aoc/protocol must be a real file: dependency for publishability validation.');
 }
-const siblingProtocolPath = resolve(root, protocolSpec.slice('file:'.length));
+const declaredProtocolPath = resolve(root, protocolSpec.slice('file:'.length));
 const stubProtocolPath = resolve(root, 'tests/fixtures/protocol-stub');
-let protocolPath = siblingProtocolPath;
+let protocolPath = declaredProtocolPath;
 let usingProtocolStub = false;
 try {
-  await stat(resolve(siblingProtocolPath, 'package.json'));
-  console.log(`[publishability] using the @aoc/protocol sibling checkout at '${siblingProtocolPath}'.`);
+  const declaredStat = await stat(declaredProtocolPath);
+  if (declaredStat.isFile()) {
+    // The declared file: dependency is a vendored, checksummed tarball (see
+    // protocol-consumer.lock.json) -- the real, pinned @aoc/protocol package,
+    // not a sibling source checkout. This is strictly more faithful than the
+    // sibling-checkout case below: it's the exact artifact Enterprise is
+    // validated against, not whatever happens to be on a dev machine's disk.
+    console.log(`[publishability] using the vendored @aoc/protocol tarball at '${declaredProtocolPath}'.`);
+  } else {
+    await stat(resolve(declaredProtocolPath, 'package.json'));
+    console.log(`[publishability] using the @aoc/protocol sibling checkout at '${declaredProtocolPath}'.`);
+  }
 } catch {
   protocolPath = stubProtocolPath;
   usingProtocolStub = true;
   console.log(
-    `[publishability] @aoc/protocol sibling checkout not found at '${siblingProtocolPath}'; ` +
+    `[publishability] @aoc/protocol not found at '${declaredProtocolPath}' (neither a vendored tarball nor a sibling checkout); ` +
       `using the type-only stub package at '${stubProtocolPath}'. This is faithful because @aoc/protocol ` +
       'is a compile-time type dependency: this run independently asserts that no shipped artifact ' +
       "requires '@aoc/protocol' at runtime.",
@@ -33,7 +56,7 @@ try {
 }
 
 const run = (cmd, args, cwd) => {
-  const result = spawnSync(cmd, args, { cwd, stdio: 'pipe', encoding: 'utf8' });
+  const result = spawnSync(cmd, args, { cwd, stdio: 'pipe', encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   if (result.status !== 0) {
     console.error(result.stdout);
     console.error(result.stderr);
@@ -61,6 +84,19 @@ try {
   fixturePkg.dependencies = fixturePkg.dependencies ?? {};
   fixturePkg.dependencies['@aoc/protocol'] = `file:${protocolPath}`;
   fixturePkg.dependencies['@aoc-enterprise/runtime'] = `file:${tarballPath}`;
+
+  for (const { name, dir } of bundledWorkspacePackages) {
+    const workspacePackStdout = run('npm', ['pack', '--json', dir], root);
+    const workspacePackMeta = JSON.parse(workspacePackStdout);
+    const workspaceTarballName = workspacePackMeta[0]?.filename;
+    if (!workspaceTarballName) {
+      throw new Error(`Could not read tarball name from npm pack output for ${name}.`);
+    }
+    const workspaceTarballPath = resolve(root, workspaceTarballName);
+    packedWorkspaceTarballPaths.push(workspaceTarballPath);
+    fixturePkg.dependencies[name] = `file:${workspaceTarballPath}`;
+  }
+
   await writeFile(fixturePkgPath, `${JSON.stringify(fixturePkg, null, 2)}\n`);
 
   run('npm', ['install', '--prefer-offline'], consumerDir);
@@ -106,4 +142,7 @@ try {
 } finally {
   await rm(tmp, { recursive: true, force: true });
   if (packedTarballPath !== undefined) await rm(packedTarballPath, { force: true });
+  for (const workspaceTarballPath of packedWorkspaceTarballPaths) {
+    await rm(workspaceTarballPath, { force: true });
+  }
 }

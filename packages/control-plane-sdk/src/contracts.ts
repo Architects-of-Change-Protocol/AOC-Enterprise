@@ -1,15 +1,18 @@
 /**
  * Control plane SDK facade contracts.
  *
- * NOTE: Identity/capability/consent/scoped-access primitives are imported from AOC-Protocol.
+ * NOTE: Capability/consent/scoped-access primitives are imported from
+ * AOC-Protocol. Verified actor identity claims are Enterprise-owned (see
+ * `@aoc-enterprise/identity`) -- AOC Protocol governance determined identity
+ * claims are not part of its public API.
  */
 
 import type {
-  AocIdentityClaims,
   CapabilityToken,
   ConsentGrant,
   ScopedAccessRequest,
 } from '@aoc/protocol';
+import type { VerifiedActorClaims } from '@aoc-enterprise/identity';
 
 import type {
   EnterprisePolicyEvaluationRequest,
@@ -17,7 +20,7 @@ import type {
 } from '@aoc-enterprise/policy-runtime';
 
 export interface ControlPlaneEvaluationInput {
-  caller: AocIdentityClaims;
+  caller: VerifiedActorClaims;
   capability: CapabilityToken;
   consentGrants: ConsentGrant[];
   access: ScopedAccessRequest;

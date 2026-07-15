@@ -9,11 +9,13 @@
     { "path": "./packages/enterprise-audit" },
     { "path": "./packages/enterprise-host-sdk" },
     { "path": "./packages/governance-treaties" },
+    { "path": "./packages/identity" },
     { "path": "./packages/integration-runtime" },
     { "path": "./packages/org-boundary" },
     { "path": "./packages/pmfreak-agent-passport-foundation" },
     { "path": "./packages/policy-runtime" },
     { "path": "./packages/runtime-negotiation" },
+    { "path": "./packages/scoped-access" },
     { "path": "./packages/tenant-governance" }
   ]
 }

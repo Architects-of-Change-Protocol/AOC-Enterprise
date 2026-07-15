@@ -7,7 +7,7 @@ const decision = await runtime.enforce({
   actorId: 'actor-example-1',
   capability: { jti: 'capability-example-1', trust_domain: 'example-trust-domain', exp: 4102444800 },
   consentGrants: [],
-  access: { action: 'read', resource: 'dataset:example', scope: ['dataset:read'] },
+  access: { action: 'read', resource: { kind: 'dataset', id: 'example' }, requestedScope: ['dataset:read'] },
   tenantId: 'tenant-example',
   orgId: 'org-example',
 });

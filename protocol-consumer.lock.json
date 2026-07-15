@@ -19,30 +19,28 @@
     "@aoc/protocol/adapters",
     "@aoc/protocol/runtime-registry"
   ],
-  "knownGaps": [
+  "knownGaps": [],
+  "resolvedGaps": [
     {
       "id": "aoc-identity-claims-not-exported",
       "symbol": "AocIdentityClaims",
-      "status": "partial-blocked-by-missing-protocol-export",
-      "description": "AocIdentityClaims is imported from '@aoc/protocol' in 7 Enterprise files but is not exported by any public subpath of the real package.",
-      "runtimeImpact": "none (type-only import, erased at compile time)"
+      "resolution": "Replaced by the Enterprise-owned VerifiedActorClaims (@aoc-enterprise/identity) in all 8 real consumer files. No import of AocIdentityClaims (or any identity-claims symbol) from '@aoc/protocol' remains; enforced by scripts/check-protocol-contract-adoption.mjs.",
+      "resolvedInCommit": "see git history of this file"
     },
     {
       "id": "scoped-access-request-shape-mismatch",
       "symbol": "ScopedAccessRequest",
-      "status": "confirmed-incompatibility-not-fixed-this-sprint",
-      "description": "Enterprise reads ScopedAccessRequest['scope'] and '.action'/'.scope' properties; the real type exposes principalId/resource/requestedScope/requestedAt with no 'scope' or 'action' field.",
-      "runtimeImpact": "type-only as currently written, but call sites in src/runtime/host.ts read properties that do not exist on the real type"
+      "resolution": "src/runtime/host.ts and packages/control-plane/types.ts migrated from '.scope' to the real '.requestedScope'. 'action' (which never existed on the real contract) moved to the Enterprise-owned EnterpriseScopedAccessRequest extension (@aoc-enterprise/scoped-access), composed over -- not duplicating -- the real ScopedAccessRequest. 'resource' (real type: ResourceRef) is compared via the explicit legacyResourceIdentifier() accessor, not a cast.",
+      "resolvedInCommit": "see git history of this file"
     },
     {
       "id": "audit-event-envelope-field-naming-divergence",
       "symbol": "AuditEventEnvelope",
-      "status": "confirmed-incompatibility-not-fixed-this-sprint",
-      "description": "packages/control-plane/service.ts constructs audit event objects with event_id/occurred_at/subject_id/requester_id/request_id; the real type is eventId/eventType/emittedAt/actorId/payload.",
-      "runtimeImpact": "real runtime field-naming divergence in constructed objects, not just types"
+      "resolution": "packages/control-plane/types.ts's ControlPlaneAuditEvent is now a standalone, Enterprise-owned legacy type (no longer intersected with AuditEventEnvelope). packages/control-plane/audit-envelope-mapper.ts's toProtocolAuditEventEnvelope() is the sole, explicit, field-by-field boundary to the real envelope; the legacy persisted shape (.aoc-control-plane.json) and existing ControlPlaneService APIs are unchanged.",
+      "resolvedInCommit": "see git history of this file"
     }
   ],
-  "validatedAt": "2026-07-14",
+  "validatedAt": "2026-07-15",
   "validationEvidence": "docs/release/PROTOCOL_CONSUMPTION_EVIDENCE.md",
   "updateProcedure": "See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md, section 'Upgrade procedure'."
 }

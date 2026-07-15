@@ -1,3 +1,4 @@
+import { legacyResourceIdentifier } from '@aoc-enterprise/scoped-access';
 import type { AuthorizationGrantInput } from './authorization/grants/grant-input.js';
 import { createRuntimeOperationalStateManager } from './state';
 import { createRuntimePersistenceManager } from './persistence';
@@ -79,7 +80,7 @@ function defaultExpiry(): string {
   return new Date(Date.now() + 5 * 60 * 1000).toISOString();
 }
 
-function containsExpectedScope(actual: string[] | undefined, expected: string | string[] | undefined): boolean {
+function containsExpectedScope(actual: readonly string[] | undefined, expected: string | string[] | undefined): boolean {
   if (expected === undefined) return true;
   const expectedScopes = Array.isArray(expected) ? expected : [expected];
   return expectedScopes.every((scope) => actual?.includes(scope));
@@ -228,7 +229,7 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
       if (!(await context.executionGrantStore.getGrant(grant.payload.grantId))) reasonCodes.push('grant_unknown');
       if (await context.executionGrantStore.isGrantRevoked(grant.payload.grantId)) reasonCodes.push('grant_revoked');
       if (await context.executionGrantStore.isGrantConsumed(grant.payload.grantId)) reasonCodes.push('grant_replayed');
-      if (!containsExpectedScope(grant.payload.input.access.scope, options?.expectedScope)) reasonCodes.push('grant_scope_mismatch');
+      if (!containsExpectedScope(grant.payload.input.access.requestedScope, options?.expectedScope)) reasonCodes.push('grant_scope_mismatch');
       const valid = reasonCodes.length === 0;
       operationalState.updateRuntimeOperationalState({ eventType: 'grant_validated', occurredAt: nowIso(), entityId: grant.payload.grantId, reasonCodes });
       await emitLifecycleAudit({
@@ -321,10 +322,10 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
       if (payload.actorId !== input.actor.sub) reasonCodes.push('delegation_policy_denied');
       if (payload.orgId !== input.orgId) reasonCodes.push('delegation_policy_denied');
       const expectedScope = payload.constraints?.scope;
-      if (!containsExpectedScope(input.access.scope, typeof expectedScope === 'string' || Array.isArray(expectedScope) ? expectedScope : undefined)) {
+      if (!containsExpectedScope(input.access.requestedScope, typeof expectedScope === 'string' || Array.isArray(expectedScope) ? expectedScope : undefined)) {
         reasonCodes.push('delegation_scope_mismatch');
       }
-      if (payload.constraints?.resource !== undefined && payload.constraints.resource !== input.access.resource) {
+      if (payload.constraints?.resource !== undefined && payload.constraints.resource !== legacyResourceIdentifier(input.access.resource)) {
         reasonCodes.push('delegation_scope_mismatch');
       }
       if (payload.constraints?.action !== undefined && payload.constraints.action !== input.access.action) {

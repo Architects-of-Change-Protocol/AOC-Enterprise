@@ -162,7 +162,7 @@ const input = {
   actorId: 'actor-contract-1',
   capability: { jti: 'capability-contract-1', trust_domain: 'contract-domain', exp: 4102444800 },
   consentGrants: [],
-  access: { action: 'read', resource: 'record:contract', scope: ['record:read'] },
+  access: { action: 'read', resource: { kind: 'record', id: 'contract' }, requestedScope: ['record:read'] },
   tenantId: 'tenant-contract',
   orgId: 'org-contract',
 };

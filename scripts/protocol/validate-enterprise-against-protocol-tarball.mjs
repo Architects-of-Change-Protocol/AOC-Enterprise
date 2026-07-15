@@ -27,9 +27,18 @@ const REPO_ROOT = resolve(process.cwd());
 // must have a corresponding row in docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md
 // ("Known gaps"). This augmentation is injected only inside the throwaway temp
 // copy created by this script -- it is never written to the tracked repository.
-const KNOWN_EXPORT_GAPS = {
-  AocIdentityClaims: 'Record<string, unknown> & { sub?: string }',
-};
+//
+// As of the Protocol Contract Adoption sprint, there are no known gaps:
+// AocIdentityClaims was replaced everywhere by the Enterprise-owned
+// VerifiedActorClaims (@aoc-enterprise/identity), ScopedAccessRequest usages
+// were migrated to the real `requestedScope` field (with `action` moved to
+// the Enterprise-owned EnterpriseScopedAccessRequest extension), and
+// AuditEventEnvelope is now produced only via an explicit mapper from the
+// legacy ControlPlaneAuditEvent -- every `@aoc/protocol` symbol Enterprise
+// imports now resolves against the real installed package with no
+// augmentation. Keep this object (rather than deleting the mechanism) so a
+// future, real, evidenced gap has an established place to be recorded.
+const KNOWN_EXPORT_GAPS = {};
 
 const EXCLUDED_TOP_LEVEL = new Set([
   '.git',
@@ -51,7 +60,12 @@ function log(message) {
 
 function run(cmd, args, cwd, { allowFailure = true } = {}) {
   log(`$ ${cmd} ${args.join(' ')} (cwd=${cwd})`);
-  const result = spawnSync(cmd, args, { cwd, encoding: 'utf8' });
+  // node's spawnSync default maxBuffer is 1 MiB; the full validation battery
+  // (in particular `npm run test`, which runs the entire root + workspace
+  // test suites with verbose TAP output) can legitimately exceed that,
+  // which kills the child with ENOBUFS/SIGTERM (status: null) -- a tooling
+  // limitation, not a real command failure. 64 MiB comfortably covers this.
+  const result = spawnSync(cmd, args, { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   const combined = `${result.stdout ?? ''}${result.stderr ?? ''}`;
   const ok = result.status === 0;
   if (!ok && !allowFailure) {
@@ -218,26 +232,30 @@ async function main() {
     delete tsconfigBase.compilerOptions.paths?.['@aoc/protocol'];
     await writeFile(tsconfigBasePath, `${JSON.stringify(tsconfigBase, null, 2)}\n`);
 
-    const gapAugmentationLines = Object.entries(KNOWN_EXPORT_GAPS)
-      .map(([symbol, type]) => `  export type ${symbol} = ${type};`)
-      .join('\n');
-    const shimPath = join(tempDir, 'types', 'aoc-protocol', 'index.d.ts');
-    await writeFile(
-      shimPath,
-      `/**\n * TEMPORARY compatibility augmentation, generated only inside the isolated\n` +
-        ` * tarball-validation copy by scripts/protocol/validate-enterprise-against-protocol-tarball.mjs.\n` +
-        ` * It exists only for symbols documented as export gaps in\n` +
-        ` * docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md (\"Known gaps\") --\n` +
-        ` * every other symbol below resolves against the real installed tarball.\n` +
-        ` * Never present in the tracked repository or in any shipped artifact.\n *\n` +
-        ` * The self-import below is required for TypeScript to treat this as a\n` +
-        ` * module *augmentation* of the real installed '@aoc/protocol' package\n` +
-        ` * rather than a from-scratch ambient module declaration that would\n` +
-        ` * shadow/replace its real exports.\n */\n` +
-        `import '@aoc/protocol';\n\n` +
-        `declare module '@aoc/protocol' {\n${gapAugmentationLines}\n}\n`,
-    );
-    log(`Narrowed the ambient shim to only the documented export gap(s): ${Object.keys(KNOWN_EXPORT_GAPS).join(', ')}. All other @aoc/protocol symbols now resolve from the installed tarball.`);
+    if (Object.keys(KNOWN_EXPORT_GAPS).length === 0) {
+      log('No known export gaps recorded -- every @aoc/protocol symbol resolves from the installed tarball with no ambient augmentation.');
+    } else {
+      const gapAugmentationLines = Object.entries(KNOWN_EXPORT_GAPS)
+        .map(([symbol, type]) => `  export type ${symbol} = ${type};`)
+        .join('\n');
+      const shimPath = join(tempDir, 'types', 'aoc-protocol', 'index.d.ts');
+      await writeFile(
+        shimPath,
+        `/**\n * TEMPORARY compatibility augmentation, generated only inside the isolated\n` +
+          ` * tarball-validation copy by scripts/protocol/validate-enterprise-against-protocol-tarball.mjs.\n` +
+          ` * It exists only for symbols documented as export gaps in\n` +
+          ` * docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md (\"Known gaps\") --\n` +
+          ` * every other symbol below resolves against the real installed tarball.\n` +
+          ` * Never present in the tracked repository or in any shipped artifact.\n *\n` +
+          ` * The self-import below is required for TypeScript to treat this as a\n` +
+          ` * module *augmentation* of the real installed '@aoc/protocol' package\n` +
+          ` * rather than a from-scratch ambient module declaration that would\n` +
+          ` * shadow/replace its real exports.\n */\n` +
+          `import '@aoc/protocol';\n\n` +
+          `declare module '@aoc/protocol' {\n${gapAugmentationLines}\n}\n`,
+      );
+      log(`Narrowed the ambient shim to only the documented export gap(s): ${Object.keys(KNOWN_EXPORT_GAPS).join(', ')}. All other @aoc/protocol symbols now resolve from the installed tarball.`);
+    }
 
     // --- Install ---
     const install = run('npm', ['install', '--no-audit', '--no-fund'], tempDir);
