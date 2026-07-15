@@ -1,10 +1,13 @@
 /**
  * Integration runtime orchestration contracts.
  *
- * NOTE: Capability token constraints and identity claims originate in AOC-Protocol.
+ * NOTE: Capability token constraints originate in AOC-Protocol. Verified actor
+ * identity claims are Enterprise-owned (see `@aoc-enterprise/identity`) -- AOC
+ * Protocol governance determined identity claims are not part of its public API.
  */
 
-import type { AocIdentityClaims, CapabilityToken } from '@aoc/protocol';
+import type { CapabilityToken } from '@aoc/protocol';
+import type { VerifiedActorClaims } from '@aoc-enterprise/identity';
 
 export interface IntegrationAdapterDescriptor {
   adapterId: string;
@@ -18,7 +21,7 @@ export interface IntegrationAdapterRegistration {
   tenantId: string;
   orgId?: string;
   descriptor: IntegrationAdapterDescriptor;
-  registeredBy: AocIdentityClaims;
+  registeredBy: VerifiedActorClaims;
   registrationCapability?: CapabilityToken;
   metadata?: Record<string, unknown>;
 }

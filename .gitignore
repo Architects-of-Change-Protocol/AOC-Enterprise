@@ -28,6 +28,13 @@ apps/agent-passport-web/.data/
 # npm pack output (validate-publishability)
 *.tgz
 
+# Exception: the vendored @aoc/protocol tarball is a tracked, checksummed
+# build artifact (see protocol-consumer.lock.json) -- it is the canonical
+# interim dependency artifact until @aoc/protocol is published to a
+# registry (docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md, "Registry
+# transition"), not disposable pack output.
+!/vendor/*.tgz
+
 # Real backups produced by `npm run backup:v1` / restore targets / drill
 # scratch output -- never commit an actual backup (see
 # docs/operations/AOC_ENTERPRISE_BACKUP_V1.md, "Security"). Fixture and

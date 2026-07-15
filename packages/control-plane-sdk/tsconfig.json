@@ -13,6 +13,9 @@
   ],
   "references": [
     {
+      "path": "../identity"
+    },
+    {
       "path": "../policy-runtime"
     }
   ]

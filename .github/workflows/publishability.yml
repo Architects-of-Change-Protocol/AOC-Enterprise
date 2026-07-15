@@ -44,17 +44,15 @@ jobs:
       - name: Verify the built tarball matches the compatibility lock (commit/version/checksum)
         run: node scripts/protocol/verify-tarball-against-lock.mjs "${{ runner.temp }}/protocol-tarball-result.json"
       - name: Validate Enterprise against the pinned tarball in an isolated copy
-        # KNOWN, DOCUMENTED, temporarily non-blocking: this genuinely fails
-        # typecheck/build/test today because of 2 confirmed contract-shape
-        # incompatibilities between Enterprise's control-plane package and the
-        # real @aoc/protocol package (see "Known gaps" in
-        # docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md). Those are real,
-        # pre-existing application-level incompatibilities this validation
-        # uncovered -- not packaging defects -- and are tracked for a
-        # dedicated follow-up sprint rather than papered over here. The step
-        # still runs and its output is captured; flip continue-on-error back
-        # to false once that follow-up lands and this passes cleanly.
-        continue-on-error: true
+        # Blocking. The Protocol Contract Adoption sprint resolved all
+        # previously-known contract-shape gaps (AocIdentityClaims ->
+        # VerifiedActorClaims, ScopedAccessRequest.scope -> .requestedScope
+        # with `action` moved to the Enterprise-owned
+        # EnterpriseScopedAccessRequest extension, and AuditEventEnvelope via
+        # an explicit toProtocolAuditEventEnvelope mapper) -- see "Known gaps"
+        # in docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md, which now
+        # records zero open gaps. This step must pass; do not reintroduce
+        # continue-on-error without a documented, evidenced reason.
         run: |
           TARBALL=$(node -e "console.log(JSON.parse(require('node:fs').readFileSync('${{ runner.temp }}/protocol-tarball-result.json','utf8')).tarballPath)")
           node scripts/protocol/validate-enterprise-against-protocol-tarball.mjs "$TARBALL"

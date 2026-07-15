@@ -32,7 +32,7 @@ function log(message) {
 
 function run(cmd, args, cwd, { allowFailure = false } = {}) {
   log(`$ ${cmd} ${args.join(' ')} (cwd=${cwd})`);
-  const result = spawnSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const result = spawnSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
   if (result.status !== 0 && !allowFailure) {
     process.stderr.write(result.stdout ?? '');
     process.stderr.write(result.stderr ?? '');

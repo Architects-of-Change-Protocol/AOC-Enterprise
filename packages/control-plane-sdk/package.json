@@ -23,6 +23,7 @@
     "dist"
   ],
   "dependencies": {
+    "@aoc-enterprise/identity": "file:../identity",
     "@aoc-enterprise/policy-runtime": "file:../policy-runtime"
   }
 }

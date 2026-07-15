@@ -1,4 +1,6 @@
-import type { AocIdentityClaims, AuditEventEnvelope, CapabilityToken, ScopedAccessRequest } from '@aoc/protocol';
+import type { AuditEventEnvelope, CapabilityToken } from '@aoc/protocol';
+import type { VerifiedActorClaims } from '@aoc-enterprise/identity';
+import type { EnterpriseScopedAccessRequest } from '@aoc-enterprise/scoped-access';
 import type { AuthorizationGrantInput } from './authorization/grants/grant-input.js';
 import type {
   AgentAccessEvaluatorAdapter,
@@ -107,9 +109,9 @@ export type DelegatedCapabilityPayload = {
 export type DelegatedCapability = RuntimeSignedEnvelope<DelegatedCapabilityPayload>;
 
 export interface DelegatedAccessEvaluationInput {
-  actor: AocIdentityClaims;
+  actor: VerifiedActorClaims;
   delegatedCapability: DelegatedCapability;
-  access: ScopedAccessRequest;
+  access: EnterpriseScopedAccessRequest;
   orgId: string;
 }
 

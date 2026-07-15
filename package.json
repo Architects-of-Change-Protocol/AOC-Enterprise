@@ -19,6 +19,7 @@
     "validate:invalid-imports": "node scripts/assert-invalid-imports.mjs",
     "validate:publishability": "node scripts/validate-publishability.mjs",
     "check:protocol-consumption": "node scripts/check-protocol-consumption.mjs",
+    "check:protocol-contract-adoption": "node scripts/check-protocol-contract-adoption.mjs",
     "check:runtime-state": "node scripts/check-runtime-operational-state.mjs",
     "check:runtime-persistence": "node scripts/check-runtime-persistence.mjs",
     "check:runtime-federation": "npm run build --silent && node scripts/check-runtime-federation.mjs",
@@ -37,8 +38,8 @@
     "compare:portability:v1": "node scripts/portability/compare-portability-state.mjs",
     "check:portability-smoke": "node scripts/portability/check-portability-smoke.mjs",
     "validate:portability:v1": "node scripts/portability/validate-portability-v1.mjs",
-    "validate:release": "npm run typecheck && npm run build && npm run lint && npm test && npm run check:protocol-consumption && npm run check:protocol-compatibility-lock && npm run check:runtime-state && npm run check:runtime-persistence && npm run check:runtime-vault && npm run check:aoc-boundaries && npm run validate:publishability && npm run check:release-integrity",
-    "validate:v1-release": "npm run typecheck && npm run lint && npm test && npm run check:protocol-consumption && npm run check:protocol-compatibility-lock && npm run check:runtime-state && npm run check:runtime-persistence && npm run check:runtime-federation && npm run check:runtime-vault && npm run check:aoc-boundaries && npm run check:release-integrity && npm run validate:publishability && node scripts/check-api-freeze.mjs && node scripts/verify-release-manifest.mjs && node scripts/check-release-docs.mjs && node scripts/check-sdk-surface.mjs && npm run check:portability-smoke"
+    "validate:release": "npm run typecheck && npm run build && npm run lint && npm test && npm run check:protocol-consumption && npm run check:protocol-contract-adoption && npm run check:protocol-compatibility-lock && npm run check:runtime-state && npm run check:runtime-persistence && npm run check:runtime-vault && npm run check:aoc-boundaries && npm run validate:publishability && npm run check:release-integrity",
+    "validate:v1-release": "npm run typecheck && npm run lint && npm test && npm run check:protocol-consumption && npm run check:protocol-contract-adoption && npm run check:protocol-compatibility-lock && npm run check:runtime-state && npm run check:runtime-persistence && npm run check:runtime-federation && npm run check:runtime-vault && npm run check:aoc-boundaries && npm run check:release-integrity && npm run validate:publishability && node scripts/check-api-freeze.mjs && node scripts/verify-release-manifest.mjs && node scripts/check-release-docs.mjs && node scripts/check-sdk-surface.mjs && npm run check:portability-smoke"
   },
   "engines": {
     "node": ">=22"
@@ -100,11 +101,13 @@
     "react-dom": { "optional": true }
   },
   "dependencies": {
+    "@aoc-enterprise/identity": "*",
+    "@aoc-enterprise/scoped-access": "*",
     "better-sqlite3": "^12.11.1"
   },
   "devDependencies": {
     "@aoc-enterprise/pmfreak-agent-passport-foundation": "*",
-    "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol",
+    "@aoc/protocol": "file:./vendor/aoc-protocol-0.1.0.tgz",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",

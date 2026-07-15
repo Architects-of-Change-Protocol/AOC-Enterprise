@@ -105,9 +105,11 @@ The root `package.json` exposes these as `npm run protocol:tarball:build` and
 tarball-backed validation described above, on every pull request and push to `main`/`master`. It
 does **not** clone Protocol into a fixed sibling path, does **not** trust a mutable branch, does
 **not** publish anything, does **not** use an npm publish token, and does **not** create a release
-or tag. `.github/workflows/ci.yml` (typecheck/build/lint/test/legal) is unaffected — it has never
-required the Protocol sibling checkout, because the local ambient shim (below) already lets it
-build in isolation.
+or tag. This job is **blocking** (`continue-on-error` was removed once the Protocol Contract
+Adoption sprint resolved every documented gap — see "Known gaps" below). `.github/workflows/ci.yml`
+(typecheck/build/lint/test/legal) is unaffected — it has never required the Protocol sibling
+checkout, because `package.json`'s `@aoc/protocol` devDependency now points at the vendored,
+checksummed tarball (`vendor/aoc-protocol-0.1.0.tgz`), which is a real, tracked file, not a shim.
 
 ## Allowed imports
 
@@ -130,48 +132,32 @@ undeclared subpath are rejected by `scripts/check-protocol-consumption.mjs` and
 
 ## Known gaps
 
-Three confirmed, documented incompatibilities exist between Enterprise's runtime source and the
-real, published `@aoc/protocol` package as of the pinned commit. **None of them are fixed by this
-sprint** — this sprint's job was to build the tooling that could *discover and prove* them, not to
-carry out application-level contract migrations. Each is a real, load-bearing finding (not a
-packaging nit): the isolated tarball validator's `typecheck`, `build`, and `test` steps genuinely
-fail because of gaps 2 and 3 below, and that failure is reported accurately rather than hidden.
+**None.** As of the Protocol Contract Adoption sprint, `protocol-consumer.lock.json`'s `knownGaps`
+is an empty array (see its `resolvedGaps` for how each was closed). The three gaps discovered by an
+earlier sprint's isolated tarball validation are resolved:
 
-| # | Finding | Used in | Real shape | Status | Follow-up |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `AocIdentityClaims` does not exist in the real package at all | `src/runtime/context.ts`, `src/adapters/protocol-adapters.ts`, `packages/agent-governance/src/contracts.ts`, `packages/tenant-governance/src/contracts.ts`, `packages/integration-runtime/src/contracts.ts`, `packages/control-plane-sdk/src/contracts.ts`, `packages/policy-runtime/src/contracts.ts` | Not exported by `contracts`, `errors`, `claims`, `adapters`, or `runtime-registry` | **Partial — blocked by missing Protocol export** | AOC Protocol should determine canonical ownership of an identity-claims contract and, if confirmed protocol-level, export it through an approved public subpath. Type-only (`import type`) usage, zero runtime impact. This repository does not modify AOC Protocol to close this gap. |
-| 2 | `ScopedAccessRequest` shape mismatch: Enterprise reads `.scope`/`.action`; the real type has neither | `packages/control-plane/types.ts` (`ScopedAccessRequest['scope']` used 3×), `src/runtime/host.ts` (`.scope`/`.action` property access, 3 sites) | Real: `{ principalId, resource: ResourceRef, requestedScope: AgentScope, requestedAt }` (see `packages/protocol/src/contracts/index.ts`) | **Confirmed incompatibility — not fixed this sprint** | A follow-up should re-point the type extraction at `ScopedAccessRequest['requestedScope']` and update the two call sites in `host.ts` to the real field names. Assessed as a mechanical, type-only change (Enterprise's own persistence field names such as `requested_scope` are unaffected), but it was not applied in this sprint pending explicit sign-off, since it touches tracked application source. |
-| 3 | `AuditEventEnvelope` field-naming divergence: Enterprise constructs `event_id`/`occurred_at`/`subject_id`/`requester_id`/`request_id`; the real type has none of these | `packages/control-plane/service.ts` (object-literal construction, 4 sites), `packages/control-plane/types.ts` (`ControlPlaneAuditEvent = AuditEventEnvelope & {...}`) | Real: `{ eventId, eventType, emittedAt, actorId?, payload }` (see `packages/protocol/src/contracts/index.ts`) | **Confirmed incompatibility — not fixed this sprint** | This is a real runtime-level migration (renaming constructed-object fields, not just types) with implications for anything reading `ControlPlaneAuditEvent` (tests, fixtures, potentially persisted/exported audit formats). Out of scope for a packaging/integration sprint; needs its own scoped migration sprint with full call-site mapping. |
+| # | Former finding | Resolution |
+| --- | --- | --- |
+| 1 | `AocIdentityClaims` did not exist in the real package at all | Replaced everywhere by the Enterprise-owned `VerifiedActorClaims` (`@aoc-enterprise/identity`, `{ readonly sub: string }`), imported by all 8 real consumer files (`src/runtime/context.ts`, `src/adapters/protocol-adapters.ts`, `src/runtime/authorization/evaluators/authorization-evaluator.ts`, `packages/agent-governance/src/contracts.ts`, `packages/tenant-governance/src/contracts.ts`, `packages/integration-runtime/src/contracts.ts`, `packages/control-plane-sdk/src/contracts.ts`, `packages/policy-runtime/src/contracts.ts`). Zero imports of `AocIdentityClaims` from `@aoc/protocol` remain; enforced by `scripts/check-protocol-contract-adoption.mjs`. |
+| 2 | `ScopedAccessRequest` shape mismatch: Enterprise read `.scope`/`.action`; the real type has neither | `packages/control-plane/types.ts` and `src/runtime/host.ts` migrated to the real `.requestedScope`. `.action` moved to the Enterprise-owned `EnterpriseScopedAccessRequest` extension (`@aoc-enterprise/scoped-access`), which composes (does not duplicate) the real `ScopedAccessRequest`. `resource` (real: `ResourceRef`) is compared via the explicit `legacyResourceIdentifier()` accessor, not a cast. Enterprise's own persisted field names (e.g. `requested_scope`) are unchanged. |
+| 3 | `AuditEventEnvelope` field-naming divergence | `ControlPlaneAuditEvent` is now a standalone, Enterprise-owned legacy type (no longer `AuditEventEnvelope & {...}`). `packages/control-plane/audit-envelope-mapper.ts`'s `toProtocolAuditEventEnvelope()` is the sole, explicit, field-by-field mapping boundary. `.aoc-control-plane.json`'s persisted shape and `ControlPlaneService`'s existing public API are unchanged. |
 
-Gaps 2 and 3 were discovered empirically by running `scripts/protocol/validate-enterprise-against-protocol-tarball.mjs`
-against the real tarball — they were invisible before this sprint because
-`types/aoc-protocol/index.d.ts` (the local ambient shim) independently invented loose,
-incorrect shapes for both `ScopedAccessRequest` and `AuditEventEnvelope` that happened to satisfy
-Enterprise's existing code. This is the clearest evidence in this audit for why the shim was never
-a substitute for validating against the real package.
+`scripts/check-protocol-consumption.mjs` no longer allowlists any ambient shim in the main tree or
+the external-consumer fixture — the only remaining allowlisted stand-in is
+`tests/fixtures/protocol-stub/index.d.ts`, a documented fallback used only by
+`scripts/validate-publishability.mjs` when neither the vendored tarball nor a sibling checkout can
+be found on disk.
 
-`scripts/check-protocol-consumption.mjs` allowlists exactly one file
-(`types/aoc-protocol/index.d.ts`) as a documented, non-canonical local-dev convenience, with a
-comment explaining why; any *new* local ambient declaration elsewhere in the tree fails the check.
+## Dependency mechanism (canonical, not a shim)
 
-## Local development convenience (non-canonical)
-
-Two mechanisms exist purely to make local development and the always-green `ci.yml` job independent
-of whether the Protocol repository happens to be checked out as a sibling directory:
-
-- `package.json` → `devDependencies["@aoc/protocol"] = "file:../Architects_of_Change_Protocol/packages/protocol"`.
-  This is **never required** — `npm ci`/`typecheck`/`build`/`lint`/`test` all pass without it (the
-  sibling path does not exist in CI or in a fresh clone; npm silently leaves a dangling symlink,
-  and TypeScript never needs to resolve it — see next point).
-- `tsconfig.base.json` → `compilerOptions.paths["@aoc/protocol"]` maps the specifier to
-  `types/aoc-protocol/index.d.ts`, a local ambient module declaration. This lets `tsc` typecheck
-  without any real install of `@aoc/protocol` at all.
-
-Neither mechanism is the canonical signal that Enterprise is compatible with real, published
-Protocol contracts — a hand-maintained local shim can silently drift from the real package (this
-audit found exactly that: the shim's `PolicyDecision` and `AgentScope` shapes already differ
-structurally from the real package's, though neither is currently used by Enterprise code). The
-canonical signal is the isolated tarball validation described above, run in CI on every change.
+`package.json` → `devDependencies["@aoc/protocol"] = "file:./vendor/aoc-protocol-0.1.0.tgz"`. This
+is a real, tracked, checksummed npm tarball (see `vendor/README.md`, `protocol-consumer.lock.json`),
+not a sibling-directory reference and not an ambient shim — `npm install`/`npm ci` extract it into a
+real `node_modules/@aoc/protocol` (confirmed not a symlink), and `tsconfig.base.json` has no `paths`
+override for `@aoc/protocol` at all, so TypeScript resolves it exactly the way any real consumer's
+`tsc` would. This is the canonical interim mechanism while `@aoc/protocol` remains unpublished (see
+"Registry transition" below); it works identically in CI and in a fresh clone, with no dependency on
+a Protocol sibling checkout being present.
 
 ## Upgrade procedure
 
@@ -180,10 +166,10 @@ canonical signal is the isolated tarball validation described above, run in CI o
 2. Run `node scripts/protocol/validate-enterprise-against-protocol-tarball.mjs <tarball path>` and
    confirm every step passes.
 3. Review the diff in Protocol's public exports between the previously-pinned commit and the new
-   one (in particular, check whether `AocIdentityClaims` — or an equivalent — has been added; if so,
-   remove it from `KNOWN_EXPORT_GAPS` in `scripts/protocol/validate-enterprise-against-protocol-tarball.mjs`
-   and from the "Known gaps" table above, and migrate Enterprise's imports to the real export in a
-   follow-up change).
+   one. `KNOWN_EXPORT_GAPS` in `scripts/protocol/validate-enterprise-against-protocol-tarball.mjs`
+   is currently `{}` (no known gaps); if the new commit removes or renames an export Enterprise
+   depends on, add the gap there and to the "Known gaps" table above, and open a follow-up to
+   migrate the affected call sites.
 4. Run the full release gate locally (`npm run validate:release`, and `npm run validate:v1-release`
    when cutting a release).
 5. Update `protocol-consumer.lock.json` with the new commit, tarball filename, and SHA-256, and run

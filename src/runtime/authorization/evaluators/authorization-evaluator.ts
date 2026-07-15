@@ -1,4 +1,5 @@
-import type { AocIdentityClaims, CapabilityToken, ScopedAccessRequest } from '@aoc/protocol';
+import type { CapabilityToken, ScopedAccessRequest } from '@aoc/protocol';
+import type { VerifiedActorClaims } from '@aoc-enterprise/identity';
 import type {
   AgentAccessEvaluatorAdapter,
   CapabilityRegistryAdapter,
@@ -8,7 +9,7 @@ import type {
 import type { AuthorizationGrantInput } from '../grants/grant-input.js';
 
 export interface AuthorizationEvaluationContext {
-  actor: AocIdentityClaims;
+  actor: VerifiedActorClaims;
   request: AuthorizationGrantInput;
 }
 
@@ -25,7 +26,7 @@ export interface AuthorizationEvaluationResult {
 }
 
 async function evaluateCapability(
-  actor: AocIdentityClaims,
+  actor: VerifiedActorClaims,
   capability: CapabilityToken,
   orgId: string,
   capabilityRegistry: CapabilityRegistryAdapter
@@ -34,7 +35,7 @@ async function evaluateCapability(
 }
 
 async function evaluateDelegation(
-  actor: AocIdentityClaims,
+  actor: VerifiedActorClaims,
   capability: CapabilityToken,
   orgId: string,
   delegationStore: DelegationStoreAdapter
@@ -43,7 +44,7 @@ async function evaluateDelegation(
 }
 
 async function evaluateAgentScope(
-  actor: AocIdentityClaims,
+  actor: VerifiedActorClaims,
   access: ScopedAccessRequest,
   orgId: string,
   agentAccess: AgentAccessEvaluatorAdapter

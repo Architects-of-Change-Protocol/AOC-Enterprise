@@ -5,7 +5,6 @@ import {
 } from '@aoc-enterprise/runtime';
 import { verifyCapabilityToken } from '@aoc-enterprise/runtime/crypto';
 import type { PolicyDecisionAdapter } from '@aoc-enterprise/runtime/adapters';
-import type { CapabilityToken, ConsentGrant, ScopedAccessRequest } from '@aoc/protocol';
 
 const policyDecisionAdapter: PolicyDecisionAdapter = {
   evaluatePolicy: async () => ({
@@ -14,16 +13,27 @@ const policyDecisionAdapter: PolicyDecisionAdapter = {
   }),
 };
 
-const input: EnforcementEvaluationInput & {
-  capability: CapabilityToken;
-  consentGrants: ConsentGrant[];
-  access: ScopedAccessRequest;
-} = {
+const input: EnforcementEvaluationInput = {
   requestId: 'req-1',
   actorId: 'user-1',
-  capability: { jti: 'jti-1', trust_domain: 'enterprise', exp: 4102444800 },
+  capability: {
+    schemaVersion: '1.0.0',
+    tokenId: 'token-1',
+    issuer: 'issuer-1',
+    subject: 'user-1',
+    resource: { kind: 'tenant', id: '123' },
+    scope: ['read'],
+    expiresAt: '2100-01-01T00:00:00.000Z',
+    proof: { proofType: 'jwt', issuedAt: new Date().toISOString() },
+  },
   consentGrants: [],
-  access: { action: 'read', resource: 'tenant:123' },
+  access: {
+    principalId: 'user-1',
+    resource: { kind: 'tenant', id: '123' },
+    requestedScope: ['read'],
+    requestedAt: new Date().toISOString(),
+    action: 'read',
+  },
   tenantId: 'tenant-123',
   orgId: 'org-123',
 };
@@ -31,7 +41,14 @@ const input: EnforcementEvaluationInput & {
 const deps = {
   policyDecision: policyDecisionAdapter,
   delegationStore: { validateDelegation: async () => true },
-  auditSink: { emitAuthorizationAudit: async () => ({ occurred_at: new Date().toISOString() }) },
+  auditSink: {
+    emitAuthorizationAudit: async () => ({
+      eventId: 'evt-1',
+      eventType: 'AUTHORIZATION_EVALUATED',
+      emittedAt: new Date().toISOString(),
+      payload: {},
+    }),
+  },
   identity: { resolveIdentity: async () => ({ sub: 'user-1' }) },
   capabilityRegistry: { hasCapability: async () => true },
   agentAccess: { evaluateAgentAccess: async () => true },

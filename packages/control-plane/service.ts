@@ -157,7 +157,7 @@ export class ControlPlaneService {
       request_id: request.request_id,
       subject_id: request.subject_id,
       requester_id: request.requester_id,
-      metadata,
+      ...(metadata === undefined ? {} : { metadata }),
     };
   }
 }

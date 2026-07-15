@@ -130,7 +130,7 @@ export function createMockRuntimePorts(): AocEnterpriseRuntimeHostPorts {
     signer,
     identity: {
       async resolveIdentity(actorId: string) {
-        return { sub: actorId, tenant: 'tenant-example' };
+        return { sub: actorId };
       },
     },
     capabilityRegistry: {
