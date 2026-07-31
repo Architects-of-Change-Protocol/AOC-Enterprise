@@ -465,3 +465,80 @@ export type { EnterpriseModuleShutdownFailure } from './lifecycle/lifecycle-erro
 export type { EnterpriseLifecycleEvent, EnterpriseLifecycleEventType } from './lifecycle/lifecycle-events.js';
 
 export type { EnterpriseLifecycleConfiguration } from './configuration/enterprise-configuration.js';
+
+// -- AOC Runtime Authority: governed agent/runtime identity, capability
+// grants, signed short-lived leases, the Enforcement Gateway, the emergency
+// control plane, and tamper-evident evidence. See
+// `docs/architecture/ADR-RUNTIME-AUTHORITY.md`.
+export type {
+  GovernedAgent,
+  GovernedAgentStatus,
+  GovernedRuntime,
+  GovernedRuntimeState,
+  RuntimeCapabilityGrant,
+  CapabilityGrantStatus,
+  AuthorityLeasePayload,
+  SignedAuthorityLease,
+  LeaseStatus,
+  LeaseRecord,
+  RuntimeControlRequest,
+  RuntimeControlSeverity,
+  ProtectedActionRequest,
+  GatewayDecision,
+  GatewayDenialCode,
+  RuntimeEvidenceEvent,
+  RuntimeEvidenceEventType,
+  RuntimeEvidenceActorType,
+} from './runtime-authority/contracts.js';
+export {
+  AOC_RUNTIME_AUTHORITY_VERSION,
+  GOVERNED_RUNTIME_TRANSITIONS,
+  GOVERNED_RUNTIME_TERMINAL_STATES,
+  GOVERNED_RUNTIME_ACTIONABLE_STATES,
+  PROHIBITED_CAPABILITIES,
+  DEFAULT_LEASE_TTL_SECONDS,
+  GATEWAY_DENIAL_CODES,
+  RUNTIME_EVIDENCE_EVENT_TYPES,
+} from './runtime-authority/contracts.js';
+export { canTransitionRuntimeState, isTerminalRuntimeState, assertRuntimeTransition, RuntimeStateTransitionError } from './runtime-authority/state-machine.js';
+export { createEd25519Signer, createRuntimeAuthorityVerifier, createVerifierForSigners } from './runtime-authority/crypto.js';
+export type { RuntimeAuthoritySigner, RuntimeAuthorityVerifier } from './runtime-authority/crypto.js';
+export { createInMemoryRuntimeEvidenceLog, canonicalEvidenceEventBytes } from './runtime-authority/evidence.js';
+export type { RuntimeEvidenceLog, RuntimeEvidenceEventInput, RuntimeEvidenceChainVerificationResult } from './runtime-authority/evidence.js';
+export {
+  createInMemoryGovernedAgentStore,
+  createInMemoryGovernedRuntimeStore,
+  createInMemoryCapabilityGrantStore,
+  createInMemoryLeaseStore,
+  assertTenantAccess,
+  requireTenantScope,
+} from './runtime-authority/stores.js';
+export type { RuntimeAuthorityAccessContext, GovernedAgentStore, GovernedRuntimeStore, CapabilityGrantStore, LeaseStore } from './runtime-authority/stores.js';
+export { RuntimeAuthorityError, isRuntimeAuthorityError } from './runtime-authority/errors.js';
+export type { RuntimeAuthorityErrorCode } from './runtime-authority/errors.js';
+export { createRuntimeAuthorityService } from './runtime-authority/service.js';
+export type {
+  RuntimeAuthorityService,
+  RegisterGovernedAgentInput,
+  CreateGovernedRuntimeInput,
+  GrantCapabilityInput,
+  IssueLeaseInput,
+  RuntimeControlOutcome,
+  ResumeOutcome,
+  QuarantineOutcome,
+  TerminateOutcome,
+} from './runtime-authority/service.js';
+export { createRuntimeAuthorityGateway } from './runtime-authority/gateway.js';
+export type { RuntimeAuthorityGatewayDeps } from './runtime-authority/gateway.js';
+export { createRuntimeAuthorityModule, RUNTIME_AUTHORITY_MODULE_ID } from './modules/runtime-authority-module.js';
+export {
+  validateRegisterAgentRequestBody,
+  validateControlRequestBody,
+  validateResumeRequestBody,
+  validateCreateRuntimeRequestBody,
+  validateActorIdRequestBody,
+  validateGrantCapabilityRequestBody,
+  validateIssueLeaseRequestBody,
+  validateProtectedActionRequestBody,
+  mapGatewayDecisionToHttpStatus,
+} from './api/runtime-authority-contract.js';

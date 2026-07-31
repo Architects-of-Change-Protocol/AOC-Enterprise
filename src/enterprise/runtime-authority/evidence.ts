@@ -70,6 +70,48 @@ function computeEventHash(event: Omit<RuntimeEvidenceEvent, 'eventHash'>): strin
   return computeDigest(event);
 }
 
+/**
+ * The pure chain-verification algorithm, operating on any event array --
+ * not tied to a particular log instance's internal storage. This is what
+ * lets adversarial tests prove tamper-evidence against deletion, reordering,
+ * and duplication (not just in-place field mutation): take a real chain via
+ * `log.list(runtimeId)`, splice/reorder/duplicate entries in the copy, and
+ * call this function directly. `RuntimeEvidenceLog.verify` is a thin
+ * wrapper over this same function applied to its own stored chain.
+ */
+export function verifyRuntimeEvidenceChain(events: readonly RuntimeEvidenceEvent[]): RuntimeEvidenceChainVerificationResult {
+  let previousHash: string | undefined;
+
+  for (const event of events) {
+    if (event.previousHash !== previousHash) {
+      return {
+        valid: false,
+        eventCount: events.length,
+        firstInvalidEventId: event.eventId,
+        failureReason: `Event '${event.eventId}' declares previousHash '${event.previousHash ?? '(none)'}' but the preceding event in the chain hashes to '${previousHash ?? '(none)'}'.`,
+      };
+    }
+
+    const { eventHash: storedHash, ...rest } = event;
+    if (!isWellFormedDigest(storedHash)) {
+      return { valid: false, eventCount: events.length, firstInvalidEventId: event.eventId, failureReason: `Event '${event.eventId}' has a malformed eventHash.` };
+    }
+    const recomputed = computeEventHash(rest);
+    if (recomputed !== storedHash) {
+      return {
+        valid: false,
+        eventCount: events.length,
+        firstInvalidEventId: event.eventId,
+        failureReason: `Event '${event.eventId}' content does not match its recorded eventHash (stored '${storedHash}', recomputed '${recomputed}'); the event was modified after being appended.`,
+      };
+    }
+
+    previousHash = storedHash;
+  }
+
+  return { valid: true, eventCount: events.length };
+}
+
 /** In-memory, append-only evidence log. `nextId`/`now` are injected so tests are deterministic. Production hardening (durable storage) is a documented next step -- see the ADR's "Known limitations". */
 export function createInMemoryRuntimeEvidenceLog(options: { readonly now?: () => string; readonly nextId?: (prefix: string) => string } = {}): RuntimeEvidenceLog {
   const now = options.now ?? (() => new Date().toISOString());
@@ -131,37 +173,7 @@ export function createInMemoryRuntimeEvidenceLog(options: { readonly now?: () =>
     },
 
     verify(runtimeId: string): RuntimeEvidenceChainVerificationResult {
-      const chain = chains.get(runtimeId) ?? [];
-      let previousHash: string | undefined;
-
-      for (const event of chain) {
-        if (event.previousHash !== previousHash) {
-          return {
-            valid: false,
-            eventCount: chain.length,
-            firstInvalidEventId: event.eventId,
-            failureReason: `Event '${event.eventId}' declares previousHash '${event.previousHash ?? '(none)'}' but the preceding event in the chain hashes to '${previousHash ?? '(none)'}'.`,
-          };
-        }
-
-        const { eventHash: storedHash, ...rest } = event;
-        if (!isWellFormedDigest(storedHash)) {
-          return { valid: false, eventCount: chain.length, firstInvalidEventId: event.eventId, failureReason: `Event '${event.eventId}' has a malformed eventHash.` };
-        }
-        const recomputed = computeEventHash(rest);
-        if (recomputed !== storedHash) {
-          return {
-            valid: false,
-            eventCount: chain.length,
-            firstInvalidEventId: event.eventId,
-            failureReason: `Event '${event.eventId}' content does not match its recorded eventHash (stored '${storedHash}', recomputed '${recomputed}'); the event was modified after being appended.`,
-          };
-        }
-
-        previousHash = storedHash;
-      }
-
-      return { valid: true, eventCount: chain.length };
+      return verifyRuntimeEvidenceChain(chains.get(runtimeId) ?? []);
     },
   };
 }
