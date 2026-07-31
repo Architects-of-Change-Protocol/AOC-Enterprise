@@ -83,6 +83,13 @@ export interface EnterpriseConfiguration {
     /** When `true`, an Assurance Store outage makes the Enterprise Host not-ready. Defaults to `false`: Assurance degrades gracefully without blocking `POST /api/governance/evaluate`. */
     readonly required: boolean;
   };
+  /** AOC Runtime Authority configuration -- criticality and default lease lifetime are deployment-configurable, matching every other module's own pattern. */
+  readonly runtimeAuthority: {
+    /** When `true`, a Runtime Authority failure makes the Enterprise Host not-ready. Defaults to `false`. */
+    readonly required: boolean;
+    /** Default Authority Lease time-to-live in seconds when a caller does not specify one (mission section 3.4 default: 30s). */
+    readonly defaultLeaseTtlSeconds: number;
+  };
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
@@ -170,6 +177,10 @@ export function loadEnterpriseConfiguration(env: Readonly<Record<string, string 
       sqlitePath: env.AOC_ENTERPRISE_ASSURANCE_SQLITE_PATH ?? '.data/assurance.sqlite',
       required: parseBoolean(env.AOC_ENTERPRISE_ASSURANCE_REQUIRED, false),
     },
+    runtimeAuthority: {
+      required: parseBoolean(env.AOC_ENTERPRISE_RUNTIME_AUTHORITY_REQUIRED, false),
+      defaultLeaseTtlSeconds: parsePositiveIntMs(env.AOC_ENTERPRISE_RUNTIME_AUTHORITY_LEASE_TTL_SECONDS, 30),
+    },
   };
 }
 
@@ -191,6 +202,7 @@ export function computeConfigurationChecksum(config: EnterpriseConfiguration): s
     requireAuthentication: config.features.requireAuthentication,
     passportRequired: config.passport.required,
     assuranceRequired: config.assurance.required,
+    runtimeAuthorityRequired: config.runtimeAuthority.required,
   };
   const serialized = JSON.stringify(shape);
   let hash = 0;

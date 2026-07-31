@@ -24,6 +24,7 @@ describe('AOC Enterprise Module Lifecycle & Registry (integration via createEnte
     // PR-004: 'aoc.enterprise.persistence' evolved into the Governance Store module (documented migration).
     // PR-006: 'aoc.enterprise.agent-passport' (Agent Passport Runtime) joined the built-in module set.
     // PR-007: 'aoc.enterprise.assurance' (Assurance Runtime) joined the built-in module set.
+    // 'aoc.enterprise.runtime-authority' (AOC Runtime Authority) joined the built-in module set.
     assert.deepEqual(
       ids,
       [
@@ -32,6 +33,7 @@ describe('AOC Enterprise Module Lifecycle & Registry (integration via createEnte
         'aoc.enterprise.events',
         'aoc.enterprise.governance-store',
         'aoc.enterprise.providers',
+        'aoc.enterprise.runtime-authority',
         'aoc.enterprise.telemetry',
         'aoc.kernel',
       ].sort(),

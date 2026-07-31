@@ -42,6 +42,18 @@ import { createSqliteAssuranceStore } from '../assurance/sqlite-assurance-store.
 import type { AssuranceStore } from '../assurance/assurance-store.js';
 import { createAssuranceService, type AssuranceService } from '../assurance/service.js';
 import type { AssuranceFramework } from '../assurance/contracts.js';
+import { createRuntimeAuthorityModule } from '../modules/runtime-authority-module.js';
+import { createEd25519Signer, createVerifierForSigners } from '../runtime-authority/crypto.js';
+import { createInMemoryRuntimeEvidenceLog } from '../runtime-authority/evidence.js';
+import { createRuntimeAuthorityGateway } from '../runtime-authority/gateway.js';
+import { createRuntimeAuthorityService, type RuntimeAuthorityService } from '../runtime-authority/service.js';
+import {
+  createInMemoryCapabilityGrantStore,
+  createInMemoryGovernedAgentStore,
+  createInMemoryGovernedRuntimeStore,
+  createInMemoryLeaseStore,
+} from '../runtime-authority/stores.js';
+import type { GatewayDecision, ProtectedActionRequest } from '../runtime-authority/contracts.js';
 
 /** Transport-level input to `AocEnterprise.evaluate()` -- the not-yet-validated wire payload. Validated internally against `GovernanceEvaluateRequestBody`; see `EnterpriseRequestContext` for the side-channel (auth header) that travels alongside it. */
 export type EnterpriseEvaluationRequest = unknown;
@@ -126,6 +138,10 @@ export interface AocEnterprise {
   readonly assurance: AssuranceService;
   /** PR-007: the frozen Assurance Framework Registry (read surface: `get`/`list`/`validate`). */
   readonly assuranceFrameworks: AssuranceFrameworkRegistry;
+  /** AOC Runtime Authority: agent/runtime registration, capability grants, lease issuance/renewal, and the emergency control plane (pause/resume/isolate/quarantine/terminate/revoke). Independent of every other store (mission: "own store, never persisted inside another module's store"). */
+  readonly runtimeAuthority: RuntimeAuthorityService;
+  /** AOC Runtime Authority's Enforcement Gateway -- the single authoritative path a protected action must cross (mission section 2.2). Never bypassed by `runtimeAuthority` itself. */
+  readonly runtimeAuthorityGateway: { authorizeAction(request: ProtectedActionRequest): GatewayDecision };
   readonly eventPublisher: EnterpriseEventPublisher;
   readonly telemetry: EnterpriseTelemetry;
   readonly logger: EnterpriseLogger;
@@ -259,6 +275,43 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     }
   }
 
+  // AOC Runtime Authority: own independent in-memory stores + evidence chain
+  // (mission: "own store, never persisted inside another module's store"),
+  // constructed once here exactly like every other store above. The signer
+  // holds the only private key in the process; the Gateway is built from a
+  // verifier that only ever sees the corresponding public key (mission
+  // section 3.4 -- "the enforcement gateway should only need verification
+  // material"). See `docs/architecture/ADR-RUNTIME-AUTHORITY.md` for why
+  // signer/gateway share a process in this MVP and what production key
+  // separation requires.
+  const runtimeAuthoritySigner = createEd25519Signer(`${configuration.enterpriseVersion}-boot-${bootId}`);
+  const runtimeAuthorityVerifier = createVerifierForSigners([runtimeAuthoritySigner]);
+  const runtimeAuthorityAgents = createInMemoryGovernedAgentStore();
+  const runtimeAuthorityRuntimes = createInMemoryGovernedRuntimeStore();
+  const runtimeAuthorityGrants = createInMemoryCapabilityGrantStore();
+  const runtimeAuthorityLeases = createInMemoryLeaseStore();
+  const runtimeAuthorityEvidence = createInMemoryRuntimeEvidenceLog({ now: kernelProviders.clock.now, nextId: eventIdGenerator.nextId });
+  const runtimeAuthority = createRuntimeAuthorityService({
+    agents: runtimeAuthorityAgents,
+    runtimes: runtimeAuthorityRuntimes,
+    grants: runtimeAuthorityGrants,
+    leases: runtimeAuthorityLeases,
+    evidence: runtimeAuthorityEvidence,
+    signer: runtimeAuthoritySigner,
+    now: kernelProviders.clock.now,
+    nextId: eventIdGenerator.nextId,
+    defaultLeaseTtlSeconds: configuration.runtimeAuthority.defaultLeaseTtlSeconds,
+  });
+  const runtimeAuthorityGateway = createRuntimeAuthorityGateway({
+    agents: runtimeAuthorityAgents,
+    runtimes: runtimeAuthorityRuntimes,
+    grants: runtimeAuthorityGrants,
+    leases: runtimeAuthorityLeases,
+    evidence: runtimeAuthorityEvidence,
+    verifier: runtimeAuthorityVerifier,
+    now: kernelProviders.clock.now,
+  });
+
   const registry = createEnterpriseModuleRegistry();
   registry.register(createTelemetryModule(telemetry, configuration.telemetry.enabled, kernelProviders.clock.now));
   registry.register(createEventsModule(eventPublisher, configuration.eventPublishing.enabled, kernelProviders.clock.now));
@@ -267,6 +320,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   registry.register(createKernelModule(kernel, kernelProviders.clock.now));
   registry.register(createAgentPassportModule(passportStore, kernelProviders.clock.now, configuration.passport.required));
   registry.register(createAssuranceModule(assuranceStore, assuranceFrameworkRegistry, kernelProviders.clock.now, configuration.assurance.required));
+  registry.register(createRuntimeAuthorityModule(kernelProviders.clock.now, configuration.runtimeAuthority.required));
   for (const module of options.modules ?? []) registry.register(module);
   registry.freeze();
 
@@ -350,6 +404,8 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     assuranceStore,
     assurance,
     assuranceFrameworks: assuranceFrameworkRegistry,
+    runtimeAuthority,
+    runtimeAuthorityGateway,
     eventPublisher,
     telemetry,
     logger,

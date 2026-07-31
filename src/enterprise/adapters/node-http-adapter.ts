@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import { EnterpriseHttpError, mapEvidenceErrorToHttp, mapAgentPassportErrorToHttp, mapAssuranceErrorToHttp } from '../api/enterprise-http-errors.js';
+import { EnterpriseHttpError, EnterpriseHttpErrors, mapEvidenceErrorToHttp, mapAgentPassportErrorToHttp, mapAssuranceErrorToHttp, mapRuntimeAuthorityErrorToHttp } from '../api/enterprise-http-errors.js';
 import type { AocEnterprise } from '../composition/composition-root.js';
 import { validateEvidenceBuildRequestBody, validateEvidenceVerifyRequestBody, toEvidenceBundleResponseBody, toEvidenceVerifyResponseBody } from '../api/evidence-contract.js';
 import { isEvidenceError } from '../evidence/errors.js';
@@ -26,6 +26,18 @@ import {
   validateReassessRequestBody,
   validateSignalRequestBody,
 } from '../api/assurance-contract.js';
+import { isRuntimeAuthorityError } from '../runtime-authority/errors.js';
+import {
+  mapGatewayDecisionToHttpStatus,
+  validateActorIdRequestBody,
+  validateControlRequestBody,
+  validateCreateRuntimeRequestBody,
+  validateGrantCapabilityRequestBody,
+  validateIssueLeaseRequestBody,
+  validateProtectedActionRequestBody,
+  validateRegisterAgentRequestBody,
+  validateResumeRequestBody,
+} from '../api/runtime-authority-contract.js';
 
 const MAX_BODY_BYTES = 1024 * 1024; // 1 MiB -- generous for a governance-evaluation payload, small enough to bound memory per request.
 
@@ -58,6 +70,10 @@ function readRequestBody(req: IncomingMessage): Promise<unknown> {
   });
 }
 
+function isPlainObjectBody(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function writeJson(res: ServerResponse, statusCode: number, body: unknown): void {
   const payload = JSON.stringify(body);
   res.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(payload) });
@@ -74,7 +90,9 @@ function writeError(res: ServerResponse, error: unknown, enterprise: AocEnterpri
           ? mapAgentPassportErrorToHttp(error)
           : isAssuranceError(error)
             ? mapAssuranceErrorToHttp(error)
-            : undefined;
+            : isRuntimeAuthorityError(error)
+              ? mapRuntimeAuthorityErrorToHttp(error)
+              : undefined;
   if (httpError !== undefined) {
     writeJson(res, httpError.httpStatus, {
       error: {
@@ -329,6 +347,227 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
               .catch(fail);
             return;
           }
+        }
+      }
+
+      // -- AOC Runtime Authority endpoints. Tenant scoping is resolved via
+      // the same credential-matching the Governance-read/Assurance routes
+      // use; every mutating call still re-derives tenant scope from the
+      // stored runtime/agent record inside `enterprise.runtimeAuthority`
+      // (never trusted from the URL alone). This adapter only routes and
+      // maps a `GatewayDecision` onto an HTTP status -- it never decides
+      // whether an action is authorized.
+      if (url.pathname.startsWith('/api/runtime-authority/')) {
+        const context = (() => {
+          const governanceContext = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+          return { system: governanceContext.system, ...(governanceContext.organizationId !== undefined ? { tenantId: governanceContext.organizationId } : {}) };
+        })();
+        const { runtimeAuthority, runtimeAuthorityGateway } = enterprise;
+
+        if (method === 'POST' && url.pathname === '/api/runtime-authority/agents') {
+          readRequestBody(req)
+            .then((rawBody) => {
+              const input = validateRegisterAgentRequestBody(rawBody);
+              return runtimeAuthority.registerAgent(context, input, input.actorId);
+            })
+            .then((agent) => writeJson(res, 201, agent))
+            .catch(fail);
+          return;
+        }
+
+        const agentActionMatch = /^\/api\/runtime-authority\/agents\/([^/]+)\/(suspend|revoke)$/.exec(url.pathname);
+        if (method === 'POST' && agentActionMatch?.[1] !== undefined && agentActionMatch[2] !== undefined) {
+          const agentId = decodeURIComponent(agentActionMatch[1]);
+          const action = agentActionMatch[2];
+          readRequestBody(req)
+            .then((rawBody) => {
+              if (!isPlainObjectBody(rawBody) || typeof rawBody.tenantId !== 'string' || rawBody.tenantId.length === 0) {
+                throw EnterpriseHttpErrors.invalidRequest("The request body must include a non-empty 'tenantId'.");
+              }
+              const control = validateControlRequestBody(rawBody);
+              return action === 'suspend' ? runtimeAuthority.suspendAgent(context, rawBody.tenantId, agentId, control) : runtimeAuthority.revokeAgent(context, rawBody.tenantId, agentId, control);
+            })
+            .then((agent) => writeJson(res, 200, agent))
+            .catch(fail);
+          return;
+        }
+
+        const agentGetMatch = /^\/api\/runtime-authority\/agents\/([^/]+)$/.exec(url.pathname);
+        if (method === 'GET' && agentGetMatch?.[1] !== undefined) {
+          const agentId = decodeURIComponent(agentGetMatch[1]);
+          const tenantId = url.searchParams.get('tenantId');
+          if (tenantId === null || tenantId.length === 0) {
+            fail(EnterpriseHttpErrors.invalidRequest("Query parameter 'tenantId' is required."));
+            return;
+          }
+          const agent = runtimeAuthority.getAgent(context, tenantId, agentId);
+          if (agent === undefined) {
+            writeJson(res, 404, { error: { code: 'RUNTIME_AUTHORITY_AGENT_NOT_FOUND', message: `No GovernedAgent '${agentId}' in tenant '${tenantId}'.` } });
+            return;
+          }
+          writeJson(res, 200, agent);
+          return;
+        }
+
+        if (method === 'POST' && url.pathname === '/api/runtime-authority/runtimes') {
+          readRequestBody(req)
+            .then((rawBody) => {
+              const input = validateCreateRuntimeRequestBody(rawBody);
+              return runtimeAuthority.createRuntime(context, input, input.actorId);
+            })
+            .then((runtime) => writeJson(res, 201, runtime))
+            .catch(fail);
+          return;
+        }
+
+        const runtimeLifecycleMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/(authorize|start)$/.exec(url.pathname);
+        if (method === 'POST' && runtimeLifecycleMatch?.[1] !== undefined && runtimeLifecycleMatch[2] !== undefined) {
+          const runtimeId = decodeURIComponent(runtimeLifecycleMatch[1]);
+          const action = runtimeLifecycleMatch[2];
+          readRequestBody(req)
+            .then((rawBody) => {
+              const { actorId } = validateActorIdRequestBody(rawBody);
+              return action === 'authorize' ? runtimeAuthority.authorizeRuntime(context, runtimeId, actorId) : runtimeAuthority.startRuntime(context, runtimeId, actorId);
+            })
+            .then((runtime) => writeJson(res, 200, runtime))
+            .catch(fail);
+          return;
+        }
+
+        const runtimeControlMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/(pause|resume|isolate|quarantine|terminate)$/.exec(url.pathname);
+        if (method === 'POST' && runtimeControlMatch?.[1] !== undefined && runtimeControlMatch[2] !== undefined) {
+          const runtimeId = decodeURIComponent(runtimeControlMatch[1]);
+          const action = runtimeControlMatch[2];
+          readRequestBody(req)
+            .then((rawBody) => {
+              switch (action) {
+                case 'pause':
+                  return runtimeAuthority.pause(context, runtimeId, validateControlRequestBody(rawBody));
+                case 'resume': {
+                  const { control, capabilities } = validateResumeRequestBody(rawBody);
+                  return runtimeAuthority.resume(context, runtimeId, control, capabilities);
+                }
+                case 'isolate':
+                  return runtimeAuthority.isolate(context, runtimeId, validateControlRequestBody(rawBody));
+                case 'quarantine':
+                  return runtimeAuthority.quarantine(context, runtimeId, validateControlRequestBody(rawBody));
+                default:
+                  return runtimeAuthority.terminate(context, runtimeId, validateControlRequestBody(rawBody));
+              }
+            })
+            .then((outcome) => writeJson(res, 200, outcome))
+            .catch(fail);
+          return;
+        }
+
+        const capabilitiesMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/capabilities$/.exec(url.pathname);
+        if (capabilitiesMatch?.[1] !== undefined) {
+          const runtimeId = decodeURIComponent(capabilitiesMatch[1]);
+          if (method === 'GET') {
+            try {
+              writeJson(res, 200, { runtimeId, capabilities: runtimeAuthority.listCapabilities(context, runtimeId) });
+            } catch (error) {
+              fail(error);
+            }
+            return;
+          }
+          if (method === 'POST') {
+            readRequestBody(req)
+              .then((rawBody) => {
+                const runtime = runtimeAuthority.getRuntime(context, runtimeId);
+                if (runtime === undefined) throw EnterpriseHttpErrors.invalidRequest(`No GovernedRuntime '${runtimeId}'.`);
+                const input = validateGrantCapabilityRequestBody(rawBody, runtime.tenantId, runtimeId);
+                return runtimeAuthority.grantCapability(context, input);
+              })
+              .then((grant) => writeJson(res, 201, grant))
+              .catch(fail);
+            return;
+          }
+        }
+
+        const capabilityRevokeMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/capabilities\/([^/]+)\/revoke$/.exec(url.pathname);
+        if (method === 'POST' && capabilityRevokeMatch?.[1] !== undefined && capabilityRevokeMatch[2] !== undefined) {
+          const runtimeId = decodeURIComponent(capabilityRevokeMatch[1]);
+          const capability = decodeURIComponent(capabilityRevokeMatch[2]);
+          readRequestBody(req)
+            .then((rawBody) => runtimeAuthority.revokeCapability(context, runtimeId, capability, validateControlRequestBody(rawBody)))
+            .then((grants) => writeJson(res, 200, { runtimeId, capability, grants }))
+            .catch(fail);
+          return;
+        }
+
+        const issueLeaseMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/leases$/.exec(url.pathname);
+        if (method === 'POST' && issueLeaseMatch?.[1] !== undefined) {
+          const runtimeId = decodeURIComponent(issueLeaseMatch[1]);
+          readRequestBody(req)
+            .then((rawBody) => {
+              const runtime = runtimeAuthority.getRuntime(context, runtimeId);
+              if (runtime === undefined) throw EnterpriseHttpErrors.invalidRequest(`No GovernedRuntime '${runtimeId}'.`);
+              const input = validateIssueLeaseRequestBody(rawBody, runtime.tenantId, runtimeId);
+              return runtimeAuthority.issueLease(context, input);
+            })
+            .then((lease) => writeJson(res, 201, lease))
+            .catch(fail);
+          return;
+        }
+
+        const leaseActionMatch = /^\/api\/runtime-authority\/leases\/([^/]+)\/(renew|revoke)$/.exec(url.pathname);
+        if (method === 'POST' && leaseActionMatch?.[1] !== undefined && leaseActionMatch[2] !== undefined) {
+          const leaseId = decodeURIComponent(leaseActionMatch[1]);
+          const action = leaseActionMatch[2];
+          readRequestBody(req)
+            .then((rawBody) => {
+              if (action === 'renew') {
+                const { actorId } = validateActorIdRequestBody(rawBody);
+                return runtimeAuthority.renewLease(context, leaseId, actorId);
+              }
+              return runtimeAuthority.revokeLease(context, leaseId, validateControlRequestBody(rawBody));
+            })
+            .then((result) => writeJson(res, 200, result))
+            .catch(fail);
+          return;
+        }
+
+        const evidenceMatch2 = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/evidence$/.exec(url.pathname);
+        if (method === 'GET' && evidenceMatch2?.[1] !== undefined) {
+          const runtimeId = decodeURIComponent(evidenceMatch2[1]);
+          try {
+            writeJson(res, 200, { runtimeId, events: runtimeAuthority.listEvidence(context, runtimeId) });
+          } catch (error) {
+            fail(error);
+          }
+          return;
+        }
+
+        const evidenceVerifyMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/evidence\/verify$/.exec(url.pathname);
+        if (method === 'POST' && evidenceVerifyMatch?.[1] !== undefined) {
+          const runtimeId = decodeURIComponent(evidenceVerifyMatch[1]);
+          try {
+            const result = runtimeAuthority.verifyEvidence(context, runtimeId);
+            writeJson(res, result.valid ? 200 : 409, result);
+          } catch (error) {
+            fail(error);
+          }
+          return;
+        }
+
+        // The Enforcement Gateway itself -- reachable over the network,
+        // independent of the agent process (mission section 2.2's required
+        // execution path). This is the one route a real agent runtime would
+        // call before every protected tool action.
+        const gatewayMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/gateway\/authorize$/.exec(url.pathname);
+        if (method === 'POST' && gatewayMatch?.[1] !== undefined) {
+          const runtimeId = decodeURIComponent(gatewayMatch[1]);
+          readRequestBody(req)
+            .then((rawBody) => {
+              const runtime = runtimeAuthority.getRuntime(context, runtimeId);
+              if (runtime === undefined) throw EnterpriseHttpErrors.invalidRequest(`No GovernedRuntime '${runtimeId}'.`);
+              const request = validateProtectedActionRequestBody(rawBody, runtime.tenantId, runtimeId);
+              const decision = runtimeAuthorityGateway.authorizeAction(request);
+              writeJson(res, mapGatewayDecisionToHttpStatus(decision), decision);
+            })
+            .catch(fail);
+          return;
         }
       }
 

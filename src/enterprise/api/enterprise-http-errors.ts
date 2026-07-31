@@ -2,6 +2,7 @@ import type { GovernanceStoreError } from '../governance-store/errors.js';
 import type { EvidenceError } from '../evidence/errors.js';
 import type { AgentPassportError } from '../passport/errors.js';
 import type { AssuranceError } from '../assurance/errors.js';
+import type { RuntimeAuthorityError } from '../runtime-authority/errors.js';
 
 /**
  * The AOC Enterprise Host's own HTTP error taxonomy (mission's "Enterprise
@@ -82,7 +83,20 @@ export type EnterpriseHttpErrorCode =
   | 'ASSURANCE_STORE_UNAVAILABLE'
   | 'ASSURANCE_TENANT_SCOPE_REQUIRED'
   | 'ASSURANCE_ACCESS_SCOPE_VIOLATION'
-  | 'ASSURANCE_VALIDATION_ERROR';
+  | 'ASSURANCE_VALIDATION_ERROR'
+  /** AOC Runtime Authority error codes surfaced on the wire, mirroring how every other module's own taxonomy is preserved verbatim. */
+  | 'RUNTIME_AUTHORITY_VALIDATION_ERROR'
+  | 'RUNTIME_AUTHORITY_AGENT_NOT_FOUND'
+  | 'RUNTIME_AUTHORITY_AGENT_ALREADY_EXISTS'
+  | 'RUNTIME_AUTHORITY_RUNTIME_NOT_FOUND'
+  | 'RUNTIME_AUTHORITY_INVALID_STATE_TRANSITION'
+  | 'RUNTIME_AUTHORITY_GRANT_NOT_FOUND'
+  | 'RUNTIME_AUTHORITY_LEASE_NOT_FOUND'
+  | 'RUNTIME_AUTHORITY_LEASE_ISSUANCE_DENIED'
+  | 'RUNTIME_AUTHORITY_TENANT_SCOPE_REQUIRED'
+  | 'RUNTIME_AUTHORITY_ACCESS_SCOPE_VIOLATION'
+  | 'RUNTIME_AUTHORITY_OPERATOR_UNAUTHORIZED'
+  | 'RUNTIME_AUTHORITY_STORE_UNAVAILABLE';
 
 export class EnterpriseHttpError extends Error {
   constructor(
@@ -233,6 +247,38 @@ export function mapAssuranceErrorToHttp(error: AssuranceError): EnterpriseHttpEr
     case 'ASSURANCE_CONTROL_EVALUATION_FAILED':
       return new EnterpriseHttpError(500, error.code, error.message, undefined, extra);
     case 'ASSURANCE_STORE_UNAVAILABLE':
+      return new EnterpriseHttpError(503, error.code, error.message, undefined, extra);
+  }
+}
+
+/**
+ * Maps a `RuntimeAuthorityError` onto the wire, mirroring the other mappers.
+ * Note this is distinct from a Gateway `GatewayDecision` (an ALLOW/DENY
+ * outcome, mapped separately in `runtime-authority-contract.ts`'s
+ * `mapGatewayDecisionToHttpStatus`) -- this mapper is only for failures
+ * *around* a Runtime Authority management call (bad input, not-found,
+ * invalid state transition, unavailable store), never for a Gateway denial
+ * itself, which is a successful (if negative) enforcement decision.
+ */
+export function mapRuntimeAuthorityErrorToHttp(error: RuntimeAuthorityError): EnterpriseHttpError {
+  const extra = error.details;
+  switch (error.code) {
+    case 'RUNTIME_AUTHORITY_VALIDATION_ERROR':
+      return new EnterpriseHttpError(400, error.code, error.message, undefined, extra);
+    case 'RUNTIME_AUTHORITY_AGENT_NOT_FOUND':
+    case 'RUNTIME_AUTHORITY_RUNTIME_NOT_FOUND':
+    case 'RUNTIME_AUTHORITY_GRANT_NOT_FOUND':
+    case 'RUNTIME_AUTHORITY_LEASE_NOT_FOUND':
+      return new EnterpriseHttpError(404, error.code, error.message, undefined, extra);
+    case 'RUNTIME_AUTHORITY_TENANT_SCOPE_REQUIRED':
+    case 'RUNTIME_AUTHORITY_ACCESS_SCOPE_VIOLATION':
+    case 'RUNTIME_AUTHORITY_OPERATOR_UNAUTHORIZED':
+      return new EnterpriseHttpError(403, error.code, error.message, undefined, extra);
+    case 'RUNTIME_AUTHORITY_AGENT_ALREADY_EXISTS':
+    case 'RUNTIME_AUTHORITY_INVALID_STATE_TRANSITION':
+    case 'RUNTIME_AUTHORITY_LEASE_ISSUANCE_DENIED':
+      return new EnterpriseHttpError(409, error.code, error.message, undefined, extra);
+    case 'RUNTIME_AUTHORITY_STORE_UNAVAILABLE':
       return new EnterpriseHttpError(503, error.code, error.message, undefined, extra);
   }
 }
