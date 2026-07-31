@@ -420,6 +420,22 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
           return;
         }
 
+        const runtimeGetMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)$/.exec(url.pathname);
+        if (method === 'GET' && runtimeGetMatch?.[1] !== undefined) {
+          const runtimeId = decodeURIComponent(runtimeGetMatch[1]);
+          try {
+            const runtime = runtimeAuthority.getRuntime(context, runtimeId);
+            if (runtime === undefined) {
+              writeJson(res, 404, { error: { code: 'RUNTIME_AUTHORITY_RUNTIME_NOT_FOUND', message: `No GovernedRuntime '${runtimeId}'.` } });
+              return;
+            }
+            writeJson(res, 200, runtime);
+          } catch (error) {
+            fail(error);
+          }
+          return;
+        }
+
         const runtimeLifecycleMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/(authorize|start)$/.exec(url.pathname);
         if (method === 'POST' && runtimeLifecycleMatch?.[1] !== undefined && runtimeLifecycleMatch[2] !== undefined) {
           const runtimeId = decodeURIComponent(runtimeLifecycleMatch[1]);
@@ -525,6 +541,17 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
             })
             .then((result) => writeJson(res, 200, result))
             .catch(fail);
+          return;
+        }
+
+        const activeLeasesMatch = /^\/api\/runtime-authority\/runtimes\/([^/]+)\/leases$/.exec(url.pathname);
+        if (method === 'GET' && activeLeasesMatch?.[1] !== undefined) {
+          const runtimeId = decodeURIComponent(activeLeasesMatch[1]);
+          try {
+            writeJson(res, 200, { runtimeId, leases: runtimeAuthority.listActiveLeases(context, runtimeId) });
+          } catch (error) {
+            fail(error);
+          }
           return;
         }
 

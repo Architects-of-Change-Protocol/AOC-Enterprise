@@ -1,0 +1,10 @@
+{
+  "name": "@aoc-enterprise/dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AOC Runtime Authority control dashboard -- a minimal, dependency-free static UI over /api/runtime-authority/*. Not the enforcement mechanism; only an interface to it.",
+  "type": "module",
+  "scripts": {
+    "start": "node serve.mjs"
+  }
+}

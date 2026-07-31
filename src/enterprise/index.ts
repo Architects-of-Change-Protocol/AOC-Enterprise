@@ -527,6 +527,7 @@ export type {
   ResumeOutcome,
   QuarantineOutcome,
   TerminateOutcome,
+  LeaseSummary,
 } from './runtime-authority/service.js';
 export { createRuntimeAuthorityGateway } from './runtime-authority/gateway.js';
 export type { RuntimeAuthorityGatewayDeps } from './runtime-authority/gateway.js';

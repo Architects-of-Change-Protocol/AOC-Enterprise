@@ -125,8 +125,18 @@ export interface RuntimeAuthorityService {
   getAgent(context: RuntimeAuthorityAccessContext, tenantId: string, agentId: string): GovernedAgent | undefined;
   getRuntime(context: RuntimeAuthorityAccessContext, runtimeId: string): GovernedRuntime | undefined;
   listCapabilities(context: RuntimeAuthorityAccessContext, runtimeId: string): readonly RuntimeCapabilityGrant[];
+  /** Every currently-ACTIVE lease for `runtimeId` -- what the control dashboard shows as "Lease status." `consumedNonces` (a `Set`, not JSON-serializable as-is) is surfaced only as a count. */
+  listActiveLeases(context: RuntimeAuthorityAccessContext, runtimeId: string): readonly LeaseSummary[];
   listEvidence(context: RuntimeAuthorityAccessContext, runtimeId: string): readonly RuntimeEvidenceEvent[];
   verifyEvidence(context: RuntimeAuthorityAccessContext, runtimeId: string): RuntimeEvidenceChainVerificationResult;
+}
+
+export interface LeaseSummary {
+  readonly leaseId: string;
+  readonly payload: AuthorityLeasePayload;
+  readonly status: LeaseRecord['status'];
+  readonly issuedBy: string;
+  readonly consumedActionCount: number;
 }
 
 export function createRuntimeAuthorityService(options: CreateRuntimeAuthorityServiceOptions): RuntimeAuthorityService {
@@ -641,6 +651,17 @@ export function createRuntimeAuthorityService(options: CreateRuntimeAuthoritySer
       const runtime = requireRuntime(runtimeId);
       assertTenantAccess(context, runtime.tenantId);
       return grants.listByRuntime(runtimeId);
+    },
+    listActiveLeases(context, runtimeId) {
+      const runtime = runtimes.get(runtimeId);
+      if (runtime !== undefined) assertTenantAccess(context, runtime.tenantId);
+      return leases.listActiveByRuntime(runtimeId).map((lease) => ({
+        leaseId: lease.leaseId,
+        payload: lease.payload,
+        status: lease.status,
+        issuedBy: lease.issuedBy,
+        consumedActionCount: lease.consumedNonces.size,
+      }));
     },
     listEvidence(context, runtimeId) {
       const runtime = runtimes.get(runtimeId);

@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AOC Runtime Authority -- Control Dashboard</title>
+<style>
+  :root {
+    --bg: #0b0f14; --panel: #131920; --panel-2: #1a222c; --border: #2a3644;
+    --text: #e6edf3; --muted: #8b98a5; --accent: #4f9cff;
+    --ok: #2ea043; --warn: #d29922; --danger: #f85149; --danger-2: #ff2d2d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 1.1rem; margin: 0 0 0.25rem; }
+  header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+  main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; display: grid; gap: 1rem; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
+  .panel h2 { font-size: 0.95rem; margin: 0 0 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  label { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 0.2rem; }
+  input, select { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.55rem; font-size: 0.85rem; }
+  button { cursor: pointer; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); border-radius: 6px; padding: 0.45rem 0.8rem; font-size: 0.82rem; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #05131f; font-weight: 600; }
+  button.danger { background: var(--danger); border-color: var(--danger); color: #200; font-weight: 600; }
+  button.danger-extreme { background: var(--danger-2); border-color: var(--danger-2); color: #fff; font-weight: 700; box-shadow: 0 0 0 2px rgba(255,45,45,0.25); }
+  .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; }
+  .badge.RUNNING { background: rgba(46,160,67,0.2); color: #4fd166; }
+  .badge.CREATED, .badge.AUTHORIZED { background: rgba(210,153,34,0.2); color: #e3b341; }
+  .badge.PAUSED { background: rgba(210,153,34,0.25); color: #e3b341; }
+  .badge.ISOLATED { background: rgba(248,81,73,0.2); color: #ff7871; }
+  .badge.QUARANTINED { background: rgba(248,81,73,0.3); color: #ff9b95; }
+  .badge.TERMINATED { background: var(--danger-2); color: #fff; }
+  .badge.ACTIVE { background: rgba(46,160,67,0.2); color: #4fd166; }
+  .badge.REVOKED, .badge.EXPIRED, .badge.SUSPENDED { background: rgba(248,81,73,0.2); color: #ff7871; }
+  .badge.ALLOW { background: rgba(46,160,67,0.2); color: #4fd166; }
+  .badge.DENY { background: rgba(248,81,73,0.2); color: #ff7871; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+  .kv label { margin-bottom: 0.1rem; }
+  .kv div.val { font-size: 0.95rem; font-weight: 600; }
+  .muted { color: var(--muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; }
+  #status-line { font-size: 0.78rem; padding: 0.4rem 0.6rem; border-radius: 6px; margin-top: 0.5rem; }
+  #status-line.err { background: rgba(248,81,73,0.15); color: #ff9b95; }
+  #status-line.ok { background: rgba(46,160,67,0.12); color: #7be895; }
+  #status-line.info { background: rgba(79,156,255,0.12); color: #9cc7ff; }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; max-width: 420px; }
+  dialog::backdrop { background: rgba(0,0,0,0.6); }
+  dialog h3 { margin-top: 0; }
+  dialog .field { margin-bottom: 0.6rem; }
+  dialog input, dialog select, dialog textarea { width: 100%; }
+  .hidden { display: none !important; }
+  .empty { color: var(--muted); font-style: italic; font-size: 0.82rem; }
+  .unauth-note { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AOC Runtime Authority -- Control Dashboard</h1>
+  <p>This UI is not the enforcement mechanism. Every decision below is made and enforced server-side by the Enforcement Gateway and the emergency control API -- this page only renders what the server reports and issues the same authenticated HTTP calls any other client could.</p>
+</header>
+<main>
+  <section class="panel">
+    <h2>Connection</h2>
+    <div class="row">
+      <div>
+        <label for="apiBase">API base URL</label>
+        <input id="apiBase" value="http://localhost:8787" size="26" />
+      </div>
+      <div>
+        <label for="tenantId">Tenant ID</label>
+        <input id="tenantId" placeholder="tenant-pmfreak-co" size="20" />
+      </div>
+      <div>
+        <label for="bearerToken">Bearer token (optional; required if the Host has AOC_ENTERPRISE_REQUIRE_AUTH=true)</label>
+        <input id="bearerToken" type="password" size="24" />
+      </div>
+      <div>
+        <label for="runtimeId">Runtime ID</label>
+        <input id="runtimeId" placeholder="runtime-..." size="20" />
+      </div>
+      <div style="align-self:flex-end;">
+        <button id="loadBtn" class="primary">Load</button>
+        <button id="autoRefreshBtn">Auto-refresh: off</button>
+      </div>
+    </div>
+    <div id="status-line" class="hidden"></div>
+    <p class="unauth-note" id="authNote"></p>
+  </section>
+
+  <section class="panel hidden" id="identityPanel">
+    <h2>Identity &amp; State</h2>
+    <div class="grid2">
+      <div class="kv"><label>Runtime state</label><div class="val"><span id="runtimeState" class="badge">--</span></div></div>
+      <div class="kv"><label>Agent identity</label><div class="val mono" id="agentIdentity">--</div></div>
+      <div class="kv"><label>Agent status</label><div class="val"><span id="agentStatus" class="badge">--</span></div></div>
+      <div class="kv"><label>Environment</label><div class="val" id="environmentId">--</div></div>
+      <div class="kv"><label>Policy version</label><div class="val" id="policyVersion">--</div></div>
+      <div class="kv"><label>Risk score</label><div class="val" id="riskScore">--</div></div>
+      <div class="kv"><label>Last activity (most recent evidence event)</label><div class="val" id="lastActivity">--</div></div>
+      <div class="kv"><label>Last control action</label><div class="val" id="lastControlAction">--</div></div>
+      <div class="kv"><label>Authority that paused/resumed</label><div class="val" id="lastControlActor">--</div></div>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="controlsPanel">
+    <h2>Emergency Controls</h2>
+    <div class="row">
+      <button id="btnPause">PAUSE</button>
+      <button id="btnResume">RESUME</button>
+      <button id="btnIsolate" class="danger">ISOLATE</button>
+      <button id="btnQuarantine" class="danger">QUARANTINE</button>
+      <button id="btnTerminate" class="danger-extreme">TERMINATE</button>
+    </div>
+    <p class="unauth-note">Every control action requires a reason, requester, and severity, and is confirmed server-side before this page updates. TERMINATE is irreversible and requires typing the runtime ID to confirm.</p>
+  </section>
+
+  <section class="panel hidden" id="capabilitiesPanel">
+    <h2>Current Capabilities</h2>
+    <table>
+      <thead><tr><th>Capability</th><th>Status</th><th>Resource scope</th><th>Issued by</th><th>Issued at</th><th></th></tr></thead>
+      <tbody id="capabilitiesBody"></tbody>
+    </table>
+    <p class="empty hidden" id="capabilitiesEmpty">No capability grants.</p>
+  </section>
+
+  <section class="panel hidden" id="leasesPanel">
+    <h2>Lease Status</h2>
+    <table>
+      <thead><tr><th>Lease ID</th><th>Status</th><th>Capabilities</th><th>Expires in</th><th>Issued by</th><th>Actions consumed</th></tr></thead>
+      <tbody id="leasesBody"></tbody>
+    </table>
+    <p class="empty hidden" id="leasesEmpty">No active leases.</p>
+  </section>
+
+  <section class="panel hidden" id="evidencePanel">
+    <h2>Recent Actions &amp; Denials</h2>
+    <div class="row" style="margin-bottom:0.5rem;">
+      <button id="btnVerifyEvidence">Verify evidence chain</button>
+      <span id="verifyResult" class="mono"></span>
+    </div>
+    <table>
+      <thead><tr><th>Time</th><th>Event</th><th>Decision</th><th>Capability</th><th>Actor</th><th>Reason</th><th>Correlation</th></tr></thead>
+      <tbody id="evidenceBody"></tbody>
+    </table>
+  </section>
+</main>
+
+<dialog id="confirmDialog">
+  <h3 id="confirmTitle">Confirm action</h3>
+  <div class="field"><label>Reason</label><textarea id="confirmReason" rows="2"></textarea></div>
+  <div class="field"><label>Requested by</label><input id="confirmRequestedBy" value="human-operator" /></div>
+  <div class="field"><label>Severity</label>
+    <select id="confirmSeverity"><option>low</option><option>medium</option><option selected>high</option><option>critical</option></select>
+  </div>
+  <div class="field hidden" id="typeToConfirmField"><label>Type the Runtime ID to confirm this irreversible action</label><input id="typeToConfirmInput" /></div>
+  <div class="row">
+    <button id="confirmCancel">Cancel</button>
+    <button id="confirmSubmit" class="danger">Confirm</button>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  let state = { runtime: null, agent: null, capabilities: [], leases: [], evidence: [] };
+  let autoRefreshTimer = null;
+  let inFlight = false;
+
+  function apiBase() { return $('apiBase').value.replace(/\/$/, ''); }
+  function headers() {
+    const h = { 'content-type': 'application/json' };
+    const token = $('bearerToken').value.trim();
+    if (token) h['authorization'] = `Bearer ${token}`;
+    return h;
+  }
+  function setStatus(kind, message) {
+    const el = $('status-line');
+    el.className = kind;
+    el.textContent = message;
+  }
+  function clearStatus() {
+    const el = $('status-line');
+    el.className = 'hidden';
+    el.textContent = '';
+  }
+
+  async function api(method, path, body) {
+    const res = await fetch(`${apiBase()}${path}`, { method, headers: headers(), body: body !== undefined ? JSON.stringify(body) : undefined });
+    let json = null;
+    try { json = await res.json(); } catch { /* no body */ }
+    if (!res.ok) {
+      const message = json && json.error ? `${json.error.code}: ${json.error.message}` : `HTTP ${res.status}`;
+      const err = new Error(message);
+      err.status = res.status;
+      err.body = json;
+      throw err;
+    }
+    return json;
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '--';
+    try { return new Date(iso).toLocaleString(); } catch { return iso; }
+  }
+
+  function countdown(expiresAtIso) {
+    const ms = Date.parse(expiresAtIso) - Date.now();
+    if (Number.isNaN(ms)) return '--';
+    if (ms <= 0) return 'expired';
+    return `${Math.ceil(ms / 1000)}s`;
+  }
+
+  function renderIdentity() {
+    const r = state.runtime, a = state.agent;
+    $('identityPanel').classList.remove('hidden');
+    $('controlsPanel').classList.remove('hidden');
+    $('runtimeState').textContent = r.state;
+    $('runtimeState').className = `badge ${r.state}`;
+    $('agentIdentity').textContent = a ? `${a.displayName} (${a.agentId})` : r.agentId;
+    $('agentStatus').textContent = a ? a.status : '?';
+    $('agentStatus').className = `badge ${a ? a.status : ''}`;
+    $('environmentId').textContent = r.environmentId;
+    $('policyVersion').textContent = r.policyVersion;
+    $('riskScore').textContent = r.riskScore;
+    const last = state.evidence[state.evidence.length - 1];
+    $('lastActivity').textContent = last ? `${fmtTime(last.occurredAt)} (${last.eventType})` : 'none yet';
+    $('lastControlAction').textContent = r.lastControlAction ? `${r.lastControlAction.action.toUpperCase()} -- ${r.lastControlAction.reason}` : 'none yet';
+    $('lastControlActor').textContent = r.lastControlAction ? `${r.lastControlAction.actorId} (${fmtTime(r.lastControlAction.occurredAt)})` : '--';
+
+    const terminated = r.state === 'TERMINATED';
+    $('btnPause').disabled = terminated || r.state === 'PAUSED';
+    $('btnResume').disabled = terminated || r.state !== 'PAUSED';
+    $('btnIsolate').disabled = terminated || r.state === 'ISOLATED';
+    $('btnQuarantine').disabled = terminated;
+    $('btnTerminate').disabled = terminated;
+  }
+
+  function renderCapabilities() {
+    $('capabilitiesPanel').classList.remove('hidden');
+    const body = $('capabilitiesBody');
+    body.innerHTML = '';
+    $('capabilitiesEmpty').classList.toggle('hidden', state.capabilities.length > 0);
+    for (const grant of state.capabilities) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${grant.capability}</td>
+        <td><span class="badge ${grant.status}">${grant.status}</span></td>
+        <td class="mono">${JSON.stringify(grant.resourceScope)}</td>
+        <td>${grant.issuedBy}</td>
+        <td>${fmtTime(grant.issuedAt)}</td>
+        <td>${grant.status === 'ACTIVE' ? `<button data-cap="${grant.capability}" class="revoke-cap">Revoke</button>` : ''}</td>`;
+      body.appendChild(tr);
+    }
+    body.querySelectorAll('.revoke-cap').forEach((btn) => btn.addEventListener('click', () => openConfirm({
+      title: `Revoke capability '${btn.dataset.cap}'`,
+      danger: true,
+      onConfirm: async (control) => {
+        await api('POST', `/api/runtime-authority/runtimes/${encodeURIComponent(state.runtime.runtimeId)}/capabilities/${encodeURIComponent(btn.dataset.cap)}/revoke`, control);
+        await refresh();
+      },
+    })));
+  }
+
+  function renderLeases() {
+    $('leasesPanel').classList.remove('hidden');
+    const body = $('leasesBody');
+    body.innerHTML = '';
+    $('leasesEmpty').classList.toggle('hidden', state.leases.length > 0);
+    for (const lease of state.leases) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${lease.leaseId}</td>
+        <td><span class="badge ${lease.status}">${lease.status}</span></td>
+        <td class="mono">${lease.payload.capabilities.join(', ')}</td>
+        <td>${countdown(lease.payload.expiresAt)}</td>
+        <td>${lease.issuedBy}</td>
+        <td>${lease.consumedActionCount}</td>`;
+      body.appendChild(tr);
+    }
+  }
+
+  function renderEvidence() {
+    $('evidencePanel').classList.remove('hidden');
+    const body = $('evidenceBody');
+    body.innerHTML = '';
+    const recent = [...state.evidence].slice(-25).reverse();
+    for (const event of recent) {
+      const tr = document.createElement('tr');
+      const decisionBadge = event.decision ? `<span class="badge ${event.decision}">${event.decision}</span>` : '--';
+      tr.innerHTML = `
+        <td>${fmtTime(event.occurredAt)}</td>
+        <td class="mono">${event.eventType}</td>
+        <td>${decisionBadge}</td>
+        <td class="mono">${event.capability ?? '--'}</td>
+        <td>${event.actorId}</td>
+        <td>${event.reason ?? '--'}</td>
+        <td class="mono">${event.correlationId}</td>`;
+      body.appendChild(tr);
+    }
+  }
+
+  async function refresh() {
+    if (!state.runtime) return;
+    const runtimeId = state.runtime.runtimeId;
+    const [runtime, capabilities, leases, evidence] = await Promise.all([
+      api('GET', `/api/runtime-authority/runtimes/${encodeURIComponent(runtimeId)}`),
+      api('GET', `/api/runtime-authority/runtimes/${encodeURIComponent(runtimeId)}/capabilities`),
+      api('GET', `/api/runtime-authority/runtimes/${encodeURIComponent(runtimeId)}/leases`),
+      api('GET', `/api/runtime-authority/runtimes/${encodeURIComponent(runtimeId)}/evidence`),
+    ]);
+    state.runtime = runtime;
+    state.capabilities = capabilities.capabilities;
+    state.leases = leases.leases;
+    state.evidence = evidence.events;
+    const tenantId = $('tenantId').value.trim();
+    if (tenantId) {
+      try { state.agent = await api('GET', `/api/runtime-authority/agents/${encodeURIComponent(runtime.agentId)}?tenantId=${encodeURIComponent(tenantId)}`); } catch { state.agent = null; }
+    }
+    renderIdentity();
+    renderCapabilities();
+    renderLeases();
+    renderEvidence();
+  }
+
+  async function loadRuntime() {
+    const runtimeId = $('runtimeId').value.trim();
+    if (!runtimeId) { setStatus('err', 'Enter a Runtime ID first.'); return; }
+    clearStatus();
+    setStatus('info', 'Loading...');
+    try {
+      await refresh();
+      clearStatus();
+    } catch (err) {
+      setStatus('err', `Failed to load: ${err.message}`);
+    }
+  }
+
+  function openConfirm({ title, danger, requireTypeToConfirm, onConfirm }) {
+    const dialog = $('confirmDialog');
+    $('confirmTitle').textContent = title;
+    $('confirmReason').value = '';
+    $('confirmSubmit').className = danger ? 'danger-extreme' : 'danger';
+    $('typeToConfirmField').classList.toggle('hidden', !requireTypeToConfirm);
+    $('typeToConfirmInput').value = '';
+    dialog.showModal();
+
+    const submit = async () => {
+      if (requireTypeToConfirm && $('typeToConfirmInput').value.trim() !== state.runtime.runtimeId) {
+        alert(`Type the exact Runtime ID ('${state.runtime.runtimeId}') to confirm.`);
+        return;
+      }
+      const reason = $('confirmReason').value.trim();
+      const requestedBy = $('confirmRequestedBy').value.trim();
+      if (!reason || !requestedBy) { alert('Reason and Requested by are required.'); return; }
+      const control = { reason, requestedBy, severity: $('confirmSeverity').value };
+      dialog.close();
+      $('confirmSubmit').removeEventListener('click', submit);
+      if (inFlight) return;
+      inFlight = true;
+      setStatus('info', 'Submitting control action -- UI will update only after the server confirms.');
+      try {
+        await onConfirm(control);
+        setStatus('ok', 'Control action confirmed by the server.');
+      } catch (err) {
+        setStatus('err', `Control action failed: ${err.message}`);
+      } finally {
+        inFlight = false;
+      }
+    };
+    $('confirmSubmit').addEventListener('click', submit, { once: true });
+    $('confirmCancel').addEventListener('click', () => { dialog.close(); $('confirmSubmit').removeEventListener('click', submit); }, { once: true });
+  }
+
+  function wireControls() {
+    const runtimeAction = (action, opts = {}) => openConfirm({
+      title: `${action.toUpperCase()} runtime '${state.runtime.runtimeId}'`,
+      danger: opts.danger ?? false,
+      requireTypeToConfirm: opts.requireTypeToConfirm ?? false,
+      onConfirm: async (control) => {
+        await api('POST', `/api/runtime-authority/runtimes/${encodeURIComponent(state.runtime.runtimeId)}/${action}`, control);
+        await refresh();
+      },
+    });
+    $('btnPause').addEventListener('click', () => runtimeAction('pause'));
+    $('btnResume').addEventListener('click', () => runtimeAction('resume'));
+    $('btnIsolate').addEventListener('click', () => runtimeAction('isolate', { danger: true }));
+    $('btnQuarantine').addEventListener('click', () => runtimeAction('quarantine', { danger: true }));
+    $('btnTerminate').addEventListener('click', () => runtimeAction('terminate', { danger: true, requireTypeToConfirm: true }));
+  }
+
+  $('loadBtn').addEventListener('click', loadRuntime);
+  $('btnVerifyEvidence').addEventListener('click', async () => {
+    try {
+      const result = await api('POST', `/api/runtime-authority/runtimes/${encodeURIComponent(state.runtime.runtimeId)}/evidence/verify`, {});
+      $('verifyResult').textContent = result.valid ? `valid (${result.eventCount} events)` : `TAMPERED: ${result.failureReason}`;
+      $('verifyResult').style.color = result.valid ? '#4fd166' : '#ff7871';
+    } catch (err) {
+      $('verifyResult').textContent = `verify failed: ${err.message}`;
+      $('verifyResult').style.color = '#ff7871';
+    }
+  });
+  $('autoRefreshBtn').addEventListener('click', () => {
+    if (autoRefreshTimer) {
+      clearInterval(autoRefreshTimer);
+      autoRefreshTimer = null;
+      $('autoRefreshBtn').textContent = 'Auto-refresh: off';
+    } else {
+      autoRefreshTimer = setInterval(() => { if (!inFlight) refresh().catch((err) => setStatus('err', err.message)); }, 5000);
+      $('autoRefreshBtn').textContent = 'Auto-refresh: on (5s)';
+    }
+  });
+
+  wireControls();
+
+  // Re-render lease countdowns every second without re-fetching (purely cosmetic; never implies a state change the server hasn't confirmed).
+  setInterval(() => { if (state.runtime) renderLeases(); }, 1000);
+})();
+</script>
+</body>
+</html>
