@@ -11,6 +11,7 @@
     { "path": "./packages/enterprise-audit" },
     { "path": "./packages/enterprise-host-sdk" },
     { "path": "./packages/governance-treaties" },
+    { "path": "./packages/grant-revocation" },
     { "path": "./packages/identity" },
     { "path": "./packages/integration-runtime" },
     { "path": "./packages/org-boundary" },

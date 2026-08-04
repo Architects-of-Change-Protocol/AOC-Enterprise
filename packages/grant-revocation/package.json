@@ -1,0 +1,22 @@
+{
+  "name": "@aoc-enterprise/grant-revocation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral, declarative record of the revocation of a previously-issued Access Grant. Contains no enforcement, no provider adapter, no URL invalidation, no session/cache/JWT/OAuth state, and no runtime execution.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ]
+}
