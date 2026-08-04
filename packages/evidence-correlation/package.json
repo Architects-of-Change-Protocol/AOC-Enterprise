@@ -1,0 +1,25 @@
+{
+  "name": "@aoc-enterprise/evidence-correlation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral, immutable correlation graph linking the immutable business artifacts produced across a governed access lifecycle (resource, decision, obligation, grant, revocation, usage). Contains no evidence itself, no provider adapter, no logging, no storage, no audit execution, and no runtime execution.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope"
+  }
+}
