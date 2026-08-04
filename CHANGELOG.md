@@ -2,6 +2,14 @@
 
 All notable changes to AOC Enterprise. The project follows [Semantic Versioning](https://semver.org/): the public HTTP API surface, the exported package entrypoints, and the store schema identifiers are the compatibility contract (see `docs/enterprise/API_STABILITY_V1.md`).
 
+## [Unreleased]
+
+### Security
+- **Fixed: `verifyCapabilityToken` (root-exported, `./crypto` subpath) previously returned `valid: true` for every capability token, including revoked and expired ones — a complete authorization bypass.** The function read `jti`, `trust_domain`, and `exp` off the token via an `as unknown as Record<string, unknown>` cast; none of those fields exist on the real `@aoc/protocol` `CapabilityToken` contract (the real fields are `tokenId`, `expiresAt`, and `revocationRefs`), so every guard condition was permanently unreachable and some malformed inputs (e.g. `null`) threw an uncaught `TypeError` instead of failing closed. The cast is removed; the function now validates against the real contract fields, revoked and expired tokens are correctly rejected, and malformed input returns `invalid` without throwing.
+  - **Open gap — trust domain is not enforced.** The real `CapabilityToken` carries no trust-domain-bearing claim (the old `trust_domain` check never had a real field to read, on top of being misspelled), so it has been removed rather than reimplemented against an invented field or an unproven mapping (e.g. guessing `issuer` means trust domain). `CapabilityVerificationContext.trustDomain` is retained on the type to avoid a breaking signature change but is documented as unused and unenforced. Enforcing trust-domain isolation requires a product decision (e.g. adopting `@aoc/protocol`'s `TrustRegistryProvider`) that is out of scope for this fix — tracked as a follow-up.
+  - **Open gap — signature verification is structural only, not cryptographic.** `CapabilityToken.proof` carries no signature bytes or key material, so `verifyCapabilityToken` can check proof *shape* (a recognized `proofType` with a non-empty `proofRef`) but not cryptographic integrity. Full tamper detection requires wiring `@aoc/protocol`'s `VerificationKeyResolver` port, which is out of scope for this fix — tracked as a follow-up.
+  - **Open gap — revocation is checked against the caller-supplied `revokedJti` set only.** `CapabilityToken.revocationRefs` point at the protocol's `RevocationLookup` port, which Enterprise does not wire up anywhere; a token that declares `revocationRefs` this function cannot resolve now fails closed (`revocation_status_indeterminate`) rather than being silently treated as clear. Adopting `RevocationLookup` is out of scope for this fix — tracked as a follow-up.
+
 ## [1.0.0] — 2026-07-12
 
 First production release. PR-008 is a hardening-only release: no new products, no new architecture, no functional behavior changes except fail-closed corrections listed below.

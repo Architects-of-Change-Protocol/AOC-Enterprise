@@ -24,7 +24,10 @@ const input: EnforcementEvaluationInput = {
     resource: { kind: 'tenant', id: '123' },
     scope: ['read'],
     expiresAt: '2100-01-01T00:00:00.000Z',
-    proof: { proofType: 'jwt', issuedAt: new Date().toISOString() },
+    // proofRef is required here (R004.A): verifyCapabilityToken now treats a
+    // non-'custom' proof with no proofRef as unverifiable and fails closed,
+    // so a fixture token asserting a successful verification must carry one.
+    proof: { proofType: 'jwt', proofRef: 'sig-ref-fixture-1', issuedAt: new Date().toISOString() },
   },
   consentGrants: [],
   access: {
