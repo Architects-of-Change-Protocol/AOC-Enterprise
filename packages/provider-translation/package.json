@@ -1,0 +1,26 @@
+{
+  "name": "@aoc-enterprise/provider-translation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral canonical Provider Translation Model: the immutable record of how an issued EnterpriseAccessGrant should be translated into provider-neutral execution intent. Contains no provider SDK, no HTTP client, no credential, no signed URL, no persistence, and no execution result.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/provider-adapter": "file:../provider-adapter",
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope"
+  }
+}
