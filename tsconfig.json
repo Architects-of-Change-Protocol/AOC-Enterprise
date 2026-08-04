@@ -3,6 +3,7 @@
   "references": [
     { "path": "./tsconfig.src.json" },
     { "path": "./packages/access-decision" },
+    { "path": "./packages/access-grant" },
     { "path": "./packages/access-obligation" },
     { "path": "./packages/canonical-runtime-contracts" },
     { "path": "./packages/agent-governance" },
