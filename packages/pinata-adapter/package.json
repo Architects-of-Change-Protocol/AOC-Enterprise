@@ -1,0 +1,29 @@
+{
+  "name": "@aoc-enterprise/pinata-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The first concrete Provider Adapter (R005.C): translates EnterpriseProviderTranslation records into Pinata SDK operations and normalizes the results back into canonical, provider-neutral execution outcomes and failures. Contains the only import of the Pinata SDK in this repository.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js' && node scripts/check-pinata-boundary.mjs",
+    "check:pinata-boundary": "node scripts/check-pinata-boundary.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/access-obligation": "file:../access-obligation",
+    "@aoc-enterprise/provider-adapter": "file:../provider-adapter",
+    "@aoc-enterprise/provider-translation": "file:../provider-translation",
+    "pinata": "^2.1.0"
+  }
+}
