@@ -188,6 +188,75 @@ describe('validateEnterpriseResourceEnvelope', () => {
     });
     assert.equal(validateEnterpriseResourceEnvelope(candidate).valid, true);
   });
+
+  it('rejects an unrecognized top-level field -- the runtime boundary a credential could otherwise be smuggled through', () => {
+    const candidate = { ...makeEnvelope(), apiKey: 'secret' };
+    const result = validateEnterpriseResourceEnvelope(candidate);
+    assert.equal(result.valid, false);
+    assert.ok(!result.valid && result.errors.some((e) => e.code === 'UNKNOWN_FIELD' && e.message.includes('envelope.apiKey')));
+  });
+
+  it('rejects an unrecognized nested field on location, resource, integrity, and descriptor', () => {
+    const candidate = {
+      ...makeEnvelope(),
+      resource: { ...makeEnvelope().resource, unexpected: 'x' },
+      location: { ...makeEnvelope().location, signedUrl: 'https://bucket.s3.amazonaws.com/key?X-Amz-Signature=...' },
+      integrity: { ...makeEnvelope().integrity, extra: 'x' },
+      descriptor: { ...makeEnvelope().descriptor, extra: 'x' },
+    };
+    const result = validateEnterpriseResourceEnvelope(candidate);
+    assert.equal(result.valid, false);
+    assert.ok(!result.valid);
+    if (!result.valid) {
+      const codes = result.errors.map((e) => e.code);
+      assert.equal(codes.filter((code) => code === 'UNKNOWN_FIELD').length, 4);
+      assert.ok(result.errors.some((e) => e.message === 'resource.unexpected is not a recognized field.'));
+      assert.ok(result.errors.some((e) => e.message === 'location.signedUrl is not a recognized field.'));
+      assert.ok(result.errors.some((e) => e.message === 'integrity.extra is not a recognized field.'));
+      assert.ok(result.errors.some((e) => e.message === 'descriptor.extra is not a recognized field.'));
+    }
+  });
+
+  it('rejects type-invalid optional scalar/nested fields instead of silently accepting them', () => {
+    assert.equal(validateEnterpriseResourceEnvelope({ ...makeEnvelope(), correlationId: 7 }).valid, false);
+    assert.equal(
+      validateEnterpriseResourceEnvelope({ ...makeEnvelope(), resource: { ...makeEnvelope().resource, tenantId: 7 } }).valid,
+      false,
+    );
+    assert.equal(
+      validateEnterpriseResourceEnvelope({ ...makeEnvelope(), resource: { ...makeEnvelope().resource, attributes: { region: 7 } } })
+        .valid,
+      false,
+    );
+    assert.equal(
+      validateEnterpriseResourceEnvelope({ ...makeEnvelope(), location: { ...makeEnvelope().location, system: 7 } }).valid,
+      false,
+    );
+    assert.equal(
+      validateEnterpriseResourceEnvelope({ ...makeEnvelope(), integrity: { ...makeEnvelope().integrity, sizeBytes: '1024' } }).valid,
+      false,
+    );
+    assert.equal(
+      validateEnterpriseResourceEnvelope({ ...makeEnvelope(), descriptor: { ...makeEnvelope().descriptor, tags: 7 } }).valid,
+      false,
+    );
+    assert.equal(
+      validateEnterpriseResourceEnvelope({ ...makeEnvelope(), descriptor: { ...makeEnvelope().descriptor, tags: ['ok', 7] } }).valid,
+      false,
+    );
+  });
+
+  it('rejects registeredAt values that are syntactically shaped but calendrically impossible', () => {
+    for (const impossible of ['2026-99-99T99:99:99Z', '2026-13-01T00:00:00Z', '2026-01-32T00:00:00Z', '2026-02-30T00:00:00Z']) {
+      const result = validateEnterpriseResourceEnvelope({ ...makeEnvelope(), registeredAt: impossible });
+      assert.equal(result.valid, false, `expected ${impossible} to be rejected`);
+      assert.ok(!result.valid && result.errors.some((e) => e.code === 'INVALID_REGISTERED_AT'));
+    }
+  });
+
+  it('accepts a real leap-day registeredAt', () => {
+    assert.equal(validateEnterpriseResourceEnvelope({ ...makeEnvelope(), registeredAt: '2024-02-29T00:00:00Z' }).valid, true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -240,6 +309,49 @@ describe('serialize / deserialize', () => {
     assert.equal('correlationId' in json, false);
     assert.equal('tenantId' in json.resource, false);
     assert.equal('attributes' in json.resource, false);
+  });
+
+  it('preserves a "__proto__" attribute key through serialize -- not silently dropped by the prototype setter', () => {
+    const original = makeEnvelope({
+      // Simulates JSON.parse output, which creates "__proto__" as a real own
+      // property (unlike an object literal's special-cased "__proto__" key).
+      resource: JSON.parse('{"kind":"document","id":"d-1","attributes":{"__proto__":"z","a":"1"}}'),
+    });
+    const json = serializeEnterpriseResourceEnvelope(original);
+    assert.equal(Object.prototype.hasOwnProperty.call(json.resource.attributes, '__proto__'), true);
+    assert.equal(json.resource.attributes?.__proto__, 'z');
+
+    const restored = deserializeEnterpriseResourceEnvelope(JSON.parse(JSON.stringify(json)));
+    assert.equal(enterpriseResourceEnvelopeEquals(original, restored), true);
+  });
+
+  it('rejects malformed nested fields with a validation error rather than throwing a raw TypeError', () => {
+    let caught: unknown;
+    try {
+      deserializeEnterpriseResourceEnvelope({ ...makeEnvelope(), descriptor: { tags: 7 } });
+    } catch (error) {
+      caught = error;
+    }
+    assert.ok(caught instanceof EnterpriseResourceEnvelopeValidationError);
+  });
+
+  it('rejects an envelope built through a loosely-typed intermediate that carries a smuggled credential field', () => {
+    // TypeScript's excess-property checking only fires on fresh object
+    // literals assigned directly to a typed position (see the compile-time
+    // negative tests below); it does not fire when the literal is first
+    // assigned to an untyped/widened variable. deserializeEnterpriseResourceEnvelope
+    // is the runtime boundary that must catch this case instead.
+    const raw: Record<string, unknown> = { ...makeEnvelope(), apiKey: 'secret' };
+    let caught: unknown;
+    try {
+      deserializeEnterpriseResourceEnvelope(raw);
+    } catch (error) {
+      caught = error;
+    }
+    assert.ok(caught instanceof EnterpriseResourceEnvelopeValidationError);
+    if (caught instanceof EnterpriseResourceEnvelopeValidationError) {
+      assert.ok(caught.issues.some((issue) => issue.code === 'UNKNOWN_FIELD'));
+    }
   });
 
   it('throws EnterpriseResourceEnvelopeValidationError on invalid input, carrying every issue', () => {

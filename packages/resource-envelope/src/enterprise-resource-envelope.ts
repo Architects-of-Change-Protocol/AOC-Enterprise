@@ -202,17 +202,25 @@ export function enterpriseResourceEnvelopeEquals(a: EnterpriseResourceEnvelope, 
 export type EnterpriseResourceEnvelopeValidationCode =
   | 'MISSING_RESOURCE'
   | 'INVALID_RESOURCE_IDENTITY'
+  | 'INVALID_RESOURCE_TENANT_ID'
+  | 'INVALID_RESOURCE_ATTRIBUTES'
   | 'UNSUPPORTED_SCHEMA_VERSION'
   | 'MISSING_LOCATION'
   | 'MISSING_LOCATION_URI'
+  | 'INVALID_LOCATION_SYSTEM'
+  | 'INVALID_LOCATION_SYSTEM_REFERENCE'
   | 'MISSING_LIFECYCLE_STATE'
   | 'INVALID_LIFECYCLE_STATE'
   | 'MISSING_REGISTERED_AT'
   | 'INVALID_REGISTERED_AT'
   | 'INCOMPLETE_INTEGRITY'
   | 'INVALID_INTEGRITY_VALUE'
+  | 'INVALID_INTEGRITY_SIZE_BYTES'
   | 'UNSUPPORTED_INTEGRITY_ALGORITHM'
-  | 'ORPHANED_SYSTEM_REFERENCE';
+  | 'INVALID_DESCRIPTOR'
+  | 'INVALID_CORRELATION_ID'
+  | 'ORPHANED_SYSTEM_REFERENCE'
+  | 'UNKNOWN_FIELD';
 
 export interface EnterpriseResourceEnvelopeValidationIssue {
   readonly code: EnterpriseResourceEnvelopeValidationCode;
@@ -225,10 +233,83 @@ export type EnterpriseResourceEnvelopeValidationResult =
 
 const LIFECYCLE_STATES: readonly EnterpriseResourceLifecycleState[] = ['registered', 'active', 'archived', 'deleted'];
 const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/i;
-const ISO_8601_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const ISO_8601_CAPTURE_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
+// Every field this contract recognizes, at each nesting level. Used to reject
+// unrecognized fields (see `pushUnknownFieldIssues`) -- an unknown field is
+// exactly how a credential, signed URL, or other forbidden concept could
+// otherwise be smuggled through `deserializeEnterpriseResourceEnvelope` by a
+// caller that builds its input through a loosely-typed intermediate object
+// rather than a fresh `EnterpriseResourceEnvelope` literal (TypeScript's
+// excess-property checking, which the compile-time negative tests rely on,
+// only fires on fresh literals -- it does not fire here, so this validator is
+// the runtime backstop for the same guarantee).
+const ENVELOPE_FIELDS = ['schemaVersion', 'resource', 'location', 'lifecycleState', 'registeredAt', 'integrity', 'descriptor', 'correlationId'] as const;
+const RESOURCE_FIELDS = ['kind', 'id', 'tenantId', 'attributes'] as const;
+const LOCATION_FIELDS = ['uri', 'system', 'systemReference'] as const;
+const INTEGRITY_FIELDS = ['algorithm', 'value', 'sizeBytes'] as const;
+const DESCRIPTOR_FIELDS = ['displayName', 'contentType', 'tags'] as const;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return isPlainObject(value) && Object.values(value).every((entry) => typeof entry === 'string');
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+function pushUnknownFieldIssues(
+  errors: EnterpriseResourceEnvelopeValidationIssue[],
+  scope: string,
+  candidate: Record<string, unknown>,
+  knownFields: readonly string[],
+): void {
+  for (const key of Object.keys(candidate)) {
+    if (!knownFields.includes(key)) {
+      errors.push({ code: 'UNKNOWN_FIELD', message: `${scope}.${key} is not a recognized field.` });
+    }
+  }
+}
+
+/**
+ * Validates that an ISO 8601 UTC timestamp string denotes a real calendar
+ * date/time -- not just a syntactically shaped one. `Date.parse` alone is
+ * insufficient here: it rejects out-of-range components (month 99, hour 99)
+ * but silently rolls day-of-month overflow into the next month (e.g.
+ * `2026-02-30` becomes March 2nd) instead of rejecting it, so this checks
+ * month/day/hour/minute/second/offset ranges explicitly, including
+ * leap-year-aware days-in-month.
+ */
+function isValidIsoDateTimeString(value: string): boolean {
+  const match = ISO_8601_CAPTURE_PATTERN.exec(value);
+  if (match === null) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, offset] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+
+  if (month < 1 || month > 12) return false;
+  if (hour > 23 || minute > 59 || second > 59) return false;
+
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (day < 1 || day > daysInMonth) return false;
+
+  if (offset !== 'Z') {
+    const offsetMatch = /^[+-](\d{2}):(\d{2})$/.exec(offset as string);
+    if (offsetMatch === null) return false;
+    const [, offsetHourText, offsetMinuteText] = offsetMatch;
+    if (Number(offsetHourText) > 23 || Number(offsetMinuteText) > 59) return false;
+  }
+
+  return true;
 }
 
 /**
@@ -236,8 +317,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * so it can guard deserialized/external input, not just already-typed
  * values. Never inspects `location.uri` for reachability, never checks
  * `system`/`systemReference` against a known provider list, and never
- * evaluates any form of permission -- only shape, required-field, and
- * paired-field consistency.
+ * evaluates any form of permission -- only shape, required-field,
+ * paired-field, and known-field consistency.
  */
 export function validateEnterpriseResourceEnvelope(candidate: unknown): EnterpriseResourceEnvelopeValidationResult {
   const errors: EnterpriseResourceEnvelopeValidationIssue[] = [];
@@ -245,6 +326,8 @@ export function validateEnterpriseResourceEnvelope(candidate: unknown): Enterpri
   if (!isPlainObject(candidate)) {
     return { valid: false, errors: [{ code: 'MISSING_RESOURCE', message: 'Envelope must be an object.' }] };
   }
+
+  pushUnknownFieldIssues(errors, 'envelope', candidate, ENVELOPE_FIELDS);
 
   if (candidate.schemaVersion !== ENTERPRISE_RESOURCE_ENVELOPE_SCHEMA_VERSION) {
     errors.push({
@@ -257,10 +340,17 @@ export function validateEnterpriseResourceEnvelope(candidate: unknown): Enterpri
     errors.push({ code: 'MISSING_RESOURCE', message: 'resource (a ResourceRef) is required.' });
   } else {
     const resource = candidate.resource;
+    pushUnknownFieldIssues(errors, 'resource', resource, RESOURCE_FIELDS);
     const hasKind = typeof resource.kind === 'string' && resource.kind.length > 0;
     const hasId = typeof resource.id === 'string' && resource.id.length > 0;
     if (!hasKind || !hasId) {
       errors.push({ code: 'INVALID_RESOURCE_IDENTITY', message: 'resource.kind and resource.id must both be non-empty strings.' });
+    }
+    if (resource.tenantId !== undefined && typeof resource.tenantId !== 'string') {
+      errors.push({ code: 'INVALID_RESOURCE_TENANT_ID', message: 'resource.tenantId must be a string when present.' });
+    }
+    if (resource.attributes !== undefined && !isStringRecord(resource.attributes)) {
+      errors.push({ code: 'INVALID_RESOURCE_ATTRIBUTES', message: 'resource.attributes must be an object of string values when present.' });
     }
   }
 
@@ -268,8 +358,15 @@ export function validateEnterpriseResourceEnvelope(candidate: unknown): Enterpri
     errors.push({ code: 'MISSING_LOCATION', message: 'location is required.' });
   } else {
     const location = candidate.location;
+    pushUnknownFieldIssues(errors, 'location', location, LOCATION_FIELDS);
     if (typeof location.uri !== 'string' || location.uri.length === 0) {
       errors.push({ code: 'MISSING_LOCATION_URI', message: 'location.uri must be a non-empty string.' });
+    }
+    if (location.system !== undefined && typeof location.system !== 'string') {
+      errors.push({ code: 'INVALID_LOCATION_SYSTEM', message: 'location.system must be a string when present.' });
+    }
+    if (location.systemReference !== undefined && typeof location.systemReference !== 'string') {
+      errors.push({ code: 'INVALID_LOCATION_SYSTEM_REFERENCE', message: 'location.systemReference must be a string when present.' });
     }
     if (location.systemReference !== undefined && location.system === undefined) {
       errors.push({
@@ -293,8 +390,8 @@ export function validateEnterpriseResourceEnvelope(candidate: unknown): Enterpri
 
   if (candidate.registeredAt === undefined) {
     errors.push({ code: 'MISSING_REGISTERED_AT', message: 'registeredAt is required.' });
-  } else if (typeof candidate.registeredAt !== 'string' || !ISO_8601_PATTERN.test(candidate.registeredAt)) {
-    errors.push({ code: 'INVALID_REGISTERED_AT', message: 'registeredAt must be an ISO 8601 UTC timestamp string.' });
+  } else if (typeof candidate.registeredAt !== 'string' || !isValidIsoDateTimeString(candidate.registeredAt)) {
+    errors.push({ code: 'INVALID_REGISTERED_AT', message: 'registeredAt must be a real ISO 8601 UTC timestamp string.' });
   }
 
   if (candidate.integrity !== undefined) {
@@ -302,6 +399,7 @@ export function validateEnterpriseResourceEnvelope(candidate: unknown): Enterpri
       errors.push({ code: 'INCOMPLETE_INTEGRITY', message: 'integrity must be an object when present.' });
     } else {
       const integrity = candidate.integrity;
+      pushUnknownFieldIssues(errors, 'integrity', integrity, INTEGRITY_FIELDS);
       const hasAlgorithm = integrity.algorithm !== undefined;
       const hasValue = integrity.value !== undefined;
       if (hasAlgorithm !== hasValue) {
@@ -316,7 +414,32 @@ export function validateEnterpriseResourceEnvelope(candidate: unknown): Enterpri
           errors.push({ code: 'INVALID_INTEGRITY_VALUE', message: 'integrity.value must be a 64-character hex sha256 digest.' });
         }
       }
+      if (integrity.sizeBytes !== undefined && (typeof integrity.sizeBytes !== 'number' || !Number.isFinite(integrity.sizeBytes) || integrity.sizeBytes < 0)) {
+        errors.push({ code: 'INVALID_INTEGRITY_SIZE_BYTES', message: 'integrity.sizeBytes must be a non-negative finite number when present.' });
+      }
     }
+  }
+
+  if (candidate.descriptor !== undefined) {
+    if (!isPlainObject(candidate.descriptor)) {
+      errors.push({ code: 'INVALID_DESCRIPTOR', message: 'descriptor must be an object when present.' });
+    } else {
+      const descriptor = candidate.descriptor;
+      pushUnknownFieldIssues(errors, 'descriptor', descriptor, DESCRIPTOR_FIELDS);
+      if (descriptor.displayName !== undefined && typeof descriptor.displayName !== 'string') {
+        errors.push({ code: 'INVALID_DESCRIPTOR', message: 'descriptor.displayName must be a string when present.' });
+      }
+      if (descriptor.contentType !== undefined && typeof descriptor.contentType !== 'string') {
+        errors.push({ code: 'INVALID_DESCRIPTOR', message: 'descriptor.contentType must be a string when present.' });
+      }
+      if (descriptor.tags !== undefined && !isStringArray(descriptor.tags)) {
+        errors.push({ code: 'INVALID_DESCRIPTOR', message: 'descriptor.tags must be an array of strings when present.' });
+      }
+    }
+  }
+
+  if (candidate.correlationId !== undefined && typeof candidate.correlationId !== 'string') {
+    errors.push({ code: 'INVALID_CORRELATION_ID', message: 'correlationId must be a string when present.' });
   }
 
   return errors.length === 0 ? { valid: true } : { valid: false, errors };
@@ -375,11 +498,12 @@ export interface SerializedEnterpriseResourceEnvelope {
 
 function sortedAttributes(attributes: Readonly<Record<string, string>> | undefined): Readonly<Record<string, string>> | undefined {
   if (attributes === undefined) return undefined;
-  const sorted: Record<string, string> = {};
-  for (const key of Object.keys(attributes).sort()) {
-    sorted[key] = attributes[key] as string;
-  }
-  return sorted;
+  // `Object.fromEntries` defines each entry as an own data property
+  // (`CreateDataPropertyOrThrow` per spec), unlike bracket assignment
+  // (`sorted[key] = ...`), which invokes `Object.prototype`'s inherited
+  // `__proto__` accessor for that one key instead of creating a property --
+  // silently dropping a legitimate `__proto__` attribute key on serialize.
+  return Object.fromEntries(Object.keys(attributes).sort().map((key) => [key, attributes[key] as string]));
 }
 
 function sortedTags(tags: readonly string[] | undefined): readonly string[] | undefined {
