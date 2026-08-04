@@ -257,6 +257,15 @@ describe('validateEnterpriseResourceEnvelope', () => {
   it('accepts a real leap-day registeredAt', () => {
     assert.equal(validateEnterpriseResourceEnvelope({ ...makeEnvelope(), registeredAt: '2024-02-29T00:00:00Z' }).valid, true);
   });
+
+  it('accepts ISO 8601 end-of-day midnight (24:00:00) but rejects any other hour-24 value', () => {
+    assert.equal(validateEnterpriseResourceEnvelope({ ...makeEnvelope(), registeredAt: '2026-12-31T24:00:00Z' }).valid, true);
+    assert.equal(validateEnterpriseResourceEnvelope({ ...makeEnvelope(), registeredAt: '2026-12-31T24:00:00.000Z' }).valid, true);
+    for (const invalid of ['2026-12-31T24:00:01Z', '2026-12-31T24:01:00Z', '2026-12-31T24:00:00.500Z', '2026-12-31T25:00:00Z']) {
+      const result = validateEnterpriseResourceEnvelope({ ...makeEnvelope(), registeredAt: invalid });
+      assert.equal(result.valid, false, `expected ${invalid} to be rejected`);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

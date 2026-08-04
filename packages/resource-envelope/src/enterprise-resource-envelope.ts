@@ -234,7 +234,7 @@ export type EnterpriseResourceEnvelopeValidationResult =
 const LIFECYCLE_STATES: readonly EnterpriseResourceLifecycleState[] = ['registered', 'active', 'archived', 'deleted'];
 const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 const ISO_8601_CAPTURE_PATTERN =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/;
 
 // Every field this contract recognizes, at each nesting level. Used to reject
 // unrecognized fields (see `pushUnknownFieldIssues`) -- an unknown field is
@@ -284,11 +284,16 @@ function pushUnknownFieldIssues(
  * `2026-02-30` becomes March 2nd) instead of rejecting it, so this checks
  * month/day/hour/minute/second/offset ranges explicitly, including
  * leap-year-aware days-in-month.
+ *
+ * `24:00:00` (with an all-zero fractional part, if any) is accepted as
+ * ISO 8601's end-of-day representation of midnight -- equivalent to
+ * `00:00:00` of the following date -- since a conforming producer may emit
+ * it; any other value with hour `24` is not a valid instant and is rejected.
  */
 function isValidIsoDateTimeString(value: string): boolean {
   const match = ISO_8601_CAPTURE_PATTERN.exec(value);
   if (match === null) return false;
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText, offset] = match;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, fractionText, offset] = match;
   const year = Number(yearText);
   const month = Number(monthText);
   const day = Number(dayText);
@@ -297,7 +302,9 @@ function isValidIsoDateTimeString(value: string): boolean {
   const second = Number(secondText);
 
   if (month < 1 || month > 12) return false;
-  if (hour > 23 || minute > 59 || second > 59) return false;
+  if (minute > 59 || second > 59) return false;
+  const isEndOfDayMidnight = hour === 24 && minute === 0 && second === 0 && (fractionText === undefined || !/[1-9]/.test(fractionText));
+  if (hour > 23 && !isEndOfDayMidnight) return false;
 
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   if (day < 1 || day > daysInMonth) return false;
