@@ -18,6 +18,10 @@ turbo
 .DS_Store
 *.log
 *.tsbuildinfo
+
+# Generated output from `npm run demo` (packages/commercial-demo) -- a fresh
+# HTML/Markdown report per run, not a tracked artifact.
+packages/commercial-demo/demo-output/
 .claude/worktrees/
 
 # Agent Passport SQLite data directory

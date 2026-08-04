@@ -1,0 +1,39 @@
+{
+  "name": "@aoc-enterprise/commercial-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AOC Architectural Consolidation Program, Sequence R006.A: an executable commercial reference demo for the frozen Access Governance lifecycle (R005.0-R005.D). Wires EnterpriseResourceEnvelope through EnterpriseAccessDecision, EnterpriseAccessObligation, EnterpriseAccessGrant, EnterpriseProviderTranslation, and the Pinata Provider Adapter to EnterpriseUsageEvent and EnterpriseEvidenceCorrelation, using a realistic legal document data-room scenario. Consumes the frozen contracts exactly as shipped; introduces no new architecture.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'",
+    "demo": "npm run build && node dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/access-decision": "file:../access-decision",
+    "@aoc-enterprise/access-grant": "file:../access-grant",
+    "@aoc-enterprise/access-obligation": "file:../access-obligation",
+    "@aoc-enterprise/evidence-correlation": "file:../evidence-correlation",
+    "@aoc-enterprise/grant-revocation": "file:../grant-revocation",
+    "@aoc-enterprise/pinata-adapter": "file:../pinata-adapter",
+    "@aoc-enterprise/provider-adapter": "file:../provider-adapter",
+    "@aoc-enterprise/provider-translation": "file:../provider-translation",
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope",
+    "@aoc-enterprise/scoped-access": "file:../scoped-access",
+    "@aoc-enterprise/usage-event": "file:../usage-event"
+  },
+  "devDependencies": {
+    "@aoc-enterprise/provider-conformance-suite": "file:../provider-conformance-suite"
+  }
+}
