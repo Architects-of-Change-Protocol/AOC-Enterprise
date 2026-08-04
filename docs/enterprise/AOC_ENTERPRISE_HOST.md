@@ -148,8 +148,13 @@ export type { EnterpriseServer } from '...';
 export { createEnterpriseRequestListener } from '...';
 
 // Configuration
-export { loadEnterpriseConfiguration, computeConfigurationChecksum } from '...';
-export type { EnterpriseConfiguration, EnterpriseEnvironment, EnterprisePersistenceProviderKind, EnterpriseFeatureFlags, EnterpriseApiKey } from '...';
+export { loadEnterpriseConfiguration, computeConfigurationChecksum, toPublicEnterpriseConfiguration } from '...';
+export type { EnterpriseConfiguration, EnterpriseEnvironment, EnterprisePersistenceProviderKind, EnterpriseFeatureFlags, EnterpriseApiKey, PublicEnterpriseConfiguration } from '...';
+// AocEnterprise.configuration is a PublicEnterpriseConfiguration (R004.B) --
+// see "Credential handling" under Configuration below. The full
+// EnterpriseConfiguration (with real apiKeys) never crosses this barrel;
+// getInternalEnterpriseConfiguration() is a trusted-in-process-only accessor
+// and is deliberately not exported here.
 
 // Telemetry & logging
 export { createEnterpriseTelemetry, createEnterpriseLogger } from '...';
@@ -335,6 +340,37 @@ a stable external contract). Full list in
 `AOC_ENTERPRISE_EVENTS_ENABLED`, `AOC_ENTERPRISE_API_KEYS`,
 `AOC_ENTERPRISE_REQUIRE_AUTH`, `AOC_ENTERPRISE_TRACE_LEVEL`,
 `AOC_ENTERPRISE_HTTP_PORT`, `AOC_ENTERPRISE_HTTP_HOST`.
+
+### Credential handling (R004.B)
+
+`AOC_ENTERPRISE_API_KEYS` (`"key1,key2:org-acme"`) is the only secret this
+layer accepts today -- the static bearer tokens `evaluateGovernanceRequest`
+and `resolveGovernanceAccessContext` compare an incoming `Authorization`
+header against. There is no fallback/default credential: an unset
+`AOC_ENTERPRISE_API_KEYS` resolves to an empty key list, so with
+`AOC_ENTERPRISE_REQUIRE_AUTH=true` every request is rejected until real keys
+are configured (fail closed).
+
+The raw keys never leave `loadEnterpriseConfiguration()`'s resolved
+`EnterpriseConfiguration` except through two routes, both server-side and
+trusted:
+
+- the closures inside `createEnterprise()` (`evaluate()`, `health()`, module
+  construction), and
+- `getInternalEnterpriseConfiguration(enterprise)`
+  (`composition/composition-root.ts`, not re-exported from `index.ts`),
+  which `adapters/node-http-adapter.ts` uses to authenticate HTTP callers.
+
+`AocEnterprise.configuration` -- the public field any embedder holding an
+`AocEnterprise` instance can read -- is the redacted
+`PublicEnterpriseConfiguration` view (`toPublicEnterpriseConfiguration()`):
+every non-secret setting is preserved; `authentication.apiKeys` is replaced
+by `authentication.apiKeyCount` (a count) and
+`authentication.apiKeyOrganizationScopes` (which configured keys are
+organization-scoped, never the key values). It is never reachable via direct
+property access, `JSON.stringify`, or an object spread of `configuration` or
+of the `AocEnterprise` instance itself -- see
+`src/enterprise/__tests__/credential-exposure.test.ts`.
 
 ## Future Enterprise Modules
 

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { AOC_KERNEL_VERSION, createAocKernel, type AocKernel, type KernelIdGenerator, type PolicyPackProvider } from '../../kernel/index.js';
 import { computeEnterpriseHealth, type EnterpriseHealthReport } from '../health/health-check.js';
-import { loadEnterpriseConfiguration, type EnterpriseConfiguration } from '../configuration/enterprise-configuration.js';
+import { loadEnterpriseConfiguration, toPublicEnterpriseConfiguration, type EnterpriseConfiguration, type PublicEnterpriseConfiguration } from '../configuration/enterprise-configuration.js';
 import { createInProcessEventPublisher, type EnterpriseEventPublisher } from '../events/enterprise-events.js';
 import {
   evaluateGovernanceRequest,
@@ -106,7 +106,16 @@ export interface CreateEnterpriseOptions {
  * required to invoke it.
  */
 export interface AocEnterprise {
-  readonly configuration: EnterpriseConfiguration;
+  /**
+   * The redacted, secret-free configuration view (R004.B). Never carries raw
+   * provider/application secrets (e.g. `authentication.apiKeys[].key`) --
+   * only non-secret operational settings and redacted diagnostic fields
+   * (`authentication.apiKeyCount`). Trusted in-process code that must
+   * authenticate callers with the real configured credentials (the Node HTTP
+   * adapter) obtains the full configuration via
+   * `getInternalEnterpriseConfiguration`, never through this field.
+   */
+  readonly configuration: PublicEnterpriseConfiguration;
   readonly kernel: AocKernel;
   readonly kernelProviders: KernelProviderSet;
   readonly persistence: GovernanceStore;
@@ -178,6 +187,35 @@ async function buildAssuranceStore(configuration: EnterpriseConfiguration, now: 
 /** A dedicated id source for Enterprise-internal bookkeeping (event ids, boot id) -- independent of the Kernel's own `idGenerator`, so Enterprise bookkeeping never perturbs the Kernel's internal id sequence. */
 function createEnterpriseIdGenerator(): KernelIdGenerator {
   return { nextId: (prefix: string) => `${prefix}-${randomUUID()}` };
+}
+
+/**
+ * R004.B: the full, secret-bearing `EnterpriseConfiguration` behind each
+ * constructed `AocEnterprise` -- keyed by instance identity so it is never a
+ * property of the object itself (not enumerable, not serializable, not
+ * spreadable). `AocEnterprise.configuration` only ever holds the redacted
+ * `PublicEnterpriseConfiguration` view; this registry is the sole route back
+ * to the real credentials, reserved for trusted in-process consumers that
+ * must authenticate callers (the Node HTTP adapter). This module is never
+ * re-exported from `enterprise/index.ts`'s public entrypoint, so
+ * `getInternalEnterpriseConfiguration` does not reach `package.json`'s
+ * published `./enterprise` subpath.
+ */
+const internalConfigurationRegistry = new WeakMap<AocEnterprise, EnterpriseConfiguration>();
+
+/**
+ * Returns the full, secret-bearing configuration backing `enterprise`.
+ * Reserved for trusted in-process code (e.g. `adapters/node-http-adapter.ts`)
+ * that must compare a caller's bearer token against real configured
+ * `authentication.apiKeys`. Throws if `enterprise` was not produced by
+ * `createEnterprise()` in this process.
+ */
+export function getInternalEnterpriseConfiguration(enterprise: AocEnterprise): EnterpriseConfiguration {
+  const configuration = internalConfigurationRegistry.get(enterprise);
+  if (configuration === undefined) {
+    throw new Error('getInternalEnterpriseConfiguration: enterprise instance was not produced by createEnterprise() in this process.');
+  }
+  return configuration;
 }
 
 /**
@@ -338,7 +376,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   });
 
   const enterprise: AocEnterprise = {
-    configuration,
+    configuration: toPublicEnterpriseConfiguration(configuration),
     kernel,
     kernelProviders,
     persistence,
@@ -403,6 +441,8 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
       await evidenceStore.close();
     },
   };
+
+  internalConfigurationRegistry.set(enterprise, configuration);
 
   return enterprise;
 }

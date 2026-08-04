@@ -174,6 +174,41 @@ export function loadEnterpriseConfiguration(env: Readonly<Record<string, string 
 }
 
 /**
+ * The redacted, secret-free view of `EnterpriseConfiguration` (R004.B). This
+ * is the shape exposed on the public `AocEnterprise.configuration` surface --
+ * every field a legitimate embedder needs (environment, ports, feature
+ * flags, timeouts) with `authentication.apiKeys` replaced by a non-secret
+ * count and per-key organization scoping. Never carries `EnterpriseApiKey.key`.
+ */
+export type PublicEnterpriseConfiguration = Omit<EnterpriseConfiguration, 'authentication'> & {
+  readonly authentication: {
+    readonly requireAuthentication: boolean;
+    readonly apiKeyCount: number;
+    /** Non-secret: which configured keys are organization-scoped, in configured order. Never the key values themselves. */
+    readonly apiKeyOrganizationScopes: readonly (string | undefined)[];
+  };
+};
+
+/**
+ * Strips every raw secret out of a resolved `EnterpriseConfiguration`,
+ * producing the safe shape `AocEnterprise.configuration` actually exposes.
+ * The full, secret-bearing `EnterpriseConfiguration` never leaves the
+ * composition root / trusted in-process adapters (see
+ * `composition-root.ts`'s `getInternalEnterpriseConfiguration`).
+ */
+export function toPublicEnterpriseConfiguration(config: EnterpriseConfiguration): PublicEnterpriseConfiguration {
+  const { authentication, ...rest } = config;
+  return {
+    ...rest,
+    authentication: {
+      requireAuthentication: config.features.requireAuthentication,
+      apiKeyCount: authentication.apiKeys.length,
+      apiKeyOrganizationScopes: authentication.apiKeys.map((apiKey) => apiKey.organizationId),
+    },
+  };
+}
+
+/**
  * A short, stable checksum of the resolved configuration (never the raw
  * values -- `apiKeys` are secrets) so `/health` can report "configuration
  * changed since last deploy" without leaking what changed.

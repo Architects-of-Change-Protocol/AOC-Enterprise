@@ -201,3 +201,36 @@ describe('Structural boundaries: Agent Passport Runtime (PR-006)', () => {
     assert.ok(text.includes('buildAgentPassportView'), 'service.ts must delegate view construction to disclosure.ts');
   });
 });
+
+describe('Structural boundaries: Provider credential exposure (R004.B)', () => {
+  it('AocEnterprise.configuration is declared as the redacted PublicEnterpriseConfiguration, never the secret-bearing EnterpriseConfiguration', () => {
+    const text = readFileSync('src/enterprise/composition/composition-root.ts', 'utf8');
+    assert.match(text, /readonly configuration: PublicEnterpriseConfiguration;/, 'the AocEnterprise interface must expose the redacted configuration view');
+    assert.doesNotMatch(text, /readonly configuration: EnterpriseConfiguration;/, 'the AocEnterprise interface must not expose the raw configuration type');
+  });
+
+  it('getInternalEnterpriseConfiguration (the route to real credentials) is never re-exported from the public enterprise entrypoint', () => {
+    const publicEntrypoint = readFileSync('src/enterprise/index.ts', 'utf8');
+    assert.doesNotMatch(publicEntrypoint, /getInternalEnterpriseConfiguration/, 'src/enterprise/index.ts must never re-export the internal credential accessor');
+
+    const exportKeys = Object.keys(JSON.parse(readFileSync('package.json', 'utf8')).exports ?? {});
+    assert.deepEqual(exportKeys.filter((key) => key.includes('composition-root') || key.includes('composition/')), [], 'no package.json subpath may point at the composition root module directly');
+  });
+
+  it('no source module defines a DEFAULT_API_KEYS (or equivalent) hardcoded production-credential export', () => {
+    const enterpriseFiles = walkTsFiles('src/enterprise').filter((f) => !f.includes('/__tests__/'));
+    const hits = importsMatching(enterpriseFiles, /export\s+(const|let)\s+DEFAULT_[A-Z_]*(API_KEY|SECRET|CREDENTIAL|TOKEN)/);
+    assert.deepEqual(hits, [], 'no default/fallback credential constant may be exported from src/enterprise');
+  });
+
+  it('loadEnterpriseConfiguration never falls back to a hardcoded, non-empty API key when the environment provides none', () => {
+    const text = readFileSync('src/enterprise/configuration/enterprise-configuration.ts', 'utf8');
+    assert.match(text, /parseApiKeys\(value: string \| undefined\).*\n\s*if \(!value\) return \[\];/, 'an unset AOC_ENTERPRISE_API_KEYS must resolve to an empty key list, never a default credential');
+  });
+
+  it('the Node HTTP adapter authenticates callers via getInternalEnterpriseConfiguration, never via the public enterprise.configuration field', () => {
+    const text = readFileSync('src/enterprise/adapters/node-http-adapter.ts', 'utf8');
+    assert.doesNotMatch(text, /resolveGovernanceAccessContext\(req\.headers\.authorization,\s*enterprise\.configuration\)/, 'authentication must read the internal (unredacted) configuration, not the public redacted view');
+    assert.match(text, /getInternalEnterpriseConfiguration\(enterprise\)/, 'authentication must go through the internal accessor');
+  });
+});

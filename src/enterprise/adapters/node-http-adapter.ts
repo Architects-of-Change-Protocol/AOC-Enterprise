@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { EnterpriseHttpError, mapEvidenceErrorToHttp, mapAgentPassportErrorToHttp, mapAssuranceErrorToHttp } from '../api/enterprise-http-errors.js';
 import type { AocEnterprise } from '../composition/composition-root.js';
+import { getInternalEnterpriseConfiguration } from '../composition/composition-root.js';
 import { validateEvidenceBuildRequestBody, validateEvidenceVerifyRequestBody, toEvidenceBundleResponseBody, toEvidenceVerifyResponseBody } from '../api/evidence-contract.js';
 import { isEvidenceError } from '../evidence/errors.js';
 import { resolveGovernanceAccessContext } from '../orchestration/governance-read-service.js';
@@ -224,7 +225,7 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
       // scoping, control logic, evidence selection, scoring, and eligibility
       // all live inside `enterprise.assurance` -- this adapter only routes.
       if (url.pathname.startsWith('/api/assurance/')) {
-        const context = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+        const context = resolveGovernanceAccessContext(req.headers.authorization, getInternalEnterpriseConfiguration(enterprise));
         const { assurance } = enterprise;
 
         if (method === 'POST' && url.pathname === '/api/assurance/assessments') {
@@ -336,7 +337,7 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
       // entirely inside `enterprise.passports` (never here), the same way
       // Evidence and Governance-read routes above defer to their services.
       if (method === 'POST' && url.pathname === '/api/passports') {
-        const context = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+        const context = resolveGovernanceAccessContext(req.headers.authorization, getInternalEnterpriseConfiguration(enterprise));
         readRequestBody(req)
           .then((rawBody) => enterprise.passports.issuePassport(context, validateIssuePassportRequestBody(rawBody)))
           .then((result) => writeJson(res, result.created ? 201 : 200, result))
@@ -347,7 +348,7 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
       if (method === 'GET') {
         const match = matchPassportRoute(url.pathname);
         if (match !== undefined) {
-          const context = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+          const context = resolveGovernanceAccessContext(req.headers.authorization, getInternalEnterpriseConfiguration(enterprise));
           if (match.kind === 'passport') {
             enterprise.passports
               .getPassport(context, match.id)
@@ -375,7 +376,7 @@ export function createEnterpriseRequestListener(enterprise: AocEnterprise): (req
       if (method === 'POST') {
         const match = matchPassportActionRoute(url.pathname);
         if (match !== undefined) {
-          const context = resolveGovernanceAccessContext(req.headers.authorization, enterprise.configuration);
+          const context = resolveGovernanceAccessContext(req.headers.authorization, getInternalEnterpriseConfiguration(enterprise));
           const { passports } = enterprise;
           switch (match.action) {
             case 'activate':
