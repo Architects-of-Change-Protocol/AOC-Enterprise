@@ -71,6 +71,12 @@ function makeFullyConformantHarness(): EnterpriseProviderConformanceHarness {
       const validation = validateEnterpriseProviderTranslation(candidate);
       if (!validation.valid) throw new Error(`Malformed translation: ${validation.errors.map((e) => e.code).join(', ')}`);
       const translation = candidate as EnterpriseProviderTranslation;
+      // Cross-provider isolation: a conformant adapter must reject a
+      // structurally valid translation targeting a different providerSystem
+      // (mirroring PinataAdapterInputError's own identical check).
+      if (translation.providerSystem !== 'fake-conformant') {
+        throw new Error(`Translation targets providerSystem '${translation.providerSystem}', not 'fake-conformant'.`);
+      }
       // A capability-supported intent can still legitimately fail at
       // execution time (a real provider being reached but declining the
       // request) -- simulated here for 'InvalidateGrant' so the suite's
@@ -136,15 +142,22 @@ describe('runEnterpriseProviderConformanceSuite -- conformant harness', () => {
     }
   });
 
-  it('reports skipped (never failed) checks when optional harness hooks are omitted', async () => {
+  it('reports skipped (never failed) only for checks that are legitimately not applicable', async () => {
     const minimal: EnterpriseProviderConformanceHarness = {
       providerSystem: 'fake-minimal',
       capabilityDeclaration: makeDeclaration({ id: 'fake-minimal-declaration-1', providerSystem: 'fake-minimal', capabilities: ['SupportsTemporaryAccess'] }),
       providerMetadataFor: () => undefined,
+      // 'SupportsExpiration' is not declared, so 'expired-grant-rejected' is
+      // the one check that legitimately remains 'skipped' -- everything
+      // else, including boundary validation, must be proven.
+      boundaryEvaluation: { valid: true },
       async execute(candidate) {
         const validation = validateEnterpriseProviderTranslation(candidate);
         if (!validation.valid) throw new Error('invalid');
         const translation = candidate as EnterpriseProviderTranslation;
+        if (translation.providerSystem !== 'fake-minimal') {
+          throw new Error(`Translation targets providerSystem '${translation.providerSystem}', not 'fake-minimal'.`);
+        }
         if (translation.executionIntent === 'ProvideTemporaryAccess' || translation.executionIntent === 'ProvideReadOnlyAccess') {
           return fakeSuccess(translation);
         }
@@ -153,7 +166,7 @@ describe('runEnterpriseProviderConformanceSuite -- conformant harness', () => {
     };
     const report = await runEnterpriseProviderConformanceSuite(minimal);
     const skipped = report.checks.filter((check) => check.status === 'skipped').map((check) => check.id).sort();
-    assert.deepEqual(skipped, ['expired-grant-rejected', 'provider-sdk-import-boundary']);
+    assert.deepEqual(skipped, ['expired-grant-rejected']);
     assert.equal(report.passed, true);
   });
 });
@@ -265,6 +278,192 @@ describe('runEnterpriseProviderConformanceSuite -- non-conformant harnesses (eac
     const expiredCheck = report.checks.find((check) => check.id === 'expired-grant-rejected');
     assert.equal(expiredCheck?.status, 'failed');
   });
+
+  it('fails dependency-validation when SupportsExpiration is declared but no translateExpiredGrant hook is supplied', async () => {
+    const { translateExpiredGrant: _omitted, ...harnessWithoutHook } = makeFullyConformantHarness();
+    const report = await runEnterpriseProviderConformanceSuite(harnessWithoutHook);
+    assert.equal(report.passed, false);
+    const expiredCheck = report.checks.find((check) => check.id === 'expired-grant-rejected');
+    assert.equal(expiredCheck?.status, 'failed');
+  });
+
+  it('fails dependency-validation when translateExpiredGrant rejects for the right reason but leaks a non-canonical field', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async translateExpiredGrant() {
+        return {
+          outcome: 'failed',
+          translationId: 'expired-translation',
+          grantRef: 'expired-grant',
+          correlationId: 'expired-corr',
+          executionIntent: 'ProvideTemporaryAccess',
+          providerSystem: 'fake-conformant',
+          failureReason: 'grant-expired',
+          message: 'Grant expired.',
+          failedAt: FIXED_NOW,
+          httpStatus: 410,
+        } as unknown as EnterpriseProviderConformanceExecutionResult;
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const expiredCheck = report.checks.find((check) => check.id === 'expired-grant-rejected');
+    assert.equal(expiredCheck?.status, 'failed');
+  });
+
+  it('fails capability-validation when a declared capability is misreported as capability-unsupported at execution time', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async execute(candidate) {
+        const validation = validateEnterpriseProviderTranslation(candidate);
+        if (!validation.valid) throw new Error('invalid');
+        const translation = candidate as EnterpriseProviderTranslation;
+        if (translation.providerSystem !== 'fake-conformant') throw new Error('wrong provider system');
+        // Declares full support but wrongly reports capability-unsupported
+        // for a capability it did declare.
+        return fakeCapabilityUnsupportedFailure(translation);
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const misreported = report.checks.filter((check) => check.id.startsWith('supported-capability-not-misreported-') && check.status === 'failed');
+    assert.ok(misreported.length > 0);
+  });
+
+  it('fails execution-normalization when a result carries an outcome outside the canonical union', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async execute(candidate) {
+        const validation = validateEnterpriseProviderTranslation(candidate);
+        if (!validation.valid) throw new Error('invalid');
+        const translation = candidate as EnterpriseProviderTranslation;
+        if (translation.providerSystem !== 'fake-conformant') throw new Error('wrong provider system');
+        return {
+          outcome: 'denied',
+          translationId: translation.id,
+          grantRef: translation.grantRef,
+          correlationId: translation.correlationId,
+          executionIntent: translation.executionIntent,
+          providerSystem: translation.providerSystem,
+          failureReason: 'execution-rejected',
+          message: 'denied is not a canonical outcome',
+          failedAt: FIXED_NOW,
+        } as unknown as EnterpriseProviderConformanceExecutionResult;
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const outcomeChecks = report.checks.filter((check) => check.id.startsWith('result-outcome-valid-') && check.status === 'failed');
+    assert.ok(outcomeChecks.length > 0);
+  });
+
+  it('fails execution-normalization when a success result carries a malformed executedAt timestamp', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async execute(candidate) {
+        const validation = validateEnterpriseProviderTranslation(candidate);
+        if (!validation.valid) throw new Error('invalid');
+        const translation = candidate as EnterpriseProviderTranslation;
+        if (translation.providerSystem !== 'fake-conformant') throw new Error('wrong provider system');
+        if (translation.executionIntent === 'InvalidateGrant') {
+          return {
+            outcome: 'failed',
+            translationId: translation.id,
+            grantRef: translation.grantRef,
+            correlationId: translation.correlationId,
+            executionIntent: translation.executionIntent,
+            providerSystem: translation.providerSystem,
+            failureReason: 'execution-rejected',
+            message: 'simulated failure',
+            failedAt: FIXED_NOW,
+          };
+        }
+        return { ...fakeSuccess(translation), executedAt: 'not-a-timestamp' };
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const timestampChecks = report.checks.filter((check) => check.id.startsWith('success-executed-at-valid-') && check.status === 'failed');
+    assert.ok(timestampChecks.length > 0);
+  });
+
+  it('fails provider-neutrality when a structurally valid translation for a foreign providerSystem is not rejected', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async execute(candidate) {
+        const validation = validateEnterpriseProviderTranslation(candidate);
+        if (!validation.valid) throw new Error('invalid');
+        // Never checks providerSystem -- executes any structurally valid
+        // translation regardless of which provider it targets.
+        return fakeSuccess(candidate as EnterpriseProviderTranslation);
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const foreignCheck = report.checks.find((check) => check.id === 'foreign-provider-system-rejected');
+    assert.equal(foreignCheck?.status, 'failed');
+  });
+
+  it('fails boundary-validation (never skips) when no boundary evaluation is supplied at all', async () => {
+    const { boundaryEvaluation: _omitted, ...harnessWithoutBoundary } = makeFullyConformantHarness();
+    const report = await runEnterpriseProviderConformanceSuite(harnessWithoutBoundary);
+    assert.equal(report.passed, false);
+    const boundaryCheck = report.checks.find((check) => check.id === 'provider-sdk-import-boundary');
+    assert.equal(boundaryCheck?.status, 'failed');
+  });
+
+  it('does not mistake a non-serializable fabricated result for a rejection of malformed input', async () => {
+    const circular: Record<string, unknown> = { outcome: 'executed' };
+    circular.self = circular;
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async execute() {
+        // Never validates, never throws -- always resolves to a fabricated,
+        // non-JSON-serializable result regardless of input.
+        return circular as unknown as EnterpriseProviderConformanceExecutionResult;
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const malformedCheck = report.checks.find((check) => check.id === 'malformed-translation-rejected');
+    assert.equal(malformedCheck?.status, 'failed');
+  });
+
+  it('reports failed checks, never throws, when the capability declaration has a non-array capabilities field', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      providerSystem: 'fake-malformed-declaration',
+      capabilityDeclaration: {
+        ...makeDeclaration({ id: 'fake-malformed-declaration-1', providerSystem: 'fake-malformed-declaration' }),
+        capabilities: 'SupportsTemporaryAccess' as unknown as EnterpriseProviderCapabilityDeclaration['capabilities'],
+      },
+      async execute() {
+        // Content is irrelevant to this test -- the point is that the suite
+        // itself must never throw a TypeError from dereferencing a
+        // non-array `capabilities` field (e.g. `.includes`/`.every`), and
+        // must instead report failed checks (the declaration itself already
+        // fails validation, so report.passed is false regardless).
+        throw new Error('unreachable in a well-behaved caller, but harmless here');
+      },
+    };
+    // If the suite itself threw here (rather than reporting failed checks),
+    // this `await` would reject and fail the test -- that is the "never
+    // throws" proof; no separate assertion helper is needed for it.
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+  });
+
+  it('reports a failed check, never throws, when execute() resolves to null instead of throwing or returning a result', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async execute() {
+        return null as unknown as EnterpriseProviderConformanceExecutionResult;
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const acceptedChecks = report.checks.filter((check) => check.id.includes('-translation-accepted-') && check.status === 'failed');
+    assert.ok(acceptedChecks.length > 0);
+  });
 });
 
 describe('evaluateEnterpriseProviderConformanceBoundary', () => {
@@ -332,5 +531,21 @@ describe('isEnterpriseProviderConformanceExecutionDetail', () => {
   it('rejects nested functions or deeply-nested objects (a proxy for a leaked raw SDK object)', () => {
     assert.equal(isEnterpriseProviderConformanceExecutionDetail({ kind: 'leak', client: () => undefined }), false);
     assert.equal(isEnterpriseProviderConformanceExecutionDetail({ kind: 'leak', nested: { deep: { value: 1 } } }), false);
+  });
+
+  it('rejects a class instance even when every enumerable property on it is a primitive', () => {
+    class FakeSdkClient {
+      readonly apiKey = 'not-actually-a-secret-but-shaped-like-one';
+      readonly region = 'us-east-1';
+    }
+    assert.equal(isEnterpriseProviderConformanceExecutionDetail({ kind: 'leak', client: new FakeSdkClient() }), false);
+    assert.equal(isEnterpriseProviderConformanceExecutionDetail(new FakeSdkClient()), false);
+  });
+
+  it('accepts an object created with Object.create(null) (no prototype, but still a plain record)', () => {
+    const detail = Object.create(null) as Record<string, unknown>;
+    detail.kind = 'null-proto';
+    detail.value = 'ok';
+    assert.equal(isEnterpriseProviderConformanceExecutionDetail(detail), true);
   });
 });

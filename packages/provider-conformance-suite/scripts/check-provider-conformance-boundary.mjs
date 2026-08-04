@@ -13,7 +13,8 @@
 //    package (any `@aoc-enterprise/*-adapter` package other than the frozen
 //    `@aoc-enterprise/provider-adapter` *contract* package, which is not a
 //    provider implementation despite its name). The suite certifies
-//    adapters; it must never depend on one.
+//    adapters; it must never depend on one. Both static (`from '...'`,
+//    `require(...)`) and dynamic (`import('...')`) imports are scanned.
 // 2. Exactly one file, `__tests__/reference-pinata-conformance.test.ts` (the
 //    R005.D Phase 10 reference execution), is permitted to import a concrete
 //    adapter package -- proving the suite actually certifies a real
@@ -26,8 +27,15 @@ import { fileURLToPath } from 'node:url';
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const IGNORED_DIRS = new Set(['node_modules', 'dist', 'dist-test', '.git']);
-const KNOWN_PROVIDER_SDK_PATTERN = /from\s+['"](pinata|aws-sdk|@aws-sdk\/[a-z0-9-]+|@azure\/[a-z0-9-]+|googleapis|dropbox)['"]|require\(\s*['"](pinata|aws-sdk|@aws-sdk\/[a-z0-9-]+|@azure\/[a-z0-9-]+|googleapis|dropbox)['"]\s*\)/;
-const CONCRETE_ADAPTER_IMPORT_PATTERN = /from\s+['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]|require\(\s*['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]\s*\)/g;
+// Matches static `from '...'`, `require('...')`, AND dynamic `import('...')`
+// -- a provider SDK or concrete adapter package pulled in via a dynamic
+// import is exactly as much of a boundary violation as a static one.
+const PROVIDER_SPECIFIER_GROUP = "(pinata|aws-sdk|@aws-sdk\\/[a-z0-9-]+|@azure\\/[a-z0-9-]+|googleapis|dropbox)";
+const KNOWN_PROVIDER_SDK_PATTERN = new RegExp(
+  `from\\s+['"]${PROVIDER_SPECIFIER_GROUP}['"]|require\\(\\s*['"]${PROVIDER_SPECIFIER_GROUP}['"]\\s*\\)|import\\(\\s*['"]${PROVIDER_SPECIFIER_GROUP}['"]\\s*\\)`,
+);
+const CONCRETE_ADAPTER_IMPORT_PATTERN =
+  /from\s+['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]|require\(\s*['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]\s*\)|import\(\s*['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]\s*\)/g;
 
 // 'provider' -> '@aoc-enterprise/provider-adapter' is the frozen R005.A
 // *contract* package, not a concrete provider implementation, and is exempt
@@ -60,7 +68,7 @@ function findConcreteAdapterImports(text) {
   const found = [];
   CONCRETE_ADAPTER_IMPORT_PATTERN.lastIndex = 0;
   for (const match of text.matchAll(CONCRETE_ADAPTER_IMPORT_PATTERN)) {
-    const packageStem = match[1] ?? match[2];
+    const packageStem = match[1] ?? match[2] ?? match[3];
     if (CONTRACT_PACKAGE_EXEMPTIONS.has(packageStem)) continue;
     found.push(`@aoc-enterprise/${packageStem}-adapter`);
   }
