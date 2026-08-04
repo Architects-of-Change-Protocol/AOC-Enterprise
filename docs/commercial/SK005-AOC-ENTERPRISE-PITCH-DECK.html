@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOC Enterprise — Official Pitch Deck (SK005)</title>
+<meta name="description" content="AOC Enterprise official commercial pitch deck — governed access, provider neutrality, and continuous assurance.">
+<style>
+:root {
+  --ink: #0F172A;
+  --ink-muted: #64748B;
+  --accent: #4F46E5;
+  --accent-deep: #3730A3;
+  --accent-soft: #EEF2FF;
+  --accent-light-text: #A5B4FC;
+  --card: #F8FAFC;
+  --card-border: #E2E8F0;
+  --chip-muted: #F1F5F9;
+  --chip-muted-text: #94A3B8;
+  --bg-dark: #0B1220;
+  --on-dark-muted: #94A3B8;
+  --on-dark-faint: #5B6B8C;
+  --on-dark-line: #253048;
+  --white: #FFFFFF;
+  --radius: 14px;
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+html, body { max-width: 100%; overflow-x: hidden; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--white);
+}
+
+h1, h2, h3, h4, p, ul { margin: 0; }
+ul { padding: 0; list-style: none; }
+a { text-decoration: none; }
+
+.slide {
+  scroll-snap-align: start;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  position: relative;
+  background: var(--white);
+  padding: 0;
+}
+
+.slide--dark { background: var(--bg-dark); }
+
+.slide-inner {
+  width: min(1180px, 92vw);
+  margin: 0 auto;
+  padding: 5.5vh 0 8vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h2 {
+  font-size: clamp(28px, 3.6vw, 40px);
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  max-width: 900px;
+}
+
+.subtitle {
+  margin-top: 14px;
+  font-size: clamp(14px, 1.3vw, 17px);
+  color: var(--ink-muted);
+  max-width: 780px;
+  line-height: 1.5;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+
+.eyebrow--dark { color: var(--accent-light-text); }
+
+.footer-tag {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  width: min(1180px, 92vw);
+  margin: 0 auto;
+  padding: 0 0 28px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+/* ---------- Icons ---------- */
+.icon { width: 22px; height: 22px; fill: currentColor; stroke: currentColor; flex-shrink: 0; }
+.icon-circle {
+  width: 60px; height: 60px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 18px;
+}
+.icon-circle .icon { width: 28px; height: 28px; }
+.icon-circle--sm { width: 48px; height: 48px; margin-bottom: 14px; }
+.icon-circle--sm .icon { width: 22px; height: 22px; }
+
+/* ---------- Hero ---------- */
+.hero {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.hero-title {
+  font-size: clamp(44px, 7vw, 72px);
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.02em;
+  margin-top: 28px;
+}
+.hero-subtitle {
+  margin-top: 22px;
+  font-size: clamp(16px, 2vw, 22px);
+  color: var(--on-dark-muted);
+  max-width: 720px;
+}
+.hero-chips {
+  margin-top: 34px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--accent-light-text);
+}
+.hero-chips .dot { color: var(--on-dark-faint); padding: 0 14px; }
+.hero-spine {
+  margin-top: 72px;
+  font-size: 16px;
+  color: var(--on-dark-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Problem slide ---------- */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 44px; }
+.problem-grid { align-items: start; }
+.check-list { margin-top: 20px; display: flex; flex-direction: column; gap: 24px; }
+.check-list li { display: flex; align-items: center; gap: 14px; font-size: 16px; }
+.check-list .icon { color: var(--accent); }
+.gap-cards { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.gap-card { display: flex; align-items: center; gap: 16px; padding: 22px 24px; font-size: 15px; }
+.gap-card .icon { color: var(--accent); }
+
+/* ---------- Missing layer ---------- */
+.missing-layer { flex: 1; align-items: center; justify-content: center; text-align: center; }
+.statement { font-size: clamp(40px, 6vw, 64px); font-weight: 800; letter-spacing: -0.02em; }
+.accent-text { color: var(--accent); }
+.statement-sub { margin-top: 22px; font-size: clamp(16px, 1.8vw, 19px); color: var(--ink-muted); max-width: 680px; margin-left: auto; margin-right: auto; }
+.chain { margin-top: 56px; display: flex; align-items: center; justify-content: center; gap: 0; }
+.chip { padding: 16px 26px; border-radius: 10px; font-weight: 700; font-size: 15px; }
+.chip--muted { background: var(--chip-muted); color: var(--ink-muted); }
+.chip--accent { background: var(--accent); color: var(--white); box-shadow: var(--shadow); font-size: 16px; padding: 18px 30px; }
+.chain-line { width: 56px; height: 1.5px; background: var(--card-border); }
+
+/* ---------- Pipeline ---------- */
+.pipeline { display: flex; align-items: flex-start; margin-top: 48px; }
+.pl-node { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 4px; }
+.pl-node:not(.pl-node--last)::after {
+  content: '';
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  width: 100%;
+  height: 1.5px;
+  background: var(--card-border);
+  z-index: 0;
+}
+.pl-dot {
+  position: relative;
+  z-index: 1;
+  width: 52px; height: 52px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 17px;
+}
+.pl-dot--active { background: var(--accent); color: var(--white); box-shadow: var(--shadow); }
+.pl-label { margin-top: 16px; font-weight: 700; font-size: 13.5px; color: var(--ink); }
+.pl-label--active { color: var(--accent-deep); }
+.pl-sub { margin-top: 6px; font-size: 11.5px; font-style: italic; color: var(--ink-muted); }
+
+/* ---------- Reference card ---------- */
+.reference-card { margin-top: 52px; padding: 28px 32px; max-width: 820px; margin-left: auto; margin-right: auto; }
+.reference-card .eyebrow { color: var(--accent); }
+.reference-card p { margin-top: 12px; font-size: 15px; line-height: 1.6; color: var(--ink); }
+
+/* ---------- Architecture stack ---------- */
+.stack { margin-top: 40px; max-width: 940px; margin-left: auto; margin-right: auto; }
+.band { border-radius: 12px; padding: 20px 26px; }
+.band--muted { background: var(--chip-muted); }
+.band--accent { background: var(--accent); box-shadow: var(--shadow); }
+.band-head { font-weight: 800; font-size: 14px; letter-spacing: 0.05em; color: var(--ink-muted); }
+.band--accent .band-head { color: var(--white); }
+.band-sub { margin-top: 8px; font-size: 12.5px; color: var(--ink-muted); }
+.band--accent .band-sub { color: #C7D2FE; }
+.band-arrow { display: flex; justify-content: center; padding: 8px 0; color: var(--ink-muted); }
+.band-arrow .icon { width: 18px; height: 18px; }
+.provider-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.provider-chip { background: var(--chip-muted); border-radius: 10px; padding: 16px 8px; text-align: center; }
+.provider-chip--live { background: var(--accent); box-shadow: var(--shadow); }
+.pname { display: block; font-weight: 700; font-size: 13.5px; color: var(--ink); }
+.provider-chip--live .pname { color: var(--white); }
+.ptag { display: block; margin-top: 6px; font-size: 9px; font-weight: 800; letter-spacing: 0.1em; color: var(--chip-muted-text); }
+.provider-chip--live .ptag { color: #C7D2FE; }
+
+/* ---------- Grid3 / outcome cards ---------- */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 44px; }
+.outcome-card { padding: 32px 28px; }
+.outcome-card h3 { font-size: 19px; font-weight: 800; margin-bottom: 18px; }
+.outcome-card ul { display: flex; flex-direction: column; gap: 12px; }
+.outcome-card li { position: relative; padding-left: 16px; font-size: 14px; color: var(--ink-muted); line-height: 1.45; }
+.outcome-card li::before { content: ''; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; border-radius: 999px; background: var(--accent); }
+
+/* ---------- Benefits grid ---------- */
+.benefit-card { padding: 26px 24px; }
+.benefit-card h4 { font-size: 15.5px; font-weight: 800; margin: 6px 0 8px; }
+.benefit-card p { font-size: 12.5px; color: var(--ink-muted); line-height: 1.5; }
+
+/* ---------- Customer rows ---------- */
+.customer-grid { row-gap: 34px; margin-top: 44px; }
+.customer-row { display: flex; gap: 20px; align-items: flex-start; }
+.customer-row .icon-circle { margin-bottom: 0; flex-shrink: 0; }
+.customer-row h4 { font-size: 16px; font-weight: 800; }
+.customer-row p { margin-top: 6px; font-size: 12.5px; color: var(--ink-muted); line-height: 1.5; }
+
+/* ---------- Assurance stats ---------- */
+.divider { margin-top: 26px; display: flex; align-items: center; gap: 18px; max-width: 640px; margin-left: auto; margin-right: auto; }
+.divider span { flex: 1; height: 1px; background: var(--card-border); }
+.divider em { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; white-space: nowrap; }
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 30px; }
+.stat { text-align: center; }
+.stat-num { font-size: clamp(44px, 6vw, 60px); font-weight: 800; color: var(--accent); line-height: 1; }
+.stat-label { margin-top: 10px; font-size: 13px; color: var(--ink-muted); }
+.caveat { margin-top: 26px; text-align: center; font-size: 13px; font-style: italic; color: var(--ink-muted); }
+
+/* ---------- Status board ---------- */
+.status-grid { align-items: stretch; }
+.status-col { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 26px 26px 30px; }
+.status-col-head { display: flex; align-items: center; gap: 12px; }
+.status-col-head .icon { color: var(--accent); }
+.status-col-head h4 { font-size: 15.5px; font-weight: 800; }
+.status-col ul { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+.status-col li { position: relative; padding-left: 15px; font-size: 12.5px; line-height: 1.5; color: var(--ink); }
+.status-col li::before { content: ''; position: absolute; left: 0; top: 7px; width: 4px; height: 4px; border-radius: 999px; background: var(--ink-muted); }
+
+/* ---------- Commercial pipeline spacer ---------- */
+.pipeline-spacer { margin-top: 10vh; }
+.pipeline-spacer .pipeline { margin-top: 0; }
+.pipeline-spacer .pl-dot { width: 62px; height: 62px; font-size: 19px; }
+.pipeline-spacer .pl-node:not(.pl-node--last)::after { top: 31px; }
+.pipeline-spacer .pl-label { font-size: 14.5px; margin-top: 20px; }
+.pipeline-spacer + .caveat { margin-top: 44px; }
+
+/* ---------- CTA ---------- */
+.cta { flex: 1; align-items: center; justify-content: center; text-align: center; }
+.cta-title { font-size: clamp(30px, 5vw, 46px); font-weight: 800; color: var(--white); letter-spacing: -0.01em; }
+.cta-subtitle { margin-top: 18px; font-size: clamp(14px, 1.6vw, 17px); color: var(--on-dark-muted); max-width: 620px; }
+.cta-button {
+  margin-top: 40px;
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: var(--white);
+  font-weight: 700; font-size: 15px;
+  padding: 18px 34px; border-radius: 999px;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease;
+}
+.cta-button:hover { transform: translateY(-2px); }
+.cta-button .icon { width: 18px; height: 18px; color: var(--white); }
+.cta-secondary { margin-top: 26px; font-size: 14px; }
+.cta-secondary a { color: #C7D2FE; }
+.cta-secondary a:hover { text-decoration: underline; }
+.cta-secondary .dot { color: var(--on-dark-faint); padding: 0 16px; }
+
+/* ---------- Nav dots ---------- */
+.nav-dots {
+  position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 10px; z-index: 50;
+}
+.nav-dots a {
+  width: 8px; height: 8px; border-radius: 999px; background: #CBD5E1;
+  display: block; transition: background 0.2s ease, transform 0.2s ease;
+}
+.nav-dots a.active { background: var(--accent); transform: scale(1.3); }
+
+.deck-counter {
+  position: fixed; left: 22px; bottom: 20px; z-index: 50;
+  font-size: 11px; letter-spacing: 0.08em; color: #94A3B8;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 860px) {
+  .grid2, .grid3, .customer-grid { grid-template-columns: 1fr; }
+  .pipeline { flex-wrap: wrap; }
+  .provider-row { grid-template-columns: repeat(2, 1fr); }
+  .nav-dots { display: none; }
+}
+
+@media (max-width: 480px) {
+  .chain-line { width: 20px; }
+  .chip { padding: 12px 16px; font-size: 13px; }
+  .chip--accent { padding: 14px 18px; font-size: 14px; }
+}
+
+@media print {
+  html { scroll-snap-type: none; }
+  .slide { min-height: 100vh; page-break-after: always; }
+  .nav-dots, .deck-counter { display: none; }
+}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><defs><symbol id="i-PiCheckCircle" viewBox="0 0 256 256"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"></path></symbol><symbol id="i-PiQuestion" viewBox="0 0 256 256"><path d="M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"></path></symbol><symbol id="i-PiShieldCheck" viewBox="0 0 256 256"><path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm0,72c0,37.07-13.66,67.16-40.6,89.42A129.3,129.3,0,0,1,128,223.62a128.25,128.25,0,0,1-38.92-21.81C61.82,179.51,48,149.3,48,112l0-56,160,0ZM82.34,141.66a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32l-56,56a8,8,0,0,1-11.32,0Z"></path></symbol><symbol id="i-PiPlugsConnected" viewBox="0 0 256 256"><path d="M237.66,18.34a8,8,0,0,0-11.32,0l-52.4,52.41-5.37-5.38a32.05,32.05,0,0,0-45.26,0L100,88.69l-6.34-6.35A8,8,0,0,0,82.34,93.66L88.69,100,65.37,123.31a32,32,0,0,0,0,45.26l5.38,5.37-52.41,52.4a8,8,0,0,0,11.32,11.32l52.4-52.41,5.37,5.38a32,32,0,0,0,45.26,0L156,167.31l6.34,6.35a8,8,0,0,0,11.32-11.32L167.31,156l23.32-23.31a32,32,0,0,0,0-45.26l-5.38-5.37,52.41-52.4A8,8,0,0,0,237.66,18.34Zm-116.29,161a16,16,0,0,1-22.62,0L76.69,157.25a16,16,0,0,1,0-22.62L100,111.31,144.69,156Zm57.94-57.94L156,144.69,111.31,100l23.32-23.31a16,16,0,0,1,22.62,0l22.06,22A16,16,0,0,1,179.31,121.37ZM88.57,35A8,8,0,0,1,103.43,29l8,20A8,8,0,0,1,96.57,55ZM24.57,93A8,8,0,0,1,35,88.57l20,8A8,8,0,0,1,49,111.43l-20-8A8,8,0,0,1,24.57,93ZM231.43,163a8,8,0,0,1-10.4,4.46l-20-8A8,8,0,1,1,207,144.57l20,8A8,8,0,0,1,231.43,163Zm-64,58.06A8,8,0,0,1,152.57,227l-8-20A8,8,0,0,1,159.43,201Z"></path></symbol><symbol id="i-PiBriefcase" viewBox="0 0 256 256"><path d="M216,56H176V48a24,24,0,0,0-24-24H104A24,24,0,0,0,80,48v8H40A16,16,0,0,0,24,72V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V72A16,16,0,0,0,216,56ZM96,48a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96ZM216,72v41.61A184,184,0,0,1,128,136a184.07,184.07,0,0,1-88-22.38V72Zm0,128H40V131.64A200.19,200.19,0,0,0,128,152a200.25,200.25,0,0,0,88-20.37V200ZM104,112a8,8,0,0,1,8-8h32a8,8,0,0,1,0,16H112A8,8,0,0,1,104,112Z"></path></symbol><symbol id="i-PiWrench" viewBox="0 0 256 256"><path d="M226.76,69a8,8,0,0,0-12.84-2.88l-40.3,37.19-17.23-3.7-3.7-17.23,37.19-40.3A8,8,0,0,0,187,29.24,72,72,0,0,0,88,96,72.34,72.34,0,0,0,94,124.94L33.79,177c-.15.12-.29.26-.43.39a32,32,0,0,0,45.26,45.26c.13-.13.27-.28.39-.42L131.06,162A72,72,0,0,0,232,96,71.56,71.56,0,0,0,226.76,69ZM160,152a56.14,56.14,0,0,1-27.07-7,8,8,0,0,0-9.92,1.77L67.11,211.51a16,16,0,0,1-22.62-22.62L109.18,133a8,8,0,0,0,1.77-9.93,56,56,0,0,1,58.36-82.31l-31.2,33.81a8,8,0,0,0-1.94,7.1L141.83,108a8,8,0,0,0,6.14,6.14l26.35,5.66a8,8,0,0,0,7.1-1.94l33.81-31.2A56.06,56.06,0,0,1,160,152Z"></path></symbol><symbol id="i-PiRocketLaunch" viewBox="0 0 256 256"><path d="M223.85,47.12a16,16,0,0,0-15-15c-12.58-.75-44.73.4-71.41,27.07L132.69,64H74.36A15.91,15.91,0,0,0,63,68.68L28.7,103a16,16,0,0,0,9.07,27.16l38.47,5.37,44.21,44.21,5.37,38.49a15.94,15.94,0,0,0,10.78,12.92,16.11,16.11,0,0,0,5.1.83A15.91,15.91,0,0,0,153,227.3L187.32,193A15.91,15.91,0,0,0,192,181.64V123.31l4.77-4.77C223.45,91.86,224.6,59.71,223.85,47.12ZM74.36,80h42.33L77.16,119.52,40,114.34Zm74.41-9.45a76.65,76.65,0,0,1,59.11-22.47,76.46,76.46,0,0,1-22.42,59.16L128,164.68,91.32,128ZM176,181.64,141.67,216l-5.19-37.17L176,139.31Zm-74.16,9.5C97.34,201,82.29,224,40,224a8,8,0,0,1-8-8c0-42.29,23-57.34,32.86-61.85a8,8,0,0,1,6.64,14.56c-6.43,2.93-20.62,12.36-23.12,38.91,26.55-2.5,36-16.69,38.91-23.12a8,8,0,1,1,14.56,6.64Z"></path></symbol><symbol id="i-PiCoins" viewBox="0 0 256 256"><path d="M184,89.57V84c0-25.08-37.83-44-88-44S8,58.92,8,84v40c0,20.89,26.25,37.49,64,42.46V172c0,25.08,37.83,44,88,44s88-18.92,88-44V132C248,111.3,222.58,94.68,184,89.57ZM232,132c0,13.22-30.79,28-72,28-3.73,0-7.43-.13-11.08-.37C170.49,151.77,184,139,184,124V105.74C213.87,110.19,232,122.27,232,132ZM72,150.25V126.46A183.74,183.74,0,0,0,96,128a183.74,183.74,0,0,0,24-1.54v23.79A163,163,0,0,1,96,152,163,163,0,0,1,72,150.25Zm96-40.32V124c0,8.39-12.41,17.4-32,22.87V123.5C148.91,120.37,159.84,115.71,168,109.93ZM96,56c41.21,0,72,14.78,72,28s-30.79,28-72,28S24,97.22,24,84,54.79,56,96,56ZM24,124V109.93c8.16,5.78,19.09,10.44,32,13.57v23.37C36.41,141.4,24,132.39,24,124Zm64,48v-4.17c2.63.1,5.29.17,8,.17,3.88,0,7.67-.13,11.39-.35A121.92,121.92,0,0,0,120,171.41v23.46C100.41,189.4,88,180.39,88,172Zm48,26.25V174.4a179.48,179.48,0,0,0,24,1.6,183.74,183.74,0,0,0,24-1.54v23.79a165.45,165.45,0,0,1-48,0Zm64-3.38V171.5c12.91-3.13,23.84-7.79,32-13.57V172C232,180.39,219.59,189.4,200,194.87Z"></path></symbol><symbol id="i-PiTrendUp" viewBox="0 0 256 256"><path d="M240,56v64a8,8,0,0,1-16,0V75.31l-82.34,82.35a8,8,0,0,1-11.32,0L96,123.31,29.66,189.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0L136,140.69,212.69,64H168a8,8,0,0,1,0-16h64A8,8,0,0,1,240,56Z"></path></symbol><symbol id="i-PiMagnifyingGlass" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path></symbol><symbol id="i-PiScales" viewBox="0 0 256 256"><path d="M239.43,133l-32-80h0a8,8,0,0,0-9.16-4.84L136,62V40a8,8,0,0,0-16,0V65.58L54.26,80.19A8,8,0,0,0,48.57,85h0v.06L16.57,165a7.92,7.92,0,0,0-.57,3c0,23.31,24.54,32,40,32s40-8.69,40-32a7.92,7.92,0,0,0-.57-3L66.92,93.77,120,82V208H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16H136V78.42L187,67.1,160.57,133a7.92,7.92,0,0,0-.57,3c0,23.31,24.54,32,40,32s40-8.69,40-32A7.92,7.92,0,0,0,239.43,133ZM56,184c-7.53,0-22.76-3.61-23.93-14.64L56,109.54l23.93,59.82C78.76,180.39,63.53,184,56,184Zm144-32c-7.53,0-22.76-3.61-23.93-14.64L200,77.54l23.93,59.82C222.76,148.39,207.53,152,200,152Z"></path></symbol><symbol id="i-PiHeartbeat" viewBox="0 0 256 256"><path d="M72,144H32a8,8,0,0,1,0-16H67.72l13.62-20.44a8,8,0,0,1,13.32,0l25.34,38,9.34-14A8,8,0,0,1,136,128h24a8,8,0,0,1,0,16H140.28l-13.62,20.44a8,8,0,0,1-13.32,0L88,126.42l-9.34,14A8,8,0,0,1,72,144ZM178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,.75,0,1.5,0,2.25a8,8,0,1,0,16-.5c0-.58,0-1.17,0-1.75A46.06,46.06,0,0,1,78,56c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46c0,53.61-77.76,102.15-96,112.8-10.83-6.31-42.63-26-66.68-52.21a8,8,0,1,0-11.8,10.82c31.17,34,72.93,56.68,74.69,57.63a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40Z"></path></symbol><symbol id="i-PiBuildings" viewBox="0 0 256 256"><path d="M240,208H224V96a16,16,0,0,0-16-16H144V32a16,16,0,0,0-24.88-13.32L39.12,72A16,16,0,0,0,32,85.34V208H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM208,96V208H144V96ZM48,85.34,128,32V208H48ZM112,112v16a8,8,0,0,1-16,0V112a8,8,0,1,1,16,0Zm-32,0v16a8,8,0,0,1-16,0V112a8,8,0,1,1,16,0Zm0,56v16a8,8,0,0,1-16,0V168a8,8,0,0,1,16,0Zm32,0v16a8,8,0,0,1-16,0V168a8,8,0,0,1,16,0Z"></path></symbol><symbol id="i-PiFileText" viewBox="0 0 256 256"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-32-80a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,136Zm0,32a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,168Z"></path></symbol><symbol id="i-PiRobot" viewBox="0 0 256 256"><path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z"></path></symbol><symbol id="i-PiBank" viewBox="0 0 256 256"><path d="M24,104H48v64H32a8,8,0,0,0,0,16H224a8,8,0,0,0,0-16H208V104h24a8,8,0,0,0,4.19-14.81l-104-64a8,8,0,0,0-8.38,0l-104,64A8,8,0,0,0,24,104Zm40,0H96v64H64Zm80,0v64H112V104Zm48,64H160V104h32ZM128,41.39,203.74,88H52.26ZM248,208a8,8,0,0,1-8,8H16a8,8,0,0,1,0-16H240A8,8,0,0,1,248,208Z"></path></symbol><symbol id="i-PiHandshake" viewBox="0 0 256 256"><path d="M254.3,107.91,228.78,56.85a16,16,0,0,0-21.47-7.15L182.44,62.13,130.05,48.27a8.14,8.14,0,0,0-4.1,0L73.56,62.13,48.69,49.7a16,16,0,0,0-21.47,7.15L1.7,107.9a16,16,0,0,0,7.15,21.47l27,13.51,55.49,39.63a8.06,8.06,0,0,0,2.71,1.25l64,16a8,8,0,0,0,7.6-2.1l55.07-55.08,26.42-13.21a16,16,0,0,0,7.15-21.46Zm-54.89,33.37L165,113.72a8,8,0,0,0-10.68.61C136.51,132.27,116.66,130,104,122L147.24,80h31.81l27.21,54.41ZM41.53,64,62,74.22,36.43,125.27,16,115.06Zm116,119.13L99.42,168.61l-49.2-35.14,28-56L128,64.28l9.8,2.59-45,43.68-.08.09a16,16,0,0,0,2.72,24.81c20.56,13.13,45.37,11,64.91-5L188,152.66Zm62-57.87-25.52-51L214.47,64,240,115.06Zm-87.75,92.67a8,8,0,0,1-7.75,6.06,8.13,8.13,0,0,1-1.95-.24L80.41,213.33a7.89,7.89,0,0,1-2.71-1.25L51.35,193.26a8,8,0,0,1,9.3-13l25.11,17.94L126,208.24A8,8,0,0,1,131.82,217.94Z"></path></symbol><symbol id="i-PiMapTrifold" viewBox="0 0 256 256"><path d="M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-5.52-.6l-64,16A8,8,0,0,0,24,56V200a8,8,0,0,0,9.94,7.76l61.13-15.28,61.35,30.68A8.15,8.15,0,0,0,160,224a8,8,0,0,0,1.94-.24l64-16A8,8,0,0,0,232,200V56A8,8,0,0,0,228.92,49.69ZM104,52.94l48,24V203.06l-48-24ZM40,62.25l48-12v127.5l-48,12Zm176,131.5-48,12V78.25l48-12Z"></path></symbol><symbol id="i-PiArrowRight" viewBox="0 0 256 256"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path></symbol><symbol id="i-PiArrowDown" viewBox="0 0 256 256"><path d="M205.66,149.66l-72,72a8,8,0,0,1-11.32,0l-72-72a8,8,0,0,1,11.32-11.32L120,196.69V40a8,8,0,0,1,16,0V196.69l58.34-58.35a8,8,0,0,1,11.32,11.32Z"></path></symbol></defs></svg>
+
+<section class="slide slide--dark" id="slide-1">
+  <div class="slide-inner hero">
+    <div class="eyebrow eyebrow--dark">AOC ENTERPRISE</div>
+    <h1 class="hero-title">AOC Enterprise</h1>
+    <p class="hero-subtitle">Governed access to every system your product depends on.</p>
+    <div class="hero-chips">
+      <span>PROVABLE</span><span class="dot">·</span><span>REVOCABLE</span><span class="dot">·</span><span>AUDITABLE</span>
+    </div>
+    <div class="hero-spine">Request&nbsp;&nbsp;→&nbsp;&nbsp;Decision&nbsp;&nbsp;→&nbsp;&nbsp;Grant&nbsp;&nbsp;→&nbsp;&nbsp;Evidence</div>
+  </div>
+</section>
+
+<section class="slide" id="slide-2">
+  <div class="slide-inner">
+    <h2>Storage solved access. Not governance.</h2>
+    <p class="subtitle">Authentication, signed URLs, and permissions confirm access happened. None of them prove it should have.</p>
+    <div class="grid2 problem-grid">
+      <div>
+        <div class="eyebrow">YOU ALREADY HAVE</div>
+        <ul class="check-list">
+          <li><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiCheckCircle"/></svg><span>Storage</span></li><li><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiCheckCircle"/></svg><span>Authentication</span></li><li><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiCheckCircle"/></svg><span>Signed URLs</span></li><li><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiCheckCircle"/></svg><span>Permissions</span></li>
+        </ul>
+      </div>
+      <div>
+        <div class="eyebrow">NONE OF THEM ANSWER</div>
+        <div class="gap-cards">
+          <div class="card gap-card"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiQuestion"/></svg><span>Who approved this, and under what policy?</span></div><div class="card gap-card"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiQuestion"/></svg><span>Does it expire on its own?</span></div><div class="card gap-card"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiQuestion"/></svg><span>Can you prove what happened after?</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-3">
+  <div class="slide-inner missing-layer">
+    <h1 class="statement"><span class="accent-text">Governed</span> Access</h1>
+    <p class="statement-sub">The layer that decides, records, and proves what happens between a request and access.</p>
+    <div class="chain">
+      <div class="chip chip--muted">Request</div>
+      <div class="chain-line"></div>
+      <div class="chip chip--accent">Governed Access</div>
+      <div class="chain-line"></div>
+      <div class="chip chip--muted">Access</div>
+    </div>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-4">
+  <div class="slide-inner">
+    <h2>One request, one provable record</h2>
+    <p class="subtitle">Every stage produces one immutable record — nothing is overwritten, only added to.</p>
+    <div class="pipeline">
+      <div class="pl-node ">
+        <div class="pl-dot ">1</div>
+        <div class="pl-label ">Request</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">2</div>
+        <div class="pl-label ">Decision</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">3</div>
+        <div class="pl-label ">Obligations</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">4</div>
+        <div class="pl-label ">Grant</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">5</div>
+        <div class="pl-label ">Translation</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">6</div>
+        <div class="pl-label ">Execution</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">7</div>
+        <div class="pl-label ">Usage</div>
+        
+      </div>
+      <div class="pl-node pl-node--last">
+        <div class="pl-dot pl-dot--active">8</div>
+        <div class="pl-label pl-label--active">Evidence</div>
+        
+      </div></div>
+    <div class="card reference-card">
+      <div class="eyebrow">REFERENCE SCENARIO</div>
+      <p>M&amp;A data-room access — outside counsel is granted a 24-hour, read-only, watermark-flagged view of a confidential target report. Every view is logged; nothing is ever downloaded.</p>
+    </div>
+  </div>
+  <div class="footer-tag"><span>Reference: docs/commercial/R006-COMMERCIAL-REFERENCE-DEMO.md</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-5">
+  <div class="slide-inner">
+    <h2>One governance layer. Any provider underneath.</h2>
+    <p class="subtitle">Enterprise never holds a credential. Only grant status and usage cross the boundary.</p>
+    <div class="stack">
+      <div class="band band--muted">
+        <div class="band-head">AOC PROTOCOL</div>
+        <div class="band-sub">identity · consent · capability tokens · audit envelopes</div>
+      </div>
+      <div class="band-arrow"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiArrowDown"/></svg></div>
+      <div class="band band--accent">
+        <div class="band-head">AOC ENTERPRISE</div>
+        <div class="band-sub">Decision · Obligation · Grant · Revocation · Usage · Evidence — cannot hold a credential or SDK type</div>
+      </div>
+      <div class="band-arrow"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiArrowDown"/></svg></div>
+      <div class="band band--muted">
+        <div class="band-head">PROVIDER ADAPTER</div>
+        <div class="band-sub">reads only resource · status · expiry — writes only usage events</div>
+      </div>
+      <div class="band-arrow"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiArrowDown"/></svg></div>
+      <div class="provider-row">
+        <div class="provider-chip provider-chip--live"><span class="pname">Pinata</span><span class="ptag">LIVE</span></div><div class="provider-chip "><span class="pname">S3</span><span class="ptag">ROADMAP</span></div><div class="provider-chip "><span class="pname">Azure Blob</span><span class="ptag">ROADMAP</span></div><div class="provider-chip "><span class="pname">Google Drive</span><span class="ptag">ROADMAP</span></div><div class="provider-chip "><span class="pname">SharePoint</span><span class="ptag">ROADMAP</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-6">
+  <div class="slide-inner">
+    <h2>What changes when access is governed</h2>
+    <p class="subtitle">One model. Three audiences. The same evidence record answers all three.</p>
+    <div class="grid3">
+    <div class="card outcome-card">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiShieldCheck"/></svg></div>
+      <h3>Business</h3>
+      <ul><li>Provable, revocable access</li><li>Gaps surface before a grant — not after an incident</li></ul>
+    </div>
+    <div class="card outcome-card">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiPlugsConnected"/></svg></div>
+      <h3>Engineering</h3>
+      <ul><li>One contract, not per-provider glue</li><li>A new provider is an adapter, not a rewrite</li></ul>
+    </div>
+    <div class="card outcome-card">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiBriefcase"/></svg></div>
+      <h3>Commercial</h3>
+      <ul><li>Evidence, not just logs, for security review</li><li>A faster path through enterprise deal cycles</li></ul>
+    </div></div>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-7">
+  <div class="slide-inner">
+    <h2>Assurance: prove your governance posture, continuously</h2>
+    <p class="subtitle">The engagement model we run with you — and the evidence engine underneath it.</p>
+    <div class="pipeline">
+      <div class="pl-node ">
+        <div class="pl-dot pl-dot--active">1</div>
+        <div class="pl-label pl-label--active">Assessment</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">2</div>
+        <div class="pl-label ">Recommendations</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">3</div>
+        <div class="pl-label ">Implementation</div>
+        
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">4</div>
+        <div class="pl-label ">Validation</div>
+        
+      </div>
+      <div class="pl-node pl-node--last">
+        <div class="pl-dot ">5</div>
+        <div class="pl-label ">Continuous Assurance</div>
+        
+      </div></div>
+    <div class="divider"><span></span><em>What's running underneath</em><span></span></div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num">4</div><div class="stat-label">control domains</div></div>
+      <div class="stat"><div class="stat-num">10</div><div class="stat-label">controls</div></div>
+      <div class="stat"><div class="stat-num">3</div><div class="stat-label">eligibility tiers</div></div>
+    </div>
+    <p class="caveat">AOC SAF v1.0.0 — implemented, API-backed, evidence-driven. Not a certification authority.</p>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-8">
+  <div class="slide-inner">
+    <h2>The build-it-yourself alternative, priced honestly</h2>
+    <p class="subtitle">Six ways Governed Access changes what your team spends time and risk on.</p>
+    <div class="grid3 benefit-grid">
+    <div class="card benefit-card">
+      <div class="icon-circle icon-circle--sm"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiWrench"/></svg></div>
+      <h4>Engineering focus</h4>
+      <p>Ship product, not per-provider glue code</p>
+    </div>
+    <div class="card benefit-card">
+      <div class="icon-circle icon-circle--sm"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiRocketLaunch"/></svg></div>
+      <h4>Lower implementation cost</h4>
+      <p>Adopt a reviewed model, not a blank page</p>
+    </div>
+    <div class="card benefit-card">
+      <div class="icon-circle icon-circle--sm"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiCoins"/></svg></div>
+      <h4>Lower ownership cost</h4>
+      <p>Provider logic lives in a swappable adapter</p>
+    </div>
+    <div class="card benefit-card">
+      <div class="icon-circle icon-circle--sm"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiTrendUp"/></svg></div>
+      <h4>Faster enterprise sales</h4>
+      <p>Answer 'prove it' with a record, not a promise</p>
+    </div>
+    <div class="card benefit-card">
+      <div class="icon-circle icon-circle--sm"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiMagnifyingGlass"/></svg></div>
+      <h4>Better auditability</h4>
+      <p>Read a chain — don't reconstruct logs</p>
+    </div>
+    <div class="card benefit-card">
+      <div class="icon-circle icon-circle--sm"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiShieldCheck"/></svg></div>
+      <h4>Reduced architectural risk</h4>
+      <p>A provider migration touches one adapter</p>
+    </div></div>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-9">
+  <div class="slide-inner">
+    <h2>Where the governance gap is most expensive</h2>
+    <p class="subtitle">Six segments where &lsquo;prove what happened to this document&rsquo; is routine, not rare.</p>
+    <div class="grid2 customer-grid">
+    <div class="customer-row">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiScales"/></svg></div>
+      <div>
+        <h4>Legal Platforms</h4>
+        <p>Tight, changing access windows across diligence and discovery</p>
+      </div>
+    </div>
+    <div class="customer-row">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiHeartbeat"/></svg></div>
+      <div>
+        <h4>Healthcare</h4>
+        <p>Conditions must be enforced, not just promised</p>
+      </div>
+    </div>
+    <div class="customer-row">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiBuildings"/></svg></div>
+      <div>
+        <h4>Enterprise SaaS</h4>
+        <p>Every customer storage integration becomes bespoke access logic</p>
+      </div>
+    </div>
+    <div class="customer-row">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiFileText"/></svg></div>
+      <div>
+        <h4>Document Platforms</h4>
+        <p>Access governance is the core product, not a bolt-on</p>
+      </div>
+    </div>
+    <div class="customer-row">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiRobot"/></svg></div>
+      <div>
+        <h4>AI Platforms</h4>
+        <p>Agents request access at machine speed and volume</p>
+      </div>
+    </div>
+    <div class="customer-row">
+      <div class="icon-circle"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiBank"/></svg></div>
+      <div>
+        <h4>Financial Services</h4>
+        <p>Access must be provable years after the fact</p>
+      </div>
+    </div></div>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-10">
+  <div class="slide-inner">
+    <h2>How we work together</h2>
+    <p class="subtitle">Start small and specific. Scale only if it fits.</p>
+    <div class="pipeline-spacer"><div class="pipeline">
+      <div class="pl-node ">
+        <div class="pl-dot pl-dot--active">1</div>
+        <div class="pl-label pl-label--active">Technical Assessment</div>
+        <div class="pl-sub">Gap analysis</div>
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">2</div>
+        <div class="pl-label ">Design Partner</div>
+        <div class="pl-sub">Working integration</div>
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">3</div>
+        <div class="pl-label ">Implementation</div>
+        <div class="pl-sub">Validated end-to-end</div>
+      </div>
+      <div class="pl-node ">
+        <div class="pl-dot ">4</div>
+        <div class="pl-label ">Enterprise Platform</div>
+        <div class="pl-sub">Production deployment</div>
+      </div>
+      <div class="pl-node pl-node--last">
+        <div class="pl-dot ">5</div>
+        <div class="pl-label ">Continuous Assurance</div>
+        <div class="pl-sub">Ongoing evidence</div>
+      </div></div></div>
+    <p class="caveat">Most engagements start with a single Technical Assessment call.</p>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide" id="slide-11">
+  <div class="slide-inner">
+    <h2>What's real today</h2>
+    <p class="subtitle">No maturity claim here goes further than the architecture behind it.</p>
+    <div class="grid3 status-grid">
+      
+    <div class="status-col">
+      <div class="status-col-head"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiCheckCircle"/></svg><h4>Available today</h4></div>
+      <ul><li>Enterprise core (v1.0.0)</li><li>27-endpoint API surface</li><li>Agent Governance</li><li>Evidence &amp; Audit API</li><li>Assurance Runtime (SAF v1.0.0)</li></ul>
+    </div>
+      
+    <div class="status-col">
+      <div class="status-col-head"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiHandshake"/></svg><h4>Design Partner stage</h4></div>
+      <ul><li>Governed Access lifecycle — architecture frozen</li><li>Pinata Provider Adapter — conformance-tested</li><li>Not yet a persisted, callable API</li></ul>
+    </div>
+      
+    <div class="status-col">
+      <div class="status-col-head"><svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiMapTrifold"/></svg><h4>Roadmap</h4></div>
+      <ul><li>Additional Provider Adapters (S3, Azure, Google Drive, SharePoint)</li><li>Governed Access production wiring</li><li>Continuous Assurance signal automation</li></ul>
+    </div>
+    </div>
+  </div>
+  <div class="footer-tag"><span>AOC Enterprise — Official Pitch Deck</span><span>SK005</span></div>
+</section>
+
+<section class="slide slide--dark" id="slide-12">
+  <div class="slide-inner cta">
+    <h1 class="cta-title">Request a Technical Assessment</h1>
+    <p class="cta-subtitle">A scoped review of your environment. No commitment beyond the assessment itself.</p>
+    <a class="cta-button" href="#slide-12">Request a Technical Assessment <svg class="icon " viewBox="0 0 256 256" aria-hidden="true"><use href="#i-PiArrowRight"/></svg></a>
+    <div class="cta-secondary">
+      <a href="#slide-12">Request a Live Demo</a><span class="dot">·</span><a href="#slide-12">Request an Architecture Review</a>
+    </div>
+  </div>
+</section>
+<div class="nav-dots"></div>
+<div class="deck-counter">01 / 12</div>
+<script>
+(function () {
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dotsWrap = document.querySelector('.nav-dots');
+  var counter = document.querySelector('.deck-counter');
+  sections.forEach(function (s, i) {
+    var a = document.createElement('a');
+    a.href = '#' + s.id;
+    a.setAttribute('aria-label', 'Slide ' + (i + 1));
+    dotsWrap.appendChild(a);
+  });
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function setActive(i) {
+    dots.forEach(function (d, j) { d.classList.toggle('active', j === i); });
+    counter.textContent = pad(i + 1) + ' / ' + pad(sections.length);
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        var idx = sections.indexOf(e.target);
+        if (idx > -1) setActive(idx);
+      }
+    });
+  }, { threshold: 0.6 });
+  sections.forEach(function (s) { io.observe(s); });
+  setActive(0);
+
+  document.addEventListener('keydown', function (e) {
+    var idx = dots.findIndex(function (d) { return d.classList.contains('active'); });
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+      if (idx < sections.length - 1) { e.preventDefault(); sections[idx + 1].scrollIntoView({ behavior: 'smooth' }); }
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+      if (idx > 0) { e.preventDefault(); sections[idx - 1].scrollIntoView({ behavior: 'smooth' }); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
