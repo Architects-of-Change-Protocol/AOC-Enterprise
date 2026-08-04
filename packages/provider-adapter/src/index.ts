@@ -1,0 +1,33 @@
+export type {
+  EnterpriseProviderCapability,
+  EnterpriseProviderCapabilityDeclaration,
+  EnterpriseProviderCapabilityDeclarationValidationCode,
+  EnterpriseProviderCapabilityDeclarationValidationIssue,
+  EnterpriseProviderCapabilityDeclarationValidationResult,
+  EnterpriseProviderCapabilityDeclarationSetValidationCode,
+  EnterpriseProviderCapabilityDeclarationSetValidationIssue,
+  EnterpriseProviderCapabilityDeclarationSetValidationResult,
+  SerializedEnterpriseProviderCapabilityDeclaration,
+  EnterpriseGrantTranslationInput,
+  EnterpriseGrantRevocationInterpretationInput,
+  EnterpriseProviderFailureReason,
+  EnterpriseProviderFailureUsageEventType,
+} from './enterprise-provider-adapter.js';
+
+export {
+  ENTERPRISE_PROVIDER_ADAPTER_SCHEMA_VERSION,
+  ENTERPRISE_PROVIDER_CAPABILITIES,
+  ENTERPRISE_PROVIDER_FAILURE_REASONS,
+  enterpriseProviderCapabilityDeclarationIdentityEquals,
+  enterpriseProviderCapabilityDeclarationEquals,
+  enterpriseProviderCapabilityDeclarationSupportsObligation,
+  enterpriseProviderCapabilityDeclarationHasCapability,
+  validateEnterpriseProviderCapabilityDeclaration,
+  validateEnterpriseProviderCapabilityDeclarationSet,
+  serializeEnterpriseProviderCapabilityDeclaration,
+  deserializeEnterpriseProviderCapabilityDeclaration,
+  EnterpriseProviderCapabilityDeclarationValidationError,
+  toEnterpriseGrantTranslationInput,
+  toEnterpriseGrantRevocationInterpretationInput,
+  mapEnterpriseProviderFailureToUsageEventType,
+} from './enterprise-provider-adapter.js';

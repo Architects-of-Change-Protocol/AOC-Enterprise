@@ -19,6 +19,7 @@
     { "path": "./packages/org-boundary" },
     { "path": "./packages/pmfreak-agent-passport-foundation" },
     { "path": "./packages/policy-runtime" },
+    { "path": "./packages/provider-adapter" },
     { "path": "./packages/resource-envelope" },
     { "path": "./packages/runtime-negotiation" },
     { "path": "./packages/scoped-access" },
