@@ -21,6 +21,7 @@
     { "path": "./packages/resource-envelope" },
     { "path": "./packages/runtime-negotiation" },
     { "path": "./packages/scoped-access" },
-    { "path": "./packages/tenant-governance" }
+    { "path": "./packages/tenant-governance" },
+    { "path": "./packages/usage-event" }
   ]
 }
