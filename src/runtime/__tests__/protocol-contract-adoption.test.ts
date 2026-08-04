@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import type { ScopedAccessRequest } from '@aoc/protocol';
+import type { ScopedAccessRequest, CapabilityToken } from '@aoc/protocol';
 import type { VerifiedActorClaims } from '@aoc-enterprise/identity';
 import type { EnterpriseScopedAccessRequest } from '@aoc-enterprise/scoped-access';
 
@@ -16,6 +16,7 @@ import type { EnterpriseScopedAccessRequest } from '@aoc-enterprise/scoped-acces
 declare const protocolAccess: ScopedAccessRequest;
 declare const enterpriseAccess: EnterpriseScopedAccessRequest;
 declare const claims: VerifiedActorClaims;
+declare const capabilityToken: CapabilityToken;
 
 function typeOnlyAssertions(): void {
   // The real Protocol contract has no `scope` field -- only `requestedScope`.
@@ -43,6 +44,25 @@ function typeOnlyAssertions(): void {
   // Record<string, unknown> -- an unevidenced field does not exist on it.
   // @ts-expect-error -- VerifiedActorClaims only has `sub`.
   void claims.tenantId;
+
+  // R004.A (capability token verification bypass): verifyCapabilityToken used
+  // to read `jti`, `trust_domain`, and `exp` off a `token as unknown as
+  // Record<string, unknown>` cast, none of which exist on the real
+  // CapabilityToken -- so the guards never fired and every token, including
+  // revoked and expired ones, verified as valid. These pins document the real
+  // field names and would fail the build the moment `@aoc/protocol` adds one
+  // of the invented fields back (unused @ts-expect-error is itself an error)
+  // or renames one of the real fields out from under verifyCapabilityToken.
+  // @ts-expect-error -- CapabilityToken has no `jti`; use `tokenId`.
+  void capabilityToken.jti;
+  // @ts-expect-error -- CapabilityToken has no `trust_domain` field at all.
+  void capabilityToken.trust_domain;
+  // @ts-expect-error -- CapabilityToken has no numeric `exp`; use `expiresAt` (ISO string).
+  void capabilityToken.exp;
+  void capabilityToken.tokenId;
+  void capabilityToken.expiresAt;
+  void capabilityToken.revocationRefs;
+  void capabilityToken.proof;
 }
 void typeOnlyAssertions;
 
