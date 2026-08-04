@@ -30,12 +30,16 @@ const IGNORED_DIRS = new Set(['node_modules', 'dist', 'dist-test', '.git']);
 // Matches static `from '...'`, `require('...')`, AND dynamic `import('...')`
 // -- a provider SDK or concrete adapter package pulled in via a dynamic
 // import is exactly as much of a boundary violation as a static one.
+// `import` and `(` may have whitespace between them (`import ('pinata')` is
+// valid JS -- the ImportCall grammar allows a WhiteSpace token there, same
+// as `typeof (x)`), so the dynamic-import alternative uses `import\s*\(`,
+// not `import\(`, to avoid a false negative on that legal spacing.
 const PROVIDER_SPECIFIER_GROUP = "(pinata|aws-sdk|@aws-sdk\\/[a-z0-9-]+|@azure\\/[a-z0-9-]+|googleapis|dropbox)";
 const KNOWN_PROVIDER_SDK_PATTERN = new RegExp(
-  `from\\s+['"]${PROVIDER_SPECIFIER_GROUP}['"]|require\\(\\s*['"]${PROVIDER_SPECIFIER_GROUP}['"]\\s*\\)|import\\(\\s*['"]${PROVIDER_SPECIFIER_GROUP}['"]\\s*\\)`,
+  `from\\s+['"]${PROVIDER_SPECIFIER_GROUP}['"]|require\\(\\s*['"]${PROVIDER_SPECIFIER_GROUP}['"]\\s*\\)|import\\s*\\(\\s*['"]${PROVIDER_SPECIFIER_GROUP}['"]\\s*\\)`,
 );
 const CONCRETE_ADAPTER_IMPORT_PATTERN =
-  /from\s+['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]|require\(\s*['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]\s*\)|import\(\s*['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]\s*\)/g;
+  /from\s+['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]|require\(\s*['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]\s*\)|import\s*\(\s*['"]@aoc-enterprise\/([a-z0-9-]+)-adapter['"]\s*\)/g;
 
 // 'provider' -> '@aoc-enterprise/provider-adapter' is the frozen R005.A
 // *contract* package, not a concrete provider implementation, and is exempt

@@ -58,7 +58,36 @@ import {
  */
 export const ENTERPRISE_PROVIDER_CONFORMANCE_SUITE_SCHEMA_VERSION = '1.0.0' as const;
 
-const ISO_8601_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const ISO_8601_SHAPE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+/**
+ * Whether `value` is a genuinely valid ISO 8601 UTC timestamp -- not merely
+ * digit-shaped. `ISO_8601_SHAPE_PATTERN` alone accepts calendar-impossible
+ * strings like `'2026-99-99T99:99:99Z'` or `'2026-02-31T00:00:00Z'` (`Date`
+ * silently rolls an out-of-range day/month over to the next month rather
+ * than rejecting it, so `!Number.isNaN(Date.parse(value))` alone is not
+ * enough either); this function range-checks every component (month 1-12,
+ * hour 0-23, minute 0-59, second 0-60 to allow a leap second, and day
+ * against the actual number of days in that month/year, accounting for leap
+ * years) before accepting the value.
+ */
+function isValidIso8601UtcTimestamp(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const match = ISO_8601_SHAPE_PATTERN.exec(value);
+  if (!match) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  if (month < 1 || month > 12) return false;
+  if (hour > 23 || minute > 59 || second > 60) return false;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (day < 1 || day > daysInMonth) return false;
+  return true;
+}
 
 // ---------------------------------------------------------------------------
 // Canonical execution-result envelope (R005.D Phase 8) -- the suite's own,
@@ -138,6 +167,10 @@ const CLOSED_EXECUTION_INTENTS: readonly EnterpriseProviderTranslationExecutionI
 
 function isJsonPrimitive(value: unknown): value is EnterpriseProviderTranslationMetadataValue {
   return typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value));
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
 }
 
 /** Whether `value` is a plain object -- `{}`-shaped or `Object.create(null)` -- never a class instance, `Map`, `Date`, array, or function. Class instances (e.g. a raw provider SDK client/response object) have a prototype other than `Object.prototype`/`null` and are rejected here even when every enumerable property they carry happens to be a primitive. */
@@ -351,17 +384,34 @@ function defaultNow(): UtcDateTime {
   return new Date().toISOString();
 }
 
+/**
+ * Converts `value` to a display string without ever throwing. `String(value)`
+ * itself throws for an object whose primitive-conversion path is broken --
+ * e.g. `Object.create(null)` (no inherited `toString`/`valueOf`/
+ * `Symbol.toPrimitive` to call) -- which is exactly the shape a malformed or
+ * adversarial harness result can take. `Object.prototype.toString.call`
+ * never throws for any object, so it is the true last-resort fallback here.
+ */
+function safeToDisplayString(value: unknown): string {
+  try {
+    return String(value);
+  } catch {
+    return typeof value === 'object' && value !== null ? Object.prototype.toString.call(value) : 'unrepresentable value';
+  }
+}
+
 function describeError(error: unknown): string {
   if (error instanceof Error) return `${error.name}: ${error.message}`;
-  return String(error);
+  return safeToDisplayString(error);
 }
 
 /** Formats `value` for a check's `detail` message; never throws even for circular or otherwise non-JSON-serializable values (a malformed/leaky harness result is exactly the case this suite must describe without itself crashing). */
 function describeValue(value: unknown): string {
   try {
-    return JSON.stringify(value) ?? String(value);
+    const serialized = JSON.stringify(value);
+    return serialized ?? safeToDisplayString(value);
   } catch {
-    return `${String(value)} (could not be JSON-serialized for this message)`;
+    return `${safeToDisplayString(value)} (could not be JSON-serialized for this message)`;
   }
 }
 
@@ -459,7 +509,7 @@ function evaluateExecutionResultChecks(
       status: detailValid ? 'passed' : 'failed',
     });
 
-    const executedAtValid = typeof result.executedAt === 'string' && ISO_8601_PATTERN.test(result.executedAt);
+    const executedAtValid = isValidIso8601UtcTimestamp(result.executedAt);
     checks.push({
       category: 'execution-normalization',
       id: `success-executed-at-valid-${intent}`,
@@ -492,7 +542,7 @@ function evaluateExecutionResultChecks(
       status: typeof result.message === 'string' && result.message.length > 0 ? 'passed' : 'failed',
     });
 
-    const failedAtValid = typeof result.failedAt === 'string' && ISO_8601_PATTERN.test(result.failedAt);
+    const failedAtValid = isValidIso8601UtcTimestamp(result.failedAt);
     checks.push({
       category: 'failure-normalization',
       id: `failure-failed-at-valid-${intent}`,
@@ -608,13 +658,26 @@ async function evaluateExpiredGrantSupport(
     }
 
     // Even a correctly-classified 'grant-expired' rejection must still be a
-    // canonical, leak-free failure result -- reuse the same field-set and
-    // message-shape rules the main execution-normalization checks apply.
+    // canonical, leak-free failure result -- reuse the same field-set,
+    // message-shape, and timestamp rules the main execution-normalization
+    // checks apply. There is no fixture translation to echo against here
+    // (this hook is free-form, not tied to a canonical translation the way
+    // the main per-intent loop is), so the equivalent of that echo check is
+    // validating each identity field is well-typed and, where it has an
+    // adapter-independent known value, that it actually matches: a
+    // 'grant-expired' result claiming a foreign providerSystem, or carrying
+    // a non-string/empty id, is exactly as non-canonical as a leaked field.
     const keys = Object.keys(result).sort();
     const exactFieldSet = keys.length === FAILURE_RESULT_FIELDS.length && keys.every((key) => FAILURE_RESULT_FIELDS.includes(key));
     const messageValid = typeof result.message === 'string' && result.message.length > 0;
-    const failedAtValid = typeof result.failedAt === 'string' && ISO_8601_PATTERN.test(result.failedAt);
-    const shapeValid = exactFieldSet && messageValid && failedAtValid;
+    const failedAtValid = isValidIso8601UtcTimestamp(result.failedAt);
+    const identityValid =
+      isNonEmptyString(result.translationId) &&
+      isNonEmptyString(result.grantRef) &&
+      isNonEmptyString(result.correlationId) &&
+      CLOSED_EXECUTION_INTENTS.includes(result.executionIntent) &&
+      result.providerSystem === harness.providerSystem;
+    const shapeValid = exactFieldSet && messageValid && failedAtValid && identityValid;
 
     return {
       category: 'dependency-validation',
@@ -623,7 +686,12 @@ async function evaluateExpiredGrantSupport(
       status: shapeValid ? 'passed' : 'failed',
       ...(shapeValid
         ? {}
-        : { detail: `canonical failure shape violated -- fields: ${keys.join(', ')}; message: ${describeValue(result.message)}; failedAt: ${describeValue(result.failedAt)}` }),
+        : {
+            detail:
+              `canonical failure shape violated -- fields: ${keys.join(', ')}; message: ${describeValue(result.message)}; ` +
+              `failedAt: ${describeValue(result.failedAt)}; translationId: ${describeValue(result.translationId)}; grantRef: ${describeValue(result.grantRef)}; ` +
+              `correlationId: ${describeValue(result.correlationId)}; executionIntent: ${describeValue(result.executionIntent)}; providerSystem: ${describeValue(result.providerSystem)} (expected '${harness.providerSystem}')`,
+          }),
     };
   } catch (error) {
     return {

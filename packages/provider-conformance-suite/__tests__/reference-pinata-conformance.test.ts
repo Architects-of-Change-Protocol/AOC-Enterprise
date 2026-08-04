@@ -1,9 +1,10 @@
+import { existsSync, readFileSync } from 'fs';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { PinataProviderClient } from '@aoc-enterprise/pinata-adapter';
 import { PINATA_PROVIDER_SYSTEM, createPinataProviderCapabilityDeclaration, executePinataProviderTranslation } from '@aoc-enterprise/pinata-adapter';
-import type { EnterpriseProviderConformanceHarness } from '../src/enterprise-provider-conformance-suite.js';
-import { evaluateEnterpriseProviderConformanceBoundary, runEnterpriseProviderConformanceSuite } from '../src/enterprise-provider-conformance-suite.js';
+import type { EnterpriseProviderConformanceBoundaryResult, EnterpriseProviderConformanceHarness } from '../src/enterprise-provider-conformance-suite.js';
+import { runEnterpriseProviderConformanceSuite } from '../src/enterprise-provider-conformance-suite.js';
 
 /**
  * R005.D Phase 10 -- Reference Execution.
@@ -24,6 +25,30 @@ import { evaluateEnterpriseProviderConformanceBoundary, runEnterpriseProviderCon
  */
 
 const FIXED_NOW = '2026-01-01T00:00:00.000Z';
+
+/**
+ * Boundary validation is required for certification (a harness that omits
+ * it fails, never skips -- see `evaluateBoundary`'s own docs). This suite
+ * performs no filesystem I/O itself, so `scripts/compute-pinata-reference-boundary-evidence.mjs`
+ * -- wired in as the first step of this package's own `npm test` -- runs a
+ * REAL scan of the current working tree and writes its result here, rather
+ * than this test hard-coding an importer-file list that could go stale (if
+ * a future change adds a second 'pinata' importer anywhere in the repo,
+ * that script's output changes and this test's boundary check starts
+ * failing). `process.cwd()` is the package root for any `npm test`
+ * invocation (root-level, per-workspace, or run directly from this
+ * package), matching the compute script's own output path.
+ */
+const PINATA_BOUNDARY_EVIDENCE_PATH = `${process.cwd()}/dist-test/pinata-boundary-evidence.json`;
+
+function loadRealPinataBoundaryEvidence(): EnterpriseProviderConformanceBoundaryResult {
+  if (!existsSync(PINATA_BOUNDARY_EVIDENCE_PATH)) {
+    throw new Error(
+      `Missing real Pinata SDK import-boundary evidence at '${PINATA_BOUNDARY_EVIDENCE_PATH}'. Run 'npm test' (which runs scripts/compute-pinata-reference-boundary-evidence.mjs as its first step) rather than invoking 'node --test' directly.`,
+    );
+  }
+  return JSON.parse(readFileSync(PINATA_BOUNDARY_EVIDENCE_PATH, 'utf8')) as EnterpriseProviderConformanceBoundaryResult;
+}
 
 function makeFakePinataClient(): PinataProviderClient {
   return {
@@ -63,23 +88,7 @@ function buildPinataHarness(): EnterpriseProviderConformanceHarness {
       return undefined;
     },
     execute: (candidate) => executePinataProviderTranslation(candidate, client, { now: () => FIXED_NOW }),
-    // Boundary validation is required for certification (a harness that
-    // omits it fails, never skips -- see evaluateBoundary's own docs). This
-    // suite performs no filesystem I/O itself, so the evaluation below
-    // encodes an already-independently-proven fact rather than re-scanning:
-    // packages/pinata-adapter/scripts/check-pinata-boundary.mjs asserts,
-    // and this repository's overall `npm test` gate continuously
-    // re-verifies (run as part of pinata-adapter's own `npm test`), that
-    // 'pinata' is imported by exactly one file in this repository --
-    // packages/pinata-adapter/src/pinata-provider-client.ts -- and nowhere
-    // else. Re-implementing that same filesystem scan a second time here
-    // would duplicate, not strengthen, that already-passing proof.
-    boundaryEvaluation: evaluateEnterpriseProviderConformanceBoundary({
-      providerModuleName: 'pinata',
-      allowedImporterFiles: ['packages/pinata-adapter/src/pinata-provider-client.ts'],
-      actualImporterFilesWithinAdapter: ['packages/pinata-adapter/src/pinata-provider-client.ts'],
-      foreignImporterFiles: [],
-    }),
+    boundaryEvaluation: loadRealPinataBoundaryEvidence(),
   };
 }
 

@@ -192,13 +192,16 @@ a real credential.
   `expiresAt` by R005.B's own design.
 
 Every other check, including boundary validation, is proven rather than
-skipped: the reference harness supplies a `boundaryEvaluation` encoding the
-already-independently-proven, continuously-re-verified fact that `pinata` is
-imported by exactly one file in this repository
-(`packages/pinata-adapter/src/pinata-provider-client.ts`), established by
-that package's own `scripts/check-pinata-boundary.mjs`, run as part of its
-`npm test`. Re-implementing that same filesystem scan a second time here
-would duplicate, not strengthen, that already-passing proof.
+skipped: `scripts/compute-pinata-reference-boundary-evidence.mjs` — run as
+the first step of this package's own `npm test` — performs a real
+filesystem scan of the current working tree (mirroring
+`packages/pinata-adapter/scripts/check-pinata-boundary.mjs`'s own walk/regex
+logic) and writes its result to `dist-test/pinata-boundary-evidence.json`;
+the reference harness reads that file at runtime as its `boundaryEvaluation`.
+This is a live proof, not a hard-coded fact: if a future change ever adds a
+second file that imports `pinata` anywhere in this repository, this scan's
+output changes and the reference test's boundary-validation check starts
+failing on its own, without needing to be told to re-check anything.
 
 Zero files under `packages/pinata-adapter` are read-write touched by this
 sequence — the reference execution consumes only that package's already-frozen

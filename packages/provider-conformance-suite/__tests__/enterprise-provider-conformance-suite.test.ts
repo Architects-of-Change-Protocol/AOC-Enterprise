@@ -311,6 +311,52 @@ describe('runEnterpriseProviderConformanceSuite -- non-conformant harnesses (eac
     assert.equal(expiredCheck?.status, 'failed');
   });
 
+  it('fails dependency-validation when translateExpiredGrant rejects for the right reason but targets a foreign providerSystem', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async translateExpiredGrant() {
+        return {
+          outcome: 'failed',
+          translationId: 'expired-translation',
+          grantRef: 'expired-grant',
+          correlationId: 'expired-corr',
+          executionIntent: 'ProvideTemporaryAccess',
+          providerSystem: 'a-different-provider',
+          failureReason: 'grant-expired',
+          message: 'Grant expired.',
+          failedAt: FIXED_NOW,
+        };
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const expiredCheck = report.checks.find((check) => check.id === 'expired-grant-rejected');
+    assert.equal(expiredCheck?.status, 'failed');
+  });
+
+  it('fails dependency-validation when translateExpiredGrant rejects for the right reason but carries a non-string id field', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async translateExpiredGrant() {
+        return {
+          outcome: 'failed',
+          translationId: 'expired-translation',
+          grantRef: '',
+          correlationId: 'expired-corr',
+          executionIntent: 'ProvideTemporaryAccess',
+          providerSystem: 'fake-conformant',
+          failureReason: 'grant-expired',
+          message: 'Grant expired.',
+          failedAt: FIXED_NOW,
+        };
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const expiredCheck = report.checks.find((check) => check.id === 'expired-grant-rejected');
+    assert.equal(expiredCheck?.status, 'failed');
+  });
+
   it('fails capability-validation when a declared capability is misreported as capability-unsupported at execution time', async () => {
     const harness: EnterpriseProviderConformanceHarness = {
       ...makeFullyConformantHarness(),
@@ -387,6 +433,39 @@ describe('runEnterpriseProviderConformanceSuite -- non-conformant harnesses (eac
     assert.ok(timestampChecks.length > 0);
   });
 
+  it('fails execution-normalization when a success result carries a digit-shaped but calendar-impossible executedAt (e.g. Feb 31, month 13)', async () => {
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async execute(candidate) {
+        const validation = validateEnterpriseProviderTranslation(candidate);
+        if (!validation.valid) throw new Error('invalid');
+        const translation = candidate as EnterpriseProviderTranslation;
+        if (translation.providerSystem !== 'fake-conformant') throw new Error('wrong provider system');
+        if (translation.executionIntent === 'InvalidateGrant') {
+          return {
+            outcome: 'failed',
+            translationId: translation.id,
+            grantRef: translation.grantRef,
+            correlationId: translation.correlationId,
+            executionIntent: translation.executionIntent,
+            providerSystem: translation.providerSystem,
+            failureReason: 'execution-rejected',
+            message: 'simulated failure',
+            failedAt: FIXED_NOW,
+          };
+        }
+        // Digit-shaped enough to pass a naive regex, but not a real date:
+        // February never has a 31st, and there is no month 13.
+        const impossibleTimestamp = translation.executionIntent === 'ProvideMetadata' ? '2026-02-31T00:00:00Z' : '2026-13-01T00:00:00Z';
+        return { ...fakeSuccess(translation), executedAt: impossibleTimestamp };
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const timestampChecks = report.checks.filter((check) => check.id.startsWith('success-executed-at-valid-') && check.status === 'failed');
+    assert.ok(timestampChecks.length > 0);
+  });
+
   it('fails provider-neutrality when a structurally valid translation for a foreign providerSystem is not rejected', async () => {
     const harness: EnterpriseProviderConformanceHarness = {
       ...makeFullyConformantHarness(),
@@ -421,6 +500,27 @@ describe('runEnterpriseProviderConformanceSuite -- non-conformant harnesses (eac
         // Never validates, never throws -- always resolves to a fabricated,
         // non-JSON-serializable result regardless of input.
         return circular as unknown as EnterpriseProviderConformanceExecutionResult;
+      },
+    };
+    const report = await runEnterpriseProviderConformanceSuite(harness);
+    assert.equal(report.passed, false);
+    const malformedCheck = report.checks.find((check) => check.id === 'malformed-translation-rejected');
+    assert.equal(malformedCheck?.status, 'failed');
+  });
+
+  it('never crashes describing a fabricated result that is both non-JSON-serializable AND non-String()-able (a circular, null-prototype object)', async () => {
+    // `Object.create(null)` has no inherited `toString`/`valueOf`/
+    // `Symbol.toPrimitive`, so `String(value)` itself throws for it -- on
+    // top of `JSON.stringify` already throwing on the circular reference.
+    // This is exactly the double-failure case describeValue's fallback must
+    // survive without crashing the suite.
+    const circularNullProto: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+    circularNullProto.outcome = 'executed';
+    circularNullProto.self = circularNullProto;
+    const harness: EnterpriseProviderConformanceHarness = {
+      ...makeFullyConformantHarness(),
+      async execute() {
+        return circularNullProto as unknown as EnterpriseProviderConformanceExecutionResult;
       },
     };
     const report = await runEnterpriseProviderConformanceSuite(harness);

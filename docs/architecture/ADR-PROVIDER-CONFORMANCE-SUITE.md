@@ -304,7 +304,7 @@ smuggled into the suite to make one provider pass.
 | `npx tsc -b --pretty false` (root project references, including the new package added to `tsconfig.json`'s `references`) | Passed with no output (clean). |
 | `npm run build --workspace @aoc-enterprise/provider-conformance-suite` | Compiled the package. Passed. |
 | `npm run build --workspace @aoc-enterprise/pinata-adapter` | Compiled (dependency of the reference-execution test's `tsc -p tsconfig.test.json`). Passed. |
-| `npm test --workspace @aoc-enterprise/provider-conformance-suite` | Compiled `__tests__` under `tsconfig.test.json` and ran `node --test` against the compiled output (**31/31 tests passed, 0 failed**, across 5 suites, including the Phase 10 reference execution against Pinata — see Phase 13 for the additional coverage added over the initial 19), then ran `scripts/check-provider-conformance-boundary.mjs` (passed, including its extended dynamic-import scan). |
+| `npm test --workspace @aoc-enterprise/provider-conformance-suite` | Runs `scripts/compute-pinata-reference-boundary-evidence.mjs` (real scan, Phase 14), compiles `__tests__` under `tsconfig.test.json`, and runs `node --test` against the compiled output (**35/35 tests passed, 0 failed**, across 5 suites, including the Phase 10 reference execution against Pinata — see Phase 13/14 for the coverage added over the initial 19), then runs `scripts/check-provider-conformance-boundary.mjs` (passed, including its whitespace-tolerant dynamic-import scan). |
 | `npm run typecheck` (root, `tsc -b --pretty false`) | Passed with no output (clean). |
 | `npm run lint` (root: `check-node16-imports.mjs` + `lint-architecture.mjs` + `lint-public-surface.mjs`) | `Node16 import and boundary checks passed` / `Architecture lint passed` / `Public surface lint passed`. |
 | `node scripts/check-aoc-boundaries.mjs` | `AOC boundary check passed`. |
@@ -349,6 +349,34 @@ the updated Phase 10 table above.
 
 ---
 
+## Phase 14 — Second Post-Review Hardening Pass
+
+Phase 13's hardening pass was itself submitted as a pull request (#91,
+still open at the time of this pass — not yet merged, so these fixes land
+as additional commits on the same branch/PR, not a further restarted
+branch). The same automated reviewer posted five more findings against
+that diff, each again a real gap in rigor introduced or left unaddressed
+by Phase 13's own fixes:
+
+| # | Finding | Fix |
+|---|---|---|
+| 13 | The `executedAt`/`failedAt` timestamp checks (finding 12) used a shape-only regex, so calendar-impossible strings like `'2026-02-31T00:00:00Z'` or `'2026-13-01T00:00:00Z'` still passed (`Date` silently rolls an out-of-range day/month over to the next month rather than rejecting it, so `Date.parse` alone would not have caught it either). | Added `isValidIso8601UtcTimestamp`, which range-checks every component (month 1–12, hour 0–23, minute 0–59, second 0–60, and day against the actual number of days in that month/year, accounting for leap years) instead of relying on digit-shape alone. |
+| 14 | `describeValue`'s non-serializable fallback called `String(value)` inside its own `catch` block; `String()` itself throws for a value whose primitive-conversion path is broken (e.g. a circular `Object.create(null)` object, which has no inherited `toString`/`valueOf`/`Symbol.toPrimitive`), so the suite could still crash while describing exactly the malformed result it was built to describe safely. | Added `safeToDisplayString`, whose own fallback is `Object.prototype.toString.call(value)` — a call that never throws for any object — and routed both `describeError` and `describeValue` through it. |
+| 15 | The boundary-check script's dynamic-import patterns (finding 7) required `import(` with no whitespace, but `import ('pinata')` (with whitespace between the keyword and the parenthesis) is valid JavaScript (the `ImportCall` grammar permits a WhiteSpace token there, the same as `typeof (x)`), so that spacing variant would have silently passed the scan. | Both the known-SDK and concrete-adapter-package dynamic-import alternatives now use `import\s*\(` instead of `import\(`. |
+| 16 | The expired-grant hook's canonical-shape check (finding 8) validated field set, message, and timestamp, but never the identity fields themselves — a `'grant-expired'` result could target a foreign `providerSystem` or carry an empty `grantRef`/non-string `translationId` and still pass, since there is no fixture translation for this hook to echo against. | Added an `identityValid` check requiring `translationId`/`grantRef`/`correlationId` to be non-empty strings, `executionIntent` to be a member of the closed execution-intent vocabulary, and `providerSystem` to equal the harness's own `providerSystem` — the free-form-hook equivalent of the main loop's echo check. |
+| 17 | The Phase 10 reference harness's `boundaryEvaluation` (added in Phase 13, finding 5) was a hard-coded importer-file list rather than a live scan; since omitting proof now fails (finding 5's whole point), a hard-coded value that could go stale (e.g. if a second file later imports `pinata` elsewhere in the repo) would keep certifying Pinata without ever re-verifying that fact. | Added `scripts/compute-pinata-reference-boundary-evidence.mjs` — a real, standalone filesystem scan (mirroring `check-pinata-boundary.mjs`'s own walk/regex logic) run as the first step of this package's own `npm test`, writing its result to `dist-test/pinata-boundary-evidence.json`. The reference test now reads that file at runtime (via the typed, unprefixed `'fs'` module the ambient shims already declare) instead of encoding the fact by hand. |
+
+`isValidIso8601UtcTimestamp` is exercised indirectly through new
+`executedAt`/`failedAt` calendar-impossible-value tests (package test
+count: 31 → 35); the dynamic-import whitespace fix was verified directly
+against the regex (`import ('pinata')` and a tab-separated variant both now
+match); the identity-check and non-serializable-description fixes each have
+a dedicated negative test. The Phase 10 reference execution against Pinata
+continues to **PASS** — now backed by a genuinely live filesystem scan
+rather than an encoded fact, re-verified on every `npm test` run.
+
+---
+
 ## Acceptance Criteria
 
 - [x] Provider-neutral (`src/` imports no provider SDK, no concrete adapter package — `scripts/check-provider-conformance-boundary.mjs`)
@@ -362,11 +390,11 @@ the updated Phase 10 table above.
 - [x] Translation validation (Phase 6)
 - [x] Failure validation (Phase 7)
 - [x] Execution validation (Phase 8)
-- [x] Pinata passes (Phase 10 — PASS, one documented skip)
-- [x] Tests pass (Phase 12/13 — 31/31 package tests, 268/268 root tests, all workspaces green)
+- [x] Pinata passes (Phase 10 — PASS, one documented skip, now backed by a live filesystem scan)
+- [x] Tests pass (Phase 12/13/14 — 35/35 package tests, 268/268 root tests, all workspaces green)
 - [x] Documentation updated (Phase 9, package README)
-- [x] Post-merge review findings addressed (Phase 13 — 12/12 fixed, each with a dedicated regression test)
-- [x] One Pull Request per change (R005.D's initial PR #90, merged; this hardening pass as its own follow-up PR)
+- [x] Post-merge review findings addressed (Phase 13 — 12/12 fixed; Phase 14 — 5/5 fixed; each with a dedicated regression test)
+- [x] One Pull Request per change (R005.D's initial PR #90, merged; the Phase 13/14 hardening as its own follow-up PR #91)
 
 ---
 
