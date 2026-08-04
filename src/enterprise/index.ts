@@ -15,13 +15,14 @@
 
 export { AOC_ENTERPRISE_HOST_VERSION } from './version.js';
 
-export { loadEnterpriseConfiguration, computeConfigurationChecksum } from './configuration/enterprise-configuration.js';
+export { loadEnterpriseConfiguration, computeConfigurationChecksum, toPublicEnterpriseConfiguration } from './configuration/enterprise-configuration.js';
 export type {
   EnterpriseConfiguration,
   EnterpriseEnvironment,
   EnterprisePersistenceProviderKind,
   EnterpriseFeatureFlags,
   EnterpriseApiKey,
+  PublicEnterpriseConfiguration,
 } from './configuration/enterprise-configuration.js';
 
 export { createEnterpriseTelemetry } from './telemetry/enterprise-telemetry.js';
