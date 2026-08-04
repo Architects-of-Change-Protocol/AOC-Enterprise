@@ -1,0 +1,26 @@
+{
+  "name": "@aoc-enterprise/access-decision",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral record of a completed access evaluation. Composes AOC Protocol's PolicyDecision and Enterprise's ScopedAccessRequest/ResourceEnvelope; contains no grant, credential, or runtime execution logic.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope",
+    "@aoc-enterprise/scoped-access": "file:../scoped-access"
+  }
+}
