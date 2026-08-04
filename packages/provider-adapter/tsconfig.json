@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "**/__tests__/**",
+    "dist"
+  ],
+  "references": [
+    { "path": "../access-grant" },
+    { "path": "../access-obligation" },
+    { "path": "../grant-revocation" },
+    { "path": "../usage-event" }
+  ]
+}
