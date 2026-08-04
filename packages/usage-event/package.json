@@ -1,0 +1,25 @@
+{
+  "name": "@aoc-enterprise/usage-event",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral, immutable record that a previously-issued Access Grant was exercised: who, what, when, using which grant, against which resource. Contains no provider adapter, no download URL, no signed URL, no JWT/OAuth state, no authorization decision, no policy evaluation, and no runtime execution.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope"
+  }
+}
