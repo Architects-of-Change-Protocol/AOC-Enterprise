@@ -17,6 +17,7 @@
     { "path": "./packages/identity" },
     { "path": "./packages/integration-runtime" },
     { "path": "./packages/org-boundary" },
+    { "path": "./packages/pinata-adapter" },
     { "path": "./packages/pmfreak-agent-passport-foundation" },
     { "path": "./packages/policy-runtime" },
     { "path": "./packages/provider-adapter" },

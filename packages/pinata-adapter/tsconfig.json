@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "**/__tests__/**",
+    "dist"
+  ],
+  "references": [
+    { "path": "../access-obligation" },
+    { "path": "../provider-adapter" },
+    { "path": "../provider-translation" }
+  ]
+}
