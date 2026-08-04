@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist-test",
+    "noEmit": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "__tests__/**/*.ts"
+  ],
+  "references": [
+    { "path": "../access-decision" },
+    { "path": "../access-grant" },
+    { "path": "../access-obligation" },
+    { "path": "../evidence-correlation" },
+    { "path": "../grant-revocation" },
+    { "path": "../pinata-adapter" },
+    { "path": "../provider-adapter" },
+    { "path": "../provider-conformance-suite" },
+    { "path": "../provider-translation" },
+    { "path": "../resource-envelope" },
+    { "path": "../scoped-access" },
+    { "path": "../usage-event" }
+  ]
+}
