@@ -1,0 +1,30 @@
+{
+  "name": "@aoc-enterprise/provider-conformance-suite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The canonical, provider-neutral Provider Conformance Suite (R005.D): the official compliance harness every future Provider Adapter (Pinata, S3, Azure Blob, Google Drive, SharePoint, Dropbox, or any other) must pass. Defines the certification harness, the canonical execution-result envelope, and provider-SDK import-boundary evaluation logic -- never a provider, an adapter, an SDK, or execution itself.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js' && node scripts/check-provider-conformance-boundary.mjs",
+    "check:provider-conformance-boundary": "node scripts/check-provider-conformance-boundary.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/provider-adapter": "file:../provider-adapter",
+    "@aoc-enterprise/provider-translation": "file:../provider-translation"
+  },
+  "devDependencies": {
+    "@aoc-enterprise/pinata-adapter": "file:../pinata-adapter"
+  }
+}
