@@ -58,8 +58,8 @@ supplies:
 | `capabilityDeclaration` | The adapter's own, already-built `EnterpriseProviderCapabilityDeclaration` (`@aoc-enterprise/provider-adapter`, reused, never redefined). |
 | `execute` | The adapter's own translation-consuming execution entrypoint, `(candidate: unknown) => Promise<EnterpriseProviderConformanceExecutionResult>` — mirrors `executePinataProviderTranslation`'s own `accepts unknown` convention. |
 | `providerMetadataFor?` | Supplies provider-specific `providerMetadata` a canonical fixture translation needs to succeed (e.g. Pinata's own `requestedDurationSeconds`) — the suite is provider-neutral and cannot guess this itself. |
-| `translateExpiredGrant?` | Only relevant when `SupportsExpiration` is declared: proves the adapter refuses to translate/honor an expired grant. |
-| `boundaryEvaluation?` | The result of a real filesystem SDK-import scan, wired in by the adapter's own boundary script (see "Boundary validation" below). |
+| `translateExpiredGrant?` | **Required whenever `SupportsExpiration` is declared** — proves the adapter refuses to translate/honor an expired grant. A declared capability without this hook fails certification rather than being silently skipped. |
+| `boundaryEvaluation?` | **Required for certification** — the result of a real filesystem SDK-import scan, wired in by the adapter's own boundary script (see "Boundary validation" below). Omitting it fails the check; certification requires proof, not an assumption. |
 
 **Adapter shapes this version certifies.** This suite certifies the
 *translation-consuming* Provider Adapter shape R005.C's own reference
@@ -133,20 +133,21 @@ the report.
 | **Failure normalization** | Every failure result carries exactly the canonical failure fields (no HTTP status, stack trace, or SDK exception leaks), a `failureReason` from the closed `EnterpriseProviderFailureReason` vocabulary, and a plain string `message`. |
 | **Execution normalization** | Every result echoes the originating translation's own `translationId`/`grantRef`/`correlationId`/`executionIntent`/`providerSystem`; a success result carries exactly the canonical success fields. |
 | **Metadata normalization** | A success result's `detail` is a JSON-safe, provider-neutral bag of data (never a raw provider SDK object). |
-| **Boundary validation** | The provider SDK is imported only by the adapter's own declared file(s) — never by an Enterprise contract or another adapter. |
-| **Dependency validation** | An execution intent's declared `capability` matches what `enterpriseProviderTranslationRequiredCapability` actually requires; an adapter declaring `SupportsExpiration` genuinely refuses an expired grant. |
+| **Boundary validation** | The provider SDK is imported only by the adapter's own declared file(s) — never by an Enterprise contract or another adapter. Required for certification; omitting proof fails, never skips. |
+| **Dependency validation** | An execution intent's declared `capability` matches what `enterpriseProviderTranslationRequiredCapability` actually requires; an adapter declaring `SupportsExpiration` genuinely refuses an expired grant, with a canonical failure shape. |
 | **Serialization consistency** | Every translation and the capability declaration itself survive `serialize -> JSON round-trip -> deserialize` unchanged. |
-| **Provider neutrality** | The capability declaration's `providerSystem` matches the harness under test; every declared capability is a member of the closed, provider-neutral vocabulary. |
+| **Provider neutrality** | The capability declaration's `providerSystem` matches the harness under test; every declared capability is a member of the closed, provider-neutral vocabulary; a translation targeting a foreign `providerSystem` is rejected, never executed. |
 
 ## Boundary validation — wiring in a real filesystem scan
 
-This suite performs no filesystem access itself. To exercise the
-`boundary-validation` category for real, an adapter's own boundary script
-(mirroring `packages/pinata-adapter/scripts/check-pinata-boundary.mjs`)
+This suite performs no filesystem access itself, but boundary proof is
+required for certification — omitting it fails the check, it does not skip.
+To exercise the `boundary-validation` category, an adapter's own boundary
+script (mirroring `packages/pinata-adapter/scripts/check-pinata-boundary.mjs`)
 collects three file lists via a real scan and calls
 `evaluateEnterpriseProviderConformanceBoundary`, then passes the result as
-`harness.boundaryEvaluation`. Omitting it is not a failure — it is reported
-as `'skipped'`, with a `description` explaining that no evaluation was
+`harness.boundaryEvaluation`. A harness that has not yet wired this in fails
+the check, with a `description` explaining that no evaluation was
 supplied.
 
 ## How adapters become compliant
@@ -182,18 +183,25 @@ the same fake-client pattern `packages/pinata-adapter`'s own tests already
 use, so no test in this package contacts a real Pinata endpoint or requires
 a real credential.
 
-**Result: PASS.** Every applicable check passes. Two checks are `'skipped'`,
-both documented, legitimate non-applicability:
+**Result: PASS.** Every applicable check passes. Exactly one check is
+`'skipped'`, a documented, legitimate non-applicability:
 
 - `expired-grant-rejected` — Pinata does not declare `SupportsExpiration`
   (see `packages/pinata-adapter/README.md`, "Unsupported capabilities"): it
   consumes only `EnterpriseProviderTranslation`, which carries no
   `expiresAt` by R005.B's own design.
-- `provider-sdk-import-boundary` — the reference harness does not supply a
-  `boundaryEvaluation`; the real filesystem SDK-import scan already runs
-  independently as part of `packages/pinata-adapter`'s own `npm test`
-  (`scripts/check-pinata-boundary.mjs`). Re-scanning the filesystem from this
-  package would duplicate, not strengthen, that already-passing proof.
+
+Every other check, including boundary validation, is proven rather than
+skipped: `scripts/compute-pinata-reference-boundary-evidence.mjs` — run as
+the first step of this package's own `npm test` — performs a real
+filesystem scan of the current working tree (mirroring
+`packages/pinata-adapter/scripts/check-pinata-boundary.mjs`'s own walk/regex
+logic) and writes its result to `dist-test/pinata-boundary-evidence.json`;
+the reference harness reads that file at runtime as its `boundaryEvaluation`.
+This is a live proof, not a hard-coded fact: if a future change ever adds a
+second file that imports `pinata` anywhere in this repository, this scan's
+output changes and the reference test's boundary-validation check starts
+failing on its own, without needing to be told to re-check anything.
 
 Zero files under `packages/pinata-adapter` are read-write touched by this
 sequence — the reference execution consumes only that package's already-frozen
