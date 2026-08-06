@@ -23,6 +23,8 @@ export type {
   PinataResourceMetadata,
   PinataTemporaryAccessRequest,
   PinataTemporaryAccessResult,
+  PinataUploadCiphertextRequest,
+  PinataUploadCiphertextResult,
 } from './pinata-provider-client.js';
 
 export { PinataProviderClientError, createPinataProviderClient } from './pinata-provider-client.js';

@@ -15,11 +15,6 @@ declare module 'crypto' {
   }
   export function createHash(algorithm: string): Hash;
   export function createHmac(algorithm: string, key: string | Buffer): Hmac;
-  interface Buffer {
-    toString(encoding?: string): string;
-    [index: number]: number;
-    readonly length: number;
-  }
 }
 declare module 'fs' {
   export function existsSync(path: string): boolean;

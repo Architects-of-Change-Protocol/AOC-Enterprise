@@ -1,0 +1,40 @@
+/**
+ * The Content Protection Runtime's error taxonomy (Slice 2 of Sovereign
+ * Execution Binding), parallel in shape to `AccessGovernanceErrorCode`
+ * (`../access-governance/errors.ts`). Every failure this module surfaces is
+ * one of these codes; raw driver/OpenSSL/internal errors never escape it.
+ */
+export type ContentProtectionErrorCode =
+  | 'CONTENT_PROTECTION_NOT_FOUND'
+  | 'CONTENT_PROTECTION_ALREADY_EXISTS'
+  | 'CONTENT_PROTECTION_VALIDATION_ERROR'
+  | 'CONTENT_PROTECTION_INVALID_TIMESTAMP'
+  | 'CONTENT_PROTECTION_TENANT_SCOPE_REQUIRED'
+  | 'CONTENT_PROTECTION_ACCESS_SCOPE_VIOLATION'
+  | 'CONTENT_PROTECTION_STORE_UNAVAILABLE'
+  | 'CONTENT_PROTECTION_INVALID_STATE_TRANSITION'
+  | 'CONTENT_PROTECTION_INVALID_KEY_LENGTH'
+  | 'CONTENT_PROTECTION_INVALID_NONCE_LENGTH'
+  | 'CONTENT_PROTECTION_AUTHENTICATION_FAILED'
+  | 'CONTENT_PROTECTION_UNSUPPORTED_ENCRYPTION_PROFILE'
+  | 'CONTENT_PROTECTION_CONTENT_INTEGRITY_MISMATCH'
+  | 'CONTENT_PROTECTION_KEY_WRAPPING_FAILED'
+  | 'CONTENT_PROTECTION_KEY_WRAPPING_MISCONFIGURED'
+  | 'CONTENT_PROTECTION_STORAGE_FAILED'
+  | 'CONTENT_PROTECTION_SOVEREIGN_BINDING_BLOCKED'
+  | 'CONTENT_PROTECTION_DECRYPTION_NOT_PERMITTED';
+
+export class ContentProtectionError extends Error {
+  constructor(
+    readonly code: ContentProtectionErrorCode,
+    message: string,
+    readonly details?: Readonly<Record<string, unknown>>,
+  ) {
+    super(message);
+    this.name = 'ContentProtectionError';
+  }
+}
+
+export function isContentProtectionError(error: unknown): error is ContentProtectionError {
+  return error instanceof ContentProtectionError;
+}

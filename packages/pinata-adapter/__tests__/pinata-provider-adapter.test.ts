@@ -53,6 +53,7 @@ function makeFakeClient(overrides: Partial<PinataProviderClient> = {}): PinataPr
       createdAt: '2026-08-01T00:00:00.000Z',
     }),
     invalidateResource: async () => ({ id: 'file-1', status: 'deleted' }),
+    uploadCiphertext: async () => ({ pinataFileId: 'file-1', cid: 'QmTestCid123', sizeBytes: 2048 }),
     ...overrides,
   };
 }

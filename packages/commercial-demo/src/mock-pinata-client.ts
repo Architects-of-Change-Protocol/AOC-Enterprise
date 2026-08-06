@@ -43,6 +43,10 @@ export function createMockPinataProviderClient(): PinataProviderClient {
     async invalidateResource(request: PinataInvalidateRequest): Promise<PinataInvalidateResult> {
       return { id: request.resourceId, status: 'unpinned' };
     },
+
+    async uploadCiphertext() {
+      return { pinataFileId: PINATA_FILE_ID, cid: PINATA_CID, sizeBytes: RESOURCE_INTEGRITY.sizeBytes ?? 0 };
+    },
   };
 }
 
@@ -67,5 +71,6 @@ export function createUnavailablePinataProviderClient(
     createTemporaryAccessLink: () => Promise.resolve().then(fail),
     getResourceMetadata: () => Promise.resolve().then(fail),
     invalidateResource: () => Promise.resolve().then(fail),
+    uploadCiphertext: () => Promise.resolve().then(fail),
   };
 }
