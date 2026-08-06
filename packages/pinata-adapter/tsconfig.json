@@ -13,6 +13,7 @@
   ],
   "references": [
     { "path": "../access-obligation" },
+    { "path": "../grant-revocation" },
     { "path": "../provider-adapter" },
     { "path": "../provider-translation" }
   ]

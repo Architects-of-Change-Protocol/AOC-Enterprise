@@ -466,3 +466,15 @@ export type { EnterpriseModuleShutdownFailure } from './lifecycle/lifecycle-erro
 export type { EnterpriseLifecycleEvent, EnterpriseLifecycleEventType } from './lifecycle/lifecycle-events.js';
 
 export type { EnterpriseLifecycleConfiguration } from './configuration/enterprise-configuration.js';
+
+// Access Governance Runtime (Slice 1: Durable Grants + Truthful Effective
+// Revocation, "Sovereign Execution Binding") deliberately has NO barrel
+// export here yet. Its own canonical dependencies
+// (`@aoc-enterprise/access-grant`, `grant-revocation`, `provider-adapter`,
+// `provider-translation`, `pinata-adapter`) are not (yet) declared runtime
+// dependencies of the published `@aoc-enterprise/runtime` package (see
+// `scripts/validate-publishability.mjs`'s `bundledWorkspacePackages` --
+// each carries its own further `file:` dependency chain that would need
+// bundling too). Import directly from `./access-governance/index.js`
+// within this monorepo; publishing it on this package's public surface is
+// follow-up work, not Slice 1's.

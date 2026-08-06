@@ -22,6 +22,7 @@
   ],
   "dependencies": {
     "@aoc-enterprise/access-obligation": "file:../access-obligation",
+    "@aoc-enterprise/grant-revocation": "file:../grant-revocation",
     "@aoc-enterprise/provider-adapter": "file:../provider-adapter",
     "@aoc-enterprise/provider-translation": "file:../provider-translation",
     "pinata": "^2.1.0"

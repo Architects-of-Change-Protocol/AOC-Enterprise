@@ -102,12 +102,11 @@ describe('executePinataProviderTranslation -- successful execution', () => {
   });
 
   it('retrieves metadata for a ProvideMetadata translation, never exposing bytes', async () => {
-    const translation = withoutProviderMetadata(
-      makeTranslation({
-        capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_PROVIDER_METADATA,
-        executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.PROVIDE_METADATA,
-      }),
-    );
+    const translation = makeTranslation({
+      capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_PROVIDER_METADATA,
+      executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.PROVIDE_METADATA,
+      providerMetadata: { pinataFileId: 'file-1' },
+    });
     const result = await executePinataProviderTranslation(translation, makeFakeClient(), { now: () => FIXED_NOW });
     assertExecuted(result);
     assert.equal(result.detail.kind, 'metadata');
@@ -120,18 +119,44 @@ describe('executePinataProviderTranslation -- successful execution', () => {
   });
 
   it('invalidates a grant via the nearest valid Pinata operation (unpin/delete)', async () => {
-    const translation = withoutProviderMetadata(
-      makeTranslation({
-        capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_GRANT_REVOCATION,
-        executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.INVALIDATE_GRANT,
-      }),
-    );
+    const translation = makeTranslation({
+      capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_GRANT_REVOCATION,
+      executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.INVALIDATE_GRANT,
+      providerMetadata: { pinataFileId: 'file-1' },
+    });
     const result = await executePinataProviderTranslation(translation, makeFakeClient(), { now: () => FIXED_NOW });
     assertExecuted(result);
     assert.equal(result.detail.kind, 'grant-invalidated');
     if (result.detail.kind === 'grant-invalidated') {
       assert.equal(result.detail.providerResourceStatus, 'deleted');
     }
+  });
+
+  it('(GAP-012) uses providerMetadata.pinataFileId, never resource.id (the CID), for ProvideMetadata/InvalidateGrant', async () => {
+    let observedResourceId: string | undefined;
+    const client = makeFakeClient({
+      getResourceMetadata: async (request) => {
+        observedResourceId = request.resourceId;
+        return {
+          id: 'file-1',
+          name: 'report.pdf',
+          cid: 'QmTestCid123',
+          sizeBytes: 2048,
+          mimeType: 'application/pdf',
+          keyvalues: {},
+          createdAt: '2026-08-01T00:00:00.000Z',
+        };
+      },
+    });
+    const translation = makeTranslation({
+      capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_PROVIDER_METADATA,
+      executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.PROVIDE_METADATA,
+      resource: { kind: 'ipfs-object', id: 'QmTestCid123' },
+      providerMetadata: { pinataFileId: 'file-1-distinct-from-cid' },
+    });
+    await executePinataProviderTranslation(translation, client, { now: () => FIXED_NOW });
+    assert.equal(observedResourceId, 'file-1-distinct-from-cid');
+    assert.notEqual(observedResourceId, translation.resource.id);
   });
 });
 
@@ -201,6 +226,34 @@ describe('executePinataProviderTranslation -- invalid or malformed translation',
     const result = await executePinataProviderTranslation(translation, makeFakeClient(), { now: () => FIXED_NOW });
     assertExecuted(result);
   });
+
+  it('(GAP-012) throws PinataAdapterInputError when providerMetadata.pinataFileId is missing for ProvideMetadata', async () => {
+    const translation = withoutProviderMetadata(
+      makeTranslation({
+        capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_PROVIDER_METADATA,
+        executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.PROVIDE_METADATA,
+      }),
+    );
+    const error = await captureError(() => executePinataProviderTranslation(translation, makeFakeClient()));
+    assert.ok(error instanceof PinataAdapterInputError);
+    if (error instanceof PinataAdapterInputError) {
+      assert.ok(error.message.includes('pinataFileId'));
+    }
+  });
+
+  it('(GAP-012) throws PinataAdapterInputError when providerMetadata.pinataFileId is missing for InvalidateGrant', async () => {
+    const translation = withoutProviderMetadata(
+      makeTranslation({
+        capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_GRANT_REVOCATION,
+        executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.INVALIDATE_GRANT,
+      }),
+    );
+    const error = await captureError(() => executePinataProviderTranslation(translation, makeFakeClient()));
+    assert.ok(error instanceof PinataAdapterInputError);
+    if (error instanceof PinataAdapterInputError) {
+      assert.ok(error.message.includes('pinataFileId'));
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -227,12 +280,11 @@ describe('executePinataProviderTranslation -- failure normalization', () => {
         throw new Error('ECONNRESET at 10.0.0.4:443 (raw socket detail that must never surface)');
       },
     });
-    const translation = withoutProviderMetadata(
-      makeTranslation({
-        capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_PROVIDER_METADATA,
-        executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.PROVIDE_METADATA,
-      }),
-    );
+    const translation = makeTranslation({
+      capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_PROVIDER_METADATA,
+      executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.PROVIDE_METADATA,
+      providerMetadata: { pinataFileId: 'file-1' },
+    });
     const result = await executePinataProviderTranslation(translation, client, { now: () => FIXED_NOW });
     assertFailed(result);
     assert.equal(result.failureReason, 'unexpected-provider-failure');
@@ -244,12 +296,11 @@ describe('executePinataProviderTranslation -- failure normalization', () => {
         throw new PinataProviderClientError('execution-rejected', 'Pinata declined to carry out the request.');
       },
     });
-    const translation = withoutProviderMetadata(
-      makeTranslation({
-        capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_GRANT_REVOCATION,
-        executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.INVALIDATE_GRANT,
-      }),
-    );
+    const translation = makeTranslation({
+      capability: ENTERPRISE_PROVIDER_CAPABILITIES.SUPPORTS_GRANT_REVOCATION,
+      executionIntent: ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.INVALIDATE_GRANT,
+      providerMetadata: { pinataFileId: 'file-1' },
+    });
     const result = await executePinataProviderTranslation(translation, client, { now: () => FIXED_NOW });
     assertFailed(result);
     const keys = Object.keys(result);

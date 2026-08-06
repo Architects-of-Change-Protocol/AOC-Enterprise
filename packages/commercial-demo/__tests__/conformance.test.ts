@@ -32,6 +32,13 @@ function buildDemoHarness(): EnterpriseProviderConformanceHarness {
       if (executionIntent === 'ProvideTemporaryAccess' || executionIntent === 'ProvideReadOnlyAccess') {
         return { requestedDurationSeconds: 86_400 };
       }
+      // GAP-012: ProvideMetadata/InvalidateGrant need Pinata's own file id,
+      // distinct from the CID carried in resource.id -- see
+      // `packages/pinata-adapter/src/pinata-provider-adapter.ts`'s
+      // `requirePinataFileId` and `docs/architecture/ADR-DURABLE-GRANTS-REVOCATION.md`.
+      if (executionIntent === 'ProvideMetadata' || executionIntent === 'InvalidateGrant') {
+        return { pinataFileId: 'commercial-demo-pinata-file-id-1' };
+      }
       return undefined;
     },
     execute: (candidate) => executePinataProviderTranslation(candidate, client, { now: () => FIXED_NOW }),
