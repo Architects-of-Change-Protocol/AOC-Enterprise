@@ -37,6 +37,7 @@ function makeFakeClient(overrides: Partial<PinataProviderClient> = {}): PinataPr
       createdAt: '2026-01-01T00:00:00.000Z',
     }),
     invalidateResource: async ({ resourceId }) => ({ id: resourceId, status: 'deleted' }),
+    uploadCiphertext: async () => ({ pinataFileId: 'unused-in-these-tests', cid: 'unused-in-these-tests', sizeBytes: 0 }),
     ...overrides,
   };
 }

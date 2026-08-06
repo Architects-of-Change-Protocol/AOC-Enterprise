@@ -18,6 +18,7 @@ describe('createPinataProviderClient', () => {
     assert.equal(typeof client.createTemporaryAccessLink, 'function');
     assert.equal(typeof client.getResourceMetadata, 'function');
     assert.equal(typeof client.invalidateResource, 'function');
+    assert.equal(typeof client.uploadCiphertext, 'function');
   });
 
   it('constructs a client with an optional dedicated gateway', () => {

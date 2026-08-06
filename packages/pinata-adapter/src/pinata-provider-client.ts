@@ -64,6 +64,32 @@ export interface PinataInvalidateResult {
 }
 
 /**
+ * A ciphertext upload request (AOC Enterprise Slice 2, Content Protection).
+ * `bytes` is documented here, deliberately, as ciphertext -- this client has
+ * no way to enforce that at the type level, but every caller in this
+ * repository (`../../../src/enterprise/content-protection/pinata-storage-adapter.ts`)
+ * only ever invokes this after `AES-256-GCM` encryption has already run; see
+ * that file's own module doc for the invariant this method exists to serve:
+ * "Pinata must receive encrypted bytes... Pinata does NOT receive plaintext;
+ * raw DEK; KEK; usable decryption capability."
+ */
+export interface PinataUploadCiphertextRequest {
+  /** `Uint8Array` rather than `Buffer` -- keeps this package's type surface independent of Node's `Buffer` global (this package's TypeScript project deliberately does not pull in full `@types/node` ambient globals; see `../../../types/node-shims.d.ts`). A `Buffer` (Node's own `Uint8Array` subclass) satisfies this directly -- no conversion needed at the call site. */
+  readonly bytes: Uint8Array;
+  readonly fileName: string;
+  readonly contentType?: string;
+  /** Safe, non-secret correlation metadata only (e.g. a `protectedResourceId`) -- never plaintext, never key material. */
+  readonly keyvalues?: Readonly<Record<string, string>>;
+}
+
+export interface PinataUploadCiphertextResult {
+  /** Pinata's own internal file id (not the CID) -- a storage handle, matching this package's existing `providerFileId` vs. `providerCid` distinction (see `../../../docs/architecture/ADR-DURABLE-GRANTS-REVOCATION.md`, "GAP-012"). */
+  readonly pinataFileId: string;
+  readonly cid: string;
+  readonly sizeBytes: number;
+}
+
+/**
  * The seam this package executes every Pinata operation through. A real
  * implementation (`createPinataProviderClient`) wraps `PinataSDK`; tests
  * substitute a fake implementing this same interface, so no test in this
@@ -78,6 +104,8 @@ export interface PinataProviderClient {
   createTemporaryAccessLink(request: PinataTemporaryAccessRequest): Promise<PinataTemporaryAccessResult>;
   getResourceMetadata(request: PinataMetadataRequest): Promise<PinataResourceMetadata>;
   invalidateResource(request: PinataInvalidateRequest): Promise<PinataInvalidateResult>;
+  /** Uploads bytes to Pinata's public network. See `PinataUploadCiphertextRequest`'s doc: every caller in this repository uploads ciphertext only, never plaintext. */
+  uploadCiphertext(request: PinataUploadCiphertextRequest): Promise<PinataUploadCiphertextResult>;
 }
 
 /**
@@ -174,6 +202,20 @@ export function createPinataProviderClient(config: PinataProviderClientConfig): 
           throw new PinataProviderClientError('unexpected-provider-failure', 'Pinata returned no result for the delete request.');
         }
         return { id: result.id, status: result.status };
+      } catch (error) {
+        throw classifyThrownError(error);
+      }
+    },
+
+    async uploadCiphertext(request: PinataUploadCiphertextRequest): Promise<PinataUploadCiphertextResult> {
+      try {
+        // `Uint8Array.from` (rather than passing `request.bytes` directly)
+        // guarantees a plain, non-shared `ArrayBuffer` backing -- `File`'s
+        // `BlobPart` type rejects a `Uint8Array` that could be backed by a
+        // `SharedArrayBuffer`, which `request.bytes`'s wider type permits.
+        const file = new File([Uint8Array.from(request.bytes)], request.fileName, { type: request.contentType ?? 'application/octet-stream' });
+        const result = await sdk.upload.public.file(file, request.keyvalues !== undefined ? { metadata: { keyvalues: { ...request.keyvalues } } } : {});
+        return { pinataFileId: result.id, cid: result.cid, sizeBytes: result.size };
       } catch (error) {
         throw classifyThrownError(error);
       }

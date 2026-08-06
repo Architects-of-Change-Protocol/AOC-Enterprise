@@ -44,6 +44,9 @@ function makeFakePinataClient(): PinataProviderClient {
     async invalidateResource({ resourceId }) {
       return { id: resourceId, status: 'deleted' };
     },
+    async uploadCiphertext() {
+      return { pinataFileId: 'file-conformance-1', cid: 'QmConformanceFixtureCid', sizeBytes: 42 };
+    },
   };
 }
 
