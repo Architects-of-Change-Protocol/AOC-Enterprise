@@ -187,6 +187,33 @@ function defaultNow(): UtcDateTime {
 }
 
 /**
+ * GAP-012 fix: a content CID and Pinata's own internal file id are two
+ * different identities, and must never be conflated by sharing one field.
+ * `translation.resource.id` (`EnterpriseProviderTranslation.resource`,
+ * a Protocol `ResourceRef`) is treated exclusively as the Pinata CID this
+ * package's `ProvideTemporaryAccess`/`ProvideReadOnlyAccess` arms already
+ * use it as (`gateways.private.createAccessLink({ cid: resource.id, ... })`).
+ * `ProvideMetadata`/`InvalidateGrant` need Pinata's own file id instead --
+ * a distinct provider-side handle a CID cannot substitute for -- which this
+ * function reads from `translation.providerMetadata.pinataFileId`, the
+ * provider-neutral, already-validated extension point R005.B's own
+ * `EnterpriseProviderTranslation.providerMetadata` was designed to carry
+ * (see the package README's "Pinata-specific decisions"). Throws
+ * `PinataAdapterInputError` -- a programming-contract violation, never a
+ * Pinata-side failure -- when it is missing, matching this package's
+ * existing treatment of a missing `requestedDurationSeconds`.
+ */
+function requirePinataFileId(translation: EnterpriseProviderTranslation): string {
+  const pinataFileId = translation.providerMetadata?.pinataFileId;
+  if (typeof pinataFileId !== 'string' || pinataFileId.length === 0) {
+    throw new PinataAdapterInputError(
+      `providerMetadata.pinataFileId (Pinata's own file id, distinct from the CID carried in resource.id) is required for a '${translation.executionIntent}' translation.`,
+    );
+  }
+  return pinataFileId;
+}
+
+/**
  * Consumes an `EnterpriseProviderTranslation` and produces Provider
  * Execution against Pinata -- nothing else (R005.C's own "Primary
  * Objective"). Never reads an `EnterpriseAccessGrant` or
@@ -264,12 +291,12 @@ export async function executePinataProviderTranslation(
       }
 
       case ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.PROVIDE_METADATA: {
-        const metadata = await client.getResourceMetadata({ resourceId: translation.resource.id });
+        const metadata = await client.getResourceMetadata({ resourceId: requirePinataFileId(translation) });
         return successResult(translation, { kind: 'metadata', metadata: normalizeMetadata(metadata) }, now());
       }
 
       case ENTERPRISE_PROVIDER_TRANSLATION_EXECUTION_INTENTS.INVALIDATE_GRANT: {
-        const result = await client.invalidateResource({ resourceId: translation.resource.id });
+        const result = await client.invalidateResource({ resourceId: requirePinataFileId(translation) });
         return successResult(translation, { kind: 'grant-invalidated', providerResourceStatus: result.status }, now());
       }
 

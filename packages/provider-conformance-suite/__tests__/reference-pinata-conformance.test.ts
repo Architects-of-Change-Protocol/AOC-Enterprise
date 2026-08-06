@@ -60,6 +60,14 @@ function buildPinataHarness(): EnterpriseProviderConformanceHarness {
       if (executionIntent === 'ProvideTemporaryAccess' || executionIntent === 'ProvideReadOnlyAccess') {
         return { requestedDurationSeconds: 900 };
       }
+      // GAP-012: ProvideMetadata/InvalidateGrant need Pinata's own file id,
+      // distinct from the CID this suite's own `buildCanonicalResource()`
+      // carries in `resource.id` -- see
+      // `packages/pinata-adapter/src/pinata-provider-adapter.ts`'s
+      // `requirePinataFileId`.
+      if (executionIntent === 'ProvideMetadata' || executionIntent === 'InvalidateGrant') {
+        return { pinataFileId: 'reference-conformance-pinata-file-id-1' };
+      }
       return undefined;
     },
     execute: (candidate) => executePinataProviderTranslation(candidate, client, { now: () => FIXED_NOW }),

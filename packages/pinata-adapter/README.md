@@ -106,19 +106,27 @@ databases, or caching. This package is a translator. Nothing more.
    providerMetadata.requestedDurationSeconds │    ({ cid: resource.id, expires })       accessUrl, expiresAt }
                                               ┘
 
- executionIntent: 'ProvideMetadata' ───────────► files.public.get(resource.id)     ─► { kind: 'metadata', metadata }
+ executionIntent: 'ProvideMetadata' ───────────► files.public.get(fileId)          ─► { kind: 'metadata', metadata }
+   providerMetadata.pinataFileId
 
- executionIntent: 'InvalidateGrant' ───────────► files.public.delete([resource.id]) ─► { kind: 'grant-invalidated',
-                                                    (nearest valid provider              providerResourceStatus }
+ executionIntent: 'InvalidateGrant' ───────────► files.public.delete([fileId])     ─► { kind: 'grant-invalidated',
+   providerMetadata.pinataFileId                  (nearest valid provider              providerResourceStatus }
                                                      operation -- unpin/delete)
 
  executionIntent: 'RegisterUsage' ─────────────► (no Pinata mapping exists) ───────► failureReason:
                                                                                         'capability-unsupported'
 ```
 
-`translation.resource.id` is treated as the Pinata identifier the requested
-operation needs (a CID for the signed access link; Pinata's own file id for
-metadata/delete) -- see "Pinata-specific decisions" below.
+`translation.resource.id` is the Pinata CID (`ProvideTemporaryAccess`/
+`ProvideReadOnlyAccess`); `translation.providerMetadata.pinataFileId` is
+Pinata's own, distinct file id (`ProvideMetadata`/`InvalidateGrant`) -- see
+"Pinata-specific decisions" below. **GAP-012 (fixed):** an earlier revision
+of this package read `resource.id` for both, silently treating a content
+CID and a provider-internal file id as the same identifier. They are not:
+Pinata's own SDK types keep them separate (`PinataResourceMetadata.cid` vs.
+`.id`), and reusing a CID as a file id (or vice versa) fails against the
+real API. See `docs/architecture/ADR-DURABLE-GRANTS-REVOCATION.md` (Slice 1
+of Sovereign Execution Binding) for the full fix record.
 
 ## Failure mapping
 
@@ -151,14 +159,22 @@ rather than returning a `PinataProviderExecutionFailure`.
 
 ## Pinata-specific decisions
 
-- **Resource identity.** `EnterpriseProviderTranslation.resource` composes
-  Protocol's `ResourceRef` (identity only). This adapter treats
-  `resource.id` as the Pinata identifier the operation needs -- a CID for
-  `gateways.private.createAccessLink`, or Pinata's own file id for
-  `files.public.get`/`files.public.delete`. This mirrors the frozen
+- **Resource identity (GAP-012 fixed).** `EnterpriseProviderTranslation.resource`
+  composes Protocol's `ResourceRef` (identity only); `resource.id` is
+  *always* the Pinata CID here, mirroring the frozen
   `@aoc-enterprise/provider-translation` package's own test fixture
-  (`resource: { kind: 'ipfs-object', id: 'Qm123' }`), which already uses a
-  CID directly as `resource.id`.
+  (`resource: { kind: 'ipfs-object', id: 'Qm123' }`). `files.public.get`/
+  `files.public.delete` need Pinata's own, separate file id instead -- a
+  storage handle, not a content identity -- which this adapter reads from
+  `translation.providerMetadata.pinataFileId` (a plain string), never from
+  `resource.id`. A translation missing it for `ProvideMetadata`/
+  `InvalidateGrant` throws `PinataAdapterInputError`, exactly like a missing
+  `requestedDurationSeconds` does for temporary access. The caller building
+  the translation (a durable orchestration layer, e.g.
+  `src/enterprise/access-governance/`) is responsible for resolving both
+  identifiers from the resource's own `EnterpriseResourceEnvelope.location`
+  (`@aoc-enterprise/resource-envelope`) before it ever reaches this adapter
+  -- this package still never reads a grant or envelope directly.
 - **Requested access duration.** `ProvideTemporaryAccess`/`ProvideReadOnlyAccess`
   require `providerMetadata.requestedDurationSeconds` (a positive number of
   seconds) on the translation; this package does not invent a default

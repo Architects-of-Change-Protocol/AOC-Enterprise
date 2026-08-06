@@ -26,3 +26,11 @@ export type {
 } from './pinata-provider-client.js';
 
 export { PinataProviderClientError, createPinataProviderClient } from './pinata-provider-client.js';
+
+export type { PinataRevocationCapability, PinataRevocationSemantics } from './pinata-revocation-capability.js';
+
+export {
+  PINATA_REVOCATION_CAPABILITY_SCHEMA_VERSION,
+  createPinataRevocationCapability,
+  pinataRevocationSemanticsForReason,
+} from './pinata-revocation-capability.js';
