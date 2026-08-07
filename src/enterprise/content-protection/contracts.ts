@@ -1,5 +1,6 @@
 import type { WrappedDekMaterial } from './key-wrapping-port.js';
 import type { StorageRef } from './storage-port.js';
+import type { ContentIdentity, SovereignAssetId } from '@aoc/protocol/identity';
 
 /**
  * Content Protection Runtime — Slice 2: Protected Resource + Content
@@ -19,8 +20,7 @@ import type { StorageRef } from './storage-port.js';
  * Naming: `ProtectedResource`, not `ProtectedAsset` -- Enterprise already
  * uses provider-neutral *resource* vocabulary throughout
  * (`AccessGrantResource`, `ResourceRef`), and this module protects both AOC
- * Sovereign Assets (once Protocol exports that contract -- see
- * `sovereign-binding-port.ts`) and ordinary resources that were never
+ * Sovereign Assets (through Protocol's public package) and ordinary resources that were never
  * sovereignized through Protocol at all. Calling every protected thing an
  * "asset" would either overload Protocol's own `SovereignAsset` vocabulary
  * or falsely imply every protected resource is one.
@@ -59,22 +59,17 @@ export interface ContentProtectionResourceRef {
  * (computed independently by this module) is what is actually compared
  * against it; see `service.ts`'s content-digest verification step.
  *
- * Only ever populated once `sovereign-binding-port.ts`'s
- * `SovereignAssetBindingPort` genuinely resolves and verifies a manifest --
- * today that port is wired to `createBlockedSovereignAssetBindingPort`
- * (`SOVEREIGN_BINDING_GATE = BLOCKED_BY_PROTOCOL`, see that file), so no
- * `ProtectedResourceRecord` produced by this repository's current
- * composition ever carries a populated `sovereignBinding` outside of this
- * module's own tests (which use a test-only in-memory Protocol stand-in to
- * prove the verification logic itself is correct and ready for the day
- * Protocol ships the real export).
+ * Populated only after the real Protocol registry resolution, manifest
+ * verification, and plaintext ContentIdentity comparison all succeed.
  */
-export interface ContentProtectionSovereignBinding {
-  readonly sovereignAssetId: string;
-  readonly sovereignVersion?: string;
-  /** Protocol's own content digest for this sovereign asset version, copied verbatim -- never recomputed or rewritten by Enterprise. */
-  readonly contentDigest: string;
-  /** When Enterprise verified `plaintextDigest === contentDigest` for this specific protection. */
+export interface VerifiedSovereignBinding {
+  readonly sovereignAssetId: SovereignAssetId;
+  /** Digest of the exact Protocol manifest that was cryptographically verified. */
+  readonly manifestDigest: string;
+  readonly manifestVersion: number;
+  readonly contentIdentity: ContentIdentity;
+  readonly canonicalizationProfile: string;
+  readonly schemaVersion: string;
   readonly verifiedAt: string;
 }
 
@@ -119,7 +114,7 @@ export type ProtectedResourceState = 'pending' | 'active' | 'failed' | 'orphaned
  *   `createPending` and stable for the record's lifetime.
  * - `resource` -- Enterprise's own identity/reference for the governed
  *   resource being protected. Never a provider identity.
- * - `sovereignBinding?` -- see `ContentProtectionSovereignBinding` above.
+ * - `sovereignBinding?` -- see `VerifiedSovereignBinding` above.
  *   Absent for a resource that was never sovereignized through Protocol --
  *   Enterprise can and does protect those too (Slice 2 requirement 3).
  * - `plaintextDigest?` -- `sha256:<hex>` of the original plaintext bytes,
@@ -160,7 +155,7 @@ export interface ProtectedResourceRecord {
   readonly organizationId: string;
   readonly state: ProtectedResourceState;
   readonly resource: ContentProtectionResourceRef;
-  readonly sovereignBinding?: ContentProtectionSovereignBinding;
+  readonly sovereignBinding?: VerifiedSovereignBinding;
   readonly plaintextDigest?: string;
   readonly ciphertextDigest?: string;
   readonly encryptionProfile: string;
@@ -185,7 +180,7 @@ export interface CreatePendingProtectedResourceInput {
   readonly encryptionProfile: string;
   readonly correlationId: string;
   /** Requested sovereign asset reference, recorded even before verification completes, so a `'pending'`/`'failed'` row still shows intent. Distinct from `ProtectedResourceRecord.sovereignBinding`, which is only ever populated once actually verified. */
-  readonly requestedSovereignAssetId?: string;
+  readonly requestedSovereignAssetId?: SovereignAssetId;
 }
 
 export interface MarkProtectedResourceActiveInput {
@@ -197,7 +192,7 @@ export interface MarkProtectedResourceActiveInput {
   readonly authTag: string;
   readonly wrappedKey: WrappedDekMaterial;
   readonly storageRef: StorageRef;
-  readonly sovereignBinding?: ContentProtectionSovereignBinding;
+  readonly sovereignBinding?: VerifiedSovereignBinding;
 }
 
 export interface MarkProtectedResourceFailedInput {

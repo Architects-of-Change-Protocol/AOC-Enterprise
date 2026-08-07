@@ -28,9 +28,7 @@ if (!protocolSpec || !protocolSpec.startsWith('file:')) {
   throw new Error('Root devDependency (or dependency) @aoc/protocol must be a real file: dependency for publishability validation.');
 }
 const declaredProtocolPath = resolve(root, protocolSpec.slice('file:'.length));
-const stubProtocolPath = resolve(root, 'tests/fixtures/protocol-stub');
 let protocolPath = declaredProtocolPath;
-let usingProtocolStub = false;
 try {
   const declaredStat = await stat(declaredProtocolPath);
   if (declaredStat.isFile()) {
@@ -45,14 +43,7 @@ try {
     console.log(`[publishability] using the @aoc/protocol sibling checkout at '${declaredProtocolPath}'.`);
   }
 } catch {
-  protocolPath = stubProtocolPath;
-  usingProtocolStub = true;
-  console.log(
-    `[publishability] @aoc/protocol not found at '${declaredProtocolPath}' (neither a vendored tarball nor a sibling checkout); ` +
-      `using the type-only stub package at '${stubProtocolPath}'. This is faithful because @aoc/protocol ` +
-      'is a compile-time type dependency: this run independently asserts that no shipped artifact ' +
-      "requires '@aoc/protocol' at runtime.",
-  );
+  throw new Error(`The real vendored @aoc/protocol artifact is required at '${declaredProtocolPath}'.`);
 }
 
 const run = (cmd, args, cwd) => {
@@ -65,12 +56,16 @@ const run = (cmd, args, cwd) => {
   return result.stdout.trim();
 };
 
+function npmTarballFilename(pkg) {
+  return `${pkg.name.replace(/^@/, '').replace('/', '-')}-${pkg.version}.tgz`;
+}
+
 try {
   run('npm', ['run', 'build'], root);
   // npm pack drops the tarball in the repo root; remember it for cleanup.
   const packStdout = run('npm', ['pack', '--json'], root);
-  const packMeta = JSON.parse(packStdout);
-  const tarballName = packMeta[0]?.filename;
+  const packMeta = packStdout ? JSON.parse(packStdout) : [];
+  const tarballName = packMeta[0]?.filename ?? npmTarballFilename(rootPkg);
   if (!tarballName) {
     throw new Error('Could not read tarball name from npm pack output.');
   }
@@ -87,8 +82,9 @@ try {
 
   for (const { name, dir } of bundledWorkspacePackages) {
     const workspacePackStdout = run('npm', ['pack', '--json', dir], root);
-    const workspacePackMeta = JSON.parse(workspacePackStdout);
-    const workspaceTarballName = workspacePackMeta[0]?.filename;
+    const workspacePackMeta = workspacePackStdout ? JSON.parse(workspacePackStdout) : [];
+    const workspacePkg = JSON.parse(await readFile(resolve(dir, 'package.json'), 'utf8'));
+    const workspaceTarballName = workspacePackMeta[0]?.filename ?? npmTarballFilename(workspacePkg);
     if (!workspaceTarballName) {
       throw new Error(`Could not read tarball name from npm pack output for ${name}.`);
     }
@@ -117,21 +113,19 @@ try {
 
   run('node', [resolve(root, 'scripts/assert-invalid-imports.mjs')], consumerDir);
 
-  // @aoc/protocol is documented as a compile-time type dependency. Assert the
-  // shipped artifacts never import it at runtime -- this is the invariant that
-  // makes the type-only stub a faithful stand-in for the real package. If this
-  // ever fails, either remove the value import or rework the stub before release.
+  // Slice 2.1 deliberately consumes Protocol cryptography at runtime. Reject
+  // only private/deep paths; public package entry points are legitimate.
   const installedDist = join(consumerDir, 'node_modules', '@aoc-enterprise', 'runtime', 'dist');
   const shippedJs = (await readdir(installedDist, { recursive: true }))
     .filter((entry) => /\.(?:js|cjs|mjs)$/.test(entry))
     .map((entry) => join(installedDist, entry));
   for (const file of shippedJs) {
     const source = await readFile(file, 'utf8');
-    if (/require\((['"])@aoc\/protocol\1\)|from\s+(['"])@aoc\/protocol\2/.test(source)) {
-      throw new Error(`Shipped artifact '${file}' imports '@aoc/protocol' at runtime; @aoc/protocol must remain a type-only dependency (or the publishability stub must be reworked).`);
+    if (/['"]@aoc\/protocol\/(?:src|dist|internal)(?:\/|['"])/.test(source)) {
+      throw new Error(`Shipped artifact '${file}' imports a private @aoc/protocol path.`);
     }
   }
-  console.log(`Runtime-import scan: ${shippedJs.length} shipped JS artifacts contain no runtime '@aoc/protocol' import${usingProtocolStub ? ' (stub protocol package validated as faithful)' : ''}.`);
+  console.log(`Runtime-import scan: ${shippedJs.length} shipped JS artifacts contain no private @aoc/protocol import.`);
 
   const declCheck = run('node', [resolve(root, 'scripts/check-declaration-leaks.mjs')], consumerDir);
   if (!declCheck.includes('passed')) {

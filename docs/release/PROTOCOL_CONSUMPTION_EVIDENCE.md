@@ -9,14 +9,15 @@ point-in-time record; re-run the commands below to refresh it after any change t
 | Field | Value |
 | --- | --- |
 | Protocol repository | `Architects-of-Change-Protocol/Architects_of_Change_Protocol` |
-| Protocol commit | `ab2ac6ef573c871a029a67b13d33ba9738cb5939` ("feat(protocol): stabilize AuditEventEnvelope and ScopedAccessRequest public shapes", #315) |
+| Protocol commit | `c79e7529f4c0fda639803de861129335341e0744` |
 | Protocol package | `@aoc/protocol` |
 | Protocol package version | `0.1.0` (still `"private": true` -- not published to any registry) |
 | Tarball filename | `aoc-protocol-0.1.0.tgz` |
 | Vendored tarball path | `vendor/aoc-protocol-0.1.0.tgz` (tracked in git; see `vendor/README.md`) |
-| Tarball size | 35,526 bytes |
-| SHA-256 (not a cryptographic signature -- a content-integrity checksum) | `4e5289b74bc30bcbd63afe87cd00d5417aa6bc665fe50d7c9c1b845bf1896b27` |
-| Build reproducibility | Built independently three times from the same pinned commit across this sprint; SHA-256 identical every time |
+| Tarball size | 60,558 bytes |
+| SHA-256 (not a cryptographic signature -- a content-integrity checksum) | `bc93d51783ef1899c0ca5fc94796129f3c27974c3f0fbf801232577247308bfc` |
+| npm integrity | `sha512-IbnT5yTPAmiwCqCmAuHrxPapXeTqGEAmCOxu3JbCCsju0Wqi2aICy4g5XPKE8pDK6ich4nD+z+QVW1PU3fgsWA==` |
+| Build provenance | Repository-supported local-checkout mode with the full pinned ref supplied and verified |
 | Protocol's own consumer/package validation | `npm run protocol:consumer:check` -- **PASSED** during tarball build |
 
 ## Enterprise commit under validation
@@ -24,11 +25,11 @@ point-in-time record; re-run the commands below to refresh it after any change t
 | Field | Value |
 | --- | --- |
 | Enterprise repository | `Architects-of-Change-Protocol/AOC-Enterprise` |
-| Branch | `claude/aoc-enterprise-protocol-adoption-n21c78` |
+| Branch | `codex/enterprise-protocol-binding-slice-2-1` |
 | Phase A commit | `e35ece985bfd5b133dc5664ca43e3bf449e30d49` ("feat(protocol): wire Enterprise to consume the real @aoc/protocol package") |
 | Phase B commit | this sprint's contract-adoption commit (see git log) |
-| Node version | v22.22.2 |
-| npm version | 10.9.7 |
+| Node version | v22.23.1 |
+| npm version | 10.9.8 |
 
 ## Module resolution evidence (real package, not a shim)
 

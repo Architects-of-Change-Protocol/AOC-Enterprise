@@ -20,7 +20,12 @@ export type ContentProtectionEventType =
   | 'protection_succeeded'
   | 'protection_failed'
   | 'integrity_mismatch'
-  | 'ciphertext_stored';
+  | 'ciphertext_stored'
+  | 'sovereign_binding_validation_started'
+  | 'sovereign_manifest_verified'
+  | 'sovereign_content_identity_matched'
+  | 'sovereign_binding_rejected'
+  | 'protected_resource_activated';
 
 /**
  * Bounded, structured detail only -- ids, states, safe truthful sentences.

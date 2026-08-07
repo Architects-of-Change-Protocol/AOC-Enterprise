@@ -148,8 +148,10 @@ if (existsSync(distDir)) {
     if (text.includes('Architects_of_Change_Protocol') || /\/(home|workspace|tmp)\//.test(text)) {
       violations.push(`${rel}: shipped artifact leaks a local/sibling filesystem path.`);
     }
-    if (file.endsWith('.d.ts') && /from\s+['"]@aoc\/protocol\/(?!$)/.test(text)) {
-      violations.push(`${rel}: shipped declaration file contains a deep '@aoc/protocol' import.`);
+    if (file.endsWith('.d.ts')) {
+      for (const specifier of extractProtocolImportSpecifiers(text)) {
+        if (!isAllowedProtocolImportSpecifier(specifier)) violations.push(`${rel}: shipped declaration file contains forbidden Protocol import '${specifier}'.`);
+      }
     }
   }
 }

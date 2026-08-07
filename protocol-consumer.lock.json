@@ -1,15 +1,16 @@
 {
   "$comment": "This is NOT an npm lockfile. It is a small, auditable record of which AOC Protocol commit/artifact AOC Enterprise has actually been validated against. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md for the full upgrade/rollback procedure. Validate this file with `node scripts/protocol/check-compatibility-lock.mjs`.",
   "repository": "Architects-of-Change-Protocol/Architects_of_Change_Protocol",
-  "commit": "ab2ac6ef573c871a029a67b13d33ba9738cb5939",
+  "commit": "c79e7529f4c0fda639803de861129335341e0744",
   "package": "@aoc/protocol",
   "expectedVersion": "0.1.0",
   "enterpriseSupportedVersion": "1.0.0",
   "peerDependencyRange": ">=0.1.0",
   "tarball": {
     "filename": "aoc-protocol-0.1.0.tgz",
-    "sha256": "4e5289b74bc30bcbd63afe87cd00d5417aa6bc665fe50d7c9c1b845bf1896b27",
-    "sizeBytes": 35526
+    "sha256": "bc93d51783ef1899c0ca5fc94796129f3c27974c3f0fbf801232577247308bfc",
+    "sizeBytes": 60558,
+    "integrity": "sha512-IbnT5yTPAmiwCqCmAuHrxPapXeTqGEAmCOxu3JbCCsju0Wqi2aICy4g5XPKE8pDK6ich4nD+z+QVW1PU3fgsWA=="
   },
   "verifiedPublicExports": [
     "@aoc/protocol",
@@ -17,7 +18,10 @@
     "@aoc/protocol/errors",
     "@aoc/protocol/claims",
     "@aoc/protocol/adapters",
-    "@aoc/protocol/runtime-registry"
+    "@aoc/protocol/runtime-registry",
+    "@aoc/protocol/canonical",
+    "@aoc/protocol/identity",
+    "@aoc/protocol/manifest"
   ],
   "knownGaps": [],
   "resolvedGaps": [

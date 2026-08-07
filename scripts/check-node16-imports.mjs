@@ -9,7 +9,8 @@ const violations = [];
 const relImport = /(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"](\.{1,2}\/[^'"?#]+)['"]/g;
 const dynImport = /import\(\s*['"](\.{1,2}\/[^'"?#]+)['"]\s*\)/g;
 const legacyAlias = /['"]@\//;
-const deepProtocol = /['"]@aoc\/protocol\/(?!$)/;
+const publicProtocolImports = /['"]@aoc\/protocol\/(?:contracts|errors|claims|adapters|runtime-registry|canonical|identity|manifest)['"]/g;
+const protocolSubpath = /['"](@aoc\/protocol\/[^'"]+)['"]/g;
 
 function hasSourceExt(specifier) {
   return ['.js', '.mjs', '.cjs', '.json'].some((ext) => specifier.endsWith(ext));
@@ -48,7 +49,10 @@ function checkFile(path) {
   const text = readFileSync(path, 'utf8');
 
   if (legacyAlias.test(text)) violations.push(`${path}: forbidden legacy alias '@/'.`);
-  if (deepProtocol.test(text)) violations.push(`${path}: forbidden deep import from @aoc/protocol.`);
+  const withoutPublicProtocolImports = text.replace(publicProtocolImports, "'@aoc/protocol'");
+  for (const match of withoutPublicProtocolImports.matchAll(protocolSubpath)) {
+    violations.push(`${path}: forbidden deep import from @aoc/protocol -> ${match[1]}.`);
+  }
 
   const recordExt = (spec) => {
     if (!hasSourceExt(spec) && !resolvesToIndexTs(path, spec)) violations.push(`${path}: relative import missing Node16 extension -> ${spec}`);
