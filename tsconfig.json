@@ -7,6 +7,7 @@
     { "path": "./packages/access-obligation" },
     { "path": "./packages/canonical-runtime-contracts" },
     { "path": "./packages/collateralization-mandate" },
+    { "path": "./packages/license-mandate" },
     { "path": "./packages/commercial-demo" },
     { "path": "./packages/agent-governance" },
     { "path": "./packages/control-plane" },
