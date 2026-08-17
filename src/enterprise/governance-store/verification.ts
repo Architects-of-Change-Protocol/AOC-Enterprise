@@ -1,5 +1,6 @@
 import { computeDigest } from './digest.js';
-import type { GovernanceIntegrityFailure, GovernanceRecord, GovernanceRecordVerificationResult } from './contracts.js';
+import type { GovernanceIntegrityFailure, GovernanceRecord, GovernanceRecordVerificationResult, GovernanceReferenceChainState } from './contracts.js';
+import { verifyGovernanceReferenceIntegrity } from './reference-integrity.js';
 import {
   computeAggregateDigest,
   evaluationRecordDigestInput,
@@ -22,11 +23,20 @@ import {
  * the store), `null` when this is the first aggregate, and `undefined` when
  * the store could not resolve the predecessor (chain check reported as a
  * failure rather than skipped).
+ *
+ * `referenceChain` is the stored head of this evaluation's protected
+ * reference chain (`null` when no head row exists). Reference integrity is a
+ * **separate domain**: it is checked here so one call answers "is this record
+ * intact?", but it contributes nothing to any aggregate digest, and the
+ * aggregate digest computation below is byte-for-byte what it always was.
+ * That separation is deliberate and load-bearing — see
+ * `docs/architecture/ADR-GOVERNANCE-REFERENCE-INTEGRITY.md`.
  */
 export function verifyGovernanceRecordIntegrity(
   record: GovernanceRecord,
   expectedPreviousAggregateDigest: string | null | undefined,
   now: () => string,
+  referenceChain?: GovernanceReferenceChainState | null,
 ): GovernanceRecordVerificationResult {
   const failures: GovernanceIntegrityFailure[] = [];
   const integrity = record.integrity;
@@ -118,6 +128,10 @@ export function verifyGovernanceRecordIntegrity(
     }
   }
 
+  // -- reference integrity (second domain; contributes to `valid`, never to a digest) --
+  const referenceResult = verifyGovernanceReferenceIntegrity(record.references, record.request.organizationId, referenceChain);
+  failures.push(...referenceResult.failures);
+
   const checks = {
     requestDigest: requestOk,
     evaluationDigest: evaluationOk,
@@ -126,6 +140,7 @@ export function verifyGovernanceRecordIntegrity(
     metadataDigest: metadataOk,
     aggregateDigest: aggregateOk,
     ...(previousOk !== undefined ? { previousDigest: previousOk } : {}),
+    referenceIntegrity: referenceResult.valid,
   };
 
   return {
@@ -134,5 +149,6 @@ export function verifyGovernanceRecordIntegrity(
     checks,
     verifiedAt: now(),
     failures,
+    referenceIntegrity: referenceResult.summary,
   };
 }

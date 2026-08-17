@@ -17,7 +17,8 @@ GovernanceEvaluation (governance_evaluations)          ← aggregate root
     ├── N GovernanceEventRecord   (governance_events,        embedded evaluation events)
     ├── 1 GovernanceRecordMetadata(governance_record_metadata, UNIQUE(evaluation_id))
     ├── 1 GovernanceIntegrityMetadata (governance_integrity, UNIQUE(evaluation_id), UNIQUE(chain_position))
-    └── N GovernanceReferenceRecord (governance_references)
+    ├── N GovernanceReferenceRecord (governance_references, appended after the seal)
+    └── 0..1 GovernanceReferenceChainState (governance_reference_chains, PK(evaluation_id))
 
 GovernanceIdempotencyRecord (governance_idempotency, PK(scope, idempotency_key)) → evaluation_id
 Lifecycle/module events (governance_events) link by correlation, never by foreign key.
@@ -70,7 +71,8 @@ Full DDL: `SCHEMA_V1` in
 | `governance_record_metadata` | PK `metadata_id`; `UNIQUE(evaluation_id)`; FK `evaluation_id` | — |
 | `governance_integrity` | PK `integrity_id`; `UNIQUE(evaluation_id)`; `UNIQUE(chain_position)`; FK `evaluation_id` | — |
 | `governance_idempotency` | PK `(scope, idempotency_key)`; FK `evaluation_id` | — |
-| `governance_references` | PK `reference_id`; FK `evaluation_id` | `evaluation_id` |
+| `governance_references` | PK `reference_id`; FK `evaluation_id`; `UNIQUE(evaluation_id, sequence)` | `evaluation_id` |
+| `governance_reference_chains` | PK `evaluation_id`; FK `evaluation_id` | — |
 | `governance_store_versions` | PK autoincrement `id` | — |
 | `RuntimeVersions` | PK `boot_id` (unchanged PR-002 boot ledger) | — |
 
@@ -82,6 +84,13 @@ Notes:
 - `PRAGMA foreign_keys = ON` on every connection; the PR-002 tables
   (`GovernanceRequests`, `GovernanceEvaluations`, `GovernanceTraces`,
   `RuntimeEvents`) remain untouched after migration.
+- `governance_references.sequence` is NULL on rows written before reference
+  integrity existed. SQLite treats NULLs as distinct in a unique index, so
+  `UNIQUE(evaluation_id, sequence)` constrains protected rows only. That index
+  and `governance_reference_chains` are created by
+  `ensureReferenceIntegritySchema` rather than `SCHEMA_V1`, because on an
+  upgraded database the column they depend on exists only after its
+  `ALTER TABLE`.
 
 ## Canonical record types
 
@@ -152,8 +161,19 @@ not a signature, not non-repudiation.
 `referenceId`, `evaluationId`, `referenceType` (`passport_event |
 evidence_bundle | assurance_record | execution_record |
 external_artifact | authorization_artifact`), `externalId`,
-`externalVersion?`, `digest?`, `uri?`, `createdAt`. The canonical list is
+`externalVersion?`, `digest?`, `uri?`, `createdAt`, plus the Store-computed
+reference-integrity fields `sequence?`, `integrityVersion?`,
+`previousReferenceDigest?`, `referenceDigest?`. The canonical list is
 `GOVERNANCE_REFERENCE_TYPES`; the union is derived from it.
+
+Callers pass a `GovernanceReferenceInput` — the record minus the four
+integrity fields — so a caller can neither choose its own chain position nor
+present a digest the Store did not compute. The integrity fields are optional
+because rows written before the mechanism existed genuinely lack them; such
+rows are classified `legacy_unprotected`. Note that `digest?` (the referenced
+artifact's own content digest, caller-supplied, never verified) and
+`referenceDigest?` (the Store's tamper-evidence digest) are different things.
+See "Two integrity domains" in `AOC_ENTERPRISE_GOVERNANCE_STORE.md`.
 
 `authorization_artifact` names a durable artifact **produced by AOC
 Enterprise** that records or embodies authorization resulting from a governed

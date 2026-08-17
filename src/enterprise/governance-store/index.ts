@@ -17,6 +17,7 @@ export {
   GOVERNANCE_STORE_CONTRACT_IDS,
   GOVERNANCE_MIGRATION_SOURCE_PR_002,
   GOVERNANCE_REFERENCE_TYPES,
+  GOVERNANCE_REFERENCE_INTEGRITY_VERSION,
   isCanonicalGovernanceReferenceType,
   toGovernanceReplayMetadata,
 } from './contracts.js';
@@ -33,7 +34,11 @@ export type {
   GovernanceRecordMetadata,
   GovernanceIntegrityMetadata,
   GovernanceReferenceRecord,
+  GovernanceReferenceInput,
   GovernanceReferenceType,
+  GovernanceReferenceIntegrityStatus,
+  GovernanceReferenceIntegritySummary,
+  GovernanceReferenceChainState,
   GovernanceCorrectionRecord,
   GovernanceReplayMetadata,
   GovernanceStoreAccessContext,
@@ -75,6 +80,8 @@ export {
 export type { GovernanceStoreLimits, GovernanceProjectionDependencies, GovernanceAggregate } from './projection.js';
 
 export { verifyGovernanceRecordIntegrity } from './verification.js';
+export { verifyGovernanceReferenceIntegrity, computeGovernanceReferenceDigest, referenceDigestInput } from './reference-integrity.js';
+export type { GovernanceReferenceDigestInput, GovernanceReferenceIntegrityResult } from './reference-integrity.js';
 export { toKernelTrace, toKernelEvaluationResult } from './store-common.js';
 
 export { createInMemoryGovernanceStore } from './in-memory-governance-store.js';

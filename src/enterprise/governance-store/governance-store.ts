@@ -8,7 +8,7 @@ import type {
   GovernanceRecord,
   GovernanceRecordLoadResult,
   GovernanceRecordVerificationResult,
-  GovernanceReferenceRecord,
+  GovernanceReferenceInput,
   GovernanceRequestRecord,
   GovernanceStoreAccessContext,
   GovernanceStoreHealth,
@@ -109,8 +109,17 @@ export interface GovernanceStore {
    */
   resolveIdempotency(context: GovernanceStoreAccessContext, probe: GovernanceIdempotencyProbe): Promise<GovernanceIdempotencyResolution>;
 
-  /** Appends a reference from a committed evaluation to a future Passport/Evidence/Assurance/execution artifact. */
-  appendReference(context: GovernanceStoreAccessContext, reference: GovernanceReferenceRecord): Promise<void>;
+  /**
+   * Appends a reference from a committed evaluation to a
+   * Passport/Evidence/Assurance/execution/authorization artifact.
+   *
+   * The append is transactional and tamper-evident: the Store assigns the
+   * reference's position in this evaluation's chain, seals it, and advances
+   * the stored chain head in one transaction, so no committed reference can
+   * exist without its integrity metadata. Callers supply only the semantic
+   * fields — chain position and digests are never caller-controlled.
+   */
+  appendReference(context: GovernanceStoreAccessContext, reference: GovernanceReferenceInput): Promise<void>;
 
   /** Appends one lifecycle/module event outside any evaluation aggregate (linked by correlation, not foreign key). Best-effort operational history. */
   appendLifecycleEvent(event: EnterpriseEvent): Promise<void>;

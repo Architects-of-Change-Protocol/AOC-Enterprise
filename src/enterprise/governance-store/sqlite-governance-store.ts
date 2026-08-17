@@ -6,6 +6,7 @@ import type { KernelEvaluationRequest, KernelEvaluationResult, KernelTrace } fro
 import type { EnterpriseEvent } from '../events/enterprise-events.js';
 import {
   GOVERNANCE_MIGRATION_SOURCE_PR_002,
+  GOVERNANCE_REFERENCE_INTEGRITY_VERSION,
   GOVERNANCE_STORE_SCHEMA_VERSION,
   type AppendGovernanceEvaluationInput,
   type AppendGovernanceEvaluationResult,
@@ -18,6 +19,8 @@ import {
   type GovernanceRecordLoadResult,
   type GovernanceRecordMetadata,
   type GovernanceRecordVerificationResult,
+  type GovernanceReferenceChainState,
+  type GovernanceReferenceInput,
   type GovernanceReferenceRecord,
   type GovernanceRequestRecord,
   type GovernanceStoreAccessContext,
@@ -31,6 +34,7 @@ import { GovernanceStoreError } from './errors.js';
 import type { EnterpriseEventRecord, EnterpriseVersionRecord, GovernanceStore, PersistEvaluationInput, PersistEvaluationResult } from './governance-store.js';
 import { buildGovernanceAggregate, computeAggregateDigest, computeGovernanceRequestPayloadDigest, metadataDigestInput, type GovernanceAggregate } from './projection.js';
 import { computeDigest } from './digest.js';
+import { sealGovernanceReference } from './reference-integrity.js';
 import { verifyGovernanceRecordIntegrity } from './verification.js';
 import { resolveStoreOptions, toLegacyAppendInput, type CreateGovernanceStoreOptions } from './in-memory-governance-store.js';
 import {
@@ -220,9 +224,22 @@ const SCHEMA_V1 = `
     external_version TEXT,
     digest TEXT,
     uri TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    -- Reference-integrity columns. Nullable on purpose: rows written before
+    -- this feature existed genuinely have no integrity metadata, and
+    -- back-filling one would claim protection that never existed. See
+    -- ensureReferenceIntegritySchema for the additive upgrade of an
+    -- existing database.
+    sequence INTEGER,
+    reference_integrity_version TEXT,
+    previous_reference_digest TEXT,
+    reference_digest TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_gov_references_evaluation ON governance_references(evaluation_id);
+  -- The chain-position index and governance_reference_chains are created by
+  -- ensureReferenceIntegritySchema, not here: on a pre-hardening database this
+  -- CREATE TABLE is a no-op and the sequence column does not exist yet, so an
+  -- index over it must wait until after the ALTER TABLEs.
 
   CREATE TABLE IF NOT EXISTS RuntimeVersions (
     boot_id          TEXT PRIMARY KEY,
@@ -351,6 +368,18 @@ interface ReferenceRow {
   readonly digest: string | null;
   readonly uri: string | null;
   readonly created_at: string;
+  readonly sequence: number | null;
+  readonly reference_integrity_version: string | null;
+  readonly previous_reference_digest: string | null;
+  readonly reference_digest: string | null;
+}
+
+interface ReferenceChainRow {
+  readonly evaluation_id: string;
+  readonly integrity_version: string;
+  readonly latest_sequence: number;
+  readonly latest_reference_digest: string;
+  readonly updated_at: string;
 }
 
 interface IdempotencyRow {
@@ -481,7 +510,20 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
     (integrity_id, evaluation_id, algorithm, canonicalization_version, request_digest, evaluation_digest, trace_digest, events_digest, metadata_digest, aggregate_digest, previous_aggregate_digest, chain_position, created_at)
     VALUES (@integrityId, @evaluationId, @algorithm, @canonicalizationVersion, @requestDigest, @evaluationDigest, @traceDigest, @eventsDigest, @metadataDigest, @aggregateDigest, @previousAggregateDigest, @chainPosition, @createdAt)`);
   const insertIdempotency = db.prepare(`INSERT INTO governance_idempotency (scope, idempotency_key, request_digest, evaluation_id, created_at) VALUES (@scope, @idempotencyKey, @requestDigest, @evaluationId, @createdAt)`);
-  const insertReference = db.prepare(`INSERT INTO governance_references (reference_id, evaluation_id, reference_type, external_id, external_version, digest, uri, created_at) VALUES (@referenceId, @evaluationId, @referenceType, @externalId, @externalVersion, @digest, @uri, @createdAt)`);
+  const insertReference = db.prepare(`INSERT INTO governance_references
+    (reference_id, evaluation_id, reference_type, external_id, external_version, digest, uri, created_at, sequence, reference_integrity_version, previous_reference_digest, reference_digest)
+    VALUES (@referenceId, @evaluationId, @referenceType, @externalId, @externalVersion, @digest, @uri, @createdAt, @sequence, @integrityVersion, @previousReferenceDigest, @referenceDigest)`);
+  // The chain head is a *projection* of the append-only reference rows, not a
+  // record of its own; advancing it in the same transaction is what makes
+  // deletion of the newest references detectable.
+  const upsertReferenceChain = db.prepare(`INSERT INTO governance_reference_chains (evaluation_id, integrity_version, latest_sequence, latest_reference_digest, updated_at)
+    VALUES (@evaluationId, @integrityVersion, @latestSequence, @latestReferenceDigest, @updatedAt)
+    ON CONFLICT(evaluation_id) DO UPDATE SET
+      integrity_version = excluded.integrity_version,
+      latest_sequence = excluded.latest_sequence,
+      latest_reference_digest = excluded.latest_reference_digest,
+      updated_at = excluded.updated_at`);
+  const selectReferenceChain = db.prepare(`SELECT * FROM governance_reference_chains WHERE evaluation_id = ?`);
 
   const selectRequestByRequestId = db.prepare(`SELECT * FROM governance_requests WHERE request_id = ?`);
   const selectEvaluationByEvaluationId = db.prepare(`SELECT * FROM governance_evaluations WHERE evaluation_id = ?`);
@@ -659,6 +701,23 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
       ...(row.digest !== null ? { digest: row.digest } : {}),
       ...(row.uri !== null ? { uri: row.uri } : {}),
       createdAt: row.created_at,
+      // Integrity columns are mapped exactly as stored — including partially
+      // present ones. Normalizing a half-written row into a clean legacy row
+      // here would hide precisely the tampering the verifier exists to catch.
+      ...(row.sequence !== null ? { sequence: row.sequence } : {}),
+      ...(row.reference_integrity_version !== null ? { integrityVersion: row.reference_integrity_version } : {}),
+      ...(row.previous_reference_digest !== null ? { previousReferenceDigest: row.previous_reference_digest } : {}),
+      ...(row.reference_digest !== null ? { referenceDigest: row.reference_digest } : {}),
+    };
+  }
+
+  function rowToReferenceChainState(row: ReferenceChainRow): GovernanceReferenceChainState {
+    return {
+      evaluationId: row.evaluation_id,
+      integrityVersion: row.integrity_version,
+      latestSequence: row.latest_sequence,
+      latestReferenceDigest: row.latest_reference_digest,
+      updatedAt: row.updated_at,
     };
   }
 
@@ -967,6 +1026,60 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
     });
   });
 
+  /**
+   * One transaction: resolve the chain head, assign the next position, seal
+   * the reference, insert it, and advance the head. A committed reference can
+   * therefore never lack its integrity metadata, and a crash between the two
+   * writes leaves neither. `better-sqlite3` is synchronous, so two in-process
+   * appends cannot interleave; cross-process writers are serialized by
+   * SQLite's own write lock, and `idx_gov_references_chain_position` is the
+   * backstop that rejects two references claiming one position.
+   */
+  const appendReferenceTxn = db.transaction((reference: GovernanceReferenceInput, organizationId: string | undefined): void => {
+    const head = selectReferenceChain.get(reference.evaluationId) as ReferenceChainRow | undefined;
+    // Fail closed *before* writing anything if the existing chain was sealed
+    // under a version this build cannot verify — which happens on a rollback,
+    // where a newer runtime wrote the chain and an older one is now serving.
+    // Chaining a v1 row onto a digest whose definition we do not know would
+    // extend a chain we cannot check, and the upsert below would additionally
+    // overwrite the head's record of that newer version, destroying the only
+    // evidence of what those rows were sealed under. Refusing costs one
+    // rejected append; proceeding silently corrupts the audit trail.
+    if (head !== undefined && head.integrity_version !== GOVERNANCE_REFERENCE_INTEGRITY_VERSION) {
+      throw new GovernanceStoreError(
+        'GOVERNANCE_SCHEMA_VERSION_UNSUPPORTED',
+        `The reference chain for evaluationId '${reference.evaluationId}' was sealed under reference-integrity version '${head.integrity_version}', which this build cannot verify; refusing to append to it.`,
+        { referenceIntegrityVersion: head.integrity_version, supportedVersion: GOVERNANCE_REFERENCE_INTEGRITY_VERSION },
+      );
+    }
+    const sealed = sealGovernanceReference(reference, {
+      ...(organizationId !== undefined ? { organizationId } : {}),
+      sequence: (head?.latest_sequence ?? 0) + 1,
+      ...(head !== undefined ? { previousReferenceDigest: head.latest_reference_digest } : {}),
+    });
+    insertReference.run({
+      referenceId: sealed.referenceId,
+      evaluationId: sealed.evaluationId,
+      referenceType: sealed.referenceType,
+      externalId: sealed.externalId,
+      externalVersion: sealed.externalVersion ?? null,
+      digest: sealed.digest ?? null,
+      uri: sealed.uri ?? null,
+      createdAt: sealed.createdAt,
+      sequence: sealed.sequence ?? null,
+      integrityVersion: sealed.integrityVersion ?? null,
+      previousReferenceDigest: sealed.previousReferenceDigest ?? null,
+      referenceDigest: sealed.referenceDigest ?? null,
+    });
+    upsertReferenceChain.run({
+      evaluationId: sealed.evaluationId,
+      integrityVersion: sealed.integrityVersion,
+      latestSequence: sealed.sequence,
+      latestReferenceDigest: sealed.referenceDigest,
+      updatedAt: sealed.createdAt,
+    });
+  });
+
   function nextEventSequence(aggregateType: string, aggregateId: string): number {
     const row = selectMaxEventSequence.get(aggregateType, aggregateId) as { max_sequence: number | null } | undefined;
     return (row?.max_sequence ?? 0) + 1;
@@ -1000,20 +1113,21 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
         throw new GovernanceStoreError('GOVERNANCE_RECORD_NOT_FOUND', `No governance record for evaluationId '${reference.evaluationId}' within this scope.`);
       }
       try {
-        insertReference.run({
-          referenceId: reference.referenceId,
-          evaluationId: reference.evaluationId,
-          referenceType: reference.referenceType,
-          externalId: reference.externalId,
-          externalVersion: reference.externalVersion ?? null,
-          digest: reference.digest ?? null,
-          uri: reference.uri ?? null,
-          createdAt: reference.createdAt,
-        });
+        appendReferenceTxn(reference, record.request.organizationId);
       } catch (error) {
         const code = sqliteErrorCode(error);
         if (code !== undefined && code.startsWith('SQLITE_CONSTRAINT')) {
-          throw new GovernanceStoreError('GOVERNANCE_STORE_VALIDATION_ERROR', `referenceId '${reference.referenceId}' was already appended; references are append-only and never overwritten.`);
+          // A duplicate reference id and a lost race for a chain position are
+          // different facts: the first is a caller mistake to be reported as
+          // such, the second is a concurrent writer whose transaction rolled
+          // back and may be retried. Reporting the second as "already
+          // appended" would tell the caller its reference exists when it does
+          // not.
+          const duplicate = db.prepare(`SELECT 1 FROM governance_references WHERE reference_id = ?`).get(reference.referenceId) !== undefined;
+          if (duplicate) {
+            throw new GovernanceStoreError('GOVERNANCE_STORE_VALIDATION_ERROR', `referenceId '${reference.referenceId}' was already appended; references are append-only and never overwritten.`);
+          }
+          throw new GovernanceStoreError('GOVERNANCE_STORE_TRANSACTION_FAILED', 'The reference append transaction lost a race for its chain position and was rolled back; nothing was persisted.', { sqliteCode: code });
         }
         mapSqliteError(error);
       }
@@ -1153,7 +1267,8 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
         const previousRow = selectIntegrityByChainPosition.get(record.integrity.chainPosition - 1) as IntegrityRow | undefined;
         expectedPrevious = previousRow?.aggregate_digest;
       }
-      return verifyGovernanceRecordIntegrity(record, expectedPrevious, resolved.now);
+      const chainRow = selectReferenceChain.get(evaluationId) as ReferenceChainRow | undefined;
+      return verifyGovernanceRecordIntegrity(record, expectedPrevious, resolved.now, chainRow === undefined ? null : rowToReferenceChainState(chainRow));
     },
 
     async health(): Promise<GovernanceStoreHealth> {
@@ -1285,6 +1400,7 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
 function initSchemaAndMigrate(db: BetterSqlite3.Database, now: () => string): void {
   const initTxn = db.transaction(() => {
     db.exec(SCHEMA_V1);
+    ensureReferenceIntegritySchema(db);
 
     const versionRow = db.prepare(`SELECT schema_version FROM governance_store_versions ORDER BY id DESC LIMIT 1`).get() as { schema_version: string } | undefined;
     if (versionRow !== undefined && versionRow.schema_version !== GOVERNANCE_STORE_SCHEMA_VERSION) {
@@ -1319,6 +1435,57 @@ function initSchemaAndMigrate(db: BetterSqlite3.Database, now: () => string): vo
 
 function tableExists(db: BetterSqlite3.Database, name: string): boolean {
   return db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`).get(name) !== undefined;
+}
+
+/**
+ * Brings a database created before reference integrity existed up to the
+ * current `governance_references` shape. `db.exec(SCHEMA_V1)` only runs
+ * `CREATE TABLE IF NOT EXISTS`, so an existing table keeps its original
+ * columns; these `ALTER TABLE ... ADD COLUMN`s supply the rest.
+ *
+ * Deliberately additive and deliberately incomplete as a "migration":
+ *
+ * - every added column is nullable with no default, so **not one existing row
+ *   changes**. Historical aggregate digests are unaffected because
+ *   `governance_references` was never inside them, and historical reference
+ *   rows stay exactly as written — classified `legacy_unprotected`, which is
+ *   the truth about them.
+ * - **nothing is back-filled.** Computing digests over historical rows now
+ *   would prove only that they are self-consistent *today*, while presenting
+ *   itself as evidence they were sealed when written. That is a claim this
+ *   store cannot support, so it does not make it.
+ * - the schema version is **not** bumped. It is checked in both directions
+ *   (`initSchemaAndMigrate` refuses an unrecognized version; `loadAggregate`
+ *   corrupts an aggregate whose stamped version differs), and
+ *   `schema_version` sits inside `metadataDigest` inside `aggregateDigest`.
+ *   Bumping it would make every historical aggregate unreadable and unfixable
+ *   without rewriting history. Reference-integrity versioning is carried
+ *   per-row in `reference_integrity_version` instead.
+ */
+function ensureReferenceIntegritySchema(db: BetterSqlite3.Database): void {
+  const columns = new Set((db.pragma(`table_info(governance_references)`) as { name: string }[]).map((column) => column.name));
+  const additions: readonly (readonly [string, string])[] = [
+    ['sequence', 'INTEGER'],
+    ['reference_integrity_version', 'TEXT'],
+    ['previous_reference_digest', 'TEXT'],
+    ['reference_digest', 'TEXT'],
+  ];
+  for (const [name, type] of additions) {
+    if (!columns.has(name)) db.exec(`ALTER TABLE governance_references ADD COLUMN ${name} ${type}`);
+  }
+  // Declared here rather than in SCHEMA_V1 because on an upgraded database the
+  // column this indexes exists only after the ALTERs above. NULL sequences
+  // (legacy rows) are distinct under SQLite's UNIQUE semantics, so this
+  // constrains protected rows only: two protected references can never claim
+  // the same chain position on one evaluation.
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_gov_references_chain_position ON governance_references(evaluation_id, sequence)`);
+  db.exec(`CREATE TABLE IF NOT EXISTS governance_reference_chains (
+    evaluation_id TEXT PRIMARY KEY REFERENCES governance_evaluations(evaluation_id),
+    integrity_version TEXT NOT NULL,
+    latest_sequence INTEGER NOT NULL,
+    latest_reference_digest TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
 }
 
 /**
