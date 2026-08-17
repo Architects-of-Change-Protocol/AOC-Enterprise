@@ -13,6 +13,7 @@
     { "path": "./packages/grant-revocation" },
     { "path": "./packages/provider-adapter" },
     { "path": "./packages/provider-translation" },
-    { "path": "./packages/pinata-adapter" }
+    { "path": "./packages/pinata-adapter" },
+    { "path": "./packages/tokenization-mandate" }
   ]
 }
