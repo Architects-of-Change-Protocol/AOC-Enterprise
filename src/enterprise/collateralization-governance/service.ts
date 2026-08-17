@@ -400,16 +400,21 @@ export function createCollateralizationGovernanceService(
 
       // Link the committed governance aggregate to the artifact it produced,
       // using the Governance Store's own reference surface rather than a
-      // collateralization-specific side table. `external_artifact` is the
-      // reference type the TokenizationMandate already uses for exactly this
-      // relationship; see `docs/enterprise/AOC_COLLATERALIZE_ACTION.md`,
-      // "Governance reference type", for why a dedicated
-      // `authorization_artifact` type is recommended but deliberately not
-      // introduced in this change.
+      // collateralization-specific side table.
+      //
+      // `authorization_artifact` is the reference type the TokenizationMandate
+      // also uses for exactly this relationship: a mandate is produced and
+      // owned by AOC Enterprise, recording an authorization this enforcement
+      // granted. The external collateral arrangement and its release are
+      // separate observations, recorded as `execution_record` below.
+      //
+      // This classifies; it does not authorize. Reaching this line already
+      // required a persisted allowed Kernel decision and an issued, persisted
+      // mandate — see `docs/enterprise/AOC_COLLATERALIZE_ACTION.md`.
       await governanceStore.appendReference(accessContext, {
         referenceId: nextId('collateralization-reference'),
         evaluationId: appended.evaluationId,
-        referenceType: 'external_artifact',
+        referenceType: 'authorization_artifact',
         externalId: mandate.id,
         externalVersion: ENTERPRISE_COLLATERALIZATION_SCHEMA_VERSION,
         createdAt: now(),

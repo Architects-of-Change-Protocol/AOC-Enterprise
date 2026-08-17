@@ -580,3 +580,138 @@ describe('TOKENIZE — request validation', () => {
     assert.equal(outcome.mandate, undefined);
   });
 });
+
+/**
+ * Evidence classification: what AOC authorized, versus what an external
+ * system later did about it. The `TokenizationMandate` is produced and owned
+ * by AOC Enterprise, so it is an `authorization_artifact`; the token issuance
+ * report describes someone else's action and stays an `execution_record`.
+ *
+ * These tests are about classification only — every enforcement semantic
+ * asserted elsewhere in this file is deliberately untouched.
+ */
+describe('TOKENIZE — governance evidence classification', () => {
+  it('classifies the TokenizationMandate as an authorization_artifact', async () => {
+    const world = buildTokenizationWorld();
+    const outcome = await world.service.requestTokenization(TENANT_A_CONTEXT, TENANT_A, buildStewardRequest());
+    assert.equal(outcome.status, 'allowed');
+    const mandateId = outcome.mandate?.id ?? '';
+
+    const record = await world.governanceStore.getByEvaluationId({ system: true, organizationId: TENANT_A }, outcome.evaluationId);
+    const mandateReference = (record?.references ?? []).find((reference) => reference.externalId === mandateId);
+    assert.ok(mandateReference, 'the mandate must be referenced from its own governance aggregate');
+    assert.equal(mandateReference.referenceType, 'authorization_artifact');
+  });
+
+  it('keeps external token issuance evidence out of the authorization category', async () => {
+    const world = buildTokenizationWorld();
+    const outcome = await world.service.requestTokenization(TENANT_A_CONTEXT, TENANT_A, buildStewardRequest());
+    const mandateId = outcome.mandate?.id ?? '';
+    const recorded = await world.service.recordExecution(TENANT_A_CONTEXT, {
+      mandateId,
+      executorRef: EXECUTOR_REF,
+      executedAt: '2026-02-01T00:00:00.000Z',
+      issuedScope: { kind: 'proportional', basisPoints: 2000 },
+      rights: [...ECONOMIC_RIGHTS],
+      issuedUnits: 1_000,
+      externalSystem: 'external-chain',
+      externalTransactionReference: 'tx-abc',
+    });
+
+    const record = await world.governanceStore.getByEvaluationId({ system: true, organizationId: TENANT_A }, outcome.evaluationId);
+    const executionReference = (record?.references ?? []).find((reference) => reference.externalId === recorded.execution.id);
+    assert.ok(executionReference, 'external execution evidence must be referenced from the same aggregate');
+    assert.equal(executionReference.referenceType, 'execution_record');
+    assert.notEqual(executionReference.referenceType, 'authorization_artifact');
+
+    // One aggregate, both categories, distinguishable: decision -> what AOC
+    // authorized -> what an external system reported doing.
+    const byType = (record?.references ?? []).reduce<Record<string, string[]>>((acc, reference) => {
+      (acc[reference.referenceType] ??= []).push(reference.externalId);
+      return acc;
+    }, {});
+    assert.deepEqual(byType['authorization_artifact'], [mandateId]);
+    assert.deepEqual(byType['execution_record'], [recorded.execution.id]);
+  });
+
+  it('appends no second authorization_artifact when a request is replayed', async () => {
+    const world = buildTokenizationWorld();
+    const submission = buildStewardRequest({ requestId: 'tokenization-request-classify-replay', correlationId: 'correlation-classify-replay' });
+
+    const first = await world.service.requestTokenization(TENANT_A_CONTEXT, TENANT_A, submission);
+    assert.ok(first.mandate);
+    const replay = await world.service.requestTokenization(TENANT_A_CONTEXT, TENANT_A, submission);
+    assert.equal(replay.mandate?.id, first.mandate.id);
+
+    const record = await world.governanceStore.getByEvaluationId({ system: true, organizationId: TENANT_A }, first.evaluationId);
+    const authorizationRefs = (record?.references ?? []).filter((reference) => reference.referenceType === 'authorization_artifact');
+    assert.equal(authorizationRefs.length, 1, 'a replay must not accumulate authorization evidence');
+    assert.equal(authorizationRefs[0]?.externalId, first.mandate.id);
+  });
+
+  it('a denied request produces no authorization_artifact at all', async () => {
+    const world = buildTokenizationWorld();
+    const outcome = await world.service.requestTokenization(
+      TENANT_A_CONTEXT,
+      TENANT_A,
+      buildStewardRequest({ requestedBy: OUTSIDER_ACTOR_ID, context: {} }),
+    );
+    assert.notEqual(outcome.status, 'allowed');
+    assert.equal(outcome.mandate, undefined);
+
+    const record = await world.governanceStore.getByEvaluationId({ system: true, organizationId: TENANT_A }, outcome.evaluationId);
+    assert.equal(
+      (record?.references ?? []).filter((reference) => reference.referenceType === 'authorization_artifact').length,
+      0,
+      'authorization evidence exists only where an authorization was actually issued',
+    );
+  });
+
+  it('an authorization_artifact reference is classification, not authority — appending one grants nothing', async () => {
+    const world = buildTokenizationWorld();
+
+    // A denied request still commits a governance aggregate. Someone with
+    // store access forges the *classification* onto it, naming a mandate that
+    // was never issued.
+    const denied = await world.service.requestTokenization(
+      TENANT_A_CONTEXT,
+      TENANT_A,
+      buildStewardRequest({ requestedBy: OUTSIDER_ACTOR_ID, context: {} }),
+    );
+    assert.notEqual(denied.status, 'allowed');
+
+    await world.governanceStore.appendReference(
+      { system: true, organizationId: TENANT_A },
+      {
+        referenceId: 'ref-forged-authorization',
+        evaluationId: denied.evaluationId,
+        referenceType: 'authorization_artifact',
+        externalId: 'mandate-never-issued',
+        createdAt: '2026-02-01T00:00:00.000Z',
+      },
+    );
+
+    // The forged classification buys nothing. No mandate exists...
+    await expectTokenizationError('TOKENIZATION_MANDATE_NOT_FOUND', () => world.service.getMandate(TENANT_A_CONTEXT, 'mandate-never-issued'));
+    // ...no execution can be recorded against it...
+    await expectTokenizationError('TOKENIZATION_MANDATE_NOT_FOUND', () =>
+      world.service.recordExecution(TENANT_A_CONTEXT, {
+        mandateId: 'mandate-never-issued',
+        executorRef: EXECUTOR_REF,
+        executedAt: '2026-02-01T00:00:00.000Z',
+        issuedScope: { kind: 'proportional', basisPoints: 2000 },
+        rights: [...ECONOMIC_RIGHTS],
+      }),
+    );
+    // ...and the same actor is still denied when it asks again. Authority
+    // comes from the Kernel decision, the Authority Graph, Recognition and
+    // Approval — never from a row in the evidence table.
+    const retry = await world.service.requestTokenization(
+      TENANT_A_CONTEXT,
+      TENANT_A,
+      buildStewardRequest({ requestId: 'tokenization-request-after-forgery', requestedBy: OUTSIDER_ACTOR_ID, context: {} }),
+    );
+    assert.notEqual(retry.status, 'allowed');
+    assert.equal(retry.mandate, undefined);
+  });
+});

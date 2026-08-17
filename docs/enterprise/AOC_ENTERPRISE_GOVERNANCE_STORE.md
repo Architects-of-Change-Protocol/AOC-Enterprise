@@ -362,6 +362,132 @@ auto-repaired; future strategy: quarantine → appended correction →
 Assurance review); multi-node hash-chain coordination; a public analytics
 API; an administrative UI.
 
+## Reference vocabulary
+
+`GovernanceReferenceRecord.referenceType` classifies *what kind of thing* a
+committed evaluation points at. The canonical list is
+`GOVERNANCE_REFERENCE_TYPES` in
+`src/enterprise/governance-store/contracts.ts`; the TypeScript union is
+derived from it, so the type and the value that reaches storage cannot drift
+apart.
+
+| Reference type | Produced by | Means |
+| --- | --- | --- |
+| `passport_event` | AOC Enterprise | an Agent Passport lifecycle event |
+| `evidence_bundle` | AOC Enterprise | an Evidence Bundle built over this evaluation |
+| `assurance_record` | AOC Enterprise | an Assurance assessment or finding artifact |
+| `authorization_artifact` | **AOC Enterprise** | **a durable artifact produced by AOC Enterprise that records or embodies authorization resulting from a governed enforcement decision** |
+| `execution_record` | external system | a report that an external system acted on an authorization AOC issued |
+| `external_artifact` | outside AOC | an artifact originating *outside* the AOC authorization machinery, referenced as evidence or context |
+
+### `authorization_artifact` vs `external_artifact`
+
+The distinction the vocabulary exists to make is **what AOC authorized**
+versus **what an external system later did about it**:
+
+- `authorization_artifact` — AOC-owned durable authorization artifact
+  resulting from enforcement.
+- `external_artifact` — artifact originating outside the AOC authorization
+  machinery.
+
+```
+TokenizationMandate               -> authorization_artifact
+CollateralizationMandate          -> authorization_artifact
+external token issuance record    -> execution_record / external_artifact
+external collateral filing        -> execution_record / external_artifact
+```
+
+In this repository both governed actions record the external side as
+`execution_record`, the more specific canonical type, and reserve
+`external_artifact` for artifacts that are neither AOC authorizations nor
+reports of execution against one. Collapsing the two categories would make
+the record unable to answer the one question an auditor most needs answered.
+
+### Authorization artifact trust boundary
+
+**A reference type is evidence classification. It is never authority.**
+
+Nothing in the runtime reads `referenceType` to decide anything, and
+appending one grants nothing. Authority continues to come only from the
+Kernel decision, the Authority Graph, Recognition Runtime, Approval Runtime,
+policy, and the canonical mandate issuance path. The invariant both governed
+actions satisfy is directional and cannot be run backwards:
+
+```
+governance decision persisted -> allowed result -> mandate issued
+  -> mandate persisted -> reference appended
+```
+
+An `authorization_artifact` reference appended by hand names a mandate that
+does not exist; no enforcement path consults it, so it confers nothing. This
+is covered by tests in
+`src/enterprise/__tests__/governance-authorization-artifact.test.ts` and by a
+"classification, not authority" test in each action's suite.
+
+### Reference vocabulary compatibility
+
+`reference_type` is persisted as free `TEXT` with no `CHECK` constraint.
+Validation is therefore deliberately **asymmetric**:
+
+- **Write** — `assertCanonicalReferenceType` (`store-common.ts`) rejects any
+  value outside `GOVERNANCE_REFERENCE_TYPES` with
+  `GOVERNANCE_STORE_VALIDATION_ERROR`. Both providers call it, so an
+  arbitrary string can never be stored and later cast back out as though it
+  were a classification this build recognizes — which matters most for
+  `authorization_artifact`, the one value that reads as "AOC authorized this".
+- **Read** — deliberately permissive. Reads never reject a stored value, so
+  history written before a vocabulary addition, and rows written by a newer
+  runtime, stay readable instead of turning an intact aggregate into a
+  corruption error.
+
+**Does `referenceType` require version-aware interpretation? No.** The
+existing storage contract is forward-compatible for an added value, on the
+evidence: the column is unconstrained `TEXT`; both schema-version guards
+(`governance_store_versions.schema_version` at open,
+`governance_record_metadata.schema_version` at load) are unaffected by the
+vocabulary; and no code path branches on `referenceType`. Adding
+`authorization_artifact` therefore required **no schema migration and no
+version bump**. Bumping either version would have been actively harmful — it
+would make older runtimes *refuse to open* databases they can read perfectly
+well.
+
+Concretely, an older runtime reading a record written by this build **accepts
+the value verbatim**: it opens the store, loads the aggregate, keeps the
+reference, and returns the exact stored string. It does not reject, fail
+closed, drop the row, or misclassify it as another member. Its one real
+defect is that its declared union no longer describes every value it can
+return — harmless here because nothing branches on the field, and the reason
+a consumer's exhaustive `switch` needs a `default`. This is demonstrated
+against the frozen read path in `governance-authorization-artifact.test.ts`
+rather than asserted.
+
+### Historical classification
+
+Mandates recorded before `authorization_artifact` existed were stored as
+`external_artifact`, which was the only value those runtimes could write.
+**Those rows are left unchanged.** No migration rewrites them.
+
+```
+historical classification   TokenizationMandate/CollateralizationMandate -> external_artifact
+new canonical classification TokenizationMandate/CollateralizationMandate -> authorization_artifact
+```
+
+This follows the Store's append-only model: there is no update path for a
+reference row, `GovernanceCorrectionRecord` is reserved with no v1 API, and
+rewriting past evidence to improve its taxonomy would replace historical
+truth with a present-day opinion. A reader distinguishing the two eras should
+use the record's `createdAt` and the evaluation's `enterpriseVersion`, not
+assume classification has always meant the same thing.
+
+**Limit worth naming:** reference rows are appended *after* the aggregate
+digest is computed (`projection.ts` builds the aggregate with
+`references: []`), so no reference row has ever been covered by the integrity
+digest — tampering with a stored `reference_type` is not detected. That is a
+pre-existing property of the v1 integrity model, not something the new
+vocabulary introduces or widens; see "Integrity model and its limits".
+Bringing references under the digest would invalidate every aggregate digest
+already stored and is separate, breaking work.
+
 ## Future extensions
 
 The `governance_references` table and `GovernanceReferenceRecord` exist

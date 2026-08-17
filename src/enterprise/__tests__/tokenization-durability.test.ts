@@ -283,6 +283,13 @@ describe('TOKENIZE durability — C. execution evidence survives restart', () =>
     assert.ok(referencedIds.includes(mandateId), 'the mandate reference must survive restart');
     assert.ok(referencedIds.includes(recorded.execution.id), 'the execution reference must survive restart');
 
+    // ...and so does their *classification*. Recovering the reference but
+    // losing which of the two is AOC's own authorization would defeat the
+    // point of keeping them apart.
+    const referenceTypesById = new Map((record?.references ?? []).map((reference) => [reference.externalId, reference.referenceType]));
+    assert.equal(referenceTypesById.get(mandateId), 'authorization_artifact');
+    assert.equal(referenceTypesById.get(recorded.execution.id), 'execution_record');
+
     // The recovered issuance total is what the ceiling is enforced against.
     const mandate = await processB.service.getMandate(TENANT_A_CONTEXT, mandateId);
     assert.equal(mandate.issuedUnits, 750_000);

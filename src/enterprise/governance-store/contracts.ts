@@ -222,12 +222,60 @@ export interface GovernanceIntegrityMetadata {
   readonly createdAt: string;
 }
 
-/** A reference from a governance evaluation to a future Passport/Evidence/Assurance/execution artifact. The Store only preserves references; the referenced runtimes do not exist yet. */
+/**
+ * The canonical reference vocabulary, as runtime values. The union on
+ * `GovernanceReferenceRecord.referenceType` is derived from this list so the
+ * type and the value that reaches storage can never drift apart.
+ *
+ * `authorization_artifact` names *what AOC authorized*;
+ * `execution_record` and `external_artifact` name *what someone else then
+ * did about it*. Keeping those apart is the point of the vocabulary — see
+ * `docs/enterprise/AOC_GOVERNANCE_RECORD_MODEL.md`, "Reference vocabulary".
+ *
+ * - `passport_event` — an Agent Passport lifecycle event.
+ * - `evidence_bundle` — an Evidence Bundle built over this evaluation.
+ * - `assurance_record` — an Assurance assessment/finding artifact.
+ * - `execution_record` — a report of an external system acting on an
+ *   authorization AOC issued (token issuance, collateral filing, release).
+ * - `external_artifact` — an artifact originating *outside* the AOC
+ *   authorization machinery, referenced as evidence or context.
+ * - `authorization_artifact` — a durable artifact produced by AOC Enterprise
+ *   that records or embodies authorization resulting from a governed
+ *   enforcement decision (`TokenizationMandate`, `CollateralizationMandate`).
+ *
+ * **A reference type is evidence classification, never authority.** Nothing
+ * in the runtime reads `referenceType` to decide anything; appending one
+ * grants no rights. See "Authorization artifact trust boundary" in the
+ * Governance Store documentation.
+ */
+export const GOVERNANCE_REFERENCE_TYPES = [
+  'passport_event',
+  'evidence_bundle',
+  'assurance_record',
+  'execution_record',
+  'external_artifact',
+  'authorization_artifact',
+] as const;
+
+export type GovernanceReferenceType = (typeof GOVERNANCE_REFERENCE_TYPES)[number];
+
+/**
+ * True when `value` is a reference type this build knows. Used to reject
+ * unknown values on *write*; reads stay deliberately permissive so records
+ * written by a newer runtime, and history written by an older one, both stay
+ * readable. See "Reference vocabulary compatibility" in the Governance Store
+ * documentation.
+ */
+export function isCanonicalGovernanceReferenceType(value: string): value is GovernanceReferenceType {
+  return (GOVERNANCE_REFERENCE_TYPES as readonly string[]).includes(value);
+}
+
+/** A reference from a governance evaluation to a Passport/Evidence/Assurance/execution/authorization artifact. The Store only preserves references; it never interprets them as authority. */
 export interface GovernanceReferenceRecord {
   readonly referenceId: string;
   readonly evaluationId: string;
 
-  readonly referenceType: 'passport_event' | 'evidence_bundle' | 'assurance_record' | 'execution_record' | 'external_artifact';
+  readonly referenceType: GovernanceReferenceType;
 
   readonly externalId: string;
   readonly externalVersion?: string;
