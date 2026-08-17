@@ -14,7 +14,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
-    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'",
+    "test": "node scripts/compute-demo-pinata-boundary-evidence.mjs && tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'",
     "demo": "npm run build && node dist/cli.js"
   },
   "files": [

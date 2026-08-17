@@ -1,8 +1,9 @@
+import { existsSync, readFileSync } from 'fs';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { PINATA_PROVIDER_SYSTEM, createPinataProviderCapabilityDeclaration, executePinataProviderTranslation } from '@aoc-enterprise/pinata-adapter';
-import type { EnterpriseProviderConformanceHarness } from '@aoc-enterprise/provider-conformance-suite';
+import type { EnterpriseProviderConformanceBoundaryResult, EnterpriseProviderConformanceHarness } from '@aoc-enterprise/provider-conformance-suite';
 import { runEnterpriseProviderConformanceSuite } from '@aoc-enterprise/provider-conformance-suite';
 
 import { createMockPinataProviderClient } from '../src/mock-pinata-client.js';
@@ -18,6 +19,29 @@ import { createMockPinataProviderClient } from '../src/mock-pinata-client.js';
  */
 
 const FIXED_NOW = '2026-08-04T09:00:00.000Z';
+
+/**
+ * Boundary validation is required for certification — a harness omitting it
+ * *fails* the check rather than skipping it, because a Provider Adapter
+ * cannot be certified without proving no provider SDK leaks outside its own
+ * declared file(s). The suite performs no filesystem I/O itself, so
+ * `scripts/compute-demo-pinata-boundary-evidence.mjs` — wired in as the first
+ * step of this package's `npm test` — runs a REAL scan of the current working
+ * tree and writes its result here, rather than this test hard-coding an
+ * importer-file list that could go stale. `process.cwd()` is the package root
+ * for any `npm test` invocation (root-level, per-workspace, or run directly
+ * from this package), matching the compute script's own output path.
+ */
+const PINATA_BOUNDARY_EVIDENCE_PATH = `${process.cwd()}/dist-test/pinata-boundary-evidence.json`;
+
+function loadRealPinataBoundaryEvidence(): EnterpriseProviderConformanceBoundaryResult {
+  if (!existsSync(PINATA_BOUNDARY_EVIDENCE_PATH)) {
+    throw new Error(
+      `Missing real Pinata SDK import-boundary evidence at '${PINATA_BOUNDARY_EVIDENCE_PATH}'. Run 'npm test' (which runs scripts/compute-demo-pinata-boundary-evidence.mjs as its first step) rather than invoking 'node --test' directly.`,
+    );
+  }
+  return JSON.parse(readFileSync(PINATA_BOUNDARY_EVIDENCE_PATH, 'utf8')) as EnterpriseProviderConformanceBoundaryResult;
+}
 
 function buildDemoHarness(): EnterpriseProviderConformanceHarness {
   const client = createMockPinataProviderClient();
@@ -42,6 +66,7 @@ function buildDemoHarness(): EnterpriseProviderConformanceHarness {
       return undefined;
     },
     execute: (candidate) => executePinataProviderTranslation(candidate, client, { now: () => FIXED_NOW }),
+    boundaryEvaluation: loadRealPinataBoundaryEvidence(),
   };
 }
 
