@@ -338,10 +338,20 @@ export function createTokenizationGovernanceService(deps: TokenizationGovernance
       // Link the committed governance aggregate to the artifact it produced,
       // using the Governance Store's own reference surface rather than a
       // tokenization-specific side table.
+      //
+      // `authorization_artifact`, not `external_artifact`: the
+      // TokenizationMandate is produced and owned by AOC Enterprise as the
+      // durable record of an authorization this enforcement just granted.
+      // External token issuance is a different thing entirely and is recorded
+      // separately as `execution_record` in `recordExecution` below.
+      //
+      // This classifies; it does not authorize. Reaching this line already
+      // required a persisted allowed Kernel decision and an issued, persisted
+      // mandate — see `docs/enterprise/AOC_TOKENIZE_ACTION.md`.
       await governanceStore.appendReference(accessContext, {
         referenceId: nextId('tokenization-reference'),
         evaluationId: appended.evaluationId,
-        referenceType: 'external_artifact',
+        referenceType: 'authorization_artifact',
         externalId: mandate.id,
         externalVersion: ENTERPRISE_TOKENIZATION_SCHEMA_VERSION,
         createdAt: now(),

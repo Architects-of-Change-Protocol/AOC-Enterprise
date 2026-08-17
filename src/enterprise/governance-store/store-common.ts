@@ -5,7 +5,7 @@ import { GovernanceStoreError } from './errors.js';
 import { computeDigest } from './digest.js';
 import { redactSensitiveValues } from './redaction.js';
 import { eventRecordDigestInput } from './projection.js';
-import { GOVERNANCE_STORE_CONTRACT_IDS, type GovernanceEventRecord, type GovernanceRecord, type GovernanceRecordSummary, type GovernanceStoreAccessContext, type GovernanceStoreQuery } from './contracts.js';
+import { GOVERNANCE_REFERENCE_TYPES, GOVERNANCE_STORE_CONTRACT_IDS, isCanonicalGovernanceReferenceType, type GovernanceEventRecord, type GovernanceRecord, type GovernanceRecordSummary, type GovernanceStoreAccessContext, type GovernanceStoreQuery } from './contracts.js';
 
 /**
  * Provider-independent Governance Store semantics: access-scope
@@ -62,6 +62,28 @@ export function decodeQueryCursor(cursor: string): number {
     // fall through to the structured error below
   }
   throw new GovernanceStoreError('GOVERNANCE_STORE_VALIDATION_ERROR', 'The query cursor is not a cursor this store issued.');
+}
+
+/**
+ * Write-path guard for the reference vocabulary. Both store implementations
+ * call this before persisting, so an unknown string can never be stored and
+ * later cast back as though it were a classification this build recognizes —
+ * which matters most for `authorization_artifact`, the one value that reads
+ * as "AOC authorized this".
+ *
+ * This is deliberately **write-only**. The read path stays permissive: a
+ * value written by a newer runtime, or historical rows written before a
+ * value was added, must remain readable rather than turning a stored
+ * aggregate into a corruption error. See the Governance Store
+ * documentation, "Reference vocabulary compatibility".
+ */
+export function assertCanonicalReferenceType(referenceType: string): void {
+  if (!isCanonicalGovernanceReferenceType(referenceType)) {
+    throw new GovernanceStoreError(
+      'GOVERNANCE_STORE_VALIDATION_ERROR',
+      `referenceType '${referenceType}' is not a canonical Governance Store reference type; expected one of ${GOVERNANCE_REFERENCE_TYPES.join(', ')}.`,
+    );
+  }
 }
 
 export function toGovernanceRecordSummary(record: GovernanceRecord): GovernanceRecordSummary {

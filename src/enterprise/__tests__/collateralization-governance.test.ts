@@ -635,3 +635,116 @@ describe('COLLATERALIZE — boundary', () => {
     assert.notEqual(second.mandate?.id, first.mandate?.id);
   });
 });
+
+/**
+ * Evidence classification: what AOC authorized, versus what an external
+ * system later did about it. The `CollateralizationMandate` is produced and
+ * owned by AOC Enterprise, so it is an `authorization_artifact`; the external
+ * collateral arrangement and its release are reports about someone else's
+ * actions and stay `execution_record`s.
+ *
+ * These tests are about classification only — every enforcement semantic
+ * asserted elsewhere in this file is deliberately untouched.
+ */
+describe('COLLATERALIZE — governance evidence classification', () => {
+  it('classifies the CollateralizationMandate as an authorization_artifact', async () => {
+    const world = buildCollateralizationWorld();
+    const outcome = await world.service.requestCollateralization(TENANT_A_CONTEXT, COLLATERAL_TENANT_A, buildCollateralStewardRequest());
+    assert.equal(outcome.status, 'allowed');
+    const mandateId = outcome.mandate?.id ?? '';
+
+    const record = await world.governanceStore.getByEvaluationId({ system: true, organizationId: COLLATERAL_TENANT_A }, outcome.evaluationId);
+    const mandateReference = (record?.references ?? []).find((reference) => reference.externalId === mandateId);
+    assert.ok(mandateReference, 'the mandate must be referenced from its own governance aggregate');
+    assert.equal(mandateReference.referenceType, 'authorization_artifact');
+  });
+
+  it('keeps external collateral execution and release evidence out of the authorization category', async () => {
+    const world = buildCollateralizationWorld();
+    const outcome = await world.service.requestCollateralization(TENANT_A_CONTEXT, COLLATERAL_TENANT_A, buildCollateralStewardRequest());
+    const mandateId = outcome.mandate?.id ?? '';
+    const executed = await world.service.recordExecution(TENANT_A_CONTEXT, buildConformingExecution(mandateId, { executionId: 'exec-classify-1' }));
+    const release = await world.service.recordRelease(TENANT_A_CONTEXT, {
+      mandateId,
+      executionId: executed.execution.id,
+      reportedBy: COLLATERAL_EXECUTOR_REF,
+      releasedAt: '2026-03-01T00:00:00.000Z',
+      releaseType: ENTERPRISE_COLLATERAL_RELEASE_TYPES.TERMINATED,
+    });
+
+    const record = await world.governanceStore.getByEvaluationId({ system: true, organizationId: COLLATERAL_TENANT_A }, outcome.evaluationId);
+    const byId = new Map((record?.references ?? []).map((reference) => [reference.externalId, reference]));
+
+    assert.equal(byId.get(mandateId)?.referenceType, 'authorization_artifact');
+    assert.equal(byId.get(executed.execution.id)?.referenceType, 'execution_record');
+    assert.equal(byId.get(release.id)?.referenceType, 'execution_record');
+
+    // The whole lineage in one aggregate, with exactly one authorization in it:
+    // decision -> what AOC authorized -> what was externally done -> what was
+    // externally released.
+    const authorizationRefs = (record?.references ?? []).filter((reference) => reference.referenceType === 'authorization_artifact');
+    assert.deepEqual(
+      authorizationRefs.map((reference) => reference.externalId),
+      [mandateId],
+      'neither an external execution nor a release may ever be classified as authorization',
+    );
+  });
+
+  it('appends no second authorization_artifact when a request is replayed', async () => {
+    const world = buildCollateralizationWorld();
+    const input = buildCollateralStewardRequest({
+      requestId: 'collateralization-request-classify-replay',
+      correlationId: 'collateralization-correlation-classify-replay',
+    });
+
+    const first = await world.service.requestCollateralization(TENANT_A_CONTEXT, COLLATERAL_TENANT_A, input);
+    const second = await world.service.requestCollateralization(TENANT_A_CONTEXT, COLLATERAL_TENANT_A, input);
+    assert.equal(second.mandate?.id, first.mandate?.id);
+
+    const record = await world.governanceStore.getByEvaluationId({ system: true, organizationId: COLLATERAL_TENANT_A }, first.evaluationId);
+    const authorizationRefs = (record?.references ?? []).filter((reference) => reference.referenceType === 'authorization_artifact');
+    assert.equal(authorizationRefs.length, 1, 'a replay must not accumulate authorization evidence');
+    assert.equal(authorizationRefs[0]?.externalId, first.mandate?.id);
+  });
+
+  it('an authorization_artifact reference is classification, not authority — appending one grants nothing', async () => {
+    const world = buildCollateralizationWorld();
+
+    const denied = await world.service.requestCollateralization(
+      TENANT_A_CONTEXT,
+      COLLATERAL_TENANT_A,
+      buildCollateralStewardRequest({ requestedBy: COLLATERAL_OUTSIDER_ACTOR_ID, context: {} }),
+    );
+    assert.notEqual(denied.status, 'allowed');
+    assert.equal(denied.mandate, undefined);
+
+    await world.governanceStore.appendReference(
+      { system: true, organizationId: COLLATERAL_TENANT_A },
+      {
+        referenceId: 'ref-forged-collateral-authorization',
+        evaluationId: denied.evaluationId,
+        referenceType: 'authorization_artifact',
+        externalId: 'collateral-mandate-never-issued',
+        createdAt: '2026-02-01T00:00:00.000Z',
+      },
+    );
+
+    // No mandate exists, so nothing can be executed against the forged
+    // classification, and the same actor is still refused. Authority comes
+    // from the governed decision path, never from evidence vocabulary.
+    await expectCollateralizationError('COLLATERALIZATION_MANDATE_NOT_FOUND', () =>
+      world.service.getMandate(TENANT_A_CONTEXT, 'collateral-mandate-never-issued'),
+    );
+    await expectCollateralizationError('COLLATERALIZATION_MANDATE_NOT_FOUND', () =>
+      world.service.recordExecution(TENANT_A_CONTEXT, buildConformingExecution('collateral-mandate-never-issued', { executionId: 'exec-forged' })),
+    );
+
+    const retry = await world.service.requestCollateralization(
+      TENANT_A_CONTEXT,
+      COLLATERAL_TENANT_A,
+      buildCollateralStewardRequest({ requestId: 'collateralization-request-after-forgery', requestedBy: COLLATERAL_OUTSIDER_ACTOR_ID, context: {} }),
+    );
+    assert.notEqual(retry.status, 'allowed');
+    assert.equal(retry.mandate, undefined);
+  });
+});

@@ -523,32 +523,46 @@ semantics. Each is recorded above so a third enforcement can settle it.
 
 ### Governance reference type
 
-Both `TokenizationMandate` and `CollateralizationMandate` are recorded as
-`GovernanceReferenceRecord`s with `referenceType: 'external_artifact'`, because
-no `authorization_artifact` type exists.
+**Resolved.** `authorization_artifact` was introduced as a canonical
+Governance Store reference type in a dedicated follow-up, exactly as
+recommended below, and both mandates now use it:
 
-There are now two grant-shaped mandate artifacts, and both are semantically
-authorization artifacts rather than arbitrary external ones — so the case is
-materially stronger than it was with one. `'external_artifact'` is a real
-mislabel: it says "some artifact outside AOC" about a record AOC itself
-produced and owns.
+```
+COLLATERALIZE decision
+      ↓
+CollateralizationMandate         → authorization_artifact   (produced by AOC Enterprise)
+      ↓
+external collateral execution    → execution_record         (reported by an external system)
+      ↓
+external release / discharge     → execution_record         (reported by an external system)
+```
 
-It is **not** introduced in this change, and the reason is compatibility rather
-than doubt about the semantics. `GovernanceReferenceRecord.referenceType` is a
-closed union that the SQLite Governance Store persists as free `TEXT` and casts
-back on read, with no `CHECK` constraint and no schema-version bump available
-for reference rows. Adding a member is source-compatible, but *emitting* it
-changes the stored value for records both actions already write — so a store
-written by a newer runtime would hand a value an older runtime's cast silently
-mistypes. That is a Governance Store change with its own migration and
-version-guard story, and it belongs in that module's own change rather than
-riding along with a new governed action.
+`external_artifact` said "some artifact outside AOC" about a record AOC itself
+produced and owns; `authorization_artifact` says what the record actually is —
+a durable artifact recording authorization resulting from enforcement. The
+external collateral arrangement and its release are observations about someone
+else's actions and remain `execution_record`s; neither is ever reclassified as
+authorization.
 
-**Recommendation: introduce `authorization_artifact` as a dedicated follow-up
-to the Governance Store**, covering the union member, the schema-version
-handling for existing reference rows, and the migration of both actions'
-emitted values together. The evidence for it is now sufficient; the safe
-sequencing is not to bundle it here.
+The compatibility concern that deferred it was resolved rather than accepted.
+`referenceType` is persisted as free `TEXT` with no `CHECK`, and both
+schema-version guards are indifferent to the vocabulary, so the stored contract
+turned out to be forward-compatible for an added value: **no schema migration
+and no version bump were required**, and an older runtime reading the new value
+accepts it verbatim rather than failing. What the change did add is a
+*write-path* guard, so an unknown string can no longer be stored and cast back
+out as though it were a recognized classification. Mandates recorded before the
+type existed keep their historical `external_artifact` classification and are
+not rewritten. The full compatibility argument, with its evidence, lives in
+"Reference vocabulary" in `AOC_ENTERPRISE_GOVERNANCE_STORE.md`.
+
+The original recommendation, kept for the record:
+
+> **Recommendation: introduce `authorization_artifact` as a dedicated follow-up
+> to the Governance Store**, covering the union member, the schema-version
+> handling for existing reference rows, and the migration of both actions'
+> emitted values together. The evidence for it is now sufficient; the safe
+> sequencing is not to bundle it here.
 
 ## Protocol boundary
 

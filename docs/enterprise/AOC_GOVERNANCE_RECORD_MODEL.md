@@ -151,9 +151,22 @@ not a signature, not non-repudiation.
 
 `referenceId`, `evaluationId`, `referenceType` (`passport_event |
 evidence_bundle | assurance_record | execution_record |
-external_artifact`), `externalId`, `externalVersion?`, `digest?`, `uri?`,
-`createdAt`. The Store preserves references; the referenced runtimes do
-not exist yet.
+external_artifact | authorization_artifact`), `externalId`,
+`externalVersion?`, `digest?`, `uri?`, `createdAt`. The canonical list is
+`GOVERNANCE_REFERENCE_TYPES`; the union is derived from it.
+
+`authorization_artifact` names a durable artifact **produced by AOC
+Enterprise** that records or embodies authorization resulting from a governed
+enforcement decision — today `TokenizationMandate` and
+`CollateralizationMandate`. `external_artifact` is reserved for artifacts
+originating **outside** the AOC authorization machinery, and
+`execution_record` for a report that an external system acted on an
+authorization AOC issued. The classification is evidence vocabulary and never
+authority; see "Reference vocabulary" in
+`AOC_ENTERPRISE_GOVERNANCE_STORE.md` for the trust boundary, the
+compatibility rules, and how historical rows are treated.
+
+The Store preserves references; it never interprets them as authority.
 
 ### GovernanceCorrectionRecord (reserved)
 

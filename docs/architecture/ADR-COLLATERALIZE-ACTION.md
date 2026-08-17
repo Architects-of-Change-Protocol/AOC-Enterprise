@@ -183,6 +183,14 @@ framework.
   version-guard story; bundling it with a new governed action would put a
   persistence-compatibility change where reviewers are not looking for one. It
   is recommended as a dedicated follow-up covering both actions together.
+  **Since resolved:** that follow-up landed, and both mandates are now
+  classified `authorization_artifact`. The compatibility question came back
+  "no schema migration, no version bump" — `reference_type` is unconstrained
+  `TEXT` and both schema-version guards are indifferent to the vocabulary — so
+  the change was an added union member, a write-path validity guard, and the
+  two emitted values. Historical `external_artifact` rows are left unrewritten.
+  See "Reference vocabulary" in
+  `docs/enterprise/AOC_ENTERPRISE_GOVERNANCE_STORE.md`.
 - No AOC Protocol change was required or is recommended. Enterprise maintains
   the complete collateralization authority/evidence lineage on its own;
   Protocol supplied only `ResourceRef`. `COLLATERALIZE` suggests an

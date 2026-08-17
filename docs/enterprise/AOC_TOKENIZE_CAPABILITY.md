@@ -335,6 +335,34 @@ mandate and each execution record are linked back to their governance
 aggregate through the Governance Store's own `appendReference` surface —
 there is no tokenization-specific audit log.
 
+#### Evidence classification
+
+The two sides of that chain are classified differently, and keeping them
+apart is the point:
+
+```
+TOKENIZE decision
+      ↓
+TokenizationMandate          → authorization_artifact   (produced by AOC Enterprise)
+      ↓
+external token execution     → execution_record         (reported by an external system)
+```
+
+The `TokenizationMandate` is recorded as a `GovernanceReferenceRecord` with
+`referenceType: 'authorization_artifact'` — the Governance Store type for a
+durable artifact AOC Enterprise itself produced to record an authorization
+resulting from enforcement. External token issuance is a report about
+someone else's action and stays an `execution_record`; it is never
+reclassified as authorization.
+
+This preserves the conceptual hierarchy — AOC Enterprise → Governed Actions →
+Enforcements → Grants / Mandates — in the evidence record itself. The
+classification is evidence vocabulary only: it confers no authority, and a
+reference appended by hand grants nothing. See "Reference vocabulary" in
+`AOC_ENTERPRISE_GOVERNANCE_STORE.md` for the trust boundary and for how
+mandates recorded before this type existed (as `external_artifact`) are
+treated.
+
 A reviewer can answer, from the canonical records alone: *why was this
 permitted, what exactly was permitted, who had the authority to permit it,
 and was the external execution consistent with the authorization?*

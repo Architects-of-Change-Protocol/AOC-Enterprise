@@ -16,6 +16,8 @@ export {
   GOVERNANCE_STORE_SCHEMA_VERSION,
   GOVERNANCE_STORE_CONTRACT_IDS,
   GOVERNANCE_MIGRATION_SOURCE_PR_002,
+  GOVERNANCE_REFERENCE_TYPES,
+  isCanonicalGovernanceReferenceType,
   toGovernanceReplayMetadata,
 } from './contracts.js';
 export type {
@@ -31,6 +33,7 @@ export type {
   GovernanceRecordMetadata,
   GovernanceIntegrityMetadata,
   GovernanceReferenceRecord,
+  GovernanceReferenceType,
   GovernanceCorrectionRecord,
   GovernanceReplayMetadata,
   GovernanceStoreAccessContext,

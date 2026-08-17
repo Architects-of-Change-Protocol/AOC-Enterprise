@@ -34,6 +34,7 @@ import { computeDigest } from './digest.js';
 import { verifyGovernanceRecordIntegrity } from './verification.js';
 import { resolveStoreOptions, toLegacyAppendInput, type CreateGovernanceStoreOptions } from './in-memory-governance-store.js';
 import {
+  assertCanonicalReferenceType,
   canSeeRecord,
   decodeQueryCursor,
   encodeQueryCursor,
@@ -647,6 +648,11 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
     return {
       referenceId: row.reference_id,
       evaluationId: row.evaluation_id,
+      // Deliberately permissive: the write path (`assertCanonicalReferenceType`)
+      // is what keeps unknown values out of this column. Reads never reject a
+      // stored value, so history written before a vocabulary addition — and
+      // rows written by a newer runtime — stay readable instead of turning an
+      // otherwise intact aggregate into a corruption error.
       referenceType: row.reference_type as GovernanceReferenceRecord['referenceType'],
       externalId: row.external_id,
       ...(row.external_version !== null ? { externalVersion: row.external_version } : {}),
@@ -988,6 +994,7 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
 
     async appendReference(context, reference) {
       assertOpen();
+      assertCanonicalReferenceType(reference.referenceType);
       const record = loadVisibleRecord(context, reference.evaluationId);
       if (record === null) {
         throw new GovernanceStoreError('GOVERNANCE_RECORD_NOT_FOUND', `No governance record for evaluationId '${reference.evaluationId}' within this scope.`);

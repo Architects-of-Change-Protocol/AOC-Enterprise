@@ -318,6 +318,14 @@ describe('COLLATERALIZE durability — C. external evidence and lineage survive 
     assert.ok(referencedIds.includes(mandateId));
     assert.ok(referencedIds.includes('exec-a'));
     assert.ok(referencedIds.includes('exec-b'));
+
+    // ...and so does their *classification*. Recovering the reference but
+    // losing which of the three is AOC's own authorization would defeat the
+    // point of keeping them apart.
+    const referenceTypesById = new Map((record.references ?? []).map((reference) => [reference.externalId, reference.referenceType]));
+    assert.equal(referenceTypesById.get(mandateId), 'authorization_artifact');
+    assert.equal(referenceTypesById.get('exec-a'), 'execution_record');
+    assert.equal(referenceTypesById.get('exec-b'), 'execution_record');
     const verification = await processB.governanceStore.verify({ system: true, organizationId: COLLATERAL_TENANT_A }, outcome.evaluationId);
     assert.equal(verification.valid, true, `governance record integrity failed: ${JSON.stringify(verification.failures)}`);
     await processB.close();
