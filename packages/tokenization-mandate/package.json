@@ -1,0 +1,25 @@
+{
+  "name": "@aoc-enterprise/tokenization-mandate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral, immutable contracts for the TOKENIZE governed capability: the request to tokenize specified rights of a governed asset, the durable TokenizationMandate that authorizes it, and the evidence of the external issuance performed under it. Contains no blockchain client, token standard, wallet, key, minting, custody, or provider adapter.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope"
+  }
+}

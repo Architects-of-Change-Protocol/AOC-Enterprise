@@ -28,6 +28,7 @@
     { "path": "./packages/runtime-negotiation" },
     { "path": "./packages/scoped-access" },
     { "path": "./packages/tenant-governance" },
+    { "path": "./packages/tokenization-mandate" },
     { "path": "./packages/usage-event" }
   ]
 }
