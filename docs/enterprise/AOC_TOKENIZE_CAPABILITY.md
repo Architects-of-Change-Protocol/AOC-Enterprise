@@ -475,3 +475,27 @@ Explicitly outside this capability, and deliberately not implied by it:
   Access Governance earns a config entry, this module should follow in the
   same change.
 - Protocol changes: none were required
+
+## Update — the fourth enforcement
+
+With `LICENSE` and `TRANSFER` (`docs/enterprise/AOC_TRANSFER_ACTION.md`) now
+implemented, the four-enforcement audit settled two questions this action was
+the first to raise:
+
+- **Required executor is not universal.** `TOKENIZE` binds one because minting
+  is an act someone must perform externally. `LICENSE` and `TRANSFER` make it
+  optional, so the binding is a property of *acts that require a performer*
+  rather than of governed actions generally.
+- **`TOKENIZE` is the only one of four with no lifecycle evidence**, and the
+  reason is now explicable rather than merely observed: minting produces a
+  token whose own subsequent life — burned, moved, split — would be a governed
+  act *over the token*, not a report about the minting. The other three each
+  leave a standing external arrangement that the same arrangement can later be
+  reported to have exited.
+
+`TOKENIZE` now consumes the shared, action-neutral vocabulary in
+`@aoc-enterprise/governed-authorization` (the governed-right categories, the
+rights-scope value type, the authorization-artifact skeleton and the execution
+evidence envelope) via aliases and interface extension. No serialized byte,
+stored record, consumer, validator or error code changed. See
+`docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md`.

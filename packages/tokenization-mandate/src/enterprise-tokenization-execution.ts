@@ -1,4 +1,7 @@
 import type { CanonicalId, UtcDateTime } from '@aoc/protocol';
+// Type-only specifiers are kept on one line deliberately: `scripts/check-duplicate-semantic-contracts.mjs`
+// treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
+import type { GovernedExecutionEvidenceCore } from '@aoc-enterprise/governed-authorization';
 
 import {
   ENTERPRISE_TOKENIZATION_SCHEMA_VERSION,
@@ -45,12 +48,11 @@ import type { EnterpriseTokenizationScope, EnterpriseTokenizationTermsValidation
  *
  * Ownership: AOC Enterprise (`@aoc-enterprise/tokenization-mandate`).
  */
-export interface EnterpriseTokenizationExecutionEvidence {
+export interface EnterpriseTokenizationExecutionEvidence extends GovernedExecutionEvidenceCore {
+  /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
   readonly schemaVersion: typeof ENTERPRISE_TOKENIZATION_SCHEMA_VERSION;
-  readonly id: CanonicalId;
-  readonly mandateRef: CanonicalId;
+  /** The party bound to mint the token. Always checked -- minting is an act someone must perform externally. Declared here rather than inherited, because `LICENSE` and `TRANSFER` carry an unbound `executedBy` observation instead; see `GovernedExecutionEvidenceCore`. */
   readonly executorRef: CanonicalId;
-  readonly executedAt: UtcDateTime;
   /** The portion of the mandate's rights this issuance actually represented -- never wider than the mandate's own scope. */
   readonly issuedScope: EnterpriseTokenizationScope;
   readonly rights: readonly EnterpriseTokenizedRightType[];

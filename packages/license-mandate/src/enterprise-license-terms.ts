@@ -1,4 +1,8 @@
 import type { CanonicalId, UtcDateTime } from '@aoc/protocol';
+import { GOVERNED_RIGHTS_SCOPE_FULL_BASIS_POINTS, GOVERNED_RIGHT_TYPES, governedRightTypes, governedRightsScopeEquals, isGovernedRightType, serializeGovernedRightsScope } from '@aoc-enterprise/governed-authorization';
+// Type-only specifiers are kept on one line deliberately: `scripts/check-duplicate-semantic-contracts.mjs`
+// treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
+import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
 
 /**
  * The shared vocabulary of the `LICENSE` governed action: what a licensing
@@ -146,15 +150,9 @@ export function isEnterpriseLicenseCapability(capability: unknown): capability i
  * license effectively does), and `LICENSE != TRANSFER` still holds
  * throughout.
  */
-export const ENTERPRISE_LICENSABLE_RIGHT_TYPES = {
-  ECONOMIC_INTEREST: 'economic-interest',
-  REVENUE_RIGHT: 'revenue-right',
-  OWNERSHIP_INTEREST: 'ownership-interest',
-  USAGE_RIGHT: 'usage-right',
-  CONTRACTUAL_CLAIM: 'contractual-claim',
-} as const;
+export const ENTERPRISE_LICENSABLE_RIGHT_TYPES = GOVERNED_RIGHT_TYPES;
 
-export type EnterpriseLicensableRightType = (typeof ENTERPRISE_LICENSABLE_RIGHT_TYPES)[keyof typeof ENTERPRISE_LICENSABLE_RIGHT_TYPES];
+export type EnterpriseLicensableRightType = GovernedRightType;
 
 /**
  * The canonical vocabulary of governed uses a license may permit.
@@ -308,12 +306,10 @@ export type EnterpriseLicenseDisposition = (typeof ENTERPRISE_LICENSE_DISPOSITIO
  * and fails closed rather than coercing one into the other. See
  * `enterpriseLicenseRightsScopeWithin`.
  */
-export type EnterpriseLicenseRightsScope =
-  | { readonly kind: 'proportional'; readonly basisPoints: number }
-  | { readonly kind: 'unitized'; readonly units: number; readonly unitDenomination: string };
+export type EnterpriseLicenseRightsScope = GovernedRightsScope;
 
 /** The whole of the named rights, expressed proportionally. Provided so "100%" never has to be spelled as a magic number at call sites. */
-export const ENTERPRISE_LICENSE_FULL_BASIS_POINTS = 10_000 as const;
+export const ENTERPRISE_LICENSE_FULL_BASIS_POINTS = GOVERNED_RIGHTS_SCOPE_FULL_BASIS_POINTS;
 
 /**
  * A declared ceiling on the size of one granted license, expressed as an
@@ -491,13 +487,13 @@ export function licenseOptionalStringArrayEquals(a: readonly string[] | undefine
   return licenseStringArrayEquals(a, b);
 }
 
-const RIGHT_TYPES: readonly EnterpriseLicensableRightType[] = Object.values(ENTERPRISE_LICENSABLE_RIGHT_TYPES);
+const RIGHT_TYPES: readonly EnterpriseLicensableRightType[] = governedRightTypes();
 const USE_TYPES: readonly EnterpriseLicensedUseType[] = Object.values(ENTERPRISE_LICENSED_USE_TYPES);
 const EXCLUSIVITY_LEVELS: readonly EnterpriseLicenseExclusivity[] = Object.values(ENTERPRISE_LICENSE_EXCLUSIVITY_LEVELS);
 const DISPOSITIONS: readonly EnterpriseLicenseDisposition[] = Object.values(ENTERPRISE_LICENSE_DISPOSITIONS);
 
 export function isEnterpriseLicensableRightType(value: unknown): value is EnterpriseLicensableRightType {
-  return typeof value === 'string' && RIGHT_TYPES.includes(value as EnterpriseLicensableRightType);
+  return isGovernedRightType(value);
 }
 
 export function isEnterpriseLicensedUseType(value: unknown): value is EnterpriseLicensedUseType {
@@ -541,8 +537,7 @@ export function enterpriseLicenseRightsScopeEquals(
   b: EnterpriseLicenseRightsScope | undefined,
 ): boolean {
   if (a === undefined || b === undefined) return a === b;
-  if (a.kind === 'proportional') return b.kind === 'proportional' && a.basisPoints === b.basisPoints;
-  return b.kind === 'unitized' && a.units === b.units && a.unitDenomination === b.unitDenomination;
+  return governedRightsScopeEquals(a, b);
 }
 
 /**
@@ -1004,9 +999,7 @@ export interface SerializedEnterpriseLicenseTerms {
 
 /** Projects a rights scope to a plain, field-ordered object. Shared by every contract in this package that carries one. */
 export function serializeEnterpriseLicenseRightsScope(scope: EnterpriseLicenseRightsScope): EnterpriseLicenseRightsScope {
-  return scope.kind === 'proportional'
-    ? { kind: 'proportional', basisPoints: scope.basisPoints }
-    : { kind: 'unitized', units: scope.units, unitDenomination: scope.unitDenomination };
+  return serializeGovernedRightsScope(scope);
 }
 
 /** Projects an operating-context map to a deterministically-ordered plain object: dimensions sorted, values sorted. */

@@ -1,4 +1,7 @@
 import type { CanonicalId, UtcDateTime } from '@aoc/protocol';
+// Type-only specifiers are kept on one line deliberately: `scripts/check-duplicate-semantic-contracts.mjs`
+// treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
+import type { GovernedExecutionEvidenceCore, GovernedLifecycleEvidenceCore } from '@aoc-enterprise/governed-authorization';
 
 import {
   ENTERPRISE_COLLATERALIZATION_SCHEMA_VERSION,
@@ -57,12 +60,11 @@ import type { EnterpriseCollateralizableRightType, EnterpriseCollateralizationSc
  *
  * Ownership: AOC Enterprise (`@aoc-enterprise/collateralization-mandate`).
  */
-export interface EnterpriseCollateralizationExecutionEvidence {
+export interface EnterpriseCollateralizationExecutionEvidence extends GovernedExecutionEvidenceCore {
+  /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
   readonly schemaVersion: typeof ENTERPRISE_COLLATERALIZATION_SCHEMA_VERSION;
-  readonly id: CanonicalId;
-  readonly mandateRef: CanonicalId;
+  /** The party bound to create the security interest. Always checked -- creating one is an act someone must perform externally. Declared here rather than inherited, because `LICENSE` and `TRANSFER` carry an unbound `executedBy` observation instead; see `GovernedExecutionEvidenceCore`. */
   readonly executorRef: CanonicalId;
-  readonly executedAt: UtcDateTime;
   /** The obligation the arrangement secures, as reported. Checked against the mandate's own before this evidence may be recorded. */
   readonly securedObligationRef: CanonicalId;
   /** The party the arrangement benefits, as reported. Checked against the mandate's own before this evidence may be recorded. */
@@ -132,14 +134,10 @@ export type EnterpriseCollateralReleaseType = (typeof ENTERPRISE_COLLATERAL_RELE
  *
  * Ownership: AOC Enterprise (`@aoc-enterprise/collateralization-mandate`).
  */
-export interface EnterpriseCollateralizationReleaseEvidence {
+export interface EnterpriseCollateralizationReleaseEvidence extends GovernedLifecycleEvidenceCore {
+  /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
   readonly schemaVersion: typeof ENTERPRISE_COLLATERALIZATION_SCHEMA_VERSION;
-  readonly id: CanonicalId;
-  readonly mandateRef: CanonicalId;
-  /** The specific external arrangement being reported as ended. */
-  readonly executionRef: CanonicalId;
-  /** Who reported the release. An opaque party pointer -- typically the executor or the secured party, but AOC neither requires nor infers which. */
-  readonly reportedBy: CanonicalId;
+  /** When the release occurred, as reported. `LICENSE` and `TRANSFER` spell the same concept `occurredAt`; the audit records that divergence as naming rather than meaning, and does not rename a frozen field to tidy it. */
   readonly releasedAt: UtcDateTime;
   readonly releaseType: EnterpriseCollateralReleaseType;
   readonly correlationId: CanonicalId;

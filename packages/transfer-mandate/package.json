@@ -1,0 +1,26 @@
+{
+  "name": "@aoc-enterprise/transfer-mandate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral, immutable contracts for the TRANSFER governed action: the request to move specified governed rights of a governed asset, or a defined portion of them, from a current holder to a recipient, the durable TransferMandate that authorizes it, the evidence of the external movement actually effected under it, and the evidence of what an external system later reported about that movement. Contains no registry integration, transfer agent, custodian, settlement, escrow, payment, pricing, valuation, tax calculation, title system, jurisdiction-specific legal policy, or provider adapter, and no authority-transition mechanism.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/governed-authorization": "file:../governed-authorization",
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope"
+  }
+}

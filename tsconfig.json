@@ -8,6 +8,8 @@
     { "path": "./packages/canonical-runtime-contracts" },
     { "path": "./packages/collateralization-mandate" },
     { "path": "./packages/license-mandate" },
+    { "path": "./packages/governed-authorization" },
+    { "path": "./packages/transfer-mandate" },
     { "path": "./packages/commercial-demo" },
     { "path": "./packages/agent-governance" },
     { "path": "./packages/control-plane" },

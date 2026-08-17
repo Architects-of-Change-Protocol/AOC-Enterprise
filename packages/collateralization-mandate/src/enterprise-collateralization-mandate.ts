@@ -21,6 +21,9 @@ import { readCollateralizationResourceRef, serializeCollateralizationResourceRef
 // treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
 import type { EnterpriseCollateralizableRightType, EnterpriseCollateralizationScope, EnterpriseCollateralizationTerms, EnterpriseCollateralizationTermsValidationCode, EnterpriseSecuredAmount, SerializedEnterpriseCollateralizationTerms } from './enterprise-collateralization-terms.js';
 import type { SerializedEnterpriseCollateralizationRequest } from './enterprise-collateralization-request.js';
+// Type-only specifiers are kept on one line deliberately: `scripts/check-duplicate-semantic-contracts.mjs`
+// treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
+import type { GovernedAuthorizationArtifact, GovernedAuthorizationStatus } from '@aoc-enterprise/governed-authorization';
 
 /**
  * The mandate's own authorization lifecycle -- deliberately not "is this
@@ -51,7 +54,7 @@ import type { SerializedEnterpriseCollateralizationRequest } from './enterprise-
  *   (`EnterpriseCollateralizationReleaseEvidence`) that references the
  *   mandate, never as a status on it.
  */
-export type EnterpriseCollateralizationMandateStatus = 'active' | 'revoked';
+export type EnterpriseCollateralizationMandateStatus = GovernedAuthorizationStatus;
 
 /**
  * The canonical Enterprise-owned contract for **the durable, machine-readable
@@ -95,24 +98,10 @@ export type EnterpriseCollateralizationMandateStatus = 'active' | 'revoked';
  *
  * Ownership: AOC Enterprise (`@aoc-enterprise/collateralization-mandate`).
  */
-export interface EnterpriseCollateralizationMandate {
+export interface EnterpriseCollateralizationMandate extends GovernedAuthorizationArtifact<EnterpriseCollateralizationTerms> {
+  /** Re-declared as this action's own literal so a serialized mandate names its schema on its face and cannot be replayed through a sibling action's contract. */
   readonly schemaVersion: typeof ENTERPRISE_COLLATERALIZATION_SCHEMA_VERSION;
-  readonly id: CanonicalId;
   readonly status: EnterpriseCollateralizationMandateStatus;
-  readonly asset: ResourceRef;
-  readonly terms: EnterpriseCollateralizationTerms;
-  readonly requestRef: CanonicalId;
-  readonly requestedBy: CanonicalId;
-  readonly decisionRef: CanonicalId;
-  readonly effectiveFrom: UtcDateTime;
-  readonly expiresAt: UtcDateTime;
-  readonly correlationId: CanonicalId;
-  readonly evaluationRef?: CanonicalId;
-  readonly issuerRef?: CanonicalId;
-  readonly approvalRefs?: readonly CanonicalId[];
-  readonly obligationRefs?: readonly CanonicalId[];
-  readonly evidenceRefs?: readonly CanonicalId[];
-  readonly auditRefs?: readonly CanonicalId[];
 }
 
 // ---------------------------------------------------------------------------

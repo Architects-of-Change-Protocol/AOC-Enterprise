@@ -618,3 +618,24 @@ DeFi, smart contracts, wallets or blockchain execution; a `RELEASE_COLLATERAL`
 governed action; an HTTP endpoint for this action; publication of the module on
 `@aoc-enterprise/runtime`'s public surface; and the `authorization_artifact`
 governance reference type discussed above.
+
+## Update — the fourth enforcement
+
+`TRANSFER` (`docs/enterprise/AOC_TRANSFER_ACTION.md`) has since landed, and it
+is the second action whose quantity is *consumed* rather than merely bounded.
+Cumulative scope containment — introduced here, and absent from `TOKENIZE` and
+`LICENSE` — is therefore confirmed as a genuine domain property of actions that
+exhaust a finite right, rather than a collateral-specific invention. The reasons
+differ and both are recorded: collateral scope accumulates because encumbering a
+finite right twice exhausts it; transferred scope accumulates because the right
+*left*, and what has left cannot leave again.
+
+`COLLATERALIZE` now consumes the shared, action-neutral vocabulary in
+`@aoc-enterprise/governed-authorization` (the governed-right categories, the
+rights-scope value type, the authorization-artifact skeleton and the evidence
+envelopes) via aliases and interface extension. No serialized byte, stored
+record, consumer, validator or error code changed. `releasedAt` / `releaseType`
+were deliberately **not** renamed to match the `occurredAt` / `lifecycleType`
+spelling `LICENSE` and `TRANSFER` share — the audit records that divergence as
+naming rather than meaning, and does not rename a frozen field to tidy it. See
+`docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md`.
