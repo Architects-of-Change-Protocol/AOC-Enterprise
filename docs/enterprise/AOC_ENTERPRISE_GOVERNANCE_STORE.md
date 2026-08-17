@@ -50,10 +50,10 @@ Five conceptual layers, one package (`src/enterprise/governance-store/`):
 | Layer | Where |
 |---|---|
 | Write model | `GovernanceStore.appendEvaluation`, `appendReference`, `appendLifecycleEvent` |
-| Integrity | `canonical-json.ts`, `digest.ts`, `projection.ts`, `verification.ts` |
+| Integrity | `canonical-json.ts`, `digest.ts`, `projection.ts`, `verification.ts`, `reference-integrity.ts` |
 | Query model | `GovernanceStore.query` + `getByEvaluationId/DecisionId/RequestId` |
 | Reconstruction | `GovernanceStore.reconstruct` (structured `complete/incomplete/corrupted`) |
-| Extension references | `GovernanceStore.appendReference` (`governance_references`) |
+| Extension references | `GovernanceStore.appendReference` (`governance_references`, `governance_reference_chains`) |
 
 Two providers implement the same interface with the same semantics,
 enforced by a shared contract test suite
@@ -140,6 +140,120 @@ First-class, tenant-scoped, enforced by database uniqueness constraints
 - "Same normalized request" means: equal SHA-256 digest of the sanitized
   persistence projection of the normalized `KernelEvaluationRequest`.
 
+## Two integrity domains
+
+The Store protects two different things, with two different mechanisms, for
+one structural reason.
+
+```
+Governance Aggregate
+      │
+      ├── aggregate integrity ── sealed at commit, covers the decision record
+      │
+      └── reference integrity ── sealed per append, covers the linkage to
+                                 authorization artifacts and external evidence
+```
+
+| | Aggregate integrity | Reference integrity |
+|---|---|---|
+| Protects | request, evaluation, trace, events, metadata | `governance_references` rows |
+| Sealed | inside the `appendEvaluation` transaction | inside the `appendReference` transaction |
+| Chain scope | store-wide (`chainPosition`) | per evaluation (`sequence`) |
+| Version | `aoc.governance-store.schema.v1` | `aoc.governance-reference-integrity.v1` (per row) |
+| Where | `projection.ts`, `verification.ts` | `reference-integrity.ts` |
+
+**Why they are separate, and must stay separate.** A reference names an
+artifact that does not exist yet when the aggregate is sealed: a
+`TokenizationMandate` is issued *after* `appendEvaluation` returns, and an
+`execution_record` can arrive months later. References are therefore appended
+after the seal and are permanently outside it. Folding them into the aggregate
+digest would require recomputing every historical aggregate digest, destroying
+the one property those digests have — that they attest to bytes committed at a
+known past moment. So references get their own chain, and history keeps its
+own truth. See `docs/architecture/ADR-GOVERNANCE-REFERENCE-INTEGRITY.md`.
+
+`verify()` checks both and reports them separately: `checks.aggregateDigest`
+and friends for the first, `checks.referenceIntegrity` plus a
+`referenceIntegrity` count summary for the second. A reference failure never
+implies an aggregate failure, and vice versa.
+
+### Reference integrity
+
+Each `appendReference` runs one transaction that resolves this evaluation's
+chain head, assigns the next `sequence`, seals the row, inserts it, and
+advances the head — so a committed reference can never lack its integrity
+metadata. Callers supply only semantic fields; `sequence`, `integrityVersion`,
+`previousReferenceDigest`, and `referenceDigest` are Store-computed and not
+caller-controllable.
+
+The digest covers: `referenceId`, `evaluationId`, `organizationId` (the owning
+aggregate's tenant), `sequence`, `referenceType`, `externalId`,
+`externalVersion`, `digest`, `uri`, `createdAt`, `integrityVersion`, and
+`previousReferenceDigest`. Absent optional values are pinned to `null` rather
+than omitted, so "no `uri`" and "`uri` deleted" cannot canonicalize alike.
+
+`governance_reference_chains` stores one head row per evaluation
+(`latest_sequence`, `latest_reference_digest`). It exists for one reason:
+without it, deleting the *newest* references leaves a shorter but internally
+consistent chain. Its shape mirrors the Agent Passport Store's
+`latest_sequence`/`latest_event_digest` projection.
+
+Each row is classified as exactly one of:
+
+| Status | Meaning |
+|---|---|
+| `legacy_unprotected` | no integrity metadata at all — predates the mechanism. Readable, historically truthful, **never reported as a failure**, and **not** evidence the row is unchanged. |
+| `protected_valid` | sealed under a known version; digest and linkage recompute. |
+| `protected_corrupted` | claims protection under a known version but does not verify — mismatched digest, broken link, malformed digest, or partial metadata. |
+| `protected_unsupported_version` | claims protection under a version this build cannot verify. Fails closed as unverifiable — not guessed at, not demoted to legacy. |
+
+**Fail-closed.** A row carrying *some* integrity metadata is never demoted to
+`legacy_unprotected`; only a row carrying *none* is legacy. A corrupted or
+unverifiable row always makes `verify()` return `valid: false`.
+
+### Historical behavior — stated plainly
+
+**Reference rows created before this mechanism existed were not covered by
+reference-integrity protection, and nothing retroactively protects them.**
+
+No digests are back-filled. Computing digests over historical rows now would
+prove only that they are self-consistent *today* while presenting itself as
+evidence they were sealed when written — a claim this Store cannot support, so
+it does not make it. Those rows read back exactly as written and are reported
+as `legacy_unprotected`.
+
+The same honesty applies in the other direction: a reference row written by a
+runtime that lacks this mechanism is indistinguishable from a genuinely
+historical one. Reference integrity attests to the rows *it sealed*; it is not
+a guarantee that every row in the table was sealed.
+
+### New behavior
+
+Every reference appended through `appendReference` from this build onward is
+tamper-evident. Modifying `reference_type`, `external_id`, or any other
+digested field of a persisted protected row — or deleting, reordering, or
+fabricating protected rows — is detected by `verify()`.
+
+### Trust boundary — integrity is not authority
+
+```
+reference integrity  ≠  authorization
+reference integrity  ≠  legal validity
+reference integrity  ≠  external execution truth
+```
+
+A valid reference digest proves exactly one thing: **this persisted reference
+row has not changed since the Store sealed it.** It does not prove that the
+referenced mandate is legitimate, that the actor owns the asset, or that an
+external system executed successfully. Those facts continue to come only from
+the Kernel decision, the Authority Graph, Recognition/Approval Runtime, policy,
+the canonical mandate issuance path, and the respective evidence paths.
+
+A hand-appended `authorization_artifact` reference naming a mandate that does
+not exist will seal and verify cleanly — sealing is what the Store does — and
+still confers nothing, because no enforcement path consults the reference
+table to decide anything. Sealing a claim does not make the claim true.
+
 ## Integrity model and its limits
 
 - **Canonical serialization** — `aoc.canonical-json.v1`
@@ -179,6 +293,16 @@ protection against a database administrator who can rewrite records *and*
 digests *and* the chain consistently. It makes tampering detectable under
 the assumption that the verifier's code and the attacker's write access
 don't fully overlap; external anchoring is a future layer.
+
+**This limit applies identically to reference integrity.** A privileged writer
+who rewrites a reference row, recomputes its digest, re-links every following
+reference in that evaluation's chain, and updates
+`governance_reference_chains` defeats detection — the same way one who rewrites
+an aggregate and its digest chain does. Both mechanisms raise the cost and
+narrow the window; neither is a trust anchor. Solving that needs something
+outside the database (external transparency log, signature, remote
+attestation, or a Protocol-level evidence anchor) and is deliberately not
+attempted here.
 
 ## Reconstruction (not "replay")
 
@@ -318,11 +442,44 @@ deprecated alias of the new id.
 - Schema: `aoc.governance-store.schema.v1` (recorded in
   `governance_store_versions` and stamped on every aggregate's metadata;
   deliberately decoupled from the Enterprise package version)
+- Reference integrity: `aoc.governance-reference-integrity.v1`, stamped
+  **per reference row** in `governance_references.reference_integrity_version`
 - Contracts: `aoc.governance-store.v1`,
   `aoc.governance-request-record.v1`, `aoc.governance-evaluation-record.v1`,
   `aoc.governance-trace-record.v1`, `aoc.governance-event-record.v1`,
   `aoc.governance-integrity-record.v1`, `aoc.governance-reference-record.v1`
 - Canonicalization: `aoc.canonical-json.v1`
+
+**Why reference integrity is versioned per row rather than by a schema
+bump.** The store schema version is checked in both directions —
+`initSchemaAndMigrate` refuses a database stamped with an unrecognized
+version, and `loadAggregate` reports an aggregate whose stamped version
+differs as corrupted — and `schema_version` sits inside `metadataDigest`
+inside `aggregateDigest`. Bumping it would make new runtimes refuse every
+existing database *and* mark every historical aggregate corrupted, with no
+fix short of rewriting history. A per-row version identifier lets a future
+`…v2` coexist with `v1` rows instead of retroactively redefining what they
+meant.
+
+### Schema compatibility for existing databases
+
+The reference-integrity columns (`sequence`,
+`reference_integrity_version`, `previous_reference_digest`,
+`reference_digest`) and the `governance_reference_chains` table are added
+additively at open time (`ensureReferenceIntegritySchema`). Every added column
+is nullable with no default, so **no existing row changes**.
+
+| Scenario | Behavior |
+|---|---|
+| new runtime, pre-hardening database | opens; columns added; aggregate digests unchanged and still verify; legacy references readable and classified `legacy_unprotected` |
+| new runtime, mixed database | legacy and protected rows coexist; the protected chain starts at `sequence` 1 and covers only rows it sealed |
+| old runtime, post-hardening database | opens and reads normally. Its `SELECT`s and `INSERT`s name their columns, so the added ones are invisible to it; the schema version it checks is unchanged. References it writes carry no integrity metadata and are read back as `legacy_unprotected` — accurate, since they were not sealed. |
+
+The schema-version bump was considered and rejected: it would have made old
+runtimes refuse databases they can read perfectly well, and — because the
+version is digested into every aggregate — made this build refuse every
+existing database too. Additive readability is proven by tests
+(`governance-reference-integrity.test.ts`), not asserted.
 
 ## Telemetry and logging
 
@@ -479,14 +636,19 @@ truth with a present-day opinion. A reader distinguishing the two eras should
 use the record's `createdAt` and the evaluation's `enterpriseVersion`, not
 assume classification has always meant the same thing.
 
-**Limit worth naming:** reference rows are appended *after* the aggregate
-digest is computed (`projection.ts` builds the aggregate with
-`references: []`), so no reference row has ever been covered by the integrity
-digest — tampering with a stored `reference_type` is not detected. That is a
-pre-existing property of the v1 integrity model, not something the new
-vocabulary introduces or widens; see "Integrity model and its limits".
-Bringing references under the digest would invalidate every aggregate digest
-already stored and is separate, breaking work.
+**Limit that used to live here, and how it was resolved.** Reference rows are
+appended *after* the aggregate digest is computed (`projection.ts` still
+builds the aggregate with `references: []`), so no reference row has ever been
+covered by the *aggregate* digest, and tampering with a stored
+`reference_type` was once undetectable.
+
+That gap is now closed — but not by bringing references under the aggregate
+digest, which would have invalidated every stored aggregate digest. References
+are covered by a second, independent domain instead; see "Two integrity
+domains" above. The rows described in this section — mandates classified as
+`external_artifact` before `authorization_artifact` existed — remain
+`legacy_unprotected`, unchanged and un-back-filled, exactly as this section
+says they should.
 
 ## Future extensions
 

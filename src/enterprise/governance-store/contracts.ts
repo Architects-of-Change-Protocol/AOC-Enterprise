@@ -24,6 +24,16 @@ export const GOVERNANCE_STORE_CONTRACT_IDS = {
   referenceRecord: 'aoc.governance-reference-record.v1',
 } as const;
 
+/**
+ * The reference-integrity format this build writes and can verify. Stamped
+ * on every protected reference row rather than derived from the store schema
+ * version, so a future `…v2` can coexist row-by-row instead of retroactively
+ * redefining what `v1` rows meant. A row claiming a version this build does
+ * not know is reported as unverifiable, never silently accepted and never
+ * downgraded to a legacy row.
+ */
+export const GOVERNANCE_REFERENCE_INTEGRITY_VERSION = 'aoc.governance-reference-integrity.v1';
+
 /** Marker value stamped on `GovernanceRecordMetadata.migrationSource` for aggregates migrated from the PR-002 schema rather than appended live. */
 export const GOVERNANCE_MIGRATION_SOURCE_PR_002 = 'pr-002-governance-store';
 
@@ -270,7 +280,22 @@ export function isCanonicalGovernanceReferenceType(value: string): value is Gove
   return (GOVERNANCE_REFERENCE_TYPES as readonly string[]).includes(value);
 }
 
-/** A reference from a governance evaluation to a Passport/Evidence/Assurance/execution/authorization artifact. The Store only preserves references; it never interprets them as authority. */
+/**
+ * A reference from a governance evaluation to a
+ * Passport/Evidence/Assurance/execution/authorization artifact. The Store
+ * only preserves references; it never interprets them as authority.
+ *
+ * The four integrity fields are **computed and owned by the Store**, exactly
+ * as aggregate digests are: callers pass a `GovernanceReferenceInput` and the
+ * Store seals it on append. They are optional because reference rows written
+ * before reference integrity existed genuinely do not have them — see
+ * `GovernanceReferenceIntegrityStatus`.
+ *
+ * `digest` and `referenceDigest` are different things and must not be
+ * confused: `digest` is the *referenced artifact's own* content digest,
+ * supplied by the caller and never verified by the Store; `referenceDigest`
+ * is the Store's tamper-evidence digest over this reference row.
+ */
 export interface GovernanceReferenceRecord {
   readonly referenceId: string;
   readonly evaluationId: string;
@@ -284,6 +309,69 @@ export interface GovernanceReferenceRecord {
   readonly uri?: string;
 
   readonly createdAt: string;
+
+  /** Position in this evaluation's protected reference chain (1-based). Absent on legacy-unprotected rows. */
+  readonly sequence?: number;
+  /** The reference-integrity format this row was sealed under (`GOVERNANCE_REFERENCE_INTEGRITY_VERSION` for rows this build wrote). Absent on legacy-unprotected rows. */
+  readonly integrityVersion?: string;
+  /** The `referenceDigest` of the preceding protected reference on the same evaluation. Absent on the first protected reference and on legacy-unprotected rows. */
+  readonly previousReferenceDigest?: string;
+  /** Tamper-evidence digest over this reference row. Absent on legacy-unprotected rows. */
+  readonly referenceDigest?: string;
+}
+
+/**
+ * What a caller supplies to `appendReference`. The integrity fields are
+ * deliberately absent: the Store computes `sequence`, `integrityVersion`,
+ * `previousReferenceDigest`, and `referenceDigest` inside the append
+ * transaction, so a caller can neither choose its own chain position nor
+ * present a digest the Store did not compute.
+ */
+export type GovernanceReferenceInput = Omit<GovernanceReferenceRecord, 'sequence' | 'integrityVersion' | 'previousReferenceDigest' | 'referenceDigest'>;
+
+/**
+ * How one persisted reference row stands against the reference-integrity
+ * mechanism. The classification is deliberately four-valued, because
+ * collapsing any pair of these would mean claiming something untrue:
+ *
+ * - `legacy_unprotected` — the row carries *no* integrity metadata at all.
+ *   It predates the mechanism (or was written by a runtime without it). It
+ *   is readable and historically truthful, and it is **not** evidence that
+ *   the row is unchanged. Never reported as a failure.
+ * - `protected_valid` — sealed under a version this build knows, and its
+ *   digest and chain linkage recompute correctly.
+ * - `protected_corrupted` — claims protection under a known version but does
+ *   not verify: mismatched digest, broken linkage, malformed digest, or
+ *   partial integrity metadata. Always a failure; never downgraded to
+ *   `legacy_unprotected`.
+ * - `protected_unsupported_version` — claims protection under a version this
+ *   build cannot verify. Not corruption (the row may be perfectly intact)
+ *   and not legacy (it claims protection), so it fails closed as
+ *   unverifiable rather than being guessed at either way.
+ */
+export type GovernanceReferenceIntegrityStatus = 'legacy_unprotected' | 'protected_valid' | 'protected_corrupted' | 'protected_unsupported_version';
+
+/** Per-status counts of an aggregate's reference rows. Present on every verification result; all zeros when the aggregate has no references. */
+export interface GovernanceReferenceIntegritySummary {
+  readonly legacyUnprotected: number;
+  readonly protectedValid: number;
+  readonly protectedCorrupted: number;
+  readonly protectedUnsupportedVersion: number;
+}
+
+/**
+ * The stored head of one evaluation's protected reference chain. Mirrors the
+ * Agent Passport Store's `latest_sequence`/`latest_event_digest` projection.
+ * Its purpose is tail-deletion detection: without a stored head, removing the
+ * newest protected references leaves a shorter but internally consistent
+ * chain.
+ */
+export interface GovernanceReferenceChainState {
+  readonly evaluationId: string;
+  readonly integrityVersion: string;
+  readonly latestSequence: number;
+  readonly latestReferenceDigest: string;
+  readonly updatedAt: string;
 }
 
 /**
@@ -461,6 +549,19 @@ export interface GovernanceIntegrityFailure {
   readonly message: string;
 }
 
+/**
+ * The result of verifying one stored aggregate across **both** integrity
+ * domains. They are separate on purpose and must stay separate:
+ *
+ * - *aggregate integrity* (`requestDigest`…`previousDigest`) protects the
+ *   canonical governance decision record, sealed at commit;
+ * - *reference integrity* (`referenceIntegrity`) protects the append-only
+ *   linkage from that record to authorization artifacts and external
+ *   evidence, which are appended afterwards and therefore cannot be inside
+ *   the aggregate digest.
+ *
+ * See `docs/architecture/ADR-GOVERNANCE-REFERENCE-INTEGRITY.md`.
+ */
 export interface GovernanceRecordVerificationResult {
   readonly evaluationId: string;
   readonly valid: boolean;
@@ -473,11 +574,16 @@ export interface GovernanceRecordVerificationResult {
     readonly metadataDigest: boolean;
     readonly aggregateDigest: boolean;
     readonly previousDigest?: boolean;
+    /** True when no reference row failed reference-integrity verification. Legacy-unprotected rows never make this false — they were never protected, and saying otherwise would report a historical fact as a fault. */
+    readonly referenceIntegrity: boolean;
   };
 
   readonly verifiedAt: string;
 
   readonly failures: readonly GovernanceIntegrityFailure[];
+
+  /** Per-status counts of this aggregate's reference rows, so a caller can tell "nothing protected" apart from "everything protected and valid" without inspecting each row. */
+  readonly referenceIntegrity: GovernanceReferenceIntegritySummary;
 }
 
 /** Structured result of loading an aggregate: complete, or explicitly incomplete/corrupted with the missing pieces named. Partial data is never silently returned as complete. */

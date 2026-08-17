@@ -497,7 +497,7 @@ describe('authorization_artifact — integrity behavior', () => {
     );
   });
 
-  it('references are outside the aggregate digest — so tampering with a stored reference_type is NOT detected, exactly as before this change', async () => {
+  it('references remain outside the aggregate digest, but reference integrity now detects a forged reference_type', async () => {
     const path = tempDbPath('integrity-tamper');
     const store = await createSqliteGovernanceStore(path);
     const appended = await store.appendEvaluation(buildInput('req-tamper-ref', 'dec-tamper-ref'));
@@ -521,19 +521,28 @@ describe('authorization_artifact — integrity behavior', () => {
     const record = await reopened.getByEvaluationId(SYSTEM, appended.evaluationId);
     await reopened.close();
 
-    // This is a **pre-existing limit of the v1 integrity model**, recorded
-    // here rather than papered over: references are appended after the
-    // aggregate digest is computed (`projection.ts` builds the aggregate with
-    // `references: []`), so no reference row has ever been covered by it.
-    // This change neither introduces nor widens that gap — it adds no new
-    // reference field to the digest and removes none. Bringing references
-    // under the digest would invalidate every aggregate digest already
-    // stored, which is a separate, breaking piece of work.
+    // The gap this test originally recorded has been closed — but *not* by
+    // moving references into the aggregate digest. References are still
+    // appended after the aggregate is sealed (`projection.ts` still builds it
+    // with `references: []`), because the artifacts they name do not exist
+    // yet at commit time. They are covered instead by a second, independent
+    // domain: the per-evaluation reference chain. So the aggregate digest is
+    // untouched and every historical aggregate still verifies to the same
+    // bytes, while a forged classification is now detected.
     //
-    // What *does* still hold: a forged classification confers nothing. The
-    // mandate it claims to point at does not exist, and no enforcement path
-    // consults this column — see "no privilege escalation" below.
-    assert.equal(verification.valid, true, 'reference rows are outside the digest, before and after this change');
+    // What was true before and remains true: a forged classification confers
+    // nothing. Detection is about evidence integrity, not authority — no
+    // enforcement path consults this column.
+    assert.equal(verification.valid, false, 'a rewritten reference_type is detected by reference integrity');
+    assert.deepEqual(
+      verification.failures.map((failure) => failure.check),
+      ['referenceIntegrity'],
+      'aggregate integrity is unaffected: only the reference domain fails',
+    );
+    assert.equal(verification.checks.aggregateDigest, true, 'the aggregate digest is unchanged and still verifies');
+    assert.equal(verification.referenceIntegrity.protectedCorrupted, 1);
+    // The tampered value is still *returned* verbatim; the read path stays
+    // permissive and it is verification that reports the corruption.
     assert.equal(record?.references[0]?.referenceType, 'authorization_artifact');
   });
 
