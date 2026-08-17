@@ -89,7 +89,13 @@ TokenizationMandate  ->  external system performs issuance  ->  execution eviden
 
 ## Where the governance actually happens
 
-Nothing in this package decides anything. Authority, policy, approvals, obligations, decision and durable evidence for `TOKENIZE` come from the primitives AOC Enterprise already has — `AocKernel`, Recognition Runtime, Authority Graph, Approval Runtime, the Domain Policy Pack Runtime, and the Governance Store. The Enterprise module that binds this package to them lives at `src/enterprise/tokenization-governance/`; see `docs/enterprise/AOC_TOKENIZE_CAPABILITY.md` and `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`.
+Nothing in this package decides anything, and nothing in it persists anything. Authority, policy, approvals, obligations, decision and durable evidence for `TOKENIZE` come from the primitives AOC Enterprise already has — `AocKernel`, Recognition Runtime, Authority Graph, Approval Runtime, the Domain Policy Pack Runtime, and the Governance Store. The Enterprise module that binds this package to them — and that stores mandates durably, in SQLite, across process restarts — lives at `src/enterprise/tokenization-governance/`.
+
+See `docs/enterprise/AOC_TOKENIZE_CAPABILITY.md`, `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`, and `docs/architecture/ADR-TOKENIZATION-MANDATE-PERSISTENCE.md`.
+
+### Terminology
+
+In the AOC model, `TOKENIZE` is an Enterprise **Governed Action**, the evaluation of whether it may be exercised is an **Enforcement**, and `EnterpriseTokenizationMandate` is the resulting **Mandate**. These are distinct from AOC Protocol's **Sovereignty Capabilities**. The field name `capability` on `EnterpriseTokenizationRequest` is the repository's existing technical contract surface and is deliberately unchanged; read it as "the identifier of the Governed Action".
 
 ## Ownership
 

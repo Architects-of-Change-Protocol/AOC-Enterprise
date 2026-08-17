@@ -24,7 +24,7 @@ import type {
  * execution records are append-only with no delete path at all.
  */
 export interface TokenizationMandateStore {
-  readonly providerKind: 'memory';
+  readonly providerKind: 'memory' | 'sqlite';
 
   /**
    * Durably persists a newly-issued mandate. Throws

@@ -44,6 +44,9 @@ export {
 export { TOKENIZATION_MANDATE_STORE_SCHEMA_VERSION, createInMemoryTokenizationMandateStore } from './in-memory-mandate-store.js';
 export type { CreateInMemoryTokenizationMandateStoreOptions } from './in-memory-mandate-store.js';
 
+export { createSqliteTokenizationMandateStore } from './sqlite-mandate-store.js';
+export type { CreateSqliteTokenizationMandateStoreOptions } from './sqlite-mandate-store.js';
+
 export { createTokenizationGovernanceService } from './service.js';
 export type {
   RecordTokenizationExecutionRequest,

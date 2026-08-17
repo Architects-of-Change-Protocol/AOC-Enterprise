@@ -92,7 +92,22 @@ function testEnterpriseContext(): GovernanceEnterpriseContext {
   };
 }
 
-export function buildTokenizationWorld(): TokenizationWorld {
+/**
+ * Substitutes durable stores for the default in-memory ones, so the same
+ * seeded world (same actors, authority, approvals, Kernel) can be driven
+ * against a real on-disk backend. This is what makes a restart test a
+ * restart test rather than two instantiations of the same object graph:
+ * `buildTokenizationWorld` is called again with stores freshly opened over
+ * the same database files, and nothing else is carried across.
+ */
+export interface TokenizationWorldOverrides {
+  readonly governanceStore?: GovernanceStore;
+  readonly mandateStore?: TokenizationMandateStore;
+  /** Overrides the id prefix counter seed so a second process's ids do not collide with the first's. */
+  readonly idSeed?: number;
+}
+
+export function buildTokenizationWorld(overrides: TokenizationWorldOverrides = {}): TokenizationWorld {
   const recognitionCtx: RuntimeContext = { clock: createManualClock(TOKENIZATION_NOW), idGenerator: createSequentialIdGenerator() };
   const authorityRuntime = createAuthorityGraphRuntime(createAuthorityRuntimeContext(TOKENIZATION_NOW));
   const approvalRuntime = new ApprovalRuntime(createApprovalRuntimeContext(TOKENIZATION_NOW), { authorityGraph: authorityRuntime });
@@ -203,10 +218,10 @@ export function buildTokenizationWorld(): TokenizationWorld {
     idGenerator: createSequentialEnforcementIdGenerator(),
   });
 
-  const governanceStore = createInMemoryGovernanceStore();
-  const mandateStore = createInMemoryTokenizationMandateStore({ now: () => TOKENIZATION_NOW });
+  const governanceStore = overrides.governanceStore ?? createInMemoryGovernanceStore();
+  const mandateStore = overrides.mandateStore ?? createInMemoryTokenizationMandateStore({ now: () => TOKENIZATION_NOW });
 
-  let counter = 0;
+  let counter = overrides.idSeed ?? 0;
   const service = createTokenizationGovernanceService({
     store: mandateStore,
     kernel,

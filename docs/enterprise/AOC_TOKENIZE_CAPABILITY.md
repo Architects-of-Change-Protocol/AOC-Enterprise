@@ -1,20 +1,60 @@
-# The `TOKENIZE` Governed Capability
+# The `TOKENIZE` Governed Action
 
 - Contracts: `@aoc-enterprise/tokenization-mandate`
 - Runtime: `src/enterprise/tokenization-governance/`
-- Decision record: `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`
+- Decision records: `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`,
+  `docs/architecture/ADR-TOKENIZATION-MANDATE-PERSISTENCE.md`
+
+## Architectural terminology
+
+Two layers, two vocabularies. They are not synonyms and must not be conflated:
+
+```
+AOC Protocol
+  → Sovereignty Capabilities     what a sovereign holds
+
+AOC Enterprise
+  → Governed Actions             what may be exercised
+  → Enforcements                 the evaluation of whether it may be
+  → Grants / Mandates            the durable authorization that results
+```
+
+Applied here:
+
+```
+TOKENIZE                 = a Governed Action.
+
+Tokenization Enforcement = AOC Enterprise evaluates whether TOKENIZE may be
+                           exercised, by whom, over which rights, in what
+                           scope, and under which conditions.
+
+TokenizationMandate      = the durable authorization artifact produced by a
+                           successful enforcement.
+```
+
+A Protocol Sovereignty Capability is not an Enterprise Governed Action. The
+Protocol establishes what authority exists and anchors its evidence;
+Enterprise governs the *exercise* of that authority.
+
+**A note on the field name.** The technical field carrying the action's
+identifier is still called `capability` — `ActionDescriptor.capability`,
+`AuthorityGrant.capability`, `RecognitionCapabilityToken.capability`, and
+`EnterpriseTokenizationRequest.capability`. That is the repository's existing
+contract surface and is deliberately left alone: this terminology is a
+documentation model, not a rename. Read `capability: 'tokenize'` in code as
+"the identifier of the Governed Action `TOKENIZE`".
 
 ## Definition
 
-`TOKENIZE` is a governed capability of AOC Enterprise.
+`TOKENIZE` is a governed action of AOC Enterprise.
 
 > **TOKENIZE** — exercising authorized control over specified rights
 > associated with an already-governed asset, in order to create an external
 > tokenized representation of those rights.
 
-It is evaluated by the same primitives every other capability is evaluated
-by. It introduces no second policy engine, no second evidence system, no
-second authorization system, and no capability-specific API.
+It is evaluated by the same primitives every other governed action is
+evaluated by. It introduces no second policy engine, no second evidence
+system, no second authorization system, and no action-specific API.
 
 ## Boundary
 
@@ -80,6 +120,10 @@ grant / deny                         mandate issued only for `allowed`
       ↓
 Tokenization Mandate                 EnterpriseTokenizationMandate
       ↓
+durable persistence                  TokenizationMandateStore (SQLite)
+      ↓
+process restart                      mandate, revocation, and issuance totals recovered
+      ↓
 external execution                   an external system, outside AOC
       ↓
 execution evidence                   EnterpriseTokenizationExecutionEvidence
@@ -87,8 +131,68 @@ execution evidence                   EnterpriseTokenizationExecutionEvidence
 audit trail                          Governance Store references + append-only executions
 ```
 
-Every box above is an existing AOC primitive except the last three, which are
-this capability's own contracts.
+Every box above is an existing AOC primitive except the three contract
+artifacts, which are this action's own.
+
+## Durability
+
+A mandate does not disappear because the Enterprise process restarts.
+
+`TokenizationMandateStore` has two implementations behind one unchanged port,
+mirroring every other Enterprise entity store:
+
+| Provider | Factory | Use |
+|---|---|---|
+| `memory` | `createInMemoryTokenizationMandateStore()` | tests, development, `AOC_ENTERPRISE_PERSISTENCE_PROVIDER=memory` |
+| `sqlite` | `createSqliteTokenizationMandateStore(dbPath)` | durable deployments |
+
+The SQLite store follows the same house style as the Governance, Passport,
+Assurance and Access Grant stores: its own database file, `WAL` +
+`synchronous=FULL` + `foreign_keys=ON`, a schema-version guard that **refuses
+to open** a database written under a different version (before any DDL runs,
+so a refused store is never mutated), synchronous transactions for
+multi-statement writes, and typed domain errors instead of raw driver errors.
+
+### Schema `aoc.tokenization-mandate-store.schema.v1`
+
+| Table | Purpose |
+|---|---|
+| `tokenization_mandate_store_versions` | schema-version guard row |
+| `tokenization_mandates` | current-state mandate row |
+| `tokenization_executions` | **append-only** external execution evidence |
+| `tokenization_mandate_revocations` | at-most-one revocation per mandate |
+
+The invariants that matter are database constraints, not application
+bookkeeping, so they hold against a writer this process never sees:
+`request_ref UNIQUE` (one request authorizes at most one mandate),
+`execution_id PRIMARY KEY` (one execution recorded at most once),
+`mandate_id UNIQUE` on revocations, and `(mandate_id, sequence) UNIQUE` for a
+restart-stable evidence order.
+
+### Stored vs derived, after persistence
+
+Persistence did not become an excuse to store a second source of truth.
+Stored: `status` (`'active' | 'revoked'`), `issuedUnits`, `executionCount`,
+timestamps. Still derived on every read: **expired**, **exhausted**,
+**superseded** — computed by `enterpriseTokenizationMandateAuthorizes` from
+the fields that already record the underlying facts. A recovered mandate past
+its `expiresAt` still carries `status: 'active'` and is still refused.
+
+### Integrity and corruption
+
+`terms` — the rights, scope, executor and constraints — is stored as its
+canonical serialization alongside `terms_digest`, the repository's own
+canonical SHA-256-over-`aoc.canonical-json.v1` digest. Every read recomputes
+and compares, because that column is exactly what a scope escalation would
+have to alter.
+
+A corrupted or malformed record fails closed with
+`TOKENIZATION_RECORD_CORRUPTED` and **never** becomes a valid authorization —
+whether the digest mismatches, the JSON is unreadable, the status is
+unrecognized, or the row does not reconstruct into a valid
+`EnterpriseTokenizationMandate` under the frozen contract's own validator.
+This is integrity detection, not a signature: the limits documented for the
+Governance Store's digests apply here too.
 
 ## Domain semantics
 
@@ -254,7 +358,9 @@ surface.
 
 ## Security invariants
 
-Each is covered by a test in `src/enterprise/__tests__/tokenization-governance.test.ts`:
+Each is covered by a test in `src/enterprise/__tests__/tokenization-governance.test.ts`,
+and each is re-proved against the durable backend across a real store
+close/reopen in `tokenization-durability.test.ts`:
 
 | Invariant | Mechanism |
 |---|---|
@@ -272,6 +378,8 @@ Each is covered by a test in `src/enterprise/__tests__/tokenization-governance.t
 | Replaying an execution cannot create additional issuance authorization | `TOKENIZATION_EXECUTION_ALREADY_RECORDED`; counters never double-advance |
 | An unreadable exercise instant cannot authorize | `INVALID_EXERCISE_INSTANT` — refused rather than compared against `NaN` |
 | Evidence is append-only | no update/delete path for execution records; Governance Store is append-only by construction |
+| A corrupted durable record cannot become an authorization | `TOKENIZATION_RECORD_CORRUPTED` — fail closed on digest mismatch, unreadable JSON, unrecognized status, or a row that does not reconstruct into a valid canonical mandate |
+| A database from another schema version cannot be silently reused | the store refuses to open it, before any DDL runs |
 
 ## Reference scenario
 
@@ -295,6 +403,16 @@ A delegated tokenization desk making the same request instead receives
 `approval_required` — its capability token requires the steward's approval —
 and no mandate is created until that approval is satisfied.
 
+The Enterprise then restarts. The mandate is recovered from disk, still
+authorizing exactly 20% of exactly those rights through exactly that
+executor; the external execution evidence recorded afterwards is correlated
+back through the recovered mandate to the original decision; and a second
+issuance is still refused because the mandate prohibited it. This runs as an
+executable test — `TOKENIZE reference scenario` in
+`src/enterprise/__tests__/tokenization-durability.test.ts` — across three
+separate store instances over the same database files, with no blockchain
+anywhere in it.
+
 The model is deliberately asset-agnostic: real estate, art, financial and
 contractual rights, physical goods, intellectual property, and digital-native
 assets are all expressible, wherever the governing model permits.
@@ -308,9 +426,11 @@ Explicitly outside this capability, and deliberately not implied by it:
 - token standards (no ERC-20/721/1400/3643 assumption anywhere)
 - custody, wallets, key management, marketplaces, exchanges, valuation
 - KYC/AML, investor onboarding, transfer-agent or securities logic
-- a SQLite `TokenizationMandateStore` (the port exists; only the in-memory
-  implementation ships, mirroring how `AccessGrantStore` gained SQLite in a
-  later slice)
 - a barrel export from `src/enterprise/index.ts` (blocked by the same
   publishability constraint documented there for Access Governance)
+- a `tokenization.sqlitePath` entry in `EnterpriseConfiguration` — the
+  factory takes an explicit `dbPath`, exactly as `createSqliteAccessGrantStore`
+  does, because neither module is wired into the composition root. When
+  Access Governance earns a config entry, this module should follow in the
+  same change.
 - Protocol changes: none were required
