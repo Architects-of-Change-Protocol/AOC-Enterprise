@@ -4,6 +4,10 @@
 - Runtime: `src/enterprise/tokenization-governance/`
 - Decision records: `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`,
   `docs/architecture/ADR-TOKENIZATION-MANDATE-PERSISTENCE.md`
+- Sibling action: `docs/enterprise/AOC_COLLATERALIZE_ACTION.md` — AOC
+  Enterprise's second governed action. Its documentation carries the
+  `TOKENIZE` vs `COLLATERALIZE` comparison matrix and the resulting
+  generalization findings.
 
 ## Architectural terminology
 
@@ -30,6 +34,15 @@ Tokenization Enforcement = AOC Enterprise evaluates whether TOKENIZE may be
 
 TokenizationMandate      = the durable authorization artifact produced by a
                            successful enforcement.
+```
+
+`TOKENIZE` is no longer the only one. AOC Enterprise now governs two actions,
+and the same asset may be the subject of both, independently:
+
+```
+COLLATERALIZE            = a Governed Action.
+CollateralizationMandate = the durable authorization artifact produced by a
+                           successful COLLATERALIZE enforcement.
 ```
 
 A Protocol Sovereignty Capability is not an Enterprise Governed Action. The

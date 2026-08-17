@@ -1,0 +1,25 @@
+{
+  "name": "@aoc-enterprise/collateralization-mandate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral, immutable contracts for the COLLATERALIZE governed action: the request to commit specified rights of a governed asset as collateral for a referenced obligation, the durable CollateralizationMandate that authorizes it, the evidence of the external collateral arrangement created under it, and the evidence of that arrangement's reported release. Contains no lending engine, loan origination, interest or LTV calculation, asset valuation, liquidation, lien registry, filing system, priority determination, blockchain client, wallet, or provider adapter.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope"
+  }
+}
