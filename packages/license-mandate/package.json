@@ -1,0 +1,25 @@
+{
+  "name": "@aoc-enterprise/license-mandate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, provider-neutral, immutable contracts for the LICENSE governed action: the request to grant a defined permission over specified rights of a governed asset to a defined licensee, the durable LicenseMandate that authorizes it, the evidence of the external license actually granted under it, and the evidence of that license's reported expiry or termination. Contains no contract drafting, signature capture, royalty or payment engine, billing, marketplace, pricing, valuation, tax calculation, usage metering, DRM, rights registry, jurisdiction-specific legal policy, or provider adapter.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/resource-envelope": "file:../resource-envelope"
+  }
+}

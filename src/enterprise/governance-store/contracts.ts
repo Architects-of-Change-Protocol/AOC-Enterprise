@@ -251,7 +251,8 @@ export interface GovernanceIntegrityMetadata {
  *   authorization machinery, referenced as evidence or context.
  * - `authorization_artifact` — a durable artifact produced by AOC Enterprise
  *   that records or embodies authorization resulting from a governed
- *   enforcement decision (`TokenizationMandate`, `CollateralizationMandate`).
+ *   enforcement decision (`TokenizationMandate`, `CollateralizationMandate`,
+ *   `LicenseMandate`).
  *
  * **A reference type is evidence classification, never authority.** Nothing
  * in the runtime reads `referenceType` to decide anything; appending one

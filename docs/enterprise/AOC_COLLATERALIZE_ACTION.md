@@ -19,11 +19,15 @@ AOC Enterprise
   → Grants / Mandates            the durable authorization that results
 ```
 
-AOC Enterprise now has **two** governed actions:
+AOC Enterprise now has **three** governed actions. This document covers the
+second; see `docs/enterprise/AOC_LICENSE_ACTION.md` for the third, and
+`docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md` for the
+three-enforcement semantic audit that compares all of them.
 
 ```
 TOKENIZE                    = a Governed Action.
 COLLATERALIZE               = a Governed Action.
+LICENSE                     = a Governed Action.
 
 Tokenization Enforcement    = AOC Enterprise evaluates whether TOKENIZE
                               may be exercised.
@@ -479,6 +483,13 @@ the secured party, replace the executor, or replay the execution.
 
 The comparison is the point of having a second enforcement. Assessed against
 the code, not against intuition.
+
+> **Superseded by the three-way audit.** A third enforcement has since landed,
+> and it changed several conclusions below — notably that executor binding is
+> **not** generic and that scope is not always required. The table here is
+> retained as the record of what two enforcements supported; see
+> `docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md` for the
+> current, three-way finding.
 
 | Concern | TOKENIZE | COLLATERALIZE | Generic? |
 |---|---|---|---|
