@@ -23,6 +23,7 @@ import { readLicenseResourceRef, serializeLicenseResourceRef } from './enterpris
 // treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
 import type { EnterpriseLicensableRightType, EnterpriseLicenseExclusivity, EnterpriseLicenseRightsScope, EnterpriseLicenseTerms, EnterpriseLicenseTermsValidationCode, EnterpriseLicensedUnits, EnterpriseLicensedUseType, SerializedEnterpriseLicenseTerms } from './enterprise-license-terms.js';
 import type { SerializedEnterpriseLicenseRequest } from './enterprise-license-request.js';
+import type { GovernedAuthorizationArtifact, GovernedAuthorizationStatus } from '@aoc-enterprise/governed-authorization';
 
 /**
  * The mandate's own authorization lifecycle -- deliberately not "is this
@@ -55,7 +56,7 @@ import type { SerializedEnterpriseLicenseRequest } from './enterprise-license-re
  *   observation-only evidence (`EnterpriseLicenseLifecycleEvidence`) that
  *   references the mandate, never as a status on it.
  */
-export type EnterpriseLicenseMandateStatus = 'active' | 'revoked';
+export type EnterpriseLicenseMandateStatus = GovernedAuthorizationStatus;
 
 /**
  * The canonical Enterprise-owned contract for **the durable, machine-readable
@@ -104,26 +105,12 @@ export type EnterpriseLicenseMandateStatus = 'active' | 'revoked';
  *
  * Ownership: AOC Enterprise (`@aoc-enterprise/license-mandate`).
  */
-export interface EnterpriseLicenseMandate {
+export interface EnterpriseLicenseMandate extends GovernedAuthorizationArtifact<EnterpriseLicenseTerms> {
+  /** Re-declared as this action's own literal so a serialized mandate names its schema on its face and cannot be replayed through a sibling action's contract. */
   readonly schemaVersion: typeof ENTERPRISE_LICENSE_SCHEMA_VERSION;
-  readonly id: CanonicalId;
   readonly status: EnterpriseLicenseMandateStatus;
-  readonly asset: ResourceRef;
-  readonly terms: EnterpriseLicenseTerms;
-  readonly requestRef: CanonicalId;
-  readonly requestedBy: CanonicalId;
-  readonly decisionRef: CanonicalId;
-  /** When AOC's authority to grant under this mandate begins. Not the external license's own effective date, which an executing system reports. */
-  readonly effectiveFrom: UtcDateTime;
-  /** When AOC's authority to grant under this mandate ends. **Not** the external license's expiry -- see `EnterpriseLicenseConstraints.maximumLicenseTermEndsAt`. */
+  /** When AOC's authority to grant under this mandate ends. **Not** the external license's expiry -- see `EnterpriseLicenseConstraints.maximumLicenseTermEndsAt`, which is a genuinely different duration and is deliberately not folded into the shared skeleton. */
   readonly expiresAt: UtcDateTime;
-  readonly correlationId: CanonicalId;
-  readonly evaluationRef?: CanonicalId;
-  readonly issuerRef?: CanonicalId;
-  readonly approvalRefs?: readonly CanonicalId[];
-  readonly obligationRefs?: readonly CanonicalId[];
-  readonly evidenceRefs?: readonly CanonicalId[];
-  readonly auditRefs?: readonly CanonicalId[];
 }
 
 // ---------------------------------------------------------------------------

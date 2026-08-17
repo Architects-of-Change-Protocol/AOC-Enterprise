@@ -1,4 +1,7 @@
 import type { CanonicalId, UtcDateTime } from '@aoc/protocol';
+// Type-only specifiers are kept on one line deliberately: `scripts/check-duplicate-semantic-contracts.mjs`
+// treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
+import type { GovernedExecutionEvidenceCore, GovernedLifecycleEvidenceCore } from '@aoc-enterprise/governed-authorization';
 
 import {
   ENTERPRISE_LICENSE_SCHEMA_VERSION,
@@ -67,13 +70,11 @@ import type { EnterpriseLicensableRightType, EnterpriseLicenseExclusivity, Enter
  *
  * Ownership: AOC Enterprise (`@aoc-enterprise/license-mandate`).
  */
-export interface EnterpriseLicenseExecutionEvidence {
+export interface EnterpriseLicenseExecutionEvidence extends GovernedExecutionEvidenceCore {
+  /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
   readonly schemaVersion: typeof ENTERPRISE_LICENSE_SCHEMA_VERSION;
-  readonly id: CanonicalId;
-  readonly mandateRef: CanonicalId;
-  /** Who performed the external licensing act, as reported. Checked against the mandate's `executorRef` only when the mandate bound one. */
+  /** Who performed the external licensing act, as reported. Checked against the mandate's `executorRef` only when the mandate bound one. Declared here rather than inherited -- see `GovernedExecutionEvidenceCore`. */
   readonly executedBy: CanonicalId;
-  readonly executedAt: UtcDateTime;
   /** The party the license was granted to, as reported. Checked against the mandate's own before this evidence may be recorded. */
   readonly licenseeRef: CanonicalId;
   readonly rights: readonly EnterpriseLicensableRightType[];
@@ -145,14 +146,9 @@ export type EnterpriseLicenseLifecycleType = (typeof ENTERPRISE_LICENSE_LIFECYCL
  *
  * Ownership: AOC Enterprise (`@aoc-enterprise/license-mandate`).
  */
-export interface EnterpriseLicenseLifecycleEvidence {
+export interface EnterpriseLicenseLifecycleEvidence extends GovernedLifecycleEvidenceCore {
+  /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
   readonly schemaVersion: typeof ENTERPRISE_LICENSE_SCHEMA_VERSION;
-  readonly id: CanonicalId;
-  readonly mandateRef: CanonicalId;
-  /** The specific external license being reported as ended. */
-  readonly executionRef: CanonicalId;
-  /** Who reported the end. An opaque party pointer -- typically the executor, the licensor or the licensee, but AOC neither requires nor infers which. */
-  readonly reportedBy: CanonicalId;
   readonly occurredAt: UtcDateTime;
   readonly lifecycleType: EnterpriseLicenseLifecycleType;
   readonly correlationId: CanonicalId;

@@ -16,6 +16,8 @@
     { "path": "./packages/pinata-adapter" },
     { "path": "./packages/tokenization-mandate" },
     { "path": "./packages/collateralization-mandate" },
-    { "path": "./packages/license-mandate" }
+    { "path": "./packages/governed-authorization" },
+    { "path": "./packages/license-mandate" },
+    { "path": "./packages/transfer-mandate" }
   ]
 }

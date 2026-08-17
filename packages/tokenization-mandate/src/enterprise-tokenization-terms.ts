@@ -1,4 +1,8 @@
 import type { CanonicalId } from '@aoc/protocol';
+import { GOVERNED_RIGHTS_SCOPE_FULL_BASIS_POINTS, GOVERNED_RIGHT_TYPES, governedRightTypes, governedRightsScopeEquals, governedRightsScopeWithin, isGovernedRightType } from '@aoc-enterprise/governed-authorization';
+// Type-only specifiers are kept on one line deliberately: `scripts/check-duplicate-semantic-contracts.mjs`
+// treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
+import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
 
 /**
  * The shared vocabulary of the `TOKENIZE` governed capability: what a
@@ -90,15 +94,9 @@ export function isEnterpriseTokenizeCapability(capability: unknown): capability 
  * category is a `schemaVersion` change, not an escape hatch. It is
  * extensible in that sense and permanently closed in no other.
  */
-export const ENTERPRISE_TOKENIZED_RIGHT_TYPES = {
-  ECONOMIC_INTEREST: 'economic-interest',
-  REVENUE_RIGHT: 'revenue-right',
-  OWNERSHIP_INTEREST: 'ownership-interest',
-  USAGE_RIGHT: 'usage-right',
-  CONTRACTUAL_CLAIM: 'contractual-claim',
-} as const;
+export const ENTERPRISE_TOKENIZED_RIGHT_TYPES = GOVERNED_RIGHT_TYPES;
 
-export type EnterpriseTokenizedRightType = (typeof ENTERPRISE_TOKENIZED_RIGHT_TYPES)[keyof typeof ENTERPRISE_TOKENIZED_RIGHT_TYPES];
+export type EnterpriseTokenizedRightType = GovernedRightType;
 
 /**
  * How much of the named rights an authorization covers.
@@ -114,12 +112,10 @@ export type EnterpriseTokenizedRightType = (typeof ENTERPRISE_TOKENIZED_RIGHT_TY
  * A discriminated union rather than a bag of optional fields, so "a scope
  * that is somehow both 20% and 500 units" is unrepresentable.
  */
-export type EnterpriseTokenizationScope =
-  | { readonly kind: 'proportional'; readonly basisPoints: number }
-  | { readonly kind: 'unitized'; readonly units: number; readonly unitDenomination: string };
+export type EnterpriseTokenizationScope = GovernedRightsScope;
 
 /** The whole of the named rights, expressed proportionally. Provided so "100%" never has to be spelled as a magic number at call sites. */
-export const ENTERPRISE_TOKENIZATION_FULL_BASIS_POINTS = 10_000 as const;
+export const ENTERPRISE_TOKENIZATION_FULL_BASIS_POINTS = GOVERNED_RIGHTS_SCOPE_FULL_BASIS_POINTS;
 
 /**
  * Declared, provider-neutral limits an authorization carries. Every field is
@@ -208,10 +204,10 @@ export function tokenizationOptionalStringArrayEquals(a: readonly string[] | und
   return tokenizationStringArrayEquals(a, b);
 }
 
-const RIGHT_TYPES: readonly EnterpriseTokenizedRightType[] = Object.values(ENTERPRISE_TOKENIZED_RIGHT_TYPES);
+const RIGHT_TYPES: readonly EnterpriseTokenizedRightType[] = governedRightTypes();
 
 export function isEnterpriseTokenizedRightType(value: unknown): value is EnterpriseTokenizedRightType {
-  return typeof value === 'string' && RIGHT_TYPES.includes(value as EnterpriseTokenizedRightType);
+  return isGovernedRightType(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -219,8 +215,7 @@ export function isEnterpriseTokenizedRightType(value: unknown): value is Enterpr
 // ---------------------------------------------------------------------------
 
 export function enterpriseTokenizationScopeEquals(a: EnterpriseTokenizationScope, b: EnterpriseTokenizationScope): boolean {
-  if (a.kind === 'proportional') return b.kind === 'proportional' && a.basisPoints === b.basisPoints;
-  return b.kind === 'unitized' && a.units === b.units && a.unitDenomination === b.unitDenomination;
+  return governedRightsScopeEquals(a, b);
 }
 
 /**
@@ -231,8 +226,7 @@ export function enterpriseTokenizationScopeEquals(a: EnterpriseTokenizationScope
  * agree on `unitDenomination` -- 500 of one unit is not 500 of another.
  */
 export function enterpriseTokenizationScopeWithin(inner: EnterpriseTokenizationScope, outer: EnterpriseTokenizationScope): boolean {
-  if (inner.kind === 'proportional') return outer.kind === 'proportional' && inner.basisPoints <= outer.basisPoints;
-  return outer.kind === 'unitized' && inner.unitDenomination === outer.unitDenomination && inner.units <= outer.units;
+  return governedRightsScopeWithin(inner, outer);
 }
 
 // ---------------------------------------------------------------------------

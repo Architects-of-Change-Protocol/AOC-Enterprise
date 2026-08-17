@@ -19,6 +19,9 @@ import { readTokenizationResourceRef, serializeTokenizationResourceRef } from '.
 // treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
 import type { EnterpriseTokenizationScope, EnterpriseTokenizationTerms, EnterpriseTokenizationTermsValidationCode, EnterpriseTokenizedRightType, SerializedEnterpriseTokenizationTerms } from './enterprise-tokenization-terms.js';
 import type { SerializedEnterpriseTokenizationRequest } from './enterprise-tokenization-request.js';
+// Type-only specifiers are kept on one line deliberately: `scripts/check-duplicate-semantic-contracts.mjs`
+// treats a line-leading `type Name,` inside an import block as a *declaration* of that name.
+import type { GovernedAuthorizationArtifact, GovernedAuthorizationStatus } from '@aoc-enterprise/governed-authorization';
 
 /**
  * The mandate's own issuance/revocation lifecycle -- deliberately not "is
@@ -38,7 +41,7 @@ import type { SerializedEnterpriseTokenizationRequest } from './enterprise-token
  * keep the two consistent. `enterpriseTokenizationMandateAuthorizes` derives
  * all of them instead.
  */
-export type EnterpriseTokenizationMandateStatus = 'active' | 'revoked';
+export type EnterpriseTokenizationMandateStatus = GovernedAuthorizationStatus;
 
 /**
  * The canonical Enterprise-owned contract for **the durable, machine-readable
@@ -75,24 +78,10 @@ export type EnterpriseTokenizationMandateStatus = 'active' | 'revoked';
  *
  * Ownership: AOC Enterprise (`@aoc-enterprise/tokenization-mandate`).
  */
-export interface EnterpriseTokenizationMandate {
+export interface EnterpriseTokenizationMandate extends GovernedAuthorizationArtifact<EnterpriseTokenizationTerms> {
+  /** Re-declared as this action's own literal so a serialized mandate names its schema on its face and cannot be replayed through a sibling action's contract. */
   readonly schemaVersion: typeof ENTERPRISE_TOKENIZATION_SCHEMA_VERSION;
-  readonly id: CanonicalId;
   readonly status: EnterpriseTokenizationMandateStatus;
-  readonly asset: ResourceRef;
-  readonly terms: EnterpriseTokenizationTerms;
-  readonly requestRef: CanonicalId;
-  readonly requestedBy: CanonicalId;
-  readonly decisionRef: CanonicalId;
-  readonly effectiveFrom: UtcDateTime;
-  readonly expiresAt: UtcDateTime;
-  readonly correlationId: CanonicalId;
-  readonly evaluationRef?: CanonicalId;
-  readonly issuerRef?: CanonicalId;
-  readonly approvalRefs?: readonly CanonicalId[];
-  readonly obligationRefs?: readonly CanonicalId[];
-  readonly evidenceRefs?: readonly CanonicalId[];
-  readonly auditRefs?: readonly CanonicalId[];
 }
 
 // ---------------------------------------------------------------------------

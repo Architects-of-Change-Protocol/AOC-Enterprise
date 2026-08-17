@@ -12,6 +12,7 @@
     "dist"
   ],
   "references": [
+    { "path": "../governed-authorization" },
     { "path": "../resource-envelope" }
   ]
 }

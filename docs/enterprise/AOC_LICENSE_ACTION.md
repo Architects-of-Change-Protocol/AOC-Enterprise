@@ -501,3 +501,25 @@ Deliberately **not** built, and none of it is implied by these contracts:
 - jurisdiction-specific legal policy or legal-opinion automation
 - `SUBLICENSE`, `ASSIGN_LICENSE`, `TERMINATE_LICENSE` as governed actions
 - external trust anchoring for the privileged-writer limitation
+
+## Update — the fourth enforcement
+
+`TRANSFER` (`docs/enterprise/AOC_TRANSFER_ACTION.md`) has since landed, and two
+of this action's distinguishing decisions were re-tested against it:
+
+- **Optional executor: confirmed, and sharpened.** `LICENSE` showed that some
+  actions have no necessary external performer. `TRANSFER` showed that the
+  *same* action may have one in some arrangements and not in others. Universal
+  executor binding is now falsified twice, independently.
+- **Optional rights scope: confirmed as licence-specific.** `TRANSFER` requires
+  a scope — moving a right is inherently a question of how much of it moves —
+  so `LICENSE` remains the only action of four for which a fraction is
+  optional, and "absence means not fractionally expressed, never 100%" remains
+  a statement about permissions rather than about quantities.
+
+`LICENSE` now consumes the shared, action-neutral vocabulary in
+`@aoc-enterprise/governed-authorization` (the governed-right categories, the
+rights-scope value type, the authorization-artifact skeleton and the evidence
+envelopes) via aliases and interface extension. No serialized byte, stored
+record, consumer, validator or error code changed. See
+`docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md`.

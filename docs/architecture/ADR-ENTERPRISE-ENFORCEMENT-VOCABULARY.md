@@ -1,333 +1,481 @@
-# ADR: The three-enforcement semantic audit — what vocabulary genuinely belongs to AOC Enterprise
+# ADR: The four-enforcement semantic audit — what vocabulary genuinely belongs to AOC Enterprise
 
-- Status: accepted
+- Status: accepted. **Supersedes the three-enforcement audit** recorded in this
+  file at commit `91460d3`; that audit's conclusions are preserved below, each
+  marked **confirmed**, **refined** or **refuted** by the fourth enforcement.
 - Related: `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`,
   `docs/architecture/ADR-COLLATERALIZE-ACTION.md`,
-  `docs/architecture/ADR-LICENSE-ACTION.md`
-- Scope: `@aoc-enterprise/{tokenization,collateralization,license}-mandate`,
-  `src/enterprise/{tokenization,collateralization,license}-governance/`
+  `docs/architecture/ADR-LICENSE-ACTION.md`,
+  `docs/architecture/ADR-TRANSFER-ACTION.md`
+- Scope: `@aoc-enterprise/{tokenization,collateralization,license,transfer}-mandate`,
+  `@aoc-enterprise/governed-authorization`,
+  `src/enterprise/{tokenization,collateralization,license,transfer}-governance/`
 
 ## Context
 
-AOC Enterprise now governs three concrete exercises of authority over a
-governed asset:
+AOC Enterprise now governs four concrete exercises of authority over a governed
+asset:
 
 ```
 TOKENIZE       → authorize an external representation of governed rights
 COLLATERALIZE  → authorize governed rights to be committed as security
 LICENSE        → authorize permission to exercise governed rights
+TRANSFER       → authorize the movement of a governed right to another holder
 ```
 
-Three independent domains is the threshold at which duplicated structure can be
-tested against duplicated *meaning*. This ADR records that audit, performed
-against the actual source after `LICENSE` was implemented and verified — never
-before, and never from architectural aesthetics or matching TypeScript shapes.
+The three-enforcement audit found several primitives semantically identical and
+deferred every one of them, on a single stated ground: extraction would require
+a new dependency edge into already-frozen contract packages, for a benefit that
+is declarative rather than behavioural. It recorded a trigger — *"It should be
+done when a fourth enforcement lands, or when one of these packages needs a
+breaking version for an unrelated reason — whichever comes first."*
 
-The question is not "is there duplication?" There is. It is: **which of it is
-semantic identity, and of that, which has earned extraction under the
-compatibility rules the repository already operates under?**
+The fourth enforcement has landed. This ADR re-runs the audit against the
+actual source with four data points, and — for the first time — acts on it.
 
 ## Method
 
-Each concern below was compared across the three contract packages and the
-three governance runtimes. A concern counts as **generic** only if its meaning
-can be stated without naming any of the three actions, and only if all three
-applicable implementations mean the same thing by it — not merely spell it the
-same way.
+Each concern was compared across four contract packages and four governance
+runtimes, **mechanically where the comparison was structural**: field lists
+were extracted from the source and diffed rather than eyeballed. A concern
+counts as **generic** only if its meaning can be stated without naming any of
+the four actions, and only if all applicable implementations mean the same
+thing by it — not merely spell it the same way.
 
-## The three-enforcement semantic matrix
+The audit ran only after `TRANSFER` was independently green.
 
-| Concern | TOKENIZE | COLLATERALIZE | LICENSE | Semantic conclusion | Extraction decision |
+## The four-enforcement semantic matrix
+
+| Concern | TOKENIZE | COLLATERALIZE | LICENSE | TRANSFER | Conclusion |
 | --- | --- | --- | --- | --- | --- |
-| Governed asset | `ResourceRef` identity only | `ResourceRef` identity only | `ResourceRef` identity only | **Identical.** Already a shared Protocol primitive; no asset is ever copied into a mandate. | Already generic — nothing to extract |
-| Governed rights | 5-value closed union | same 5 values | same 5 values | **Identical.** The vocabulary names which right of the *asset* is engaged — a property of the rights, not of the action. | GENERIC PROVEN · EXTRACTION DEFERRED |
-| Numeric rights scope (type) | `proportional \| unitized`, **required** | `proportional \| unitized`, **required** | `proportional \| unitized`, **optional** | **Type identical; requiredness is not.** Representing/encumbering is inherently "how much"; permitting is not. | GENERIC PROVEN (as an optional primitive) · EXTRACTION DEFERRED |
-| Rights-scope accumulation | none (issuance ceiling) | **cumulative** (`scopeSum`) | none | **Not generic.** Accumulation follows from encumbering a finite right, which only collateral does. | KEEP ACTION-SPECIFIC |
-| Action-specific permission scope | none | none | `permittedUses` · `permittedContexts` · `exclusivity` · term ceiling · unit ceiling | **A second, distinct kind of scope that only LICENSE has.** | KEEP ACTION-SPECIFIC |
-| Beneficiary / counterparty | **none** | `securedPartyRef` (benefits from security) | `licenseeRef` (receives permission) | **Not generic.** Absent in one; and the two present are different relations, not one concept. | KEEP ACTION-SPECIFIC |
-| Third-party reference that is not a party | none | `securedObligationRef` (what is secured) | none | **Not generic.** Unique to collateral. | KEEP ACTION-SPECIFIC |
-| Executor | `executorRef` **required** | `executorRef` **required** | `executorRef` **optional** | **Refuted as universal.** Licensing has no necessary external performer. | REJECT AS FALSE ABSTRACTION (as a required primitive) |
-| Bound-identity-must-match pattern | executor | executor · secured party · secured obligation | licensee · executor (when bound) | **The pattern is generic; the roles are not.** | KEEP ACTION-SPECIFIC (pattern documented, not typed) |
-| Authority path | Recognition → Authority Graph → Kernel | identical | identical | **Identical.** | Already generic (shared runtime) |
-| Approvals | Approval Runtime | identical | identical | **Identical.** | Already generic (shared runtime) |
-| Obligations | Enterprise obligations | identical | identical | **Identical.** | Already generic (shared runtime) |
-| Decision refs | `decisionRef` + `evaluationRef?` | identical | identical | **Identical.** | GENERIC PROVEN · EXTRACTION DEFERRED |
-| Mandate identity | `id` · `requestRef` · `requestedBy` · `correlationId` | identical | identical | **Identical.** | GENERIC PROVEN · EXTRACTION DEFERRED |
-| Validity period | `effectiveFrom` / `expiresAt`, both required | identical | identical, **plus** a separate external-term ceiling | **Mandate window identical.** LICENSE adds a second, distinct duration. | GENERIC PROVEN · EXTRACTION DEFERRED |
-| Revocation status | `active \| revoked` | `active \| revoked` | `active \| revoked` | **Identical**, with identical two-state rationale. | GENERIC PROVEN · EXTRACTION DEFERRED |
-| Revocation record | 10 fields + `executionsAtRevocation` | same 10 + `executionsAtRevocation` + `committedScopeAtRevocation` | same 10 + `executionsAtRevocation` | **11 fields identical**, one action-specific addition. | GENERIC PROVEN · EXTRACTION DEFERRED |
-| External execution envelope | `id` · `mandateRef` · `executedAt` · `correlationId` · `externalSystem?` · `externalTransactionReference?` · `evidenceRefs?` | identical | identical | **Envelope identical; payloads share nothing.** | GENERIC PROVEN · EXTRACTION DEFERRED |
-| Execution payload | issued scope, units, network, token standard, contract ref | committed scope, secured amount, registry, filing ref, jurisdiction, priority rank | granted uses, exclusivity, contexts, licence term, licensed units, agreement/acceptance refs | **Nothing in common beyond the envelope.** | KEEP ACTION-SPECIFIC |
-| Lifecycle evidence | **none** | release / discharge / satisfied / terminated | expired / terminated / cancelled / surrendered / superseded | **2 of 3.** Same shape and same observation-only posture, but tokenization has no analogue. | NEEDS FOURTH ENFORCEMENT |
-| Durable store | own tables, WAL, digest, version guard | identical conventions | identical conventions | **Conventions identical; schemas domain-specific.** | Already generic (conventions), KEEP ACTION-SPECIFIC (schemas) |
-| `authorization_artifact` | mandate → reference | identical | identical | **Identical.** | Already generic (Governance Store) |
-| Reference integrity | store-sealed | identical | identical | **Identical.** | Already generic (Governance Store) |
-| Tenant isolation | context + scope helpers | identical | identical | **Identical** (helpers differ only by error code). | GENERIC PROVEN · EXTRACTION DEFERRED |
-| Idempotency | `request_ref UNIQUE`, Kernel replay | identical | identical | **Identical.** | GENERIC PROVEN · EXTRACTION DEFERRED |
-| Corruption behavior | digest + canonical revalidation, fail closed | identical | identical | **Identical.** | GENERIC PROVEN · EXTRACTION DEFERRED |
+| Governed asset | `ResourceRef` identity only | same | same | same | **Identical 4/4.** Already a shared Protocol primitive. |
+| Action-target right | rights being *represented* | rights being *encumbered* | rights whose exercise is *permitted* | rights being *moved* | **Four different relations to one vocabulary.** |
+| Authority-source right | none | none | none | none | **No action expresses one.** Authority is scoped by capability + action + resource-scope string only. |
+| Rights vocabulary | 5-value closed union | same 5 | same 5 | same 5 | **Identical 4/4. EXTRACTED.** |
+| Proportional scope | `basisPoints`, integer | same | same | same | **Identical 4/4. EXTRACTED** (value type). |
+| Unitized scope | `units` + opaque denomination | same | same | same | **Identical 4/4. EXTRACTED** (value type). |
+| Scope requiredness | required | required | **optional** | required | **Action-specific 3–1.** |
+| Scope accumulation | none | **cumulative** | none | **cumulative** | **Action-specific 2–2**, and it tracks whether the quantity is *consumed*. |
+| Action-specific scope | none | none | uses · contexts · exclusivity · term · unit ceilings | none | **Only LICENSE has a second kind of scope.** |
+| Requester | `requestedBy` | same | same | same, **and distinct from the holder** | **Identical 4/4** (skeleton field). |
+| Source party | none | none | none | **`transferorRef`** | **Unique to TRANSFER.** No sibling takes anything away. |
+| Beneficiary / counterparty | none | `securedPartyRef` (benefits) | `licenseeRef` (receives permission) | `transfereeRef` (receives the right) | **Not generic.** Three different relations; one action has none. |
+| Recipient substitutability | n/a | n/a | relaxable by `assignment` | **never relaxable** | **Not generic.** |
+| Executor | required | required | **optional** | **optional** | **Refuted as universal, twice.** |
+| Authority path | Recognition → Authority Graph → Kernel | identical | identical | identical | **Identical 4/4.** Already generic. |
+| Approvals | Approval Runtime | identical | identical | identical | **Identical 4/4.** Already generic. |
+| Obligations | Enterprise obligations | identical | identical | identical | **Identical 4/4.** Already generic. |
+| Mandate common metadata | 17 fields | same 17 | same 17 | same 17, **zero extras in any** | **Identical 4/4. EXTRACTED.** |
+| Validity | `effectiveFrom`/`expiresAt`, required | same | same **+ external term ceiling** | same | **Mandate window identical 4/4. EXTRACTED.** |
+| Revocation | `active \| revoked`; 10-field record | same + `committedScopeAtRevocation?` | same 10 | same + `transferredScopeAtRevocation?` | **10 fields + status identical 4/4. EXTRACTED.** The extra field appears in exactly the two actions with a conserved quantity. |
+| Execution evidence | envelope + issuance payload | envelope + collateral payload | envelope + licence payload | envelope + movement payload | **9-field envelope identical 4/4. EXTRACTED.** Payloads share nothing. |
+| Execution actor | `executorRef`, bound | `executorRef`, bound | `executedBy`, observed | `executedBy`, observed | **Not generic, 2–2.** The split is semantic, not cosmetic. |
+| Lifecycle evidence | **none** | release / discharge / satisfied / terminated | expired / terminated / cancelled / surrendered / superseded | registered / rejected / reversed / corrected / superseded | **8-field envelope identical 3/3 that have one. EXTRACTED.** Taxonomy action-specific. |
+| Durable store | own tables, WAL, digest, version guard | identical conventions | identical conventions | identical conventions | **Conventions identical; schemas domain-specific.** |
+| `authorization_artifact` | mandate → reference | identical | identical | identical | **Identical 4/4.** Already generic. |
+| Reference integrity | store-sealed | identical | identical | identical | **Identical 4/4.** Already generic. |
+| Post-execution authority change | none | none | none | **none — but arguably needed** | **A new distinction, and the architecture supports neither side of it.** |
+| Protocol impact | none | none | none | none | **Identical 4/4.** |
 
-## Generic primitive candidates
+## Generic primitive decisions
 
-### Candidate 1 — `GovernedRightsScope` (rights + proportional/unitized scope)
+### Candidate 1 — Governed-right vocabulary
 
-- **TOKENIZE**: rights being *represented*; scope required; ceiling not summed.
-- **COLLATERALIZE**: rights being *encumbered*; scope required; **summed** across executions.
-- **LICENSE**: rights being *permitted for use*; scope **optional**; not summed.
-- **Semantically identical?** *Partial.* The right *selection* is identical
-  across all three. The scope *type* is byte-identical. But requiredness and
-  accumulation are not: `LICENSE` proves a permission can be fully specified
-  with no fraction at all, and only collateral accumulates.
-- **Decision: the right vocabulary and the scope type are GENERIC SEMANTIC
-  PROVEN, EXTRACTION DEFERRED FOR COMPATIBILITY. Requiredness and accumulation
-  are KEEP ACTION-SPECIFIC.**
-- **Rationale.** The original hypothesis — that "rights + scope" is one generic
-  primitive — is **half right, and the half it gets wrong matters more.** A
-  generic `GovernedRightsScope` that is mandatory would corrupt `LICENSE`; one
-  that accumulates would corrupt `TOKENIZE` and `LICENSE`. What is genuinely
-  generic is narrower than the name suggests: a right-category vocabulary, and
-  an optional quantity expressed as an exact integer.
+- **TOKENIZE**: `ENTERPRISE_TOKENIZED_RIGHT_TYPES`, 5 values.
+- **COLLATERALIZE / LICENSE / TRANSFER**: the same 5 values, three times.
+- **Semantic result.** **Identical 4/4**, and `TRANSFER` supplied the argument
+  the three-way audit could only assert. The vocabulary describes **types of
+  rights attached to an asset (A)**, not **rights granted by each action (B)**,
+  and here is the proof: for `LICENSE`, `'ownership-interest'` names the right
+  a permission *draws on* while the permission granted is something narrower;
+  for `TRANSFER`, the very same value names the thing that *moves*. One
+  vocabulary sustaining two completely different relations is only possible if
+  it is asset-side.
+- **Decision: EXTRACT NOW** → `GovernedRightType`.
+- **Compatibility impact.** None. Each action re-exports its own alias
+  (`EnterpriseLicensableRightType = GovernedRightType`), so every consumer,
+  serialized byte and stored record is unchanged.
+- **Three-way conclusion: CONFIRMED and REFINED** (the A-or-B question is now
+  answered from evidence rather than inference).
 
-### Candidate 2 — Mandate reference / metadata skeleton
+### Candidate 2 — Authority-source right vs action-target right
 
-- **Evidence, all three, field for field:** `schemaVersion` · `id` · `status` ·
-  `asset` · `terms` · `requestRef` · `requestedBy` · `decisionRef` ·
-  `effectiveFrom` · `expiresAt` · `correlationId` · `evaluationRef?` ·
-  `issuerRef?` · `approvalRefs?` · `obligationRefs?` · `evidenceRefs?` ·
-  `auditRefs?`.
-- **Semantically identical?** **Yes — the strongest result in this audit.**
-  Three independently-motivated domains produced the same 17 fields with the
-  same meanings, the same optionality, and the same "reference what is owned
-  elsewhere, never embed it" discipline. It is definable without naming any
-  action: *the identity of a durable authorization artifact, its linkage to the
-  governance decision that produced it, its validity window, and its revocation
-  state.*
-- **Decision: GENERIC SEMANTIC PROVEN, BUT EXTRACTION DEFERRED FOR
-  COMPATIBILITY.**
-- **Rationale.** Extraction fails rubric criterion 5, not criteria 1–4. The
-  three contract packages are frozen, compile to `dist`, and each declares
-  exactly one dependency (`@aoc-enterprise/resource-envelope`). Extracting the
-  skeleton requires either a new compiled contract package that two *already
-  frozen* packages must take as a new dependency, or placing it in
-  `@aoc-enterprise/canonical-runtime-contracts`, which exports raw `src` and so
-  uses an incompatible packaging model. Meanwhile the benefit is purely
-  declarative: each package must keep its own validator, its own ~24-code error
-  union, and its own serializer regardless, and a shared base would need three
-  type parameters (`terms`, `schemaVersion`, `status`) to serve all three —
-  eroding the very clarity extraction is meant to buy.
-- **Migration path when it is taken.** A `GovernedAuthorizationArtifact<TTerms>`
-  base interface that each mandate `extends`. This is structurally compatible:
-  no consumer, serializer, validator or stored byte changes. It should be done
-  when a fourth enforcement lands, or when one of these packages needs a
-  breaking version for an unrelated reason — whichever comes first.
+**A new candidate, raised by the `LICENSE` audit and settled here.**
 
-### Candidate 3 — Authorized executor / authorized party binding
+- **Evidence.** `AuthorityGrant` carries `capability`, `actions[]`,
+  `resourceScopes[]` — and no governed-right field. Neither does
+  `DelegationGrant`, `RecognitionCapabilityToken`, or any authority policy. The
+  governed-right vocabulary appears only inside `action.parameters`.
+- **Measured, not asserted** (`transfer-authority-transition.test.ts`):
+  authority is asset-scoped by default; a hierarchical resource-scope suffix
+  *does* contain when a caller names it; and **the convention is unenforced** —
+  an actor scoped to `…:usage-right` successfully transferred the
+  **ownership interest**, because nothing connects the scope string to the
+  action's target right.
+- **Semantic result: SEMANTIC DISTINCTION PROVEN, BUT THE CURRENT AUTHORITY
+  MODEL DOES NOT EXPRESS IT.**
+- **Decision: KEEP ACTION-SPECIFIC — and record an architecture gap.** No
+  `AuthorityBasis`/`ActionTargetRight` types were introduced. Introducing them
+  in a contract package while the Authority Graph cannot evaluate them would
+  produce a vocabulary that *looks* like a guarantee and is not one.
+- **Extraction path.** Right-scoped authority is an Authority Graph change —
+  a right dimension on `AuthorityGrant` and a policy that evaluates it against
+  `action.parameters` — not a contract-package change. Deliberately not
+  attempted here.
 
-- **TOKENIZE**: `executorRef`, required — someone must mint the token.
-- **COLLATERALIZE**: `executorRef`, required — someone must create the security
-  interest. Plus `securedPartyRef` (benefits) and `securedObligationRef` (not a
-  party at all).
-- **LICENSE**: `executorRef` **optional** — a licensor may grant directly. Plus
-  `licenseeRef` (receives), which is required.
-- **Semantically identical?** **No.**
-- **Decision: REJECT AS FALSE ABSTRACTION** for `AuthorizedExecutor` as a
-  required primitive; **KEEP ACTION-SPECIFIC** for a general
-  `AuthorizedPartyBinding` type.
-- **Rationale.** This is the hypothesis `LICENSE` was best placed to test, and
-  it **falsified it.** Two of three actions require an executor only because
-  representing and encumbering are *acts someone must perform externally*.
-  Permission is not such an act: it can be granted by the licensor directly.
-  Requiring one would have forced every direct license to invent a party, and
-  an invented binding protects nothing.
+### Candidate 3 — `GovernedRightsScope`
 
-  The tempting salvage — "the generic thing is an *authorized party binding*,
-  and executor/secured-party/licensee are instances" — is precisely the false
-  abstraction the audit rubric warns about. Those three roles contain identity
-  fields and nothing else in common:
+- **Evidence.** The value type is byte-identical 4/4. The *policy* over it is
+  not:
 
   ```
-  executorRef      may PERFORM the external act        (binds who acts)
-  securedPartyRef  BENEFITS from the arrangement       (binds who gains)
-  licenseeRef      RECEIVES the permission             (binds who may exercise)
+                  required?   accumulates?
+  TOKENIZE        yes         no
+  COLLATERALIZE   yes         yes
+  LICENSE         NO          no
+  TRANSFER        yes         yes
   ```
 
-  They differ in what substituting them *means*, in whether they are optional,
-  and in what may relax them (only `licenseeRef` can be relaxed, and only by an
-  assignment disposition). A type unifying them would be a bag of
-  `CanonicalId`s with a comment — which is what the domain already has, more
-  honestly, as three named fields. **A licensee is not an executor, and a
-  secured party is not an executor.**
+- **Semantic result.** The three-way audit's split — type generic, requiredness
+  and accumulation action-specific — is **confirmed by a fourth independent
+  case, and made sharper**: `TRANSFER` sits *opposite* `LICENSE` on
+  requiredness and *with* `COLLATERALIZE` on accumulation, so neither property
+  is a majority artefact.
+- **Decision: EXTRACT NOW** the value type and its three total functions
+  (`Equals`, `Within`, `Sum`) and `serialize`. **KEEP ACTION-SPECIFIC**
+  requiredness, accumulation, and presence semantics.
+- **Note on presence.** `LICENSE` treats an absent scope as "not fractionally
+  expressed" — emphatically not 100% — and refuses to compare it against a
+  present one. That refusal stayed in `LICENSE`: it is a statement about
+  permissions, not about quantities.
+- **Three-way conclusion: CONFIRMED.**
 
-### Candidate 4 — Authorization artifact metadata / `UniversalMandate`
+### Candidate 4 — Mandate reference / metadata skeleton
 
-- **Semantically identical?** The *envelope* is (see Candidate 2). The
-  `terms` are not: tokenization terms, collateralization terms and license
-  terms share no field beyond `rights`.
-- **Decision: REJECT `UniversalMandate`. The envelope is Candidate 2.**
-- **Rationale.** A single mandate type would either erase the domain
-  distinctions (weakening validation — rubric criterion 4) or become a union
-  that every consumer must narrow, which is worse than three named types.
+- **Evidence, extracted mechanically from the source:**
 
-### Candidate 5 — External execution evidence envelope
+  ```
+  TOKENIZE       17 fields
+  COLLATERALIZE  17 fields
+  LICENSE        17 fields
+  TRANSFER       17 fields
+  common         17          extras in any package: ZERO
+  ```
 
-- **Evidence, all three:** `id` · `mandateRef` · `executedAt` ·
-  `correlationId` · `externalSystem?` · `externalTransactionReference?` ·
-  `evidenceRefs?`, plus the identical observation-only posture — recording
-  evidence never re-authorizes anything.
-- **Semantically identical?** **Yes for the envelope. Emphatically no for the
-  payload.**
-- **Decision: GENERIC SEMANTIC PROVEN (envelope only), EXTRACTION DEFERRED FOR
-  COMPATIBILITY. Payloads KEEP ACTION-SPECIFIC.**
-- **Rationale.** Same compatibility bar as Candidate 2, and a smaller prize: a
-  seven-field envelope. The payloads share nothing — issued scope and token
-  standards, committed scope and priority rank, granted uses and exclusivity —
-  and unifying them would produce a type where almost every field is optional,
-  which is how a contract stops constraining anything.
+  `schemaVersion · id · status · asset · terms · requestRef · requestedBy ·
+  decisionRef · effectiveFrom · expiresAt · correlationId · evaluationRef? ·
+  issuerRef? · approvalRefs? · obligationRefs? · evidenceRefs? · auditRefs?`
 
-### Candidate 6 — Mandate validity / revocation metadata
+- **Semantic result. Identical 4/4** — four independently-motivated domains,
+  written months apart, produced the same seventeen fields with the same
+  meanings, the same optionality, and the same "reference what is owned
+  elsewhere, never embed it" discipline, with **no action adding a single field
+  of its own**. It is definable without naming any action: *the identity of a
+  durable authorization artifact, its linkage to the governance decision that
+  produced it, its validity window, and its revocation state.*
+- **Decision: EXTRACT NOW** → `GovernedAuthorizationArtifact<TTerms>`.
+- **Compatibility impact.** None. Each mandate `extends` the base and
+  re-declares `schemaVersion` as its own literal and `status` as its own union,
+  so a serialized artifact still names its schema on its face and still cannot
+  be replayed through a sibling action's contract. Each action keeps its own
+  validator, its own ~24-code error union and its own serializer.
+- **Three-way conclusion: CONFIRMED, and the deferral is now LIFTED** — see
+  "Why extraction happened this time".
 
-- **Evidence:** `active | revoked` in all three, with the same recorded
-  rationale for refusing a third state; `effectiveFrom`/`expiresAt` required in
-  all three; a revocation record sharing 10 identical fields plus
-  `executionsAtRevocation`; and in all three the same principle that revocation
-  withdraws *future* authority and asserts nothing about what already happened
-  externally.
-- **Semantically identical?** **Yes.**
-- **Decision: GENERIC SEMANTIC PROVEN, EXTRACTION DEFERRED FOR COMPATIBILITY.**
-- **Rationale.** Folds naturally into Candidate 2 and should be extracted with
-  it, not separately. `LICENSE` adds an external-term ceiling that is a
-  *different* duration and must not be folded in.
+### Candidate 5 — `GovernedAuthorizationArtifact<TTerms>` as a migration path
 
-### Candidate 7 — Lifecycle evidence
+The three-way audit named this exact shape as the migration path it would take
+when a fourth enforcement landed. **Taken, under that name.** `UniversalMandate`
+remains **REJECTED**: a single mandate type would either erase the domain
+distinctions or become a union every consumer must narrow.
 
-- **TOKENIZE**: none. **COLLATERALIZE**: release/discharge/satisfied/terminated.
-  **LICENSE**: expired/terminated/cancelled/surrendered/superseded.
-- **Semantically identical?** The two that exist are structurally and
-  posturally identical (append-only, references a specific execution,
-  observation-only, never a status, never restores capacity). But only two of
-  three have one.
-- **Decision: NEEDS FOURTH ENFORCEMENT.**
-- **Rationale.** Two cases is exactly the evidence strength this audit exists to
-  distrust — and the second was written with the first in view. Whether "an
-  external arrangement ends" is a universal governed-action concern or a
-  property of arrangements that *persist* (unlike a minted token) is genuinely
-  open. A fourth action would settle it.
+### Candidate 6 — Validity / revocation metadata
 
-### Candidate 8 — Tenant scoping and strict-UTC helpers (runtime layer)
+- **Evidence.** `active | revoked` in all four, with the same recorded
+  rationale for refusing a third state. `effectiveFrom`/`expiresAt` required in
+  all four. Revocation records share **10 identical fields** 4/4.
+- **The one variation is informative rather than awkward.** The extra field —
+  `committedScopeAtRevocation?` / `transferredScopeAtRevocation?` — appears in
+  exactly the two actions whose quantity is *consumed*, and in neither of the
+  two whose quantity is a ceiling. It correlates perfectly with Candidate 3's
+  accumulation split.
+- **Decision: EXTRACT NOW** → `GovernedAuthorizationStatus`, folded into
+  Candidate 4 rather than extracted separately. **KEEP ACTION-SPECIFIC** the
+  revocation *record* (it is a runtime row shape, not contract vocabulary) and
+  `LICENSE`'s external-term ceiling, which is a genuinely different duration.
+- **Three-way conclusion: CONFIRMED.**
 
-- **Evidence:** `canAccess*Organization`, `require*TenantScope`,
+### Candidate 7 — External execution evidence envelope
+
+- **Evidence, extracted mechanically.** Nine fields common to all four:
+  `schemaVersion · id · mandateRef · executedAt · rights · correlationId ·
+  externalSystem? · externalTransactionReference? · evidenceRefs?`, plus the
+  identical observation-only posture.
+- **Refinement of the three-way result:** the proven envelope is **nine fields,
+  not seven**. `rights` is common to all four, which three actions could not
+  establish on their own.
+- **And a new negative result: the actor is not in the envelope**, and the
+  split is semantic:
+
+  ```
+  TOKENIZE       executorRef   BOUND — checked, always
+  COLLATERALIZE  executorRef   BOUND — checked, always
+  LICENSE        executedBy    OBSERVED — checked only if one was bound
+  TRANSFER       executedBy    OBSERVED — checked only if one was bound
+  ```
+
+  One inherited field would have had to mean "checked" and "merely recorded" at
+  once.
+- **Decision: EXTRACT NOW** → `GovernedExecutionEvidenceCore` (9 fields).
+  **KEEP ACTION-SPECIFIC** the actor field and every payload.
+- **Three-way conclusion: CONFIRMED and REFINED** (envelope widened 7 → 9;
+  actor explicitly excluded).
+
+### Candidate 8 — Lifecycle evidence
+
+- **The three-way audit's explicit open question, and the reason it said
+  `NEEDS FOURTH ENFORCEMENT`. `TRANSFER` supplied the fourth case.**
+- **Evidence.** Three of four have one; the eight structural fields are
+  identical across all three. `LICENSE` and `TRANSFER` additionally agree
+  field-for-field (11/11) on `occurredAt` / `lifecycleType` /
+  `externalReference?`; `COLLATERALIZE` spells the same three concepts
+  `releasedAt` / `releaseType` / `externalReleaseReference`.
+- **And the posture is identical in all three, in three respects that matter
+  more than the fields:** append-only against a *specific* execution; never a
+  mandate status; and **never restores capacity**. `TRANSFER` holds this last
+  rule hardest — a reported reversal decrements nothing.
+- **Why TOKENIZE has none is now explicable rather than merely observed.**
+  Minting produces a token whose own subsequent life — burned, moved, split —
+  would be a governed act *over the token*, not a report about the minting. The
+  other three each leave a standing external arrangement that the same
+  arrangement can later be reported to have exited.
+- **Semantic result: generic envelope proven; event taxonomy action-specific.**
+  The taxonomies share not one value across the three.
+- **Decision: EXTRACT NOW** → `GovernedLifecycleEvidenceCore` (8 fields).
+  **KEEP ACTION-SPECIFIC** the taxonomies and the instant/category field names.
+  `COLLATERALIZE`'s naming divergence is recorded as naming rather than
+  meaning; a frozen field was **not** renamed to tidy it.
+- **Three-way conclusion: RESOLVED** (from `NEEDS FOURTH ENFORCEMENT`).
+
+### Candidate 9 — Party roles
+
+- **Evidence, now five roles across four actions:**
+
+  ```
+  executorRef      may PERFORM the external act     TOKENIZE, COLLATERALIZE (required)
+                                                    LICENSE, TRANSFER (optional)
+  securedPartyRef  BENEFITS from the arrangement    COLLATERALIZE
+  licenseeRef      RECEIVES the permission          LICENSE (relaxable by assignment)
+  transferorRef    LOSES the right                  TRANSFER
+  transfereeRef    RECEIVES the right               TRANSFER (never relaxable)
+  ```
+
+- **Semantic result: NOT GENERIC**, and the fourth action strengthened the
+  refutation twice. It added the first role that *loses* something, and it
+  added a recipient that — unlike a licensee — can never be substituted. Two
+  "recipients" that differ in whether substitution is even representable are
+  not one concept.
+- **Decision: KEEP ACTION-SPECIFIC.** The identity *primitive* (`CanonicalId`)
+  is already generic; the role semantics are not. A unifying type would be a
+  bag of `CanonicalId`s with a comment.
+- **Three-way conclusion: CONFIRMED** (`AuthorizedExecutor` as a universal
+  primitive remains **REJECTED AS FALSE ABSTRACTION**, now falsified twice
+  independently).
+
+### Candidate 10 — Post-execution state transition
+
+**A new candidate, and the most interesting thing `TRANSFER` found.**
+
+- **Evidence.**
+
+  ```
+  TOKENIZE       ownership unchanged
+  COLLATERALIZE  ownership unchanged
+  LICENSE        ownership unchanged
+  TRANSFER       ownership arguably changed — and AOC does not know it
+  ```
+
+- **Measured** (`transfer-authority-transition.test.ts`): after a complete,
+  integrity-sealed, restart-surviving transfer, the recipient's governed
+  request is **denied** and the transferor's authority is **unchanged**.
+- **Semantic result: a real distinction between non-authority-mutating and
+  authority-mutating actions exists — and the architecture currently supports
+  only the first kind.**
+- **Decision: KEEP ACTION-SPECIFIC — do not implement the taxonomy.** Marking
+  actions as authority-mutating would be a label without a mechanism: there is
+  no generic authority-transition primitive for such a label to select. What is
+  needed is the mechanism, not the taxonomy.
+- **Recorded as: AUTHORITY-TRANSITION GAP IDENTIFIED.** See
+  `docs/architecture/ADR-TRANSFER-ACTION.md`.
+
+### Candidate 11 — Tenant scoping and strict-UTC helpers (runtime layer)
+
+- **Evidence.** `canAccess*Organization`, `require*TenantScope`,
   `require*AccessToOrganization` and the strict-UTC predicate are byte-identical
-  across the three governance runtimes, differing only in which typed error they
+  across all four governance runtimes, differing only in which typed error they
   throw.
-- **Semantically identical?** **Yes**, but they are *utilities*, not governance
-  vocabulary.
-- **Decision: KEEP ACTION-SPECIFIC (for now).**
-- **Rationale.** Rubric criterion 3 requires extraction to reduce *semantic*
-  duplication rather than line count. A UTC regex has no domain content, and a
-  shared version would need an injected error factory to preserve each module's
-  typed error taxonomy — trading duplication for indirection at the exact point
-  where fail-closed behaviour must stay obvious. This is a legitimate future
-  tidy-up, not a finding about Enterprise's vocabulary.
+- **Decision: KEEP ACTION-SPECIFIC (still).** These are *utilities*, not
+  governance vocabulary. A UTC regex has no domain content, and a shared version
+  would need an injected error factory to preserve each module's typed error
+  taxonomy — trading duplication for indirection exactly where fail-closed
+  behaviour must stay obvious.
+- **Three-way conclusion: CONFIRMED.**
 
 ## Extractions actually performed
 
-**None.**
+**One package: `@aoc-enterprise/governed-authorization`.**
 
-Every candidate that met the three-domain semantic-identity bar (Candidates 2,
-5, 6, and the vocabulary half of 1) failed rubric criterion 5: extraction would
-require modifying frozen contract packages whose duplication was already
-deliberately recorded, for a benefit that is declarative rather than
-behavioural. Every candidate that would have been cheap to extract (Candidate 8)
-is a utility rather than vocabulary. Every candidate that looked most like a
-framework primitive (Candidate 3) was **falsified** by the third
-implementation.
+```
+GovernedRightType · GOVERNED_RIGHT_TYPES · isGovernedRightType
+GovernedRightsScope · Equals / Within / Sum / serialize · FULL_BASIS_POINTS
+GovernedAuthorizationStatus
+GovernedAuthorizationArtifact<TTerms>
+GovernedExecutionEvidenceCore
+GovernedLifecycleEvidenceCore
+```
 
-This is a deliberate outcome, not an incomplete one. Per the governing rubric,
-"GENERIC SEMANTIC PROVEN BUT EXTRACTION DEFERRED FOR COMPATIBILITY" is a
-legitimate result, and contract stability is worth more than removing declared
-duplication that is already documented as intentional.
+Pure data. No orchestration, no policy engine, no persistence, no service, no
+API, no provider adapter, no validation, no error taxonomy, no action terms, no
+party roles.
+
+All four contract packages consume it. Each keeps its own names as aliases, its
+own `schemaVersion` literal, its own validators, its own error unions and its
+own serializers.
+
+### Why extraction happened this time
+
+The three-way audit deferred on **one** ground — rubric criterion 5, frozen
+contract compatibility — and named the fourth enforcement as the trigger to
+revisit. Both halves were tested rather than assumed:
+
+1. **The evidence got stronger, in a way three actions could not produce.** 17
+   of 17 mandate fields with zero extras across four independent domains; a
+   scope split that is 3–1 on requiredness and 2–2 on accumulation, so neither
+   is a majority artefact; and the one open question (lifecycle evidence)
+   answered.
+2. **The compatibility objection was measured and did not hold.**
+   `check-api-freeze` guards the v1 **HTTP** surface, not these packages. None
+   of the four is on the published `@aoc-enterprise/runtime` surface — all four
+   governance runtimes are deliberately un-barrelled for exactly that reason —
+   so `validate:publishability` is unaffected. And structural aliasing changes
+   no serialized byte, no stored record, no consumer and no validator.
+
+Every regression suite and every release check was re-run after the extraction:
+root **3906 pass / 0 fail**, workspaces **996 pass / 0 fail**, and every check
+that passed at baseline still passes.
 
 ## Does AOC Enterprise need a generic enforcement framework?
 
-**No.** The burden of proof was not met, and after three implementations it is
-clearer *why* it will probably never be met by adding more actions.
+**No — and after four implementations it is clearer why it never will.**
 
-The behavioural machinery is **already generalized**, and all three actions
-consume it unchanged:
+The behavioural machinery is already generalized, and all four actions consume
+it unchanged:
 
 ```
 AocKernel               authority · policy · approvals · obligations · decision
 Recognition Runtime     standing
-Authority Graph         authority, scoped to the asset
+Authority Graph         authority, scoped to capability + action + resource string
 Approval Runtime        quorum, delegation, segregation of duties
 Governance Store        aggregates · references · integrity chain
 Reference Integrity     store-computed sealing
 persistence conventions WAL · digests · version guards · tenant scoping
 ```
 
-What each action adds is exactly what cannot be generalized: *what was
-authorized*, *what was done under it*, and *what was reported afterwards*. An
-`EnterpriseEnforcementFramework`, `GenericMandateEngine`,
-`UniversalGovernedActionEngine`, `ActionPluginFramework` or `MandateFramework`
-would sit between the Kernel and three thin domain modules and mediate nothing
-— the orchestration each service performs is ~40 lines of sequencing whose
-every branch is a domain decision.
+`TRANSFER` needed no new machinery. It needed a fourth *vocabulary*, and it
+found that the vocabulary was already there — which is what this ADR acted on.
+An `EnterpriseEnforcementFramework`, `GenericMandateEngine`,
+`UniversalGovernedActionEngine` or `ActionPluginFramework` would sit between the
+Kernel and four thin domain modules and mediate nothing: the orchestration each
+service performs is ~40 lines of sequencing whose every branch is a domain
+decision.
 
 **The remaining question was never orchestration. It was vocabulary — and the
-vocabulary that survived three domains is smaller than any of the three
-implementations would have suggested on its own.**
+vocabulary that survived four domains has now been extracted, and is smaller
+than any single implementation would have suggested.**
 
-## Did `LICENSE` expose any missing shared machinery?
+## Did `TRANSFER` expose missing shared machinery?
 
-**No.** Every mechanism it needed already existed and was consumed unchanged.
-The one thing it needed that no sibling had — a second, non-fractional notion of
-scope — is genuinely action-specific, and the audit's most useful negative
-result is that it must stay that way.
+**Yes — one thing, and it is not a framework.**
 
-## Did `LICENSE` expose any need for a Protocol change?
+There is **no authority-transition primitive**. The Authority Graph is mutated
+only by explicit administrative acts, and nothing expresses "authority over X
+moved from A to B" as a first-class, evidenced, revocable operation. Every
+sibling action was able to ignore this because none of them changes who may act
+next. `TRANSFER` cannot ignore it, and does not pretend to: it records what it
+knows and stops.
 
-**No.** Nothing in `LICENSE` crosses an independent sovereignty boundary.
-Governed permission lineage, license lineage and rights delegation lineage were
-each considered and deliberately not implemented in Protocol: none appeared as a
-requirement in the implementation, and implementing them speculatively is
-exactly what the Protocol boundary rule forbids.
+This was deliberately **not** solved with an action-specific write into the
+Authority Graph.
 
-## What the third enforcement proved about Enterprise
+## Did `TRANSFER` expose a need for a Protocol change?
+
+**No.** `@aoc/protocol` holds no owner, holder, controller or
+sovereign-ownership record anywhere — `ResourceRef` is `{kind, id, tenantId?,
+attributes?}`, pure identity — so a completed transfer has nothing at the
+Protocol layer to update. The gap identified above is Enterprise-local: the
+state that would need to change is the Authority Graph, an Enterprise feature.
+
+**Classification: `PROTOCOL CHANGE NOT YET REQUIRED, BUT AUTHORITY-TRANSITION
+GAP IDENTIFIED`.** It would become a Protocol question only if authority
+transitions had to be recognized across independently-governed deployments —
+which `TRANSFER` did not demonstrate, and which must not be implemented
+speculatively.
+
+## What the fourth enforcement proved about Enterprise
 
 ```
-                    GOVERNED ASSET
-                         │
-           ┌─────────────┼─────────────┐
-           ▼             ▼             ▼
-       TOKENIZE     COLLATERALIZE    LICENSE
-           │             │             │
-           ▼             ▼             ▼
-      Enforcement    Enforcement    Enforcement     ← identical machinery
-           │             │             │
-           ▼             ▼             ▼
-       Mandate         Mandate        Mandate       ← identical envelope,
-           │             │             │              different terms
-           ▼             ▼             ▼
-       External        External       External
-     representation   collateral     permission     ← nothing in common
-           │             │             │
-           ▼             ▼             ▼
-        Evidence       Evidence       Evidence      ← identical envelope,
-                                                      different payloads
+                       GOVERNED RIGHT
+                             │
+        ┌────────────────────┼────────────────────┐
+        ▼                    ▼                    ▼
+    TOKENIZE            COLLATERALIZE          LICENSE
+ representation          encumbrance           permission
+        │                    │                    │
+        └────────────────────┼────────────────────┘
+                             │
+                         TRANSFER
+                     change of holder
+                             │
+                             ▼
+                        Enforcement          ← identical machinery, 4/4
+                             │
+                             ▼
+                          Mandate            ← identical envelope (now shared),
+                             │                 different terms
+                             ▼
+                  authorization_artifact     ← identical, 4/4
+                             │
+                             ▼
+                    Reference Integrity      ← identical, 4/4
+                             │
+                             ▼
+                     External Execution      ← nothing in common
+                             │
+                             ▼
+                         Evidence            ← identical envelope (now shared),
+                             │                 different payloads
+                             ▼
+                    Authority Transition     ← ✗ DOES NOT EXIST
 ```
 
-AOC Enterprise is not a tokenization platform, a collateral platform, or a
-licensing platform. It is a generalized governance and enforcement machine, and
-after three enforcements the smallest reusable semantic vocabulary that
-genuinely belongs to it is:
+The diagram was incomplete, and `TRANSFER` is what showed where. Changing who
+holds a right does require an authority transition, and AOC has no primitive
+for one at any layer. Everything above that final box is now proven and, where
+it was vocabulary, shared.
+
+After four enforcements the smallest reusable semantic vocabulary that
+genuinely belongs to AOC Enterprise is exactly what
+`@aoc-enterprise/governed-authorization` now contains:
 
 1. a **governed asset reference** (already Protocol's `ResourceRef`);
 2. a **governed-right vocabulary** — which right of the asset is engaged;
-3. an **optional exact quantity** over those rights;
+3. an **exact quantity** over those rights, with requiredness and accumulation
+   left to each action;
 4. an **authorization artifact envelope** — identity, decision linkage,
-   validity window, revocation state, and reference lists;
-5. an **execution evidence envelope** — identity, mandate linkage, instant,
-   external system, correlation.
+   validity window, revocation state, reference lists;
+5. an **execution evidence envelope** and a **lifecycle evidence envelope**.
 
-Everything else — beneficiaries, executors, uses, contexts, exclusivity,
-accumulation, lifecycle — belongs to the action, and three independent domains
-were required to find that out.
+Everything else — beneficiaries, executors, holders, recipients, uses,
+contexts, exclusivity, registries, accumulation policy, lifecycle taxonomies —
+belongs to the action. Four independent domains were required to find that out,
+and the fourth was required to act on it.
