@@ -14,6 +14,7 @@ import {
 import { GovernanceStoreError } from '../governance-store/errors.js';
 import { createSqliteGovernanceStore } from '../governance-store/sqlite-governance-store.js';
 import { createInMemoryGovernanceStore } from '../governance-store/in-memory-governance-store.js';
+import { verifyGovernanceRecordIntegrity } from '../governance-store/verification.js';
 import type { GovernanceStore } from '../governance-store/governance-store.js';
 
 /**
@@ -871,6 +872,104 @@ describe('reference integrity — M. corrupted rows are never silently accepted'
 // ---------------------------------------------------------------------------
 // Old-runtime compatibility
 // ---------------------------------------------------------------------------
+
+describe('reference integrity — rollback onto a newer chain', () => {
+  it('refuses to append onto a chain sealed under an unsupported version, writing nothing', async () => {
+    const path = tempDbPath('rollback-append');
+    const store = await createSqliteGovernanceStore(path);
+    const appended = await store.appendEvaluation(buildInput('req-rollback', 'dec-rollback'));
+    await appendAuthorizationReference(store, appended.evaluationId);
+    await store.close();
+
+    // A newer runtime advanced this evaluation's chain under a version this
+    // build does not know.
+    const db = (await openRawDb(path)) as unknown as RawDb;
+    db.prepare(`UPDATE governance_reference_chains SET integrity_version = 'aoc.governance-reference-integrity.v2' WHERE evaluation_id = ?`).run(appended.evaluationId);
+    db.close();
+
+    const reopened = await createSqliteGovernanceStore(path);
+    await assert.rejects(
+      () =>
+        reopened.appendReference(SYSTEM, {
+          referenceId: 'ref-after-rollback',
+          evaluationId: appended.evaluationId,
+          referenceType: 'authorization_artifact',
+          externalId: 'mandate:after-rollback',
+          createdAt: '2026-01-03T00:00:00.000Z',
+        }),
+      (error: unknown) => error instanceof GovernanceStoreError && error.code === 'GOVERNANCE_SCHEMA_VERSION_UNSUPPORTED',
+    );
+    const record = await reopened.getByEvaluationId(SYSTEM, appended.evaluationId);
+    await reopened.close();
+
+    // Nothing was written: no row, and the head still records the newer
+    // version rather than being silently downgraded to this build's.
+    assert.equal(record?.references.length, 1, 'the rejected append must not have inserted a row');
+    const raw = (await openRawDb(path)) as unknown as RawDb;
+    const head = raw.prepare(`SELECT integrity_version, latest_sequence FROM governance_reference_chains WHERE evaluation_id = ?`).get(appended.evaluationId) as {
+      integrity_version: string;
+      latest_sequence: number;
+    };
+    raw.close();
+    assert.equal(head.integrity_version, 'aoc.governance-reference-integrity.v2', 'the newer version must not be overwritten');
+    assert.equal(head.latest_sequence, 1, 'the head must not have advanced');
+  });
+
+  it('reports an unsupported chain head as unverifiable rather than valid', async () => {
+    const { verification } = await tamper(
+      'head-unknown-version',
+      (store, evaluationId) => appendAuthorizationReference(store, evaluationId),
+      (db, evaluationId) => {
+        db.prepare(`UPDATE governance_reference_chains SET integrity_version = 'aoc.governance-reference-integrity.v2' WHERE evaluation_id = ?`).run(evaluationId);
+      },
+    );
+    assert.equal(verification.valid, false);
+    assert.ok(verification.failures.some((failure) => failure.message.includes('cannot verify')));
+  });
+});
+
+describe('reference integrity — the three-argument verifier stays usable', () => {
+  it('skips only the tail check when no chain head is supplied, instead of failing intact records', async () => {
+    const store = await createSqliteGovernanceStore(':memory:');
+    const appended = await store.appendEvaluation(buildInput('req-3arg', 'dec-3arg'));
+    await appendAuthorizationReference(store, appended.evaluationId, '1');
+    await appendAuthorizationReference(store, appended.evaluationId, '2');
+    const record = await store.getByEvaluationId(SYSTEM, appended.evaluationId);
+    await store.close();
+    assert.ok(record);
+
+    // Exactly how an external consumer of the exported API calls it.
+    const threeArg = verifyGovernanceRecordIntegrity(record, record.integrity.previousAggregateDigest ?? null, () => '2026-01-04T00:00:00.000Z');
+    assert.equal(threeArg.valid, true, 'an intact record must not be reported invalid merely because no head was passed');
+    assert.equal(threeArg.checks.referenceIntegrity, true);
+    assert.equal(threeArg.referenceIntegrity.protectedValid, 2, 'per-row digests and chain links are still verified');
+
+    // ...and the per-row verification is real, not skipped wholesale: a
+    // tampered row still fails without a head.
+    const tamperedRecord = {
+      ...record,
+      references: record.references.map((reference) => (reference.sequence === 1 ? { ...reference, externalId: 'mandate:swapped' } : reference)),
+    };
+    const tampered = verifyGovernanceRecordIntegrity(tamperedRecord, tamperedRecord.integrity.previousAggregateDigest ?? null, () => '2026-01-04T00:00:00.000Z');
+    assert.equal(tampered.valid, false);
+    assert.equal(tampered.referenceIntegrity.protectedCorrupted, 1);
+  });
+
+  it('an explicit null head still fails when protected references exist', async () => {
+    const store = await createSqliteGovernanceStore(':memory:');
+    const appended = await store.appendEvaluation(buildInput('req-nullhead', 'dec-nullhead'));
+    await appendAuthorizationReference(store, appended.evaluationId);
+    const record = await store.getByEvaluationId(SYSTEM, appended.evaluationId);
+    await store.close();
+    assert.ok(record);
+
+    // `null` is the stronger claim — the store looked and found no head — so
+    // it must stay a failure, distinct from "no head supplied".
+    const explicitNull = verifyGovernanceRecordIntegrity(record, record.integrity.previousAggregateDigest ?? null, () => '2026-01-04T00:00:00.000Z', null);
+    assert.equal(explicitNull.valid, false);
+    assert.ok(explicitNull.failures.some((failure) => failure.message.includes('no stored reference chain head')));
+  });
+});
 
 describe('reference integrity — an older runtime keeps reading the database', () => {
   it('an old-shaped read of a protected row returns the same semantic fields it always did', async () => {

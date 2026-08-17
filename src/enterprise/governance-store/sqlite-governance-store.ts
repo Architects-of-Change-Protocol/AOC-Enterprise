@@ -6,6 +6,7 @@ import type { KernelEvaluationRequest, KernelEvaluationResult, KernelTrace } fro
 import type { EnterpriseEvent } from '../events/enterprise-events.js';
 import {
   GOVERNANCE_MIGRATION_SOURCE_PR_002,
+  GOVERNANCE_REFERENCE_INTEGRITY_VERSION,
   GOVERNANCE_STORE_SCHEMA_VERSION,
   type AppendGovernanceEvaluationInput,
   type AppendGovernanceEvaluationResult,
@@ -1036,6 +1037,21 @@ export async function createSqliteGovernanceStore(dbPath: string, options: Creat
    */
   const appendReferenceTxn = db.transaction((reference: GovernanceReferenceInput, organizationId: string | undefined): void => {
     const head = selectReferenceChain.get(reference.evaluationId) as ReferenceChainRow | undefined;
+    // Fail closed *before* writing anything if the existing chain was sealed
+    // under a version this build cannot verify — which happens on a rollback,
+    // where a newer runtime wrote the chain and an older one is now serving.
+    // Chaining a v1 row onto a digest whose definition we do not know would
+    // extend a chain we cannot check, and the upsert below would additionally
+    // overwrite the head's record of that newer version, destroying the only
+    // evidence of what those rows were sealed under. Refusing costs one
+    // rejected append; proceeding silently corrupts the audit trail.
+    if (head !== undefined && head.integrity_version !== GOVERNANCE_REFERENCE_INTEGRITY_VERSION) {
+      throw new GovernanceStoreError(
+        'GOVERNANCE_SCHEMA_VERSION_UNSUPPORTED',
+        `The reference chain for evaluationId '${reference.evaluationId}' was sealed under reference-integrity version '${head.integrity_version}', which this build cannot verify; refusing to append to it.`,
+        { referenceIntegrityVersion: head.integrity_version, supportedVersion: GOVERNANCE_REFERENCE_INTEGRITY_VERSION },
+      );
+    }
     const sealed = sealGovernanceReference(reference, {
       ...(organizationId !== undefined ? { organizationId } : {}),
       sequence: (head?.latest_sequence ?? 0) + 1,

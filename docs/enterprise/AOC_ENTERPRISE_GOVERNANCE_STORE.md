@@ -211,6 +211,24 @@ Each row is classified as exactly one of:
 `legacy_unprotected`; only a row carrying *none* is legacy. A corrupted or
 unverifiable row always makes `verify()` return `valid: false`.
 
+Fail-closed applies to the **write** path too. If an evaluation's stored chain
+head declares a version this build cannot verify — the rollback case, where a
+newer runtime sealed the chain and an older one is now serving —
+`appendReference` refuses with `GOVERNANCE_SCHEMA_VERSION_UNSUPPORTED` before
+writing anything. Chaining a known-version row onto a digest whose definition
+this build does not know would extend an unverifiable chain, and advancing the
+head would overwrite the only record of what those rows were sealed under.
+One rejected append is cheaper than a silently mixed-version chain.
+
+**Supplying the chain head to the verifier.** `verifyGovernanceRecordIntegrity`
+takes the head as an optional fourth argument, and it is three-valued: a head
+state verifies everything; `null` asserts the store looked and found no head
+(a failure when protected references exist); omitting it skips *only* the
+tail-truncation check, leaving per-row digests, sequence contiguity, and chain
+links fully verified. Omission is not treated as tampering — both providers
+always pass an explicit value, so it only arises for external callers of the
+three-argument form, and failing them would report intact records as invalid.
+
 ### Historical behavior — stated plainly
 
 **Reference rows created before this mechanism existed were not covered by

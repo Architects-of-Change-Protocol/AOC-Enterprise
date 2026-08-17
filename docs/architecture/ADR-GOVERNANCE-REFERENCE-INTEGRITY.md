@@ -127,6 +127,7 @@ why it is the one thing in this design that is updated in place.
 | mixed database | both coexist; the protected chain starts at `sequence` 1 and attests only to rows it sealed |
 | new runtime, old database | opens; columns added additively; nothing back-filled |
 | old runtime, new database | opens and reads normally — added columns are invisible to column-named `SELECT`s and `INSERT`s, and the schema version is unchanged |
+| rollback: this build meets a chain sealed by a newer one | `appendReference` refuses with `GOVERNANCE_SCHEMA_VERSION_UNSUPPORTED` before writing; reads still work, and the newer rows report `protected_unsupported_version` |
 
 ### Legacy semantics
 

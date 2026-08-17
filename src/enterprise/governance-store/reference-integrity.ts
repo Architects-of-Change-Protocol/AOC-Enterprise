@@ -152,11 +152,18 @@ const CHECK = 'referenceIntegrity';
 /**
  * Recomputes and validates the protected reference chain of one aggregate.
  *
- * `chain` is the stored head for this evaluation (`null` when no head row
- * exists, which is correct for an aggregate that has only legacy references
- * or none at all). Passing `undefined` means the caller could not resolve the
- * head; that is reported as a failure rather than skipped, matching how the
- * aggregate verifier treats an unresolvable predecessor.
+ * `chain` is the stored head for this evaluation, and is three-valued:
+ *
+ * - a `GovernanceReferenceChainState` — full verification, including
+ *   tail-truncation detection;
+ * - `null` — the store looked and there is no head row. Correct for an
+ *   aggregate with only legacy references or none; a **failure** if protected
+ *   references exist, because their head was removed;
+ * - `undefined` — no head was supplied, so the tail check is skipped. Every
+ *   other check still runs. This is not treated as tampering: both providers
+ *   always pass an explicit value, so `undefined` only arises when an external
+ *   caller uses the three-argument `verifyGovernanceRecordIntegrity`, and
+ *   failing them would report intact records as invalid.
  *
  * Failure messages name reference ids and sequences only — never external
  * identifiers, uris, or payloads.
@@ -257,9 +264,17 @@ export function verifyGovernanceReferenceIntegrity(
   }
 
   // -- stored head: what makes tail deletion (and wholesale chain removal) detectable --
+  //
+  // `undefined` means the caller did not supply a head, so this one check is
+  // skipped — everything above (per-row digests, sequence contiguity, chain
+  // links) has already run. It deliberately does not fail: "you did not ask
+  // for the tail check" is not evidence of tampering, and treating it as such
+  // would report every intact record as invalid for any caller using the
+  // three-argument `verifyGovernanceRecordIntegrity`. `null` is the different,
+  // stronger statement that the store looked and there is no head row.
   const last = ordered[ordered.length - 1];
   if (chain === undefined) {
-    failures.push({ check: CHECK, message: 'The stored reference chain head for this evaluation could not be resolved.' });
+    // no head supplied — tail-truncation cannot be checked, nothing else changes
   } else if (chain === null) {
     if (ordered.length > 0) {
       failures.push({ check: CHECK, message: `This evaluation has ${ordered.length} protected reference(s) but no stored reference chain head.` });
