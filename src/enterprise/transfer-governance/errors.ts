@@ -32,6 +32,18 @@
  * module's mandates. That is also why there is no
  * `TRANSFEROR_DOES_NOT_HOLD_RIGHT` here.
  *
+ * The same reasoning, applied again, is why there is no
+ * `TRANSFER_AUTHORITY_UNAVAILABLE` either. A request that passed every
+ * governance check but lost the race to commit the transferor's remaining
+ * capacity surfaces as the authority layer's
+ * `GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT`: how much of a holder's
+ * authority already stands committed to still-live authorizations is a fact
+ * about authority state, not about this module's mandates. It is deliberately
+ * not reported as a governance `denied` outcome, either — the Kernel decided
+ * `allowed`, that decision is durably committed, and restating it as a denial
+ * would misreport what governance actually concluded. What failed is the
+ * commitment, after the decision and before any artifact existed.
+ *
  * What this module can say is whether an execution stayed inside what it
  * authorized -- `TRANSFER_EXECUTION_NOT_AUTHORIZED`.
  */

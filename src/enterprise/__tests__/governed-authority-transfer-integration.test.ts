@@ -3,13 +3,14 @@ import { describe, it } from 'node:test';
 
 import { GOVERNED_RIGHT_TYPES } from '@aoc-enterprise/governed-authorization';
 
-import { isAuthorityGovernanceError } from '../authority-governance/errors.js';
+import { AuthorityGovernanceError, isAuthorityGovernanceError } from '../authority-governance/errors.js';
 import {
   ALICE,
   BOB,
   CAROL,
   FULL_INTEREST,
   GA_ASSET,
+  GA_NOW,
   GA_TENANT_A,
   QUARTER_INTEREST,
   TENANT_CONTEXT,
@@ -195,23 +196,43 @@ describe('TRANSFER integration — replay and cross-store recovery', () => {
   });
 
   it('a failed transition still leaves the execution evidence recorded, and says so by throwing', async () => {
+    // Before Phase 5.4 this was reached by over-authorizing: two 6 000 bp
+    // mandates against 10 000 bp, the second unconservable at execution.
+    // Reservation has closed that route — a second incompatible mandate can no
+    // longer be issued at all — so the seam is exercised where it actually
+    // lives, by failing the authority store the transfer service depends on.
+    //
+    // That is a better test of this property than the old scenario was. What is
+    // being asserted has nothing to do with how the transition came to fail: it
+    // is that evidence committed to one store survives a failure in the other,
+    // and that the caller learns about it rather than the failure being
+    // swallowed.
     const world = buildGovernedAuthorityWorld();
     await seedPosition(world, ALICE, ECONOMIC, FULL_INTEREST);
+    const mandate = await issueMandate(world, 'transfer-evidence-1', transferTerms(ALICE, BOB, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }));
 
-    // Two mandates for 6000 bp each against 10 000 — both authorized, because
-    // issuing a mandate reserves nothing. The first movement completes; the
-    // second cannot be conserved.
-    const first = await issueMandate(world, 'transfer-evidence-1', transferTerms(ALICE, BOB, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }));
-    const second = await issueMandate(world, 'transfer-evidence-2', transferTerms(ALICE, CAROL, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }));
-    await world.transfer.recordExecution(TENANT_CONTEXT, conformingExecution(first.id, ALICE, BOB, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }));
+    const failure = new AuthorityGovernanceError('GOVERNED_AUTHORITY_STORE_UNAVAILABLE', 'the authority store is unreachable');
+    const faulty = buildGovernedAuthorityWorld({
+      authorityStore: world.authorityStore,
+      transferStore: world.transferStore,
+      governanceStore: world.governanceStore,
+      transferAuthorityPort: {
+        applyTransition: () => Promise.reject(failure),
+        listTransitionsByExecutionRef: (context, tenantId, executionRef) => world.authorityStore.listTransitionsByExecutionRef(context, tenantId, executionRef),
+        acquireReservation: (context, input) => world.authorityStore.acquireReservation(context, input),
+        releaseReservation: (context, input) => world.authorityStore.releaseReservation(context, input),
+        listReservationsByMandateRef: (context, tenantId, mandateRef) => world.authorityStore.listReservationsByMandateRef(context, tenantId, mandateRef),
+      },
+      idSeed: 2_000,
+    });
 
     await assert.rejects(
       () =>
-        world.transfer.recordExecution(
+        faulty.transfer.recordExecution(
           TENANT_CONTEXT,
-          conformingExecution(second.id, ALICE, CAROL, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }, { executionId: 'execution-uncoverable' }),
+          conformingExecution(mandate.id, ALICE, BOB, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }, { executionId: 'execution-uncoverable' }),
         ),
-      (error: unknown) => isAuthorityGovernanceError(error) && error.code === 'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE',
+      (error: unknown) => isAuthorityGovernanceError(error) && error.code === 'GOVERNED_AUTHORITY_STORE_UNAVAILABLE',
     );
 
     // This is the honest consequence of two stores that cannot share a
@@ -219,50 +240,80 @@ describe('TRANSFER integration — replay and cross-store recovery', () => {
     // report a movement, that report is durable, and AOC refused to draw an
     // authority conclusion from it. A caller learns both facts — the evidence
     // is queryable, and the call threw.
-    const executions = await world.transfer.listExecutions(TENANT_CONTEXT, second.id);
+    const executions = await world.transfer.listExecutions(TENANT_CONTEXT, mandate.id);
     assert.equal(executions.length, 1, 'the evidence of what was reported is not discarded');
-    assert.equal(await heldScope(world, CAROL, ECONOMIC), null, 'and no authority was credited from it');
-    assert.deepEqual(await heldScope(world, ALICE, ECONOMIC), { kind: 'proportional', basisPoints: 4_000 });
+    assert.equal(await heldScope(world, BOB, ECONOMIC), null, 'and no authority was credited from it');
+    assert.deepEqual(await heldScope(world, ALICE, ECONOMIC), FULL_INTEREST);
 
-    // Reconciliation does not paper over it either: the movement is still
-    // unconservable, so the repair path fails the same way rather than
-    // inventing authority to make the books balance.
-    await assert.rejects(
-      () => world.transfer.reconcileAuthorityTransitions(TENANT_CONTEXT, second.id),
-      (error: unknown) => isAuthorityGovernanceError(error) && error.code === 'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE',
-    );
+    // The reservation is untouched by the failure: the movement did not
+    // complete, so its capacity is still committed and still unavailable to a
+    // competing authorization. Releasing it here — on a movement that may yet
+    // succeed on retry — is exactly the mistake that would let the same
+    // authority fund a second commitment.
+    const held = await world.authorityStore.listReservationsByMandateRef({ system: true }, GA_TENANT_A, mandate.id);
+    assert.equal(held.length, 1);
+    assert.equal(held[0]?.status, 'active', 'an uncertain execution does not free capacity');
+
+    // And the repair path completes it, against the same still-committed
+    // capacity, once the store is reachable again.
+    assert.deepEqual(await world.transfer.reconcileAuthorityTransitions(TENANT_CONTEXT, mandate.id), ['execution-uncoverable']);
+    assert.deepEqual(await heldScope(world, ALICE, ECONOMIC), { kind: 'proportional', basisPoints: 4_000 });
+    assert.deepEqual(await heldScope(world, BOB, ECONOMIC), { kind: 'proportional', basisPoints: 6_000 });
+    const after = await world.authorityStore.listReservationsByMandateRef({ system: true }, GA_TENANT_A, mandate.id);
+    assert.equal(after[0]?.status, 'consumed', 'and the capacity is spent rather than returned');
   });
 });
 
-describe('TRANSFER integration — over-authorization, the risk that reservation would have removed', () => {
-  it('two mandates may each be authorized against the same holdings; only the second execution is refused', async () => {
+describe('TRANSFER integration — over-authorization, the risk reservation removed', () => {
+  it('a second mandate against already-committed authority is refused at issuance, not left to fail at execution', async () => {
     const world = buildGovernedAuthorityWorld();
     await seedPosition(world, ALICE, ECONOMIC, FULL_INTEREST);
 
-    // This is the residual risk of deferring reservation, measured rather than
-    // asserted away. Issuing a mandate reserves nothing, so both of these are
-    // authorized against the same 10 000 bp.
+    // The measured before-state, preserved here as the thing that changed.
+    // Until Phase 5.4 both of these were authorized against the same 10 000 bp,
+    // because issuing a mandate reserved nothing, and the conflict surfaced
+    // only when the second movement was refused at execution — by which point
+    // AOC had already told two counterparties they were authorized.
     const first = await issueMandate(world, 'transfer-over-1', transferTerms(ALICE, BOB, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }));
-    const second = await issueMandate(world, 'transfer-over-2', transferTerms(ALICE, CAROL, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }));
 
+    // Surfaced as the authority layer's own code, exactly as an unconservable
+    // execution already was, and for the reason `../transfer-governance/errors.ts`
+    // gives: how much of a holder's authority stands committed is a fact about
+    // authority state, not about this module's mandates. It is deliberately not
+    // reported as a governance `denied` either — the Kernel genuinely decided
+    // ALLOW, that decision is durably recorded, and rewriting it here would
+    // misreport what governance concluded. What failed is the commitment.
+    await assert.rejects(
+      () =>
+        world.transfer.requestTransfer(
+          TENANT_CONTEXT,
+          GA_TENANT_A,
+          transferRequest('transfer-over-2', transferTerms(ALICE, CAROL, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 })),
+        ),
+      (error: unknown) => isAuthorityGovernanceError(error) && error.code === 'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+    );
+
+
+    // Alice still holds everything: a reservation commits capacity, it does not
+    // move authority.
+    assert.deepEqual(await heldScope(world, ALICE, ECONOMIC), FULL_INTEREST);
+
+    // Exactly one live commitment exists, and it is the first mandate's.
+    const committed = await world.authorityStore.listActiveReservations(
+      { system: true },
+      { tenantId: GA_TENANT_A, holderRef: ALICE, resource: { kind: GA_ASSET.kind, id: GA_ASSET.id }, governedRight: ECONOMIC, at: GA_NOW },
+    );
+    assert.equal(committed.length, 1);
+    assert.equal(committed[0]?.sourceMandateRef, first.id);
+
+    // The first mandate is still perfectly executable — narrowing availability
+    // for a competitor never weakened the authorization it protects.
     await world.transfer.recordExecution(
       TENANT_CONTEXT,
       conformingExecution(first.id, ALICE, BOB, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }),
     );
-
-    // Conservation still holds where it counts: the second movement cannot
-    // complete, so no more authority leaves Alice than she ever had.
-    await assert.rejects(
-      () =>
-        world.transfer.recordExecution(
-          TENANT_CONTEXT,
-          conformingExecution(second.id, ALICE, CAROL, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }),
-        ),
-      (error: unknown) => isAuthorityGovernanceError(error) && error.code === 'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE',
-    );
-
     assert.deepEqual(await heldScope(world, ALICE, ECONOMIC), { kind: 'proportional', basisPoints: 4_000 });
-    assert.equal(await heldScope(world, CAROL, ECONOMIC), null);
+    assert.deepEqual(await heldScope(world, BOB, ECONOMIC), { kind: 'proportional', basisPoints: 6_000 });
   });
 
   it('but a mandate issued after a completed transfer already sees the reduced holdings', async () => {
@@ -280,7 +331,7 @@ describe('TRANSFER integration — over-authorization, the risk that reservation
       GA_TENANT_A,
       transferRequest('transfer-sequential-2', transferTerms(ALICE, CAROL, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 })),
     );
-    assert.equal(second.status, 'denied', 'the over-authorization window closes as soon as the first movement completes');
+    assert.equal(second.status, 'denied', 'and it is the holder\u2019s reduced authority, not a commitment, that denies it now');
   });
 });
 

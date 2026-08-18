@@ -10,10 +10,18 @@ import {
   type EnterpriseTransferableRightType,
 } from '@aoc-enterprise/transfer-mandate';
 
-import type { GovernedAuthorityTransition } from '@aoc-enterprise/governed-authority';
+import type { GovernedAuthorityReservation, GovernedAuthorityTransition } from '@aoc-enterprise/governed-authority';
 
 import type { KernelEvaluationOptions, KernelEvaluationRequest, KernelEvaluationResult } from '../../kernel/index.js';
-import type { ApplyGovernedAuthorityTransitionInput, ApplyGovernedAuthorityTransitionOutcome, AuthorityGovernanceContext } from '../authority-governance/index.js';
+import { governedActionCommitsAuthority } from '../authority-governance/index.js';
+import type {
+  AcquireGovernedAuthorityReservationInput,
+  AcquireGovernedAuthorityReservationOutcome,
+  ApplyGovernedAuthorityTransitionInput,
+  ApplyGovernedAuthorityTransitionOutcome,
+  AuthorityGovernanceContext,
+  ReleaseGovernedAuthorityReservationInput,
+} from '../authority-governance/index.js';
 import type { GovernanceEnterpriseContext, GovernanceStoreAccessContext } from '../governance-store/contracts.js';
 import type { GovernanceStore } from '../governance-store/governance-store.js';
 import { isGovernanceStoreError } from '../governance-store/errors.js';
@@ -55,6 +63,18 @@ export interface TransferKernelPort {
 export interface TransferAuthorityPort {
   applyTransition(context: AuthorityGovernanceContext, input: ApplyGovernedAuthorityTransitionInput): Promise<ApplyGovernedAuthorityTransitionOutcome>;
   listTransitionsByExecutionRef(context: AuthorityGovernanceContext, tenantId: string, executionRef: string): Promise<readonly GovernedAuthorityTransition[]>;
+  /** Commits a portion of the transferor's still-uncommitted authority to a mandate about to be issued. Atomic: the availability it decides on is the availability inside its own transaction, never one this module measured earlier. */
+  acquireReservation(
+    context: AuthorityGovernanceContext,
+    input: AcquireGovernedAuthorityReservationInput,
+  ): Promise<AcquireGovernedAuthorityReservationOutcome>;
+  /** Ends a commitment without any authority having moved, returning the capacity. */
+  releaseReservation(context: AuthorityGovernanceContext, input: ReleaseGovernedAuthorityReservationInput): Promise<GovernedAuthorityReservation>;
+  listReservationsByMandateRef(
+    context: AuthorityGovernanceContext,
+    tenantId: string,
+    sourceMandateRef: string,
+  ): Promise<readonly GovernedAuthorityReservation[]>;
 }
 
 export interface TransferGovernanceServiceDependencies {
@@ -253,6 +273,132 @@ function assertAssetBelongsToOrganization(asset: { readonly tenantId?: string },
 export function createTransferGovernanceService(deps: TransferGovernanceServiceDependencies): TransferGovernanceService {
   const { store, kernel, governanceStore, enterpriseContext, now, nextId, authorityStore } = deps;
 
+  function toAuthorityContext(context: TransferGovernanceContext): AuthorityGovernanceContext {
+    return {
+      system: context.system,
+      ...(context.organizationId !== undefined ? { organizationId: context.organizationId } : {}),
+      ...(context.actorId !== undefined ? { actorId: context.actorId } : {}),
+    };
+  }
+
+  /**
+   * Commits the transferor's authority to a mandate that is about to exist, one
+   * reservation per governed right the terms name.
+   *
+   * ## Why the transferor, and never the requester
+   *
+   * `terms.transferorRef` — the same reference the Kernel's holder-bound checks
+   * ran against, and never `requestedBy`. A delegated administrator, a
+   * representative and a subdelegated agent acting for the same holder all draw
+   * on that holder's one pool; none of them acquires capacity of their own, and
+   * none of them gets a second pool by coming through a different lineage.
+   *
+   * ## All-or-nothing across rights
+   *
+   * A transfer naming two rights either commits both or commits neither. The
+   * store cannot do this in one transaction across two rights' availability
+   * (they are independent questions with independent answers), so a failure
+   * part-way through releases what was already acquired before propagating.
+   * Leaving a partial commitment behind would deny capacity in a right whose
+   * mandate never existed.
+   */
+  async function reserveTransferAuthority(args: {
+    readonly context: TransferGovernanceContext;
+    readonly organizationId: string;
+    readonly request: EnterpriseTransferRequest;
+    readonly mandateId: string;
+    readonly decisionRef: string;
+    readonly effectiveFrom: string;
+    readonly expiresAt: string;
+  }): Promise<readonly string[]> {
+    // A deployment that has not adopted governed authority has no positions for
+    // a commitment to stand against, and behaves exactly as it did before this
+    // layer existed.
+    if (authorityStore === undefined) return [];
+    // The eligibility question, asked once and in one place, rather than as an
+    // `action === 'TRANSFER'` test scattered through the runtime. `TRANSFER` is
+    // the only governed action that debits a position, and therefore the only
+    // one with finite capacity for a competing authorization to overpromise.
+    //
+    // Asserted rather than branched on. If this ever became false — a rename of
+    // the capability constant would be enough — every transfer would silently
+    // stop committing capacity and the double-commitment vulnerability would
+    // reopen with nothing to notice it. A loud failure is the only safe
+    // response to a classification that disagrees with this call site.
+    if (!governedActionCommitsAuthority(ENTERPRISE_TRANSFER_CAPABILITY)) {
+      throw new TransferGovernanceError(
+        'TRANSFER_EVALUATION_FAILED',
+        `'${ENTERPRISE_TRANSFER_CAPABILITY}' is not classified as committing governed authority, but TRANSFER debits a position; refusing to issue a mandate that would rely on uncommitted capacity.`,
+        { capability: ENTERPRISE_TRANSFER_CAPABILITY },
+      );
+    }
+
+    const authorityContext = toAuthorityContext(args.context);
+    const acquired: string[] = [];
+    try {
+      for (const governedRight of args.request.terms.rights) {
+        const outcome = await authorityStore.acquireReservation(authorityContext, {
+          tenantId: args.organizationId,
+          holderRef: args.request.terms.transferorRef,
+          resource: { kind: args.request.asset.kind, id: args.request.asset.id },
+          governedRight,
+          scope: args.request.terms.scope,
+          action: ENTERPRISE_TRANSFER_CAPABILITY,
+          sourceRequestRef: args.request.id,
+          sourceDecisionRef: args.decisionRef,
+          sourceMandateRef: args.mandateId,
+          effectiveFrom: args.effectiveFrom,
+          // The mandate's own expiry, so a commitment never outlives the
+          // authorization justifying it — and covers exactly the window in
+          // which an external executor may still legitimately act.
+          expiresAt: args.expiresAt,
+          // One commitment per right per mandate. The request reference alone
+          // would collide across the rights of a multi-right transfer.
+          idempotencyKey: `${args.mandateId}:${governedRight}`,
+          correlationId: args.request.correlationId,
+        });
+        // An unenrolled resource has no capacity to commit and no competing
+        // commitment to prevent, so it proceeds exactly as it did before this
+        // layer existed. The remaining rights are still asked, because
+        // enrolment is a property of the resource and the answer will be the
+        // same for all of them.
+        if (outcome.outcome === 'reserved') acquired.push(outcome.reservation.id);
+      }
+    } catch (error) {
+      await releaseTransferReservations(args.context, args.organizationId, acquired).catch(() => undefined);
+      throw error;
+    }
+    return acquired;
+  }
+
+  /** Releases whatever of a mandate's commitments are still active, looking them up by the artifact rather than requiring a caller to have kept their identifiers. */
+  async function releaseActiveReservationsForMandate(context: TransferGovernanceContext, organizationId: string, mandateId: string): Promise<void> {
+    if (authorityStore === undefined) return;
+    const authorityContext = toAuthorityContext(context);
+    const held = await authorityStore.listReservationsByMandateRef(authorityContext, organizationId, mandateId);
+    for (const reservation of held) {
+      if (reservation.status !== 'active') continue;
+      await authorityStore.releaseReservation(authorityContext, {
+        tenantId: organizationId,
+        reservationId: reservation.id,
+        reason: 'authorization_ended',
+      });
+    }
+  }
+
+  /** Returns committed capacity that no longer supports anything. Idempotent, and never touches a position: a release is not a credit. */
+  async function releaseTransferReservations(context: TransferGovernanceContext, organizationId: string, reservationIds: readonly string[]): Promise<void> {
+    if (authorityStore === undefined || reservationIds.length === 0) return;
+    const authorityContext = toAuthorityContext(context);
+    for (const reservationId of reservationIds) {
+      await authorityStore.releaseReservation(authorityContext, {
+        tenantId: organizationId,
+        reservationId,
+        reason: 'authorization_ended',
+      });
+    }
+  }
+
   /**
    * Commits the governed authority transition a completed movement implies.
    *
@@ -273,12 +419,7 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
     execution: TransferExecutionRecord,
   ): Promise<void> {
     if (authorityStore === undefined) return;
-    const authorityContext: AuthorityGovernanceContext = {
-      system: context.system,
-      ...(context.organizationId !== undefined ? { organizationId: context.organizationId } : {}),
-      ...(context.actorId !== undefined ? { actorId: context.actorId } : {}),
-    };
-    await authorityStore.applyTransition(authorityContext, {
+    await authorityStore.applyTransition(toAuthorityContext(context), {
       tenantId: mandate.organizationId,
       resource: { kind: mandate.assetKind, id: mandate.assetId },
       governedRights: execution.rights,
@@ -301,6 +442,14 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
       // right did, not when AOC heard about it.
       occurredAt: execution.transferEffectiveAt ?? execution.executedAt,
       correlationId: execution.correlationId,
+      // Terminalize this mandate's reservation in the same commit section that
+      // debits the transferor. The capacity is not "released" — it was spent,
+      // and the position now reflects that — so continuing to subtract the
+      // reservation would count the same quantity twice. Naming the mandate
+      // rather than the reservation keeps this module free of reservation
+      // identifiers it would otherwise have to thread through execution
+      // evidence.
+      consumesReservationsForMandateRef: mandate.id,
     });
   }
 
@@ -496,32 +645,82 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
         (value): value is string => value !== undefined,
       );
 
-      const mandate = await store.issueMandate(context, {
-        id: nextId('transfer-mandate'),
+      // ---------------------------------------------------------------------
+      // The commitment gate.
+      //
+      // Everything above this line established that the action is *permitted*:
+      // recognition, action authority, delegated lineage, holder-bound
+      // representation, the holder's underlying authority, policy, approvals
+      // and obligations, all committed as one governance aggregate. None of it
+      // established that the authority it relies on is still *uncommitted* —
+      // and the Kernel could not, because any availability it observed would
+      // already be stale by the time a mandate was written.
+      //
+      // So the last thing before the authorization artifact exists is an atomic
+      // acquire against the transferor's remaining capacity. It can only ever
+      // narrow: an ALLOW that loses this race becomes a denial, and a DENY can
+      // never be rescued here, because a denied request never reaches this
+      // line.
+      //
+      // The mandate's id is minted first so the reservation can name the
+      // artifact it stands for. That ordering is what makes the compensation
+      // below possible: a commitment acquired for an artifact with no name
+      // could not be found again if issuing it then failed.
+      // ---------------------------------------------------------------------
+      const mandateId = nextId('transfer-mandate');
+      const reservationIds = await reserveTransferAuthority({
+        context,
         organizationId,
-        assetKind: request.asset.kind,
-        assetId: request.asset.id,
-        // The mandate's terms are the request's terms, copied verbatim. There
-        // is no caller-supplied override, so 25% cannot become 100% and
-        // Company B cannot become Company C between request and mandate; the
-        // store re-asserts containment anyway
-        // (`assertNoTransferScopeEscalation`).
-        terms: request.terms,
-        requestedTerms: request.terms,
-        requestRef: request.id,
-        requestedBy: request.requestedBy,
+        request,
+        mandateId,
         decisionRef: result.decisionId,
-        evaluationRef: appended.evaluationId,
         effectiveFrom: requireStrictUtcTransferTimestamp(result.evaluatedAt, 'result.evaluatedAt'),
         expiresAt: mandateExpiresAt,
-        correlationId: request.correlationId,
-        ...(request.asset.tenantId !== undefined ? { assetTenantId: request.asset.tenantId } : {}),
-        ...(input.issuerRef !== undefined ? { issuerRef: input.issuerRef } : {}),
-        ...(approvalRefs.length > 0 ? { approvalRefs } : {}),
-        ...(input.obligationRefs !== undefined ? { obligationRefs: input.obligationRefs } : {}),
-        ...(request.evidenceRefs !== undefined ? { evidenceRefs: request.evidenceRefs } : {}),
-        ...(input.auditRefs !== undefined ? { auditRefs: input.auditRefs } : {}),
       });
+
+      let mandate;
+      try {
+        mandate = await store.issueMandate(context, {
+          id: mandateId,
+          organizationId,
+          assetKind: request.asset.kind,
+          assetId: request.asset.id,
+          // The mandate's terms are the request's terms, copied verbatim. There
+          // is no caller-supplied override, so 25% cannot become 100% and
+          // Company B cannot become Company C between request and mandate; the
+          // store re-asserts containment anyway
+          // (`assertNoTransferScopeEscalation`).
+          terms: request.terms,
+          requestedTerms: request.terms,
+          requestRef: request.id,
+          requestedBy: request.requestedBy,
+          decisionRef: result.decisionId,
+          evaluationRef: appended.evaluationId,
+          effectiveFrom: requireStrictUtcTransferTimestamp(result.evaluatedAt, 'result.evaluatedAt'),
+          expiresAt: mandateExpiresAt,
+          correlationId: request.correlationId,
+          ...(request.asset.tenantId !== undefined ? { assetTenantId: request.asset.tenantId } : {}),
+          ...(input.issuerRef !== undefined ? { issuerRef: input.issuerRef } : {}),
+          ...(approvalRefs.length > 0 ? { approvalRefs } : {}),
+          ...(input.obligationRefs !== undefined ? { obligationRefs: input.obligationRefs } : {}),
+          ...(request.evidenceRefs !== undefined ? { evidenceRefs: request.evidenceRefs } : {}),
+          ...(input.auditRefs !== undefined ? { auditRefs: input.auditRefs } : {}),
+        });
+      } catch (error) {
+        // Compensation. The capacity was committed and the artifact it was
+        // committed for does not exist, so the commitment must not stand — a
+        // permanently stranded reservation would deny the holder capacity for
+        // an authorization nobody ever received.
+        //
+        // Deliberately best-effort, and deliberately not allowed to mask the
+        // real failure: if the release itself fails, the reservation still
+        // lapses on its own at `expiresAt` (never later than the mandate would
+        // have), so the worst case is bounded and self-healing rather than
+        // permanent. Losing the original error to a compensation error would be
+        // strictly worse than that.
+        await releaseTransferReservations(context, organizationId, reservationIds).catch(() => undefined);
+        throw error;
+      }
 
       // Link the committed governance aggregate to the artifact it produced,
       // using the Governance Store's own reference surface rather than a
@@ -680,7 +879,7 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
 
     async revokeMandate(context, input) {
       const mandate = await store.getMandate(context, input.mandateId);
-      return store.revokeMandate(context, {
+      const outcome = await store.revokeMandate(context, {
         revocationId: nextId('transfer-revocation'),
         mandateId: mandate.id,
         organizationId: mandate.organizationId,
@@ -691,6 +890,23 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.evidenceRefs !== undefined ? { evidenceRefs: input.evidenceRefs } : {}),
       });
+
+      // Revoking withdraws the authority to move further rights, so the
+      // capacity this mandate was holding is capacity nothing can any longer
+      // draw on, and continuing to withhold it from the holder would be a
+      // penalty rather than an accounting fact.
+      //
+      // Revocation is still emphatically not reversal: rights already moved
+      // stay moved, their positions are untouched, and their reservations are
+      // already `'consumed'` — which `releaseReservation` refuses to reopen, so
+      // this cannot resurrect capacity that was genuinely spent. Only a
+      // still-`'active'` commitment is released.
+      //
+      // Ordered after the revocation is durably recorded, deliberately. The
+      // other ordering would free capacity for a mandate that might still turn
+      // out to be live.
+      await releaseActiveReservationsForMandate(context, mandate.organizationId, mandate.id);
+      return outcome;
     },
 
     async reconcileAuthorityTransitions(context, mandateId) {

@@ -38,6 +38,18 @@ export type AuthorityGovernanceErrorCode =
   /** A stored row's digest does not match its contents, or a transition chain link is broken. Reads fail closed rather than reconstructing authority from bytes that changed after commit. */
   | 'GOVERNED_AUTHORITY_RECORD_CORRUPTED'
   // -------------------------------------------------------------------------
+  // Governed authority reservation. Same discipline, same deliberate absence:
+  // there is **no code for "this holder lacks the authority"**. What is here is
+  // about commitments that could not be *written* or *trusted*.
+  // -------------------------------------------------------------------------
+  /** The holder's authority is sufficient in isolation, but commitments already standing against it leave too little uncommitted. Distinct from `INSUFFICIENT_SCOPE` on purpose: the remedy is to wait or release, not to acquire more of the right. */
+  | 'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT'
+  /** The same idempotency key was reused for a materially different commitment, or a reservation already reached a terminal state incompatible with the operation. Refused rather than reinterpreted. */
+  | 'GOVERNED_AUTHORITY_RESERVATION_CONFLICT'
+  | 'GOVERNED_AUTHORITY_RESERVATION_NOT_FOUND'
+  /** A stored reservation's digest does not match its contents. Reads fail closed rather than dropping the row — silently skipping a tampered reservation would free exactly the capacity it commits. */
+  | 'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED'
+  // -------------------------------------------------------------------------
   // Holder-bound representation. Same taxonomy, same discipline, and the same
   // deliberate absence: there is **no code for "this representative may not
   // act for that holder"**. That is a governance denial, produced by the

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 
 import { GOVERNED_RIGHT_TYPES, type GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
-import { governedAuthorityPositionState } from '@aoc-enterprise/governed-authority';
+import { governedAuthorityPositionState, type GovernedAuthorityAvailability } from '@aoc-enterprise/governed-authority';
 
 import { isAuthorityGovernanceError } from '../authority-governance/errors.js';
 import { createInMemoryGovernedAuthorityStore } from '../authority-governance/in-memory-authority-store.js';
@@ -26,6 +26,7 @@ import type { GovernedAuthorityStore } from '../authority-governance/authority-s
 
 const NOW = '2026-01-01T00:00:00.000Z';
 const LATER = '2026-02-01T00:00:00.000Z';
+const MUCH_LATER = '2026-06-01T00:00:00.000Z';
 
 const TENANT_A = 'org-a';
 const TENANT_B = 'org-b';
@@ -83,6 +84,54 @@ function movement(executionRef: string, from: string, to: string, scope: Governe
     occurredAt: NOW,
     ...overrides,
   };
+}
+
+/** A commitment against one holder's authority, named by the mandate it stands for. */
+function reservation(
+  mandateRef: string,
+  holderRef: string,
+  scope: GovernedRightsScope,
+  overrides: {
+    tenantId?: string;
+    resource?: { kind: string; id: string };
+    governedRight?: typeof ECONOMIC | typeof USAGE;
+    expiresAt?: string;
+    idempotencyKey?: string;
+  } = {},
+) {
+  return {
+    tenantId: overrides.tenantId ?? TENANT_A,
+    holderRef,
+    resource: overrides.resource ?? ASSET,
+    governedRight: overrides.governedRight ?? ECONOMIC,
+    scope,
+    action: 'transfer',
+    sourceRequestRef: `request-for-${mandateRef}`,
+    sourceDecisionRef: `decision-for-${mandateRef}`,
+    sourceMandateRef: mandateRef,
+    effectiveFrom: NOW,
+    expiresAt: overrides.expiresAt ?? MUCH_LATER,
+    ...(overrides.idempotencyKey !== undefined ? { idempotencyKey: overrides.idempotencyKey } : {}),
+  };
+}
+
+function availabilityOf(
+  holderRef: string,
+  overrides: { tenantId?: string; resource?: { kind: string; id: string }; governedRight?: typeof ECONOMIC | typeof USAGE; at?: string } = {},
+) {
+  return {
+    tenantId: overrides.tenantId ?? TENANT_A,
+    holderRef,
+    resource: overrides.resource ?? ASSET,
+    governedRight: overrides.governedRight ?? ECONOMIC,
+    at: overrides.at ?? NOW,
+  };
+}
+
+/** Reads the position id out of an availability answer, so a deepEqual can state the whole shape without hard-coding a derived digest. */
+function positionIdOf(availability: GovernedAuthorityAvailability): string {
+  assert.ok(availability.outcome === 'available');
+  return availability.positionId;
 }
 
 /**
@@ -513,6 +562,422 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
       });
     });
 
+    // -----------------------------------------------------------------------
+    // Reservation: how much of a position is already committed to a still-live
+    // governed authorization, and therefore unavailable to another.
+    // -----------------------------------------------------------------------
+
+    describe('reservation — availability', () => {
+      it('reports held, committed and available, and never lets a commitment change the position', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        const before = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.deepEqual(before, { outcome: 'available', positionId: positionIdOf(before), held: proportional(5_000), available: proportional(5_000) });
+
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000)));
+
+        const after = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.equal(after.outcome, 'available');
+        assert.ok(after.outcome === 'available');
+        assert.deepEqual(after.held, proportional(5_000), 'the holder still possesses everything it possessed');
+        assert.deepEqual(after.committed, proportional(3_000));
+        assert.deepEqual(after.available, proportional(2_000));
+
+        // The point of the whole model: a reservation is not a debit.
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(5_000));
+        await store.close();
+      });
+
+      it('aggregates every active commitment against the same holder, resource and right', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-a', 'party-alice', proportional(2_000)));
+        await store.acquireReservation(ADMIN, reservation('mandate-b', 'party-alice', proportional(3_000)));
+
+        const availability = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(availability.outcome === 'available');
+        assert.deepEqual(availability.available, proportional(5_000));
+
+        // 5000 fits exactly; 5001 does not. The boundary is the assertion.
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-d', 'party-alice', proportional(5_001)))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        const exact = await store.acquireReservation(ADMIN, reservation('mandate-c', 'party-alice', proportional(5_000)));
+        assert.equal(exact.outcome, 'reserved');
+
+        const exhausted = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(exhausted.outcome === 'available');
+        assert.deepEqual(exhausted.available, proportional(0));
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-e', 'party-alice', proportional(1)))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        await store.close();
+      });
+
+      it('reports a resource with no positions as unenrolled rather than refusing it', async () => {
+        const store = await open();
+        // Nothing seeded at all: this deployment holds no governed authority
+        // state for the resource, so there is no capacity to commit and no
+        // competing commitment to prevent.
+        const outcome = await store.acquireReservation(ADMIN, reservation('mandate-legacy', 'party-alice', proportional(3_000)));
+        assert.deepEqual(outcome, { outcome: 'resource_not_enrolled' });
+        await store.close();
+      });
+
+      it('fails closed for a right of an enrolled resource the holder has no position in', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000), { right: USAGE });
+        // The resource is enrolled — by the usage-right position — so the
+        // economic interest is enforced strictly even though nobody was
+        // bootstrapped into it.
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-unheld', 'party-alice', proportional(1_000)))),
+          'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE',
+        );
+        await store.close();
+      });
+    });
+
+    describe('reservation — the pools that must stay separate', () => {
+      it('keeps holders, resources and rights independent of one another', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-bob', proportional(5_000));
+        await seed(store, 'party-alice', proportional(5_000), { right: USAGE });
+        await seed(store, 'party-alice', proportional(5_000), { resource: OTHER_ASSET });
+
+        await store.acquireReservation(ADMIN, reservation('mandate-alice', 'party-alice', proportional(4_000)));
+
+        const aliceEconomic = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(aliceEconomic.outcome === 'available');
+        assert.deepEqual(aliceEconomic.available, proportional(1_000));
+
+        for (const [what, query] of [
+          ['another holder', availabilityOf('party-bob')],
+          ['another right of the same resource', availabilityOf('party-alice', { governedRight: USAGE })],
+          ['the same right of another resource', availabilityOf('party-alice', { resource: OTHER_ASSET })],
+        ] as const) {
+          const untouched = await store.resolveAvailability(ADMIN, query);
+          assert.ok(untouched.outcome === 'available');
+          assert.deepEqual(untouched.available, proportional(5_000), `${what} is not reduced by Alice\u2019s commitment`);
+        }
+        await store.close();
+      });
+
+      it('draws every representative and every delegated route on the holder from one pool', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        // Two commitments made through entirely different chains of authority —
+        // a direct holder request and a subdelegated agent's, say — still name
+        // the same holder, resource and right, and so compete.
+        await store.acquireReservation(ADMIN, reservation('mandate-via-x', 'party-alice', proportional(3_000)));
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-via-y', 'party-alice', proportional(3_000)))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        await store.close();
+      });
+    });
+
+    describe('reservation — lifecycle', () => {
+      it('release returns capacity without touching the position, and is idempotent', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const acquired = await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(acquired.outcome === 'reserved');
+
+        const released = await store.releaseReservation(ADMIN, { tenantId: TENANT_A, reservationId: acquired.reservation.id, reason: 'authorization_ended' });
+        assert.equal(released.status, 'released');
+
+        const restored = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(restored.outcome === 'available');
+        assert.deepEqual(restored.available, proportional(5_000));
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(5_000), 'and the position never moved');
+
+        // Releasing twice cannot free capacity twice — availability is derived
+        // from what is still active, not from a counter something could
+        // decrement again.
+        await store.releaseReservation(ADMIN, { tenantId: TENANT_A, reservationId: acquired.reservation.id, reason: 'authorization_ended' });
+        const stillFive = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(stillFive.outcome === 'available');
+        assert.deepEqual(stillFive.available, proportional(5_000));
+        await store.close();
+      });
+
+      it('stops counting a lapsed commitment at its expiry, with no cleanup process involved', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000), { expiresAt: LATER }));
+
+        const during = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(during.outcome === 'available');
+        assert.deepEqual(during.available, proportional(1_000));
+
+        // Nothing has run, nothing has been rewritten, and the row still says
+        // `'active'`. The clock alone decides.
+        const after = await store.resolveAvailability(ADMIN, availabilityOf('party-alice', { at: LATER }));
+        assert.ok(after.outcome === 'available');
+        assert.deepEqual(after.available, proportional(5_000));
+        assert.equal((await store.listActiveReservations(ADMIN, availabilityOf('party-alice', { at: LATER }))).length, 0);
+        await store.close();
+      });
+
+      it('consumes the commitment in the same commit section as the debit, and never double-counts it', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000)));
+
+        const beforeExecution = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(beforeExecution.outcome === 'available');
+        assert.deepEqual(beforeExecution.available, proportional(7_000));
+
+        await store.applyTransition(ADMIN, {
+          ...movement('exec-consume', 'party-alice', 'party-bob', proportional(3_000)),
+          consumesReservationsForMandateRef: 'mandate-1',
+        });
+
+        // 7000 held, and 7000 available. Subtracting the reservation again from
+        // a position that already reflects the movement would say 4000, which
+        // is the double-accounting this asserts against.
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(7_000));
+        const afterExecution = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(afterExecution.outcome === 'available');
+        assert.deepEqual(afterExecution.available, proportional(7_000));
+
+        const held = await store.listReservationsByMandateRef(ADMIN, TENANT_A, 'mandate-1');
+        assert.equal(held[0]?.status, 'consumed');
+        await store.close();
+      });
+
+      it('refuses to release a consumed commitment, because the authority has already moved', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+        const acquired = await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000)));
+        assert.ok(acquired.outcome === 'reserved');
+        await store.applyTransition(ADMIN, {
+          ...movement('exec-consume', 'party-alice', 'party-bob', proportional(3_000)),
+          consumesReservationsForMandateRef: 'mandate-1',
+        });
+
+        assert.equal(
+          await errorCode(() => store.releaseReservation(ADMIN, { tenantId: TENANT_A, reservationId: acquired.reservation.id, reason: 'authorization_ended' })),
+          'GOVERNED_AUTHORITY_RESERVATION_CONFLICT',
+        );
+        await store.close();
+      });
+
+      it('consumes a commitment exactly once however often the execution is replayed', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000)));
+
+        const applied = {
+          ...movement('exec-retry', 'party-alice', 'party-bob', proportional(3_000)),
+          consumesReservationsForMandateRef: 'mandate-1',
+        };
+        await store.applyTransition(ADMIN, applied);
+        const replay = await store.applyTransition(ADMIN, applied);
+        assert.equal(replay.replayed, true);
+
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(7_000), 'debited exactly once');
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-bob', ASSET, ECONOMIC))?.scope, proportional(3_000), 'credited exactly once');
+        const held = await store.listReservationsByMandateRef(ADMIN, TENANT_A, 'mandate-1');
+        assert.equal(held.length, 1);
+        assert.equal(held[0]?.status, 'consumed');
+        await store.close();
+      });
+
+      it('requires a privileged context to cancel a commitment administratively', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const acquired = await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000)));
+        assert.ok(acquired.outcome === 'reserved');
+
+        assert.equal(
+          await errorCode(() =>
+            store.releaseReservation(TENANT_A_CONTEXT, { tenantId: TENANT_A, reservationId: acquired.reservation.id, reason: 'administrative' }),
+          ),
+          'GOVERNED_AUTHORITY_BOOTSTRAP_NOT_PERMITTED',
+        );
+        const administrative = await store.releaseReservation(ADMIN, { tenantId: TENANT_A, reservationId: acquired.reservation.id, reason: 'administrative' });
+        assert.equal(administrative.status, 'released');
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(5_000), 'and the position is untouched');
+        await store.close();
+      });
+
+      it('refuses a commitment that would never stand, and one of nothing', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-backwards', 'party-alice', proportional(1_000), { expiresAt: NOW }))),
+          'GOVERNED_AUTHORITY_SCOPE_INVALID',
+        );
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-zero', 'party-alice', proportional(0)))),
+          'GOVERNED_AUTHORITY_SCOPE_INVALID',
+        );
+        await store.close();
+      });
+
+      it('refuses a commitment in a quantity the position cannot be compared with', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-units', 'party-alice', unitized(10)))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        await store.close();
+      });
+    });
+
+    describe('reservation — idempotency', () => {
+      it('returns the original commitment on replay rather than committing a second quantity', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        const first = await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000)));
+        const retry = await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000)));
+        assert.ok(first.outcome === 'reserved' && retry.outcome === 'reserved');
+        assert.equal(retry.replayed, true);
+        assert.equal(retry.reservation.id, first.reservation.id);
+
+        const availability = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(availability.outcome === 'available');
+        assert.deepEqual(availability.available, proportional(2_000), 'one commitment, not two');
+        await store.close();
+      });
+
+      it('refuses the same idempotency key used for a materially different commitment', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+        await seed(store, 'party-bob', proportional(10_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000), { idempotencyKey: 'key-1' }));
+
+        for (const [what, input] of [
+          ['a different holder', reservation('mandate-1', 'party-bob', proportional(3_000), { idempotencyKey: 'key-1' })],
+          ['a different quantity', reservation('mandate-1', 'party-alice', proportional(4_000), { idempotencyKey: 'key-1' })],
+          ['a different resource', reservation('mandate-1', 'party-alice', proportional(3_000), { idempotencyKey: 'key-1', resource: OTHER_ASSET })],
+          ['a different right', reservation('mandate-1', 'party-alice', proportional(3_000), { idempotencyKey: 'key-1', governedRight: USAGE })],
+          ['a different mandate', reservation('mandate-2', 'party-alice', proportional(3_000), { idempotencyKey: 'key-1' })],
+        ] as const) {
+          assert.equal(await errorCode(() => store.acquireReservation(ADMIN, input)), 'GOVERNED_AUTHORITY_RESERVATION_CONFLICT', `refuses ${what}`);
+        }
+        await store.close();
+      });
+    });
+
+    it('refuses a second commitment for the same mandate and right under a different key', async () => {
+      const store = await open();
+      await seed(store, 'party-alice', proportional(10_000));
+      await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000), { idempotencyKey: 'key-a' }));
+
+      // Same artifact, same right, different key. A commitment is identified by
+      // the artifact it stands for, so this is the same commitment however it
+      // is keyed — and letting it through would either overwrite the live one
+      // or commit 3 000 bp twice.
+      assert.equal(
+        await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(3_000), { idempotencyKey: 'key-b' }))),
+        'GOVERNED_AUTHORITY_RESERVATION_CONFLICT',
+      );
+      const availability = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+      assert.ok(availability.outcome === 'available');
+      assert.deepEqual(availability.available, proportional(7_000), 'one commitment, not two');
+      await store.close();
+    });
+
+    describe('reservation — concurrency', () => {
+      it('lets exactly one of two incompatible concurrent commitments succeed', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        // 4000 + 4000 against 5000. Both succeeding is the vulnerability this
+        // whole layer exists to close; neither succeeding would be a bug of its
+        // own.
+        const results = await Promise.allSettled([
+          store.acquireReservation(ADMIN, reservation('mandate-race-a', 'party-alice', proportional(4_000))),
+          store.acquireReservation(ADMIN, reservation('mandate-race-b', 'party-alice', proportional(4_000))),
+        ]);
+        assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1, 'exactly one, never two and never zero');
+
+        const active = await store.listActiveReservations(ADMIN, availabilityOf('party-alice'));
+        assert.equal(active.length, 1);
+        const availability = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(availability.outcome === 'available', 'and the store is never left overcommitted');
+        assert.deepEqual(availability.available, proportional(1_000));
+        await store.close();
+      });
+
+      it('holds the invariant under many-way contention', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+
+        // Ten concurrent attempts at 1500 bp each against 10 000: at most six
+        // can fit, and the sum of whatever commits must never exceed the
+        // holdings.
+        const results = await Promise.allSettled(
+          Array.from({ length: 10 }, (_unused, index) => store.acquireReservation(ADMIN, reservation(`mandate-many-${index}`, 'party-alice', proportional(1_500)))),
+        );
+        const committed = results.filter((result) => result.status === 'fulfilled').length;
+        assert.ok(committed >= 1 && committed <= 6, `expected between 1 and 6 commitments, got ${committed}`);
+
+        const availability = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(availability.outcome === 'available', 'never overcommitted');
+        assert.equal(committed * 1_500 + (availability.available as { basisPoints: number }).basisPoints, 10_000);
+        await store.close();
+      });
+
+      it('keeps the books consistent when a release and an acquisition race', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const held = await store.acquireReservation(ADMIN, reservation('mandate-held', 'party-alice', proportional(4_000)));
+        assert.ok(held.outcome === 'reserved');
+
+        await Promise.allSettled([
+          store.releaseReservation(ADMIN, { tenantId: TENANT_A, reservationId: held.reservation.id, reason: 'authorization_ended' }),
+          store.acquireReservation(ADMIN, reservation('mandate-contending', 'party-alice', proportional(4_000))),
+        ]);
+
+        // Whichever order they landed in, the standing commitments must still
+        // fit inside the position.
+        const availability = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(availability.outcome === 'available', 'never overcommitted, whichever won');
+        await store.close();
+      });
+    });
+
+    describe('reservation — tenant isolation', () => {
+      it('never lets one tenant see, commit against or release another tenant\u2019s authority', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-alice', proportional(5_000), { tenantId: TENANT_B });
+        const mine = await store.acquireReservation(ADMIN, reservation('mandate-a', 'party-alice', proportional(3_000)));
+        assert.ok(mine.outcome === 'reserved');
+
+        assert.equal(await errorCode(() => store.resolveAvailability(TENANT_B_CONTEXT, availabilityOf('party-alice'))), 'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION');
+        assert.equal(
+          await errorCode(() => store.acquireReservation(TENANT_B_CONTEXT, reservation('mandate-b', 'party-alice', proportional(1_000)))),
+          'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION',
+        );
+        assert.equal(
+          await errorCode(() => store.releaseReservation(TENANT_B_CONTEXT, { tenantId: TENANT_A, reservationId: mine.reservation.id, reason: 'authorization_ended' })),
+          'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION',
+        );
+        // Reading it under the other tenant's own scope finds nothing, rather
+        // than refusing in a way that would confirm the identifier exists.
+        assert.equal(await store.getReservation(TENANT_B_CONTEXT, TENANT_B, mine.reservation.id), null);
+
+        // And tenant B's own availability is untouched by tenant A's commitment.
+        const other = await store.resolveAvailability(TENANT_B_CONTEXT, availabilityOf('party-alice', { tenantId: TENANT_B }));
+        assert.ok(other.outcome === 'available');
+        assert.deepEqual(other.available, proportional(5_000));
+        await store.close();
+      });
+    });
+
     if (openNamed !== undefined) {
       describe('durability', () => {
         it('survives a close and reopen with the same balances and the same history', async () => {
@@ -525,6 +990,44 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
           assert.deepEqual((await second.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(7_500));
           assert.deepEqual((await second.getPosition(ADMIN, TENANT_A, 'party-bob', ASSET, ECONOMIC))?.scope, proportional(2_500));
           assert.equal((await second.listTransitionsByExecutionRef(ADMIN, TENANT_A, 'exec-durable')).length, 1);
+          await second.close();
+        });
+
+        it('keeps an active commitment reducing availability across a restart', async () => {
+          const first = await openNamed('durable-reservation');
+          await seed(first, 'party-alice', proportional(5_000));
+          await first.acquireReservation(ADMIN, reservation('mandate-durable', 'party-alice', proportional(4_000)));
+          await first.close();
+
+          const second = await openNamed('durable-reservation');
+          const availability = await second.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+          assert.ok(availability.outcome === 'available');
+          assert.deepEqual(availability.held, proportional(5_000), 'the holdings survived');
+          assert.deepEqual(availability.available, proportional(1_000), 'and so did the commitment against them');
+
+          // The whole point of durability here: the competing commitment is
+          // still refused after the process that made the first one is gone.
+          assert.equal(
+            await errorCode(() => second.acquireReservation(ADMIN, reservation('mandate-after-restart', 'party-alice', proportional(4_000)))),
+            'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          );
+          await second.close();
+        });
+
+        it('stops a lapsed commitment blocking after a restart, with no cleanup having run', async () => {
+          const first = await openNamed('durable-reservation-expiry');
+          await seed(first, 'party-alice', proportional(5_000));
+          await first.acquireReservation(ADMIN, reservation('mandate-lapsing', 'party-alice', proportional(4_000), { expiresAt: LATER }));
+          await first.close();
+
+          // Reopened, and asked about an instant past the expiry. The row is
+          // still physically there and still says `'active'`; the clock alone
+          // is what stops it counting.
+          const second = await openNamed('durable-reservation-expiry');
+          const availability = await second.resolveAvailability(ADMIN, availabilityOf('party-alice', { at: LATER }));
+          assert.ok(availability.outcome === 'available');
+          assert.deepEqual(availability.available, proportional(5_000));
+          assert.equal((await second.listReservationsByMandateRef(ADMIN, TENANT_A, 'mandate-lapsing'))[0]?.status, 'active');
           await second.close();
         });
 
@@ -623,6 +1126,189 @@ describe('Governed Authority Store — SQLite', () => {
       'GOVERNED_AUTHORITY_RECORD_CORRUPTED',
     );
     await reopened.close();
+  });
+
+  describe('reservation corruption fails closed', () => {
+    // Every dimension a tamper could use to free capacity or extend a
+    // commitment's life *while leaving it attached to the same holder,
+    // resource and right*. Each is applied with the digest left alone, and each
+    // must make the availability question itself fail — never quietly drop the
+    // row, which would release exactly the capacity the tamper was after.
+    //
+    // The tampers that *relocate* a reservation — onto another holder, resource
+    // or right — are a different class and are covered separately below.
+    const tampers = [
+      ['scope', `UPDATE governed_authority_reservations SET scope_basis_points = 1`],
+      ['status', `UPDATE governed_authority_reservations SET status = 'released'`],
+      ['expiry', `UPDATE governed_authority_reservations SET expires_at = '2026-01-01T00:00:00.001Z'`],
+      ['source mandate', `UPDATE governed_authority_reservations SET source_mandate_ref = 'mandate-other'`],
+      ['source request', `UPDATE governed_authority_reservations SET source_request_ref = 'request-other'`],
+      ['action', `UPDATE governed_authority_reservations SET action = 'license'`],
+      ['digest', `UPDATE governed_authority_reservations SET reservation_digest = 'sha256:${'0'.repeat(64)}'`],
+    ] as const;
+
+    for (const [dimension, sql] of tampers) {
+      it(`refuses a reservation whose ${dimension} was altered after commit`, async () => {
+        const path = join(directory, `reservation-tamper-${dimension.replace(/ /gu, '-')}.sqlite`);
+        const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-tampered', 'party-alice', proportional(4_000)));
+        await store.close();
+
+        const { default: Database } = await import('better-sqlite3');
+        const db = new Database(path);
+        db.prepare(sql).run();
+        db.close();
+
+        const reopened = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+        assert.equal(
+          await errorCode(() => reopened.resolveAvailability(ADMIN, availabilityOf('party-alice'))),
+          'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED',
+          'the availability question fails rather than the tampered row silently freeing its capacity',
+        );
+        // And nothing may be committed against a state AOC cannot trust.
+        assert.equal(
+          await errorCode(() => reopened.acquireReservation(ADMIN, reservation('mandate-after-tamper', 'party-alice', proportional(4_000)))),
+          'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED',
+        );
+        await reopened.close();
+      });
+    }
+
+    for (const [dimension, sql] of [
+      ['holder', `UPDATE governed_authority_reservations SET holder_ref = 'party-mallory'`],
+      ['resource', `UPDATE governed_authority_reservations SET resource_id = 'asset-b'`],
+      ['governed right', `UPDATE governed_authority_reservations SET governed_right = 'usage-right'`],
+    ] as const) {
+      it(`detects a reservation relocated to another ${dimension}, at the tuple it was moved to`, async () => {
+        // A relocating tamper is, from the original tuple's point of view,
+        // indistinguishable from deleting the row — and no per-row digest can
+        // detect a deletion. This states that limitation exactly rather than
+        // implying a guarantee the mechanism does not provide. See
+        // `docs/architecture/ADR-GOVERNED-AUTHORITY-RESERVATION.md`, "What
+        // integrity does and does not cover".
+        const path = join(directory, `reservation-relocate-${dimension.replace(/ /gu, '-')}.sqlite`);
+        const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-mallory', proportional(5_000));
+        await seed(store, 'party-alice', proportional(5_000), { right: USAGE });
+        await seed(store, 'party-alice', proportional(5_000), { resource: OTHER_ASSET });
+        await store.acquireReservation(ADMIN, reservation('mandate-relocated', 'party-alice', proportional(4_000)));
+        await store.close();
+
+        const { default: Database } = await import('better-sqlite3');
+        const db = new Database(path);
+        db.prepare(sql).run();
+        db.close();
+
+        const reopened = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+
+        // Where it was moved *to*, it fails closed: the digest no longer
+        // matches, so no availability can be computed there and nothing can be
+        // committed against it.
+        const destination =
+          dimension === 'holder'
+            ? availabilityOf('party-mallory')
+            : dimension === 'resource'
+              ? availabilityOf('party-alice', { resource: OTHER_ASSET })
+              : availabilityOf('party-alice', { governedRight: USAGE });
+        assert.equal(await errorCode(() => reopened.resolveAvailability(ADMIN, destination)), 'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED');
+
+        // Where it was moved *from*, the capacity is genuinely freed — the row
+        // is simply no longer there to be counted. This is the deletion case
+        // wearing another name, and it is the bound of what row-level integrity
+        // can promise. What it is *not* is a downgrade: the resource is still
+        // enrolled, and every other check still runs.
+        const origin = await reopened.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(origin.outcome === 'available');
+        assert.deepEqual(origin.available, proportional(5_000), 'documented limitation: a relocated row frees its origin capacity');
+        await reopened.close();
+      });
+    }
+
+    it('refuses a status the closed lifecycle does not contain, at the database level', async () => {
+      const path = join(directory, 'reservation-status-check.sqlite');
+      const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      await seed(store, 'party-alice', proportional(5_000));
+      await store.acquireReservation(ADMIN, reservation('mandate-status', 'party-alice', proportional(1_000)));
+      await store.close();
+
+      const { default: Database } = await import('better-sqlite3');
+      const db = new Database(path);
+      assert.throws(() => db.prepare(`UPDATE governed_authority_reservations SET status = 'expired'`).run(), /CHECK constraint failed/);
+      assert.throws(() => db.prepare(`UPDATE governed_authority_reservations SET scope_basis_points = -1`).run(), /CHECK constraint failed/);
+      db.close();
+    });
+
+    it('refuses two commitments of the same right by the same mandate, at the database level', async () => {
+      const path = join(directory, 'reservation-mandate-unique.sqlite');
+      const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      await seed(store, 'party-alice', proportional(5_000));
+      await store.acquireReservation(ADMIN, reservation('mandate-unique', 'party-alice', proportional(1_000)));
+      await store.close();
+
+      const { default: Database } = await import('better-sqlite3');
+      const db = new Database(path);
+      const row = db.prepare(`SELECT * FROM governed_authority_reservations`).get() as Record<string, unknown>;
+      assert.throws(
+        () =>
+          db
+            .prepare(
+              `INSERT INTO governed_authority_reservations SELECT 'second-row', tenant_id, holder_ref, resource_kind, resource_id, governed_right,
+                 scope_kind, scope_basis_points, scope_units, scope_unit_denomination, action, source_request_ref, source_decision_ref, source_mandate_ref,
+                 effective_from, expires_at, status, 'a-different-key', correlation_id, created_at, updated_at, reservation_digest, schema_version
+               FROM governed_authority_reservations WHERE reservation_id = ?`,
+            )
+            .run(row['reservation_id']),
+        /UNIQUE constraint failed/,
+        'a second commitment cannot be laundered through a fresh idempotency key',
+      );
+      db.close();
+    });
+  });
+
+  it('brings a v1 database forward rather than refusing it, and adds no commitments to it', async () => {
+    // The one migration this runtime performs. A deployment already holding
+    // authority state must not be stopped by a release that adds a table it has
+    // no rows for — and its existing positions and transitions must still
+    // verify byte-for-byte afterwards, because the migration does not touch
+    // them.
+    const path = join(directory, 'schema-v1-migration.sqlite');
+    const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+    await seed(store, 'party-alice', proportional(10_000));
+    await store.applyTransition(ADMIN, movement('exec-pre-migration', 'party-alice', 'party-bob', proportional(2_500)));
+    await store.close();
+
+    const { default: Database } = await import('better-sqlite3');
+    const rewind = new Database(path);
+    rewind.prepare(`DELETE FROM governed_authority_store_versions`).run();
+    rewind.prepare(`INSERT INTO governed_authority_store_versions (schema_version, migration_state, recorded_at) VALUES (?, ?, ?)`).run(
+      'aoc.governed-authority-store.schema.v1',
+      'applied',
+      NOW,
+    );
+    rewind.prepare(`DROP TABLE governed_authority_reservations`).run();
+    rewind.close();
+
+    const migrated = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+    assert.deepEqual((await migrated.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(7_500), 'the balances survived');
+    assert.equal((await migrated.listTransitionsByExecutionRef(ADMIN, TENANT_A, 'exec-pre-migration')).length, 1, 'and so did the history');
+
+    const availability = await migrated.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+    assert.ok(availability.outcome === 'available');
+    assert.deepEqual(availability.available, proportional(7_500), 'a migrated deployment has no commitments, so everything it holds is available');
+
+    const health = await migrated.health();
+    assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v2');
+    assert.equal(health.activeReservationCount, 0);
+
+    // And it enforces from here on.
+    await migrated.acquireReservation(ADMIN, reservation('mandate-post-migration', 'party-alice', proportional(7_000)));
+    assert.equal(
+      await errorCode(() => migrated.acquireReservation(ADMIN, reservation('mandate-post-migration-2', 'party-alice', proportional(1_000)))),
+      'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+    );
+    await migrated.close();
   });
 
   it('cannot be made to hold a negative quantity even by a writer bypassing the runtime entirely', async () => {

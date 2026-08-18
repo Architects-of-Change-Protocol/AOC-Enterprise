@@ -1,8 +1,16 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-import { isGovernedAuthorityIssuanceBasis, type GovernedAuthorityBasis, type GovernedAuthorityPosition, type GovernedAuthorityTransition } from '@aoc-enterprise/governed-authority';
-import { isGovernedRightType, serializeGovernedRightsScope, type GovernedRightType, type GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
+import {
+  governedAuthorityReservationReducesAvailability,
+  isGovernedAuthorityIssuanceBasis,
+  type GovernedAuthorityBasis,
+  type GovernedAuthorityPosition,
+  type GovernedAuthorityReservation,
+  type GovernedAuthorityReservationStatus,
+  type GovernedAuthorityTransition,
+} from '@aoc-enterprise/governed-authority';
+import { governedRightsScopeWithin, isGovernedRightType, serializeGovernedRightsScope, type GovernedRightType, type GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
 
 import { AuthorityGovernanceError } from './errors.js';
 import { GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION, assertReplayMatches } from './in-memory-authority-store.js';
@@ -22,12 +30,23 @@ import {
   deriveAuthorityPositionId,
   subtractAuthorityScope,
 } from './lifecycle.js';
+import {
+  assertReservationIntegrity,
+  computeAvailability,
+  computeReservationDigest,
+  deriveReservationId,
+  reservationReplayMatches,
+} from './reservation-lifecycle.js';
 import { requireAuthorityAccessToOrganization, requireStrictUtcAuthorityTimestamp, type GovernedAuthorityStore } from './authority-store.js';
 import type {
+  AcquireGovernedAuthorityReservationInput,
+  AcquireGovernedAuthorityReservationOutcome,
   ApplyGovernedAuthorityTransitionInput,
   AuthorityGovernanceContext,
   BootstrapGovernedAuthorityInput,
+  GovernedAuthorityAvailabilityQuery,
   GovernedAuthorityResourceRef,
+  ReleaseGovernedAuthorityReservationInput,
 } from './contracts.js';
 
 export interface CreateSqliteGovernedAuthorityStoreOptions {
@@ -136,6 +155,107 @@ const SCHEMA_V1 = `
   CREATE INDEX IF NOT EXISTS idx_governed_authority_transitions_subject
     ON governed_authority_transitions(tenant_id, resource_kind, resource_id, governed_right);
 `;
+
+// ---------------------------------------------------------------------------
+// Schema v2 adds one table and changes nothing existing: how much of each
+// position is already committed to a still-live governed authorization.
+//
+// Purely additive, which is what makes the v1 -> v2 migration below safe to
+// apply automatically. No position or transition row is read, rewritten or
+// re-digested, so a v1 database's entire authority history keeps verifying
+// byte-for-byte, and a v1 deployment's availability on the day it upgrades is
+// simply its holdings — correct, because it had no commitments to account for.
+//
+// Durable invariants pushed down to the database, in the same spirit as the
+// position and transition tables:
+//
+//  - `UNIQUE (tenant_id, idempotency_key)` -> one commitment per idempotency
+//    identity. A retried acquisition collides rather than committing a second
+//    quantity, and the constraint holds across processes where an in-memory
+//    replay check would not.
+//  - `UNIQUE (tenant_id, source_mandate_ref, governed_right)` -> one
+//    authorization artifact commits each right at most once. This is what makes
+//    "was this mandate supported by a reservation?" a single-row question, and
+//    what stops a second acquisition being laundered through a fresh
+//    idempotency key for the same mandate.
+//  - `CHECK (status IN ('active','consumed','released'))` -> the closed
+//    lifecycle is enforced by the database, not only by the code above it.
+//    There is deliberately no `'expired'`: expiry is derived from `expires_at`
+//    against the clock, so a stopped cleanup process can never leave a stored
+//    status disagreeing with it.
+//  - `CHECK (scope_basis_points >= 0)` / `CHECK (scope_units >= 0)` -> a
+//    negative commitment, which would *manufacture* availability, is
+//    unrepresentable.
+//
+// The partial index on active rows is what the availability read uses: the
+// enforcement path asks this question on every conserving authorization, and it
+// must not scan terminal history to answer it.
+// ---------------------------------------------------------------------------
+const SCHEMA_V2 = `
+  CREATE TABLE IF NOT EXISTS governed_authority_reservations (
+    reservation_id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    holder_ref TEXT NOT NULL,
+    resource_kind TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    governed_right TEXT NOT NULL,
+    scope_kind TEXT NOT NULL,
+    scope_basis_points INTEGER,
+    scope_units INTEGER,
+    scope_unit_denomination TEXT,
+    action TEXT NOT NULL,
+    source_request_ref TEXT NOT NULL,
+    source_decision_ref TEXT,
+    source_mandate_ref TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    status TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    correlation_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    reservation_digest TEXT NOT NULL,
+    schema_version TEXT NOT NULL,
+    UNIQUE (tenant_id, idempotency_key),
+    UNIQUE (tenant_id, source_mandate_ref, governed_right),
+    CHECK (status IN ('active', 'consumed', 'released')),
+    CHECK (scope_basis_points IS NULL OR scope_basis_points >= 0),
+    CHECK (scope_units IS NULL OR scope_units >= 0)
+  );
+  CREATE INDEX IF NOT EXISTS idx_governed_authority_reservations_active
+    ON governed_authority_reservations(tenant_id, holder_ref, resource_kind, resource_id, governed_right)
+    WHERE status = 'active';
+  CREATE INDEX IF NOT EXISTS idx_governed_authority_reservations_mandate
+    ON governed_authority_reservations(tenant_id, source_mandate_ref);
+`;
+
+/** The one predecessor this runtime knows how to bring forward. Anything else still refuses to open. */
+const GOVERNED_AUTHORITY_STORE_SCHEMA_V1 = 'aoc.governed-authority-store.schema.v1';
+
+interface ReservationRow {
+  readonly reservation_id: string;
+  readonly tenant_id: string;
+  readonly holder_ref: string;
+  readonly resource_kind: string;
+  readonly resource_id: string;
+  readonly governed_right: string;
+  readonly scope_kind: string;
+  readonly scope_basis_points: number | null;
+  readonly scope_units: number | null;
+  readonly scope_unit_denomination: string | null;
+  readonly action: string;
+  readonly source_request_ref: string;
+  readonly source_decision_ref: string | null;
+  readonly source_mandate_ref: string;
+  readonly effective_from: string;
+  readonly expires_at: string;
+  readonly status: string;
+  readonly idempotency_key: string;
+  readonly correlation_id: string | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+  readonly reservation_digest: string;
+}
 
 interface PositionRow {
   readonly position_id: string;
@@ -266,6 +386,36 @@ function toPosition(row: PositionRow): GovernedAuthorityPosition {
   });
 }
 
+function readReservationStatus(value: string, recordId: string): GovernedAuthorityReservationStatus {
+  if (value === 'active' || value === 'consumed' || value === 'released') return value;
+  throw corrupted(`Stored governed authority reservation '${recordId}' has an unknown status '${value}'.`, { recordId });
+}
+
+/** Reads a reservation back, verifying its digest. A tampered row fails the read rather than dropping out of it: skipping one would silently free the capacity it commits. */
+function toReservation(row: ReservationRow): GovernedAuthorityReservation {
+  return assertReservationIntegrity({
+    id: row.reservation_id,
+    tenantId: row.tenant_id,
+    holderRef: row.holder_ref,
+    resourceKind: row.resource_kind,
+    resourceId: row.resource_id,
+    governedRight: readGovernedRight(row.governed_right, row.reservation_id),
+    scope: readScopeColumns(row, row.reservation_id),
+    action: row.action,
+    sourceRequestRef: row.source_request_ref,
+    ...(row.source_decision_ref !== null ? { sourceDecisionRef: row.source_decision_ref } : {}),
+    sourceMandateRef: row.source_mandate_ref,
+    effectiveFrom: row.effective_from,
+    expiresAt: row.expires_at,
+    status: readReservationStatus(row.status, row.reservation_id),
+    idempotencyKey: row.idempotency_key,
+    ...(row.correlation_id !== null ? { correlationId: row.correlation_id } : {}),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    digest: row.reservation_digest,
+  });
+}
+
 function toTransition(row: TransitionRow): GovernedAuthorityTransition {
   return assertTransitionIntegrity({
     id: row.transition_id,
@@ -334,20 +484,32 @@ export async function createSqliteGovernedAuthorityStore(
   // Fail closed on a database written by a different schema version, before
   // any DDL runs — never silently reuse or migrate a mismatched store.
   const versionTable = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`).get('governed_authority_store_versions');
+  let migrateFromV1 = false;
   if (versionTable !== undefined) {
     const existingVersion = db.prepare(`SELECT schema_version FROM governed_authority_store_versions ORDER BY id DESC LIMIT 1`).get() as
       | { schema_version: string }
       | undefined;
     if (existingVersion !== undefined && existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION) {
-      db.close();
-      throw new AuthorityGovernanceError(
-        'GOVERNED_AUTHORITY_STORE_UNAVAILABLE',
-        `Governed Authority Store schema version '${existingVersion.schema_version}' is not supported by this runtime (expected '${GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION}'). Refusing to open the store.`,
-      );
+      // v1 -> v2 is brought forward rather than refused, because the change is
+      // purely additive: one new table, and not a single existing row read,
+      // rewritten or re-digested. Every other version still refuses, so this is
+      // one known migration rather than a general "try to upgrade anything"
+      // policy — and refusing v1 outright would have stopped every deployment
+      // that already holds authority state, to add a table they have no rows
+      // for.
+      if (existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_V1) {
+        db.close();
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_STORE_UNAVAILABLE',
+          `Governed Authority Store schema version '${existingVersion.schema_version}' is not supported by this runtime (expected '${GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION}'). Refusing to open the store.`,
+        );
+      }
+      migrateFromV1 = true;
     }
   }
 
   db.exec(SCHEMA_V1);
+  db.exec(SCHEMA_V2);
   const recordedVersion = db.prepare(`SELECT schema_version FROM governed_authority_store_versions ORDER BY id DESC LIMIT 1`).get() as
     | { schema_version: string }
     | undefined;
@@ -355,6 +517,15 @@ export async function createSqliteGovernedAuthorityStore(
     db.prepare(`INSERT INTO governed_authority_store_versions (schema_version, migration_state, recorded_at) VALUES (?, ?, ?)`).run(
       GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION,
       'applied',
+      now(),
+    );
+  } else if (migrateFromV1) {
+    // Appended, never overwritten: the version table is a history, and a
+    // reader must be able to see that this database was migrated rather than
+    // created at v2.
+    db.prepare(`INSERT INTO governed_authority_store_versions (schema_version, migration_state, recorded_at) VALUES (?, ?, ?)`).run(
+      GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION,
+      'migrated',
       now(),
     );
   }
@@ -409,6 +580,38 @@ export async function createSqliteGovernedAuthorityStore(
        updated_at = excluded.updated_at,
        last_transition_ref = excluded.last_transition_ref,
        position_digest = excluded.position_digest`,
+  );
+
+  const selectReservationsFor = db.prepare(
+    `SELECT * FROM governed_authority_reservations
+       WHERE tenant_id = ? AND holder_ref = ? AND resource_kind = ? AND resource_id = ? AND governed_right = ?
+       ORDER BY reservation_id ASC`,
+  );
+  const selectReservationById = db.prepare(`SELECT * FROM governed_authority_reservations WHERE tenant_id = ? AND reservation_id = ?`);
+  const selectReservationByIdempotencyKey = db.prepare(`SELECT * FROM governed_authority_reservations WHERE tenant_id = ? AND idempotency_key = ?`);
+  const selectReservationsByMandate = db.prepare(
+    `SELECT * FROM governed_authority_reservations WHERE tenant_id = ? AND source_mandate_ref = ? ORDER BY reservation_id ASC`,
+  );
+  const selectActiveReservationsByMandate = db.prepare(
+    `SELECT * FROM governed_authority_reservations WHERE tenant_id = ? AND source_mandate_ref = ? AND status = 'active' ORDER BY reservation_id ASC`,
+  );
+  const insertReservation = db.prepare(
+    `INSERT INTO governed_authority_reservations (
+       reservation_id, tenant_id, holder_ref, resource_kind, resource_id, governed_right,
+       scope_kind, scope_basis_points, scope_units, scope_unit_denomination,
+       action, source_request_ref, source_decision_ref, source_mandate_ref,
+       effective_from, expires_at, status, idempotency_key, correlation_id,
+       created_at, updated_at, reservation_digest, schema_version
+     ) VALUES (
+       @reservation_id, @tenant_id, @holder_ref, @resource_kind, @resource_id, @governed_right,
+       @scope_kind, @scope_basis_points, @scope_units, @scope_unit_denomination,
+       @action, @source_request_ref, @source_decision_ref, @source_mandate_ref,
+       @effective_from, @expires_at, @status, @idempotency_key, @correlation_id,
+       @created_at, @updated_at, @reservation_digest, @schema_version
+     )`,
+  );
+  const updateReservationStatus = db.prepare(
+    `UPDATE governed_authority_reservations SET status = @status, updated_at = @updated_at, reservation_digest = @reservation_digest WHERE reservation_id = @reservation_id`,
   );
 
   /** The chain position the next transition for a tenant will occupy. Read inside the caller's transaction, so it cannot straddle another writer. */
@@ -476,6 +679,55 @@ export async function createSqliteGovernedAuthorityStore(
       position_digest: sealed.digest,
       schema_version: GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION,
     });
+    return sealed;
+  }
+
+  function readReservationsFor(
+    tenantId: string,
+    holderRef: string,
+    resource: GovernedAuthorityResourceRef,
+    governedRight: GovernedRightType,
+  ): GovernedAuthorityReservation[] {
+    return (selectReservationsFor.all(tenantId, holderRef, resource.kind, resource.id, governedRight) as ReservationRow[]).map(toReservation);
+  }
+
+  function insertSealedReservation(draft: Omit<GovernedAuthorityReservation, 'digest'>): GovernedAuthorityReservation {
+    const sealed: GovernedAuthorityReservation = { ...draft, digest: computeReservationDigest(draft) };
+    insertReservation.run({
+      reservation_id: sealed.id,
+      tenant_id: sealed.tenantId,
+      holder_ref: sealed.holderRef,
+      resource_kind: sealed.resourceKind,
+      resource_id: sealed.resourceId,
+      governed_right: sealed.governedRight,
+      ...writeScopeColumns(sealed.scope),
+      action: sealed.action,
+      source_request_ref: sealed.sourceRequestRef,
+      source_decision_ref: sealed.sourceDecisionRef ?? null,
+      source_mandate_ref: sealed.sourceMandateRef,
+      effective_from: sealed.effectiveFrom,
+      expires_at: sealed.expiresAt,
+      status: sealed.status,
+      idempotency_key: sealed.idempotencyKey,
+      correlation_id: sealed.correlationId ?? null,
+      created_at: sealed.createdAt,
+      updated_at: sealed.updatedAt,
+      reservation_digest: sealed.digest,
+      schema_version: GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION,
+    });
+    return sealed;
+  }
+
+  /** Moves a reservation to a terminal status, re-sealing its digest over the new bytes so the row stays verifiable rather than becoming a permanent integrity failure. */
+  function writeReservationStatus(
+    reservation: GovernedAuthorityReservation,
+    status: GovernedAuthorityReservationStatus,
+    updatedAt: string,
+  ): GovernedAuthorityReservation {
+    const { digest: _digest, ...rest } = reservation;
+    const next = { ...rest, status, updatedAt };
+    const sealed: GovernedAuthorityReservation = { ...next, digest: computeReservationDigest(next) };
+    updateReservationStatus.run({ reservation_id: sealed.id, status: sealed.status, updated_at: sealed.updatedAt, reservation_digest: sealed.digest });
     return sealed;
   }
 
@@ -615,9 +867,174 @@ export async function createSqliteGovernedAuthorityStore(
         applied.push(transition);
       }
 
+      // Terminalized in the same transaction that just debited the position, so
+      // "capacity released" and "authority moved" commit together or not at
+      // all. This is the coordination §"Execution atomicity" asks for, and it is
+      // a real one: both rows live in this database and this is one
+      // `db.transaction(...)`. Crashing before COMMIT rolls back both.
+      if (input.consumesReservationsForMandateRef !== undefined) {
+        const active = (selectActiveReservationsByMandate.all(input.tenantId, input.consumesReservationsForMandateRef) as ReservationRow[]).map(toReservation);
+        for (const reservation of active) writeReservationStatus(reservation, 'consumed', recordedAt);
+      }
+
       return { transitions: applied, replayed: false };
     },
   );
+
+  /**
+   * One commit section for check-and-reserve.
+   *
+   * The availability read and the insert are inside the same transaction, so
+   * two concurrent acquisitions against the same position serialize: the second
+   * reads the first's committed row and is refused. `UNIQUE (tenant_id,
+   * idempotency_key)` and `UNIQUE (tenant_id, source_mandate_ref,
+   * governed_right)` refuse a duplicate even if one somehow reached the insert.
+   */
+  const commitReservation = db.transaction(
+    (
+      input: AcquireGovernedAuthorityReservationInput,
+      idempotencyKey: string,
+      effectiveFrom: string,
+      expiresAt: string,
+      recordedAt: string,
+    ): AcquireGovernedAuthorityReservationOutcome => {
+      const existingRow = selectReservationByIdempotencyKey.get(input.tenantId, idempotencyKey) as ReservationRow | undefined;
+      if (existingRow !== undefined) {
+        const existing = toReservation(existingRow);
+        if (
+          !reservationReplayMatches(existing, {
+            holderRef: input.holderRef,
+            resourceKind: input.resource.kind,
+            resourceId: input.resource.id,
+            governedRight: input.governedRight,
+            scope: input.scope,
+            action: input.action,
+            sourceMandateRef: input.sourceMandateRef,
+          })
+        ) {
+          throw new AuthorityGovernanceError(
+            'GOVERNED_AUTHORITY_RESERVATION_CONFLICT',
+            `Idempotency key '${idempotencyKey}' already commits governed authority under materially different terms; a replay must restate the same commitment.`,
+            { idempotencyKey, reservationId: existing.id },
+          );
+        }
+        return { outcome: 'reserved', reservation: existing, replayed: true };
+      }
+
+      // A commitment is identified by the artifact it stands for, so a second
+      // acquisition naming the same mandate and right is the same commitment
+      // however it was keyed. Refused explicitly rather than left to collide on
+      // the derived id — in memory that collision would silently overwrite a
+      // live commitment, and in SQLite it would surface as a raw driver error
+      // instead of this module's taxonomy.
+      const forSameMandate = selectReservationsByMandate.all(input.tenantId, input.sourceMandateRef) as ReservationRow[];
+      const clashing = forSameMandate.find((row) => row.governed_right === input.governedRight);
+      if (clashing !== undefined) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_RESERVATION_CONFLICT',
+          `Mandate '${input.sourceMandateRef}' already commits governed authority over '${input.governedRight}' under a different idempotency key.`,
+          { sourceMandateRef: input.sourceMandateRef, governedRight: input.governedRight, reservationId: clashing.reservation_id },
+        );
+      }
+
+      const position = readPosition(input.tenantId, input.holderRef, input.resource, input.governedRight);
+      const availability = computeAvailability(position, readReservationsFor(input.tenantId, input.holderRef, input.resource, input.governedRight), recordedAt);
+
+      if (availability.outcome === 'no_authority') {
+        // Enrolment is consulted only once the holder turns out to have no
+        // position, so the common enforced path costs no extra read — the same
+        // ordering `resolver.ts` uses for coverage. A resource with positions
+        // but none for this holder-and-right is enrolled, and fails closed.
+        const enrolled = ((countPositionsForResource.get(input.tenantId, input.resource.kind, input.resource.id) as { total: number } | undefined)?.total ?? 0) > 0;
+        if (!enrolled) return { outcome: 'resource_not_enrolled' as const };
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE',
+          `'${input.holderRef}' holds no recognized authority over '${input.governedRight}' of this resource; there is nothing to commit.`,
+          { tenantId: input.tenantId, holderRef: input.holderRef, governedRight: input.governedRight },
+        );
+      }
+      if (availability.outcome === 'incompatible') {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
+          'This governed authority cannot be committed by that quantity: the position and the standing commitments are not commensurable with it.',
+          { tenantId: input.tenantId, holderRef: input.holderRef, governedRight: input.governedRight },
+        );
+      }
+      if (availability.outcome === 'overcommitted') {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          `More governed authority already stands committed against '${input.holderRef}' than that holder possesses; refusing to commit further until the inconsistency is resolved.`,
+          {
+            tenantId: input.tenantId,
+            holderRef: input.holderRef,
+            governedRight: input.governedRight,
+            held: availability.held,
+            committed: availability.committed,
+          },
+        );
+      }
+
+      if (!governedRightsScopeWithin(serializeGovernedRightsScope(input.scope), availability.available)) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          `'${input.holderRef}' holds enough '${input.governedRight}' in total, but too much of it is already committed to still-live governed authorizations to commit this much more.`,
+          {
+            tenantId: input.tenantId,
+            holderRef: input.holderRef,
+            governedRight: input.governedRight,
+            held: availability.held,
+            ...(availability.committed !== undefined ? { committed: availability.committed } : {}),
+            available: availability.available,
+            requested: serializeGovernedRightsScope(input.scope),
+          },
+        );
+      }
+
+      const reservation = insertSealedReservation({
+        id: deriveReservationId(input.tenantId, input.sourceMandateRef, input.governedRight),
+        tenantId: input.tenantId,
+        holderRef: input.holderRef,
+        resourceKind: input.resource.kind,
+        resourceId: input.resource.id,
+        governedRight: input.governedRight,
+        scope: serializeGovernedRightsScope(input.scope),
+        action: input.action,
+        sourceRequestRef: input.sourceRequestRef,
+        ...(input.sourceDecisionRef !== undefined ? { sourceDecisionRef: input.sourceDecisionRef } : {}),
+        sourceMandateRef: input.sourceMandateRef,
+        effectiveFrom,
+        expiresAt,
+        status: 'active',
+        idempotencyKey,
+        ...(input.correlationId !== undefined ? { correlationId: input.correlationId } : {}),
+        createdAt: recordedAt,
+        updatedAt: recordedAt,
+      });
+      return { outcome: 'reserved' as const, reservation, replayed: false };
+    },
+  );
+
+  /** One commit section for release: read the current status and write the terminal one together, so two concurrent releases cannot both observe `'active'`. */
+  const commitRelease = db.transaction((tenantId: string, reservationId: string, releasedAt: string): GovernedAuthorityReservation => {
+    const row = selectReservationById.get(tenantId, reservationId) as ReservationRow | undefined;
+    if (row === undefined) {
+      throw new AuthorityGovernanceError(
+        'GOVERNED_AUTHORITY_RESERVATION_NOT_FOUND',
+        `No governed authority reservation '${reservationId}' exists in this tenant.`,
+        { tenantId, reservationId },
+      );
+    }
+    const reservation = toReservation(row);
+    if (reservation.status === 'released') return reservation;
+    if (reservation.status === 'consumed') {
+      throw new AuthorityGovernanceError(
+        'GOVERNED_AUTHORITY_RESERVATION_CONFLICT',
+        `Governed authority reservation '${reservation.id}' was consumed by a completed movement; the authority has already moved and releasing it would fabricate capacity.`,
+        { reservationId: reservation.id },
+      );
+    }
+    return writeReservationStatus(reservation, 'released', releasedAt);
+  });
 
   return {
     providerKind: 'sqlite',
@@ -701,10 +1118,81 @@ export async function createSqliteGovernedAuthorityStore(
       return (selectTransitionsByExecution.all(tenantId, executionRef) as TransitionRow[]).map(toTransition);
     },
 
+    async acquireReservation(context: AuthorityGovernanceContext, input: AcquireGovernedAuthorityReservationInput) {
+      requireAuthorityAccessToOrganization(context, input.tenantId);
+      assertKnownGovernedRight(input.governedRight);
+      assertValidAuthorityScope(input.scope, 'scope');
+      assertNonZeroAuthorityScope(input.scope, 'scope');
+      const effectiveFrom = requireStrictUtcAuthorityTimestamp(input.effectiveFrom, 'effectiveFrom');
+      const expiresAt = requireStrictUtcAuthorityTimestamp(input.expiresAt, 'expiresAt');
+      if (Date.parse(expiresAt) <= Date.parse(effectiveFrom)) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_SCOPE_INVALID',
+          'A governed authority reservation must expire after it becomes effective; a commitment that never stands reduces nothing.',
+          { effectiveFrom, expiresAt },
+        );
+      }
+      const recordedAt = requireStrictUtcAuthorityTimestamp(now(), 'recordedAt');
+      return commitReservation(input, input.idempotencyKey ?? input.sourceMandateRef, effectiveFrom, expiresAt, recordedAt);
+    },
+
+    async releaseReservation(context: AuthorityGovernanceContext, input: ReleaseGovernedAuthorityReservationInput) {
+      requireAuthorityAccessToOrganization(context, input.tenantId);
+      if (input.reason === 'administrative' && !context.system) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_BOOTSTRAP_NOT_PERMITTED',
+          'Administratively cancelling a governed authority reservation requires a privileged system context.',
+          { reservationId: input.reservationId },
+        );
+      }
+      const releasedAt = requireStrictUtcAuthorityTimestamp(input.releasedAt ?? now(), 'releasedAt');
+      return commitRelease(input.tenantId, input.reservationId, releasedAt);
+    },
+
+    async resolveAvailability(context: AuthorityGovernanceContext, query: GovernedAuthorityAvailabilityQuery) {
+      requireAuthorityAccessToOrganization(context, query.tenantId);
+      const at = requireStrictUtcAuthorityTimestamp(query.at, 'at');
+      const position = readPosition(query.tenantId, query.holderRef, query.resource, query.governedRight);
+      return computeAvailability(position, readReservationsFor(query.tenantId, query.holderRef, query.resource, query.governedRight), at);
+    },
+
+    async getReservation(context: AuthorityGovernanceContext, tenantId: string, reservationId: string) {
+      requireAuthorityAccessToOrganization(context, tenantId);
+      // Scoped by tenant in the SQL itself, so a cross-tenant id reads as absent
+      // rather than as a refusal: a caller must not be able to probe another
+      // tenant's reservation identifiers by telling "denied" from "no such
+      // thing".
+      const row = selectReservationById.get(tenantId, reservationId) as ReservationRow | undefined;
+      return row === undefined ? null : toReservation(row);
+    },
+
+    async listReservationsByMandateRef(context: AuthorityGovernanceContext, tenantId: string, sourceMandateRef: string) {
+      requireAuthorityAccessToOrganization(context, tenantId);
+      return (selectReservationsByMandate.all(tenantId, sourceMandateRef) as ReservationRow[]).map(toReservation);
+    },
+
+    async listActiveReservations(context: AuthorityGovernanceContext, query: GovernedAuthorityAvailabilityQuery) {
+      requireAuthorityAccessToOrganization(context, query.tenantId);
+      const at = requireStrictUtcAuthorityTimestamp(query.at, 'at');
+      return readReservationsFor(query.tenantId, query.holderRef, query.resource, query.governedRight).filter((reservation) =>
+        governedAuthorityReservationReducesAvailability(reservation, at),
+      );
+    },
+
     async health() {
       const positionCount = (db.prepare(`SELECT COUNT(*) AS total FROM governed_authority_positions`).get() as { total: number }).total;
       const transitionCount = (db.prepare(`SELECT COUNT(*) AS total FROM governed_authority_transitions`).get() as { total: number }).total;
-      return { providerKind: 'sqlite' as const, available: db.open, schemaVersion: GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION, positionCount, transitionCount };
+      const activeReservationCount = (
+        db.prepare(`SELECT COUNT(*) AS total FROM governed_authority_reservations WHERE status = 'active'`).get() as { total: number }
+      ).total;
+      return {
+        providerKind: 'sqlite' as const,
+        available: db.open,
+        schemaVersion: GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION,
+        positionCount,
+        transitionCount,
+        activeReservationCount,
+      };
     },
 
     async close() {
