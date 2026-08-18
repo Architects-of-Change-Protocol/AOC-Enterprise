@@ -9,9 +9,9 @@
 | `validateExecutionGrant()` | A with durable host dependency | Verifies signature, expiry, revocation, consumed status, and expected scope; audits validation result. |
 | `consumeExecutionGrant()` | A if host atomicity contract is met | Validates and atomically marks consumed through the host store; duplicate consumption returns `grant_replayed`. |
 | `revokeExecutionGrant()` | A with durable host dependency | Persists revocation through `ExecutionGrantStorePort` and audits `grant_revoked`. |
-| `issueDelegatedCapability()` | A with durable host dependency | Signs, persists, includes parent linkage and nonce, and audits issue. |
-| `evaluateDelegatedAccess()` | B — production-shaped with host policy dependency | Verifies signature, persistent presence, revocation, expiry, actor/org/scope constraints, legacy delegation validation, and agent access policy. Host policy completeness remains host-owned. |
-| `revokeDelegatedCapability()` | A for direct revocation | Persists direct delegation revocation and audits it. Descendant cascade remains a host-store responsibility. |
+| `issueDelegatedCapability()` | A with durable host dependency | Signs, persists, records nonce, and audits issue. Parent linkage is now **validated** rather than merely recorded: a claimed `parentDelegationId`/`parentGrantId` that is unknown, revoked, expired, non-redelegable, in another organization, or narrower than the child is refused. A child with no explicit `expiresAt` inherits its parent's. |
+| `evaluateDelegatedAccess()` | B — production-shaped with host policy dependency | Verifies signature, persistent presence, revocation, expiry, actor/org/scope constraints, legacy delegation validation, and agent access policy. Additionally **re-walks the full ancestry at every call** — ancestor existence, revocation, expiry, containment on every axis, depth and cycles — so nothing is trusted from issuance. Host policy completeness remains host-owned. |
+| `revokeDelegatedCapability()` | A for direct and descendant revocation | Persists direct delegation revocation and audits it. Descendants no longer need a store cascade: lineage is re-resolved at every evaluation, so revoking one link refuses its whole subtree without any descendant record being rewritten. |
 | `createCapabilityClaim()` | B — production-shaped, revocation incomplete | Signs claims with claim id, actor, org, trust domain, issued/expiry metadata, nonce, and audit event. Claim revocation store is not implemented. |
 | `verifyCapabilityClaim()` | B — production-shaped, revocation incomplete | Verifies signature, expiry, actor/org/trust-domain expectations, and audits result. Claim revocation is a remaining blocker. |
 
@@ -20,7 +20,7 @@
 Runtime lifecycle artifacts are signed envelopes owned by the portable runtime and persisted by host ports:
 
 - execution grants authorize a one-time runtime execution handoff;
-- delegated capabilities authorize constrained downstream access;
+- delegated capabilities authorize constrained downstream access, bounded by a lineage that is validated at issuance and re-validated at every use (see `docs/enterprise/AOC_DELEGATED_CAPABILITIES_DERIVED_AUTHORITY.md`);
 - capability claims assert actor/org/trust-domain capability facts;
 - replay protection records nonces/jtis for issued artifacts;
 - lifecycle audit records every transition or denial attempt.

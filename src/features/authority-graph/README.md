@@ -91,20 +91,53 @@ lineage, the resolved `depth` (delegation hop count), the `terminalActorId`
 (who is acting) and the `rootIssuerActorId` (who the lineage ultimately
 traces back to).
 
-`AuthorityChainVerifier` then runs nine deterministic policies, in a fixed
-order, against that chain -- stopping at the first that fails:
+`AuthorityChainVerifier` also resolves a `DelegationLineageAssessment` from the
+store (see below) and hands it to the policies on `AuthorityPolicyContext`,
+alongside `rootIssuerAccepted` and `crossDomainAccepted`. It then runs ten
+deterministic policies, in a fixed order, against that chain -- stopping at the
+first that fails:
 
 1. `authority_chain_required` -- was any chain resolved at all?
 2. `self_issuance_denied` -- did anyone issue authority to themselves?
 3. `issuer_authority_required` -- did every issuer actually hold what it issued from?
 4. `ancestor_revocation_denied` -- is every ancestor still active?
 5. `ancestor_expiration_denied` -- has every ancestor not expired?
-6. `delegation_scope_contained` -- is the requested resource within scope, all the way up?
-7. `delegation_depth_limited` -- is every delegation within its permitted depth?
-8. `non_delegable_action_denied` -- was a non-delegable action delegated anyway?
-9. `cross_domain_authority_denied` -- does every link stay inside the trust domain?
+6. `delegation_lineage_valid` -- does the delegation lineage terminate at a real grant, without a cycle, without changing hands, and without gaining an action?
+7. `delegation_scope_contained` -- is the requested resource within scope, all the way up?
+8. `delegation_depth_limited` -- is every delegation within its permitted depth?
+9. `non_delegable_action_denied` -- was a non-delegable action delegated anyway?
+10. `cross_domain_authority_denied` -- does every link stay inside the trust domain?
 
 If every policy passes, the decision is `authority_valid`.
+
+## How derived-authority lineage is proven
+
+Policies 1-5 and 7-10 all assume the chain they are handed *is* a chain. That
+assumption was measurable as a hole: `AuthorityResolver` stops walking when a
+source id resolves to nothing, so a delegation naming a source that does not
+exist arrived at the policy chain looking exactly like a root, and every policy
+passed it. The same was true of a cycle, of a hop whose delegator had never held
+its source, and of a hop carrying an action its source lacked -- the last
+because `delegation_scope_contained` proves containment for `resourceScopes` and
+never did for `actions`.
+
+`DelegationLineageVerifier` walks the lineage separately and asks the opposite
+question: not "what can be assembled?" but "does what was assembled actually
+terminate at a real `AuthorityGrant`, without revisiting itself, without
+changing hands, and without gaining an action?". It reports one typed breach --
+`source_missing`, `cycle`, `delegator_not_source_holder`, or `action_expanded`
+-- and `delegation_lineage_valid` turns that into a denial.
+
+It is a **projection, never a stored record**. Nothing is copied into a
+descendant at creation, so revoking or deleting an ancestor invalidates its whole
+subtree at the next evaluation without a single descendant row being rewritten.
+
+It sits at position 6 on purpose: after liveness, so an ancestor an operator
+revoked reports the revocation rather than its structural consequence, and
+before narrowing, so a chain that never terminated anywhere is refused before
+there is any discussion of how well it narrows.
+
+See `docs/enterprise/AOC_DELEGATED_CAPABILITIES_DERIVED_AUTHORITY.md`.
 
 ## How delegation scope inheritance works
 
@@ -268,7 +301,7 @@ domain/     Typed records: AuthorityNode, AuthorityEdge, AuthorityGrant,
 services/   AuthorityGraphStore, AuthorityGrantService, RoleAssignmentService,
             DelegationService, AuthorityResolver, AuthorityChainVerifier,
             AuthorityProofService, AuthorityLineageLedger.
-policies/   The nine policies listed above, plus the default evaluation order.
+policies/   The ten policies listed above, plus the default evaluation order.
 runtime/    AuthorityGraphRuntime facade, injectable clock/id generator,
             error types.
 fixtures/   The Datasys Agent Republic authority lineage, plus fixtures for

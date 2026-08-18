@@ -7,6 +7,7 @@ import type { AuthorityGraphStore } from './authority-graph-store.js';
 import type { AuthorityLineageLedger } from './authority-lineage-ledger.js';
 import type { AuthorityProofService } from './authority-proof-service.js';
 import type { AuthorityResolver } from './authority-resolver.js';
+import { DelegationLineageVerifier } from './delegation-lineage-verifier.js';
 
 export class AuthorityChainVerifier {
   constructor(
@@ -16,6 +17,7 @@ export class AuthorityChainVerifier {
     private readonly proofService: AuthorityProofService,
     private readonly ledger: AuthorityLineageLedger,
     private readonly policies: readonly AuthorityPolicy[] = createDefaultAuthorityPolicyChain(),
+    private readonly lineageVerifier: DelegationLineageVerifier = new DelegationLineageVerifier(store),
   ) {}
 
   verifyAuthority(request: AuthorityChainRequest): AuthorityDecision {
@@ -32,7 +34,12 @@ export class AuthorityChainVerifier {
     const crossDomainAccepted = this.store.isCrossDomainAuthorityAccepted(request.trustDomainId);
     const now = this.ctx.clock.now();
 
-    const context: AuthorityPolicyContext = { now, chain, rootIssuerAccepted, crossDomainAccepted };
+    // Resolved once, here, for the same reason `rootIssuerAccepted` is: the
+    // policies are pure functions of a context, and a walk performed inside one
+    // of them would be invisible to the rest and repeated by any that needed it.
+    const lineage = this.lineageVerifier.assess(chain);
+
+    const context: AuthorityPolicyContext = { now, chain, rootIssuerAccepted, crossDomainAccepted, lineage };
 
     let decisionType: AuthorityDecisionType = 'authority_valid';
     let reasonCode = 'AUTHORITY_CHAIN_VALID';

@@ -6,6 +6,11 @@ import { createRuntimeFederationManager } from './federation';
 import { createRuntimeVaultManager, type RuntimeVaultBoundary, type RuntimeVaultHydrationContext, type RuntimeVaultIsolationContext, type RuntimeVaultContinuityContext } from './vault';
 import type { RuntimeOperationalSnapshot } from './state';
 import { evaluateEnforcementPipeline } from './enforcement/authorization-pipeline.js';
+import {
+  delegationLineageReasonCode,
+  resolveDelegationLineage,
+  type DelegationLineagePorts,
+} from './authorization/delegation/delegation-lineage.js';
 import type {
   CapabilityClaim,
   CapabilityClaimExpectedValues,
@@ -84,6 +89,24 @@ function containsExpectedScope(actual: readonly string[] | undefined, expected: 
   if (expected === undefined) return true;
   const expectedScopes = Array.isArray(expected) ? expected : [expected];
   return expectedScopes.every((scope) => actual?.includes(scope));
+}
+
+/**
+ * The four store reads a lineage walk needs, adapted from ports the runtime
+ * context already carries.
+ *
+ * Deliberately not a new port on `RuntimeContext`. Requiring a host to
+ * implement something new would mean lineage enforcement arrived only for hosts
+ * that opted in, and the whole point is that a capability which *claims* a
+ * parent has that claim checked wherever it is presented.
+ */
+function delegationLineagePorts(context: RuntimeContext): DelegationLineagePorts {
+  return {
+    getDelegation: (delegationId) => Promise.resolve(context.lifecycleDelegationStore.getDelegation(delegationId)),
+    isDelegationRevoked: (delegationId) => Promise.resolve(context.lifecycleDelegationStore.isDelegationRevoked(delegationId)),
+    getExecutionGrant: (grantId) => Promise.resolve(context.executionGrantStore.getGrant(grantId)),
+    isExecutionGrantRevoked: (grantId) => Promise.resolve(context.executionGrantStore.isGrantRevoked(grantId)),
+  };
 }
 
 async function signPayload<TPayload extends Record<string, unknown>>(
@@ -290,12 +313,49 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
     },
     async issueDelegatedCapability(input) {
       const issuedAt = input.issuedAt ?? nowIso();
+      // A derived capability's default lifetime is its parent's, not a fresh
+      // window of its own. Without this, a child issued a millisecond after its
+      // parent would take a default expiry strictly later than the parent's and
+      // be refused as outliving it -- which would make lineage enforcement
+      // unusable for the ordinary case of a caller that sets no expiry at all.
+      // An explicitly supplied `expiresAt` is never widened to the parent's; it
+      // still has to be inside it.
+      const inheritedExpiry =
+        input.expiresAt ??
+        (input.parentDelegationId === undefined
+          ? undefined
+          : (await context.lifecycleDelegationStore.getDelegation(input.parentDelegationId))?.payload.expiresAt);
       const payload: DelegatedCapabilityPayload = {
         ...input,
         issuedAt,
-        expiresAt: input.expiresAt ?? defaultExpiry(),
+        expiresAt: inheritedExpiry ?? defaultExpiry(),
         nonce: input.nonce ?? makeId('nonce', [input.delegationId]),
       };
+
+      // A capability that claims a parent must be inside it at the moment it is
+      // minted. Refusing here rather than only at use keeps an illegitimate
+      // record out of the store entirely, so it never appears in an audit trail
+      // as authority that briefly existed. This is a refusal and not a denial
+      // verdict because issuance is an administrative operation, and the caller
+      // asked for something that cannot be created -- the same shape the nonce
+      // replay guard below already uses.
+      const issuanceLineage = await resolveDelegationLineage(payload, delegationLineagePorts(context), issuedAt);
+      if (!issuanceLineage.valid && issuanceLineage.breach !== null) {
+        const reasonCode = delegationLineageReasonCode(issuanceLineage.breach);
+        // No operational-state marker: nothing was issued, so there is no
+        // delegation whose lifecycle this belongs to. The audit sink records the
+        // refusal, which is where a refused administrative operation belongs.
+        await emitLifecycleAudit({
+          eventType: 'delegation_denied',
+          actorId: payload.actorId,
+          orgId: payload.orgId,
+          delegationId: payload.delegationId,
+          reasonCodes: [reasonCode],
+          decision: 'denied',
+        });
+        throw new Error(`delegated capability ${payload.delegationId} is not contained by the authority it derives from: ${reasonCode}`);
+      }
+
       const nonceRecorded = await context.replayProtection.recordNonce(payload.nonce, scopeFor('delegation'), payload.expiresAt);
       if (!nonceRecorded.recorded) { operationalState.updateRuntimeOperationalState({ eventType: 'replay_denied', occurredAt: nowIso(), nonce: payload.nonce, reasonCodes: ['delegation_nonce_replay'] }); throw new Error('delegation nonce replay detected during issue'); }
       const delegation = await signPayload(context, payload);
@@ -321,6 +381,15 @@ export function createAocEnterpriseRuntime(ports: AocEnterpriseRuntimeHostPorts)
       if (isExpired(payload.expiresAt)) reasonCodes.push('delegation_expired');
       if (payload.actorId !== input.actor.sub) reasonCodes.push('delegation_policy_denied');
       if (payload.orgId !== input.orgId) reasonCodes.push('delegation_policy_denied');
+
+      // Re-walked here, not trusted from issuance. Every ancestor's existence,
+      // revocation state, expiry and envelope are read from the stores again at
+      // the instant of use, which is what makes revoking one link disable its
+      // whole subtree without rewriting a descendant -- and what stops a record
+      // that entered a host-supplied store by some other route (a restore, a
+      // migration, a second writer) from being trusted because it looks issued.
+      const lineage = await resolveDelegationLineage(payload, delegationLineagePorts(context), nowIso());
+      if (!lineage.valid && lineage.breach !== null) reasonCodes.push(delegationLineageReasonCode(lineage.breach));
       const expectedScope = payload.constraints?.scope;
       if (!containsExpectedScope(input.access.requestedScope, typeof expectedScope === 'string' || Array.isArray(expectedScope) ? expectedScope : undefined)) {
         reasonCodes.push('delegation_scope_mismatch');

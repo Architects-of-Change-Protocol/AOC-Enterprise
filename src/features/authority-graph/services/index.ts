@@ -11,6 +11,8 @@ export type { CreateDelegationGrantInput } from './delegation-service.js';
 
 export { AuthorityResolver } from './authority-resolver.js';
 
+export { DelegationLineageVerifier } from './delegation-lineage-verifier.js';
+
 export { AuthorityChainVerifier } from './authority-chain-verifier.js';
 
 export { AuthorityProofService } from './authority-proof-service.js';

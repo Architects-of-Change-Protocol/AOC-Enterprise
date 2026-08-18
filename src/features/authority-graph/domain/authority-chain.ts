@@ -1,6 +1,7 @@
 import type { AuthorityDecisionType } from './authority-decision.js';
 import type { AuthorityGrant } from './authority-grant.js';
 import type { DelegationGrant } from './delegation-grant.js';
+import type { DelegationLineageAssessment } from './delegation-lineage.js';
 
 export interface AuthorityChainRequest {
   readonly id: string;
@@ -54,6 +55,17 @@ export interface AuthorityPolicyContext {
   readonly rootIssuerAccepted: boolean;
   /** Whether the target trust domain explicitly accepts authority that crosses in from another trust domain. */
   readonly crossDomainAccepted: boolean;
+  /**
+   * What walking the chain's delegation lineage against current store state
+   * established: whether it terminates at a real grant, and the first hop at
+   * which it stopped being a legitimate derivation.
+   *
+   * Resolved by the verifier and handed to the policies for the same reason
+   * `rootIssuerAccepted` is: a policy is a pure function of a request and a
+   * context, and giving one a store would let it answer questions the others
+   * cannot see the answer to.
+   */
+  readonly lineage: DelegationLineageAssessment;
 }
 
 export interface AuthorityPolicyOutcome {

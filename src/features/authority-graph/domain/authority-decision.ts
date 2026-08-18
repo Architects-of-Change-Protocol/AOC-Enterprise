@@ -11,6 +11,7 @@ export type AuthorityDecisionType =
   | 'ancestor_revoked'
   | 'ancestor_expired'
   | 'self_issuance_detected'
+  | 'delegation_lineage_broken'
   | 'cross_domain_authority_denied';
 
 export interface AuthorityDecision {
