@@ -35,13 +35,16 @@ import {
 } from './reservation-lifecycle.js';
 import {
   assertEncumbranceIntegrity,
+  assertEncumbranceReleaseBasisAcceptable,
   assertRemainingScopeCoversEncumbrances,
   computeCapacity,
   computeEncumbranceDigest,
   deriveEncumbranceId,
   deriveEncumbranceIdempotencyKey,
+  encumbranceReleaseReplayMatches,
   encumbranceReplayMatches,
   governedActionEncumbersAuthority,
+  projectReleaseBasis,
   sumActiveEncumbrances,
 } from './encumbrance-lifecycle.js';
 import {
@@ -67,11 +70,13 @@ import type {
 /**
  * Bumped whenever the durable shape changes. The SQLite store refuses to open a
  * database written under a different value — except for the additive
- * migrations it knows how to bring forward, `v1 -> v2` (the reservations table)
- * and `v2 -> v3` (the encumbrances table, and the widened reservation status
- * check) — and this constant is the single place both stores agree on it.
+ * migrations it knows how to bring forward, `v1 -> v2` (the reservations
+ * table), `v2 -> v3` (the encumbrances table, and the widened reservation
+ * status check) and `v3 -> v4` (the encumbrance release lineage columns and the
+ * partial unique index binding one confirmed release execution to one
+ * constraint) — and this constant is the single place both stores agree on it.
  */
-export const GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION = 'aoc.governed-authority-store.schema.v3';
+export const GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION = 'aoc.governed-authority-store.schema.v4';
 
 export interface CreateInMemoryGovernedAuthorityStoreOptions {
   readonly now?: () => string;
@@ -233,6 +238,29 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       )
       .map(assertEncumbranceIntegrity)
       .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+
+  /**
+   * Refuses a release execution reference that has already terminalized a
+   * different constraint.
+   *
+   * The store's own structural defence, and deliberately narrow: it does not
+   * know what a release mandate is or whether an execution succeeded, so it
+   * checks the one thing it can see — that a confirmed release is spent
+   * exactly once. Its SQLite counterpart is a partial UNIQUE index, so both
+   * backends enforce it against a second writer too.
+   */
+  function assertReleaseExecutionUnclaimed(tenantId: string, releaseExecutionRef: string, encumbranceId: string): void {
+    for (const encumbrance of encumbrances.values()) {
+      if (encumbrance.tenantId !== tenantId) continue;
+      if (encumbrance.id === encumbranceId) continue;
+      if (encumbrance.releaseExecutionRef !== releaseExecutionRef) continue;
+      throw new AuthorityGovernanceError(
+        'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT',
+        `Release execution '${releaseExecutionRef}' already terminalized governed authority encumbrance '${encumbrance.id}'; one confirmed release discharges exactly the constraint it discharged.`,
+        { releaseExecutionRef, releasedEncumbranceId: encumbrance.id, presentedEncumbranceId: encumbranceId },
+      );
+    }
   }
 
   return {
@@ -989,15 +1017,23 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
 
     async releaseEncumbrance(context, input) {
       requireAuthorityAccessToOrganization(context, input.tenantId);
-      // Privileged, always. There is no basis a request path could supply, so
-      // there is no context a request path could reach this from.
-      if (!context.system) {
+      // An administrative withdrawal stays privileged, exactly as it always
+      // was: an operator override is not reachable from a request path. A
+      // governed-execution basis is not privileged, because what makes it
+      // trustworthy is not the caller's context but the execution reference it
+      // carries — one the release service alone can mint, by calling a trusted
+      // executor port itself. Requiring a system context for it as well would
+      // have forced the production discharge path to run as an administrator,
+      // which is the opposite of governing it.
+      if (input.basis.kind === 'administrative' && !context.system) {
         throw new AuthorityGovernanceError(
-          'GOVERNED_AUTHORITY_BOOTSTRAP_NOT_PERMITTED',
-          'Releasing a persistent governed authority constraint requires a privileged system context; a party can never free constrained authority by asking.',
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_NOT_PERMITTED',
+          'A privileged administrative withdrawal of a persistent governed authority constraint requires a system context; ordinary discharge goes through the governed release lifecycle.',
           { encumbranceId: input.encumbranceId },
         );
       }
+      assertEncumbranceReleaseBasisAcceptable(input.basis, { encumbranceId: input.encumbranceId });
+
       const found = encumbrances.get(input.encumbranceId);
       if (found === undefined || found.tenantId !== input.tenantId) {
         throw new AuthorityGovernanceError(
@@ -1007,14 +1043,51 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
         );
       }
       const verified = assertEncumbranceIntegrity(found);
-      // Already released: return it unchanged. Capacity is derived from the
-      // constraints still active rather than from a counter, so a second
-      // release cannot free the same authority twice even if one occurred — but
-      // returning the record rather than rewriting it keeps the audit honest
-      // about when the release actually happened.
-      if (verified.status === 'released') return verified;
+
+      // Already released: return it unchanged when the grounds are the same
+      // ones already recorded, and refuse when they are not. Capacity is
+      // derived from the constraints still active rather than from a counter,
+      // so a second release cannot free the same authority twice either way —
+      // but returning the record rather than rewriting it keeps the audit
+      // honest about when the release actually happened, and refusing
+      // *different* grounds surfaces two lifecycles both believing they
+      // discharged one constraint.
+      if (verified.status === 'released') {
+        if (!encumbranceReleaseReplayMatches(verified, input.basis)) {
+          throw new AuthorityGovernanceError(
+            'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT',
+            `Governed authority encumbrance '${verified.id}' was already released on different grounds; refusing to restate why a terminal constraint ended.`,
+            { encumbranceId: verified.id, recordedBasis: verified.releaseBasis, presentedBasis: input.basis.kind },
+          );
+        }
+        return verified;
+      }
+
+      // One confirmed release execution terminalizes at most one constraint.
+      // Without this, a service that had genuinely released constraint A could
+      // present the same execution reference for sibling B and discharge a
+      // commitment nothing ever released.
+      if (input.basis.kind === 'governed-execution') {
+        assertReleaseExecutionUnclaimed(input.tenantId, input.basis.executionRef, verified.id);
+      }
+
       const releasedAt = requireStrictUtcAuthorityTimestamp(input.releasedAt ?? now(), 'releasedAt');
-      return putEncumbrance({ ...verified, status: 'released', releasedAt, releaseBasis: input.basis, updatedAt: releasedAt });
+      return putEncumbrance({
+        ...verified,
+        status: 'released',
+        releasedAt,
+        ...projectReleaseBasis(input.basis),
+        updatedAt: releasedAt,
+      });
+    },
+
+    async getEncumbranceByReleaseExecutionRef(context, tenantId, releaseExecutionRef) {
+      requireAuthorityAccessToOrganization(context, tenantId);
+      for (const encumbrance of encumbrances.values()) {
+        if (encumbrance.tenantId !== tenantId) continue;
+        if (encumbrance.releaseExecutionRef === releaseExecutionRef) return assertEncumbranceIntegrity(encumbrance);
+      }
+      return null;
     },
 
     async getEncumbrance(context, tenantId, encumbranceId) {

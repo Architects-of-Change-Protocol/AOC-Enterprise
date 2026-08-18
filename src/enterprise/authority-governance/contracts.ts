@@ -289,10 +289,32 @@ export type RecordGovernedAuthorityEncumbranceOutcome =
   /** The resource is not enrolled in right-scoped authority. Nothing was recorded, and nothing needed to be. */
   | { readonly outcome: 'resource_not_enrolled' };
 
+/**
+ * Ending a persistent constraint, so the authority it held becomes committable
+ * again.
+ *
+ * Note what a caller does **not** supply, and why:
+ *
+ * - **No status, no digest, no capacity figure.** Status and digest are the
+ *   store's; capacity is not written at all, it is re-derived from the
+ *   constraints that are still active. There is deliberately no
+ *   "restore capacity" operation to get wrong twice.
+ * - **No holder, right, scope, resource, source action or source execution.**
+ *   Every one of those is read from the stored constraint. A caller that could
+ *   restate them could release a constraint on terms it chose rather than the
+ *   ones AOC recorded.
+ * - **No free-text reason.** `basis` is a typed union, and its
+ *   `'governed-execution'` variant is only constructible by the release
+ *   service, from an execution it performed itself against a trusted executor.
+ *
+ * This is a *store* API, not a request surface, exactly as `recordEncumbrance`
+ * is. Production requesters reach it through the governed release lifecycle in
+ * `../encumbrance-release-governance/`.
+ */
 export interface ReleaseGovernedAuthorityEncumbranceInput {
   readonly tenantId: string;
   readonly encumbranceId: string;
-  /** Only `'administrative'` exists, and it requires `context.system`. See `GovernedAuthorityEncumbranceReleaseBasis` for why there is no evidence-reported basis. */
+  /** Why this constraint may stop constraining. `'administrative'` requires `context.system`; `'governed-execution'` requires an action classified as releasing. See `GovernedAuthorityEncumbranceReleaseBasis`. */
   readonly basis: GovernedAuthorityEncumbranceReleaseBasis;
   readonly releasedAt?: string;
 }

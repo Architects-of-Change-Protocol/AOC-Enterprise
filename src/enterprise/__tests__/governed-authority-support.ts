@@ -15,7 +15,7 @@ import { ApprovalRuntime } from '../../features/approval-runtime/runtime/approva
 import { createApprovalRuntimeContext } from '../../features/approval-runtime/runtime/approval-runtime-context.js';
 import { createAuthorityGraphRuntime, type AuthorityGraphRuntime } from '../../features/authority-graph/runtime/authority-graph-runtime.js';
 import { createAuthorityRuntimeContext } from '../../features/authority-graph/runtime/authority-runtime-context.js';
-import { createAocRecognitionRuntime } from '../../features/recognition-runtime/runtime/aoc-recognition-runtime.js';
+import { createAocRecognitionRuntime, type AocRecognitionRuntime } from '../../features/recognition-runtime/runtime/aoc-recognition-runtime.js';
 import { createManualClock, createSequentialIdGenerator, type RuntimeContext } from '../../features/recognition-runtime/runtime/runtime-context.js';
 import { createAocKernel, type AocKernel } from '../../kernel/index.js';
 import {
@@ -30,6 +30,20 @@ import {
 } from '../authority-governance/index.js';
 import { createInMemoryCollateralizationMandateStore } from '../collateralization-governance/in-memory-mandate-store.js';
 import { createCollateralizationGovernanceService, type CollateralizationGovernanceService } from '../collateralization-governance/service.js';
+import { ENTERPRISE_RELEASE_ENCUMBRANCE_CAPABILITY } from '../encumbrance-release-governance/contracts.js';
+import {
+  createInMemoryEncumbranceReleaseExecutorPort,
+  type EncumbranceReleaseExecutorPort,
+  type InMemoryEncumbranceReleaseExecutorPort,
+} from '../encumbrance-release-governance/executor-port.js';
+import { createInMemoryEncumbranceReleaseMandateStore } from '../encumbrance-release-governance/in-memory-mandate-store.js';
+import type { EncumbranceReleaseMandateStore } from '../encumbrance-release-governance/mandate-store.js';
+import {
+  createEncumbranceReleaseGovernanceService,
+  type EncumbranceReleaseAuthorityPort,
+  type EncumbranceReleaseGovernanceService,
+  type SubmitEncumbranceReleaseRequestInput,
+} from '../encumbrance-release-governance/service.js';
 import type { GovernanceEnterpriseContext } from '../governance-store/contracts.js';
 import { createInMemoryGovernanceStore } from '../governance-store/in-memory-governance-store.js';
 import type { GovernanceStore } from '../governance-store/governance-store.js';
@@ -128,6 +142,26 @@ export const GA_SUBDELEGATE_ACTOR_ID = 'actor-subdelegated-agent';
 export const GA_SUBDELEGATE_PASSPORT_ID = 'passport-subdelegated-agent';
 export const GA_SUBDELEGATE_TOKEN_ID = 'cap-subdelegated-agent-governed-actions';
 /** The manager's own asset-scoped grant, named so a test can revoke or subdelegate from it. */
+/**
+ * The release officer: the one actor in this world that holds
+ * `release-encumbrance` action authority.
+ *
+ * Deliberately nobody else, and deliberately not the rights manager who
+ * submits every other action here. A world in which the actor that
+ * collateralizes can also discharge would make every "who may release?" test
+ * vacuous, and the phase's central negative results — that being the holder,
+ * the secured party or the original requester grants nothing — are only
+ * measurable against a fixture where release authority is separately held.
+ */
+export const GA_RELEASE_OFFICER_ACTOR_ID = 'actor-release-officer';
+export const GA_RELEASE_OFFICER_PASSPORT_ID = 'passport-release-officer';
+export const GA_RELEASE_OFFICER_TOKEN_ID = 'cap-release-officer-release-encumbrance';
+export const GA_RELEASE_OFFICER_GRANT_ID = 'authority-grant-release-officer-release-encumbrance';
+
+/** The secured party, additionally registered as an actor that can *call* — recognized, passported, capability-tokened, and holding no release authority whatsoever. */
+export const GA_SECURED_PARTY_PASSPORT_ID = 'passport-secured-party';
+export const GA_SECURED_PARTY_TOKEN_ID = 'cap-secured-party-governed-actions';
+
 export const GA_MANAGER_GRANT_ID = 'authority-grant-manager-governed-actions';
 
 export const GA_ASSET = { kind: 'asset', id: 'governed-asset-a', tenantId: GA_TENANT_A } as const;
@@ -171,6 +205,17 @@ export interface GovernedAuthorityWorld {
    * pre-existing test ignores it and is unaffected.
    */
   readonly authorityRuntime: AuthorityGraphRuntime;
+  /**
+   * The Recognition Runtime behind this world's recognition provider.
+   *
+   * Exposed so a test can revoke a capability token and observe the effect on a
+   * real governed request. For a human or organization acting for itself the
+   * token *is* the action authority, so this is how "the requester's authority
+   * was withdrawn" is expressed for a direct requester — the counterpart of
+   * revoking a `DelegationGrant` for a delegated one. Purely additive: every
+   * pre-existing test ignores it and is unaffected.
+   */
+  readonly recognitionRuntime: AocRecognitionRuntime;
   readonly governanceStore: GovernanceStore;
   readonly authorityStore: GovernedAuthorityStore;
   /** Present only when the world was built with `withRepresentation`. Absent reproduces a deployment that has not adopted holder-bound representation. */
@@ -180,6 +225,11 @@ export interface GovernedAuthorityWorld {
   readonly license: LicenseGovernanceService;
   readonly tokenization: TokenizationGovernanceService;
   readonly collateralization: CollateralizationGovernanceService;
+  /** The `RELEASE_ENCUMBRANCE` action, over the same Kernel, the same Authority Graph and the same authority store as the other four. */
+  readonly encumbranceRelease: EncumbranceReleaseGovernanceService;
+  readonly encumbranceReleaseStore: EncumbranceReleaseMandateStore;
+  /** The executor the release service actually calls. Exposed so a test can assert on what crossed the boundary — that a revoked mandate reached no executor at all, and that a retry produced one external call rather than two. */
+  readonly releaseExecutor: EncumbranceReleaseExecutorPort;
 }
 
 export interface GovernedAuthorityWorldOverrides {
@@ -247,6 +297,36 @@ export interface GovernedAuthorityWorldOverrides {
    * ever delegated from has always looked like.
    */
   readonly managerDelegationDepth?: number;
+  readonly encumbranceReleaseStore?: EncumbranceReleaseMandateStore;
+  /**
+   * Substitutes what actually performs the external release.
+   *
+   * The one switch that decides whether a governed, fully authorized release
+   * *happens*, and the whole demonstration that the service cannot self-assert
+   * one: swap in the failing or indeterminate adapter and the constraint stays
+   * `'active'` however impeccable the governance chain above it was.
+   */
+  readonly releaseExecutor?: EncumbranceReleaseExecutorPort;
+  /**
+   * Makes the release officer's asset-scoped grant delegable, up to this many
+   * hops, so derived release authority can be exercised and then revoked.
+   *
+   * Off by default, mirroring `managerDelegationDepth`.
+   */
+  readonly releaseDelegationDepth?: number;
+  /** Omits the release officer's authority grant entirely, so no actor in the world holds release action authority. */
+  readonly withoutReleaseAuthority?: boolean;
+  /**
+   * Attaches an approval requirement to the release officer's capability
+   * token, so an authorized release request produces `approval_required`
+   * instead of a mandate.
+   *
+   * The ordinary approval machinery, applied to the fifth action with no
+   * release-specific path: a deployment that wants a human in the loop before a
+   * constraint may be discharged expresses it here exactly as it would for any
+   * other governed action.
+   */
+  readonly releaseRequiresApprovalBy?: string;
 }
 
 export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOverrides = {}): GovernedAuthorityWorld {
@@ -255,12 +335,35 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
   const approvalRuntime = new ApprovalRuntime(createApprovalRuntimeContext(GA_NOW), { authorityGraph: authorityRuntime });
   const recognitionRuntime = createAocRecognitionRuntime(recognitionCtx, undefined, authorityRuntime, approvalRuntime);
 
+  // The four actions every pre-existing credential in this world covers, and
+  // `release-encumbrance` is deliberately not among them.
+  //
+  // For a human or organization acting for itself, the capability token *is*
+  // the action authority — `requiresAuthorityChain` only pulls the Authority
+  // Graph in for agents and for actors claiming to act for a different
+  // principal. So the way to say "the rights manager, Alice and the secured
+  // party hold no release authority" in this stack is to leave the fifth action
+  // out of their tokens, which is exactly what this list does. Every denial the
+  // release suite observes is then attributable to that absence alone: their
+  // passports are valid, their recognition is intact, and each of them can
+  // still invoke all four of the actions they were credentialed for.
   const capabilities = [
     ENTERPRISE_TRANSFER_CAPABILITY,
     ENTERPRISE_LICENSE_CAPABILITY,
     ENTERPRISE_TOKENIZE_CAPABILITY,
     ENTERPRISE_COLLATERALIZE_CAPABILITY,
   ];
+
+  /**
+   * What the two delegable agents' tokens cover: the same four, plus release.
+   *
+   * Safe to widen for agents specifically, and only for them, because an agent
+   * always needs its lineage proven — a token alone gets it nowhere. Widening
+   * it here is what lets a derived-release test arrange nothing but the
+   * `DelegationGrant` itself, so what the test measures is the lineage rather
+   * than the credential.
+   */
+  const agentCapabilities = [...capabilities, ENTERPRISE_RELEASE_ENCUMBRANCE_CAPABILITY];
 
   const org = recognitionRuntime.registerActor({ id: GA_ORG_ACTOR_ID, type: 'organization', displayName: 'Meridian Holdings' });
   const trustDomain = recognitionRuntime.createTrustDomain({
@@ -360,7 +463,7 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
       issuerActorId: org.id,
       trustDomainId: trustDomain.id,
       capability: ENTERPRISE_TRANSFER_CAPABILITY,
-      actions: capabilities,
+      actions: agentCapabilities,
       resourceScopes: [GA_ASSET_SCOPE],
       riskLevel: 'critical',
     });
@@ -401,6 +504,11 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
       : {}),
   });
   approvalRuntime.registerApproverRecognitionStatus(manager.id, 'recognized');
+  // Alice's own grant covers the four pre-release actions and stops there.
+  // She is the encumbered holder throughout this suite, and she may not
+  // discharge her own constraint by being it — the single most important
+  // negative result of the release phase, and one a fixture that quietly gave
+  // her the fifth capability would have hidden.
   authorityRuntime.issueAuthorityGrant({
     id: 'authority-grant-alice-governed-actions',
     issuerActorId: org.id,
@@ -411,6 +519,101 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
     resourceScopes: [GA_ASSET_SCOPE],
     canDelegate: false,
   });
+
+  // ---------------------------------------------------------------------------
+  // Release action authority. One actor holds it, by explicit grant, and that
+  // grant is the only thing in this world that makes a governed discharge
+  // possible.
+  // ---------------------------------------------------------------------------
+  recognitionRuntime.registerActor({
+    id: GA_RELEASE_OFFICER_ACTOR_ID,
+    type: 'human',
+    displayName: 'Release Officer',
+    issuerId: org.id,
+    trustDomainId: trustDomain.id,
+  });
+  recognitionRuntime.issuePassport({
+    id: GA_RELEASE_OFFICER_PASSPORT_ID,
+    type: 'human_passport',
+    subjectActorId: GA_RELEASE_OFFICER_ACTOR_ID,
+    issuerActorId: org.id,
+    trustDomainId: trustDomain.id,
+  });
+  approvalRuntime.registerApproverRecognitionStatus(GA_RELEASE_OFFICER_ACTOR_ID, 'recognized');
+  if (overrides.withoutReleaseAuthority !== true) {
+    // Both halves of the officer's release authority, withheld together by
+    // `withoutReleaseAuthority`.
+    //
+    // Both, because in this stack they are not interchangeable and neither is
+    // redundant: for a human acting for itself the capability token carries the
+    // action authority, while the `AuthorityGrant` is what a delegation later
+    // derives from. Withholding only one would produce a world that still
+    // released — through the other — and a "nobody may release here" fixture
+    // that quietly released would be worse than none.
+    recognitionRuntime.issueCapabilityToken({
+      id: GA_RELEASE_OFFICER_TOKEN_ID,
+      subjectActorId: GA_RELEASE_OFFICER_ACTOR_ID,
+      principalActorId: GA_RELEASE_OFFICER_ACTOR_ID,
+      issuerActorId: org.id,
+      trustDomainId: trustDomain.id,
+      capability: ENTERPRISE_RELEASE_ENCUMBRANCE_CAPABILITY,
+      actions: [ENTERPRISE_RELEASE_ENCUMBRANCE_CAPABILITY],
+      resourceScopes: [GA_ASSET_SCOPE],
+      riskLevel: 'critical',
+      ...(overrides.releaseRequiresApprovalBy !== undefined
+        ? {
+            approvalRequirement: {
+              actions: [ENTERPRISE_RELEASE_ENCUMBRANCE_CAPABILITY],
+              requiredApproverActorIds: [overrides.releaseRequiresApprovalBy],
+            },
+          }
+        : {}),
+    });
+    authorityRuntime.issueAuthorityGrant({
+      id: GA_RELEASE_OFFICER_GRANT_ID,
+      issuerActorId: org.id,
+      subjectActorId: GA_RELEASE_OFFICER_ACTOR_ID,
+      trustDomainId: trustDomain.id,
+      roleId: 'role-release-officer',
+      capability: ENTERPRISE_RELEASE_ENCUMBRANCE_CAPABILITY,
+      actions: [ENTERPRISE_RELEASE_ENCUMBRANCE_CAPABILITY],
+      resourceScopes: [GA_ASSET_SCOPE],
+      canDelegate: overrides.releaseDelegationDepth !== undefined,
+      ...(overrides.releaseDelegationDepth !== undefined
+        ? { maxDelegationDepth: overrides.releaseDelegationDepth, allowedDelegateActorTypes: ['agent', 'human', 'organization'] as const }
+        : {}),
+    });
+  }
+
+  // The secured party, recognized and capable of calling, holding no authority
+  // grant at all. Benefiting from an arrangement is not authority to end it,
+  // and this actor is what makes that measurable rather than asserted.
+  recognitionRuntime.registerActor({
+    id: GA_SECURED_PARTY_REF,
+    type: 'organization',
+    displayName: 'Secured Party',
+    issuerId: org.id,
+    trustDomainId: trustDomain.id,
+  });
+  recognitionRuntime.issuePassport({
+    id: GA_SECURED_PARTY_PASSPORT_ID,
+    type: 'organization_passport',
+    subjectActorId: GA_SECURED_PARTY_REF,
+    issuerActorId: org.id,
+    trustDomainId: trustDomain.id,
+  });
+  recognitionRuntime.issueCapabilityToken({
+    id: GA_SECURED_PARTY_TOKEN_ID,
+    subjectActorId: GA_SECURED_PARTY_REF,
+    principalActorId: GA_SECURED_PARTY_REF,
+    issuerActorId: org.id,
+    trustDomainId: trustDomain.id,
+    capability: ENTERPRISE_COLLATERALIZE_CAPABILITY,
+    actions: capabilities,
+    resourceScopes: [GA_ASSET_SCOPE],
+    riskLevel: 'critical',
+  });
+  approvalRuntime.registerApproverRecognitionStatus(GA_SECURED_PARTY_REF, 'recognized');
 
   const authorityStore = overrides.authorityStore ?? createInMemoryGovernedAuthorityStore({ now: () => GA_NOW });
   const representationStore =
@@ -444,6 +647,9 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
 
   const governanceStore = overrides.governanceStore ?? createInMemoryGovernanceStore();
   const transferStore = overrides.transferStore ?? createInMemoryTransferMandateStore({ now: () => GA_NOW });
+  const encumbranceReleaseStore = overrides.encumbranceReleaseStore ?? createInMemoryEncumbranceReleaseMandateStore({ now: () => GA_NOW });
+  const releaseExecutor: EncumbranceReleaseExecutorPort =
+    overrides.releaseExecutor ?? createInMemoryEncumbranceReleaseExecutorPort({ now: () => GA_NOW });
 
   let counter = overrides.idSeed ?? 0;
   const nextId = (prefix: string): string => {
@@ -455,6 +661,7 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
   return {
     kernel,
     authorityRuntime,
+    recognitionRuntime,
     governanceStore,
     authorityStore,
     ...(representationStore !== undefined ? { representationStore } : {}),
@@ -473,6 +680,17 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
       store: createInMemoryCollateralizationMandateStore({ now: () => GA_NOW }),
       ...(overrides.withoutCollateralAuthorityEncumbrance === true ? {} : { authorityStore }),
     }),
+    encumbranceRelease: createEncumbranceReleaseGovernanceService({
+      ...shared,
+      store: encumbranceReleaseStore,
+      // The same store the constraint lives in. Release governance that read a
+      // different one could authorize the discharge of a constraint nothing was
+      // accounting against.
+      authorityStore: authorityStore satisfies EncumbranceReleaseAuthorityPort,
+      executor: releaseExecutor,
+    }),
+    encumbranceReleaseStore,
+    releaseExecutor,
   };
 }
 
@@ -645,6 +863,34 @@ export function conformingExecution(
     externalSystem: 'transfer-agent-c',
     ...overrides,
   };
+}
+
+/**
+ * The canonical "the release officer asks AOC to discharge one constraint"
+ * submission.
+ *
+ * Note what it does *not* carry, and cannot: no holder, no right, no scope, no
+ * source action, no source execution. A release request names the constraint
+ * and nothing about it — everything else is read from the canonical record, so
+ * there is no field through which a caller could describe a different
+ * constraint than the one it named.
+ */
+export function encumbranceReleaseRequest(
+  requestId: string,
+  encumbranceRef: string,
+  overrides: Record<string, unknown> = {},
+): SubmitEncumbranceReleaseRequestInput {
+  return {
+    requestId,
+    correlationId: `corr-${requestId}`,
+    resource: GA_ASSET,
+    encumbranceRef,
+    requestedBy: GA_RELEASE_OFFICER_ACTOR_ID,
+    trustDomainId: GA_TRUST_DOMAIN_ID,
+    context: { passportId: GA_RELEASE_OFFICER_PASSPORT_ID, capabilityTokenId: GA_RELEASE_OFFICER_TOKEN_ID },
+    mandateExpiresAt: GA_MANDATE_EXPIRES_AT,
+    ...overrides,
+  } as SubmitEncumbranceReleaseRequestInput;
 }
 
 export { GOVERNED_RIGHT_TYPES };

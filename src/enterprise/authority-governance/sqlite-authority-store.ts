@@ -7,6 +7,7 @@ import {
   isGovernedAuthorityIssuanceBasis,
   type GovernedAuthorityBasis,
   type GovernedAuthorityEncumbrance,
+  type GovernedAuthorityEncumbranceReleaseBasisKind,
   type GovernedAuthorityEncumbranceStatus,
   type GovernedAuthorityPosition,
   type GovernedAuthorityReservation,
@@ -41,13 +42,16 @@ import {
 } from './reservation-lifecycle.js';
 import {
   assertEncumbranceIntegrity,
+  assertEncumbranceReleaseBasisAcceptable,
   assertRemainingScopeCoversEncumbrances,
   computeCapacity,
   computeEncumbranceDigest,
   deriveEncumbranceId,
   deriveEncumbranceIdempotencyKey,
+  encumbranceReleaseReplayMatches,
   encumbranceReplayMatches,
   governedActionEncumbersAuthority,
+  projectReleaseBasis,
   sumActiveEncumbrances,
 } from './encumbrance-lifecycle.js';
 import { requireAuthorityAccessToOrganization, requireStrictUtcAuthorityTimestamp, type GovernedAuthorityStore } from './authority-store.js';
@@ -334,6 +338,69 @@ const SCHEMA_V3 = `
     ON governed_authority_encumbrances(tenant_id, source_mandate_ref);
 `;
 
+// ---------------------------------------------------------------------------
+// Schema v4: the release lineage a governed discharge leaves behind.
+//
+// Purely additive, and additive in the strong sense that matters here — every
+// new column is nullable, no existing column changes meaning, and no existing
+// row's digest is recomputed. A v3 encumbrance that was never released
+// projects byte-identically under the new digest projection, because every
+// release lineage field is conditional on being present. That is what lets
+// this migration run with `ALTER TABLE ... ADD COLUMN` and nothing else: there
+// is no rebuild, no re-seal, and no historical release re-interpreted.
+//
+// The one durable invariant it adds is the partial UNIQUE index. A confirmed
+// release execution discharges exactly the constraint it discharged; without
+// this, a caller holding a store handle could present the same execution
+// reference for a sibling constraint and free authority nothing ever released.
+// Partial rather than total, because `NULL` release references are the
+// overwhelming majority and SQLite treats NULLs as distinct in a UNIQUE index
+// anyway — stating the predicate makes the intent legible rather than
+// incidental.
+//
+// `release_basis` keeps its name and its `'administrative'` value: widening a
+// column's accepted vocabulary is not the same as changing what an existing
+// row means, and renaming it would have rewritten history to tidy a label.
+// ---------------------------------------------------------------------------
+const SCHEMA_V4_ENCUMBRANCE_RELEASE_COLUMNS: readonly string[] = [
+  'release_action TEXT',
+  'release_mandate_ref TEXT',
+  'release_execution_ref TEXT',
+  'released_by TEXT',
+  'release_reason_code TEXT',
+];
+
+const SCHEMA_V4_INDEXES = `
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_governed_authority_encumbrances_release_execution
+    ON governed_authority_encumbrances(tenant_id, release_execution_ref)
+    WHERE release_execution_ref IS NOT NULL;
+`;
+
+/**
+ * Adds v4's release lineage columns to an encumbrance table that predates
+ * them.
+ *
+ * Written as "add the column unless it is already there" rather than as a
+ * version-gated block, because `SCHEMA_V3` above uses
+ * `CREATE TABLE IF NOT EXISTS` and therefore creates the *v3* shape on a fresh
+ * database too. One code path brings both cases to the same place, so a fresh
+ * store and a migrated store are structurally identical rather than nearly so.
+ */
+function applyEncumbranceReleaseColumns(db: {
+  prepare: (sql: string) => { all: () => unknown[] };
+  exec: (sql: string) => unknown;
+}): void {
+  const existing = new Set(
+    (db.prepare(`PRAGMA table_info(governed_authority_encumbrances)`).all() as { readonly name: string }[]).map((column) => column.name),
+  );
+  for (const definition of SCHEMA_V4_ENCUMBRANCE_RELEASE_COLUMNS) {
+    const columnName = definition.slice(0, definition.indexOf(' '));
+    if (existing.has(columnName)) continue;
+    db.exec(`ALTER TABLE governed_authority_encumbrances ADD COLUMN ${definition};`);
+  }
+  db.exec(SCHEMA_V4_INDEXES);
+}
+
 /** The reservations table as v3 defines it: identical to v2 except that the status CHECK admits `'encumbered'`. Used only by the rebuild migration. */
 const SCHEMA_V3_RESERVATIONS_REBUILD = `
   CREATE TABLE governed_authority_reservations_v3 (
@@ -371,6 +438,7 @@ const SCHEMA_V3_RESERVATIONS_REBUILD = `
 /** The predecessors this runtime knows how to bring forward. Anything else still refuses to open. */
 const GOVERNED_AUTHORITY_STORE_SCHEMA_V1 = 'aoc.governed-authority-store.schema.v1';
 const GOVERNED_AUTHORITY_STORE_SCHEMA_V2 = 'aoc.governed-authority-store.schema.v2';
+const GOVERNED_AUTHORITY_STORE_SCHEMA_V3 = 'aoc.governed-authority-store.schema.v3';
 
 interface ReservationRow {
   readonly reservation_id: string;
@@ -420,6 +488,11 @@ interface EncumbranceRow {
   readonly correlation_id: string | null;
   readonly created_at: string;
   readonly updated_at: string;
+  readonly release_action: string | null;
+  readonly release_mandate_ref: string | null;
+  readonly release_execution_ref: string | null;
+  readonly released_by: string | null;
+  readonly release_reason_code: string | null;
   readonly encumbrance_digest: string;
 }
 
@@ -562,9 +635,9 @@ function readEncumbranceStatus(value: string, recordId: string): GovernedAuthori
   throw corrupted(`Stored governed authority encumbrance '${recordId}' has an unknown status '${value}'.`, { recordId });
 }
 
-/** The only release basis this model has. A stored row naming anything else was not written by this runtime, and is refused rather than read. */
-function readEncumbranceReleaseBasis(value: string, recordId: string): 'administrative' {
-  if (value === 'administrative') return value;
+/** The two release basis kinds this model has. A stored row naming anything else was not written by this runtime, and is refused rather than read. */
+function readEncumbranceReleaseBasis(value: string, recordId: string): GovernedAuthorityEncumbranceReleaseBasisKind {
+  if (value === 'administrative' || value === 'governed-execution') return value;
   throw corrupted(`Stored governed authority encumbrance '${recordId}' has an unknown release basis '${value}'.`, { recordId });
 }
 
@@ -611,6 +684,11 @@ function toEncumbrance(row: EncumbranceRow): GovernedAuthorityEncumbrance {
     status: readEncumbranceStatus(row.status, row.encumbrance_id),
     ...(row.released_at !== null ? { releasedAt: row.released_at } : {}),
     ...(row.release_basis !== null ? { releaseBasis: readEncumbranceReleaseBasis(row.release_basis, row.encumbrance_id) } : {}),
+    ...(row.release_action !== null ? { releaseAction: row.release_action } : {}),
+    ...(row.release_mandate_ref !== null ? { releaseMandateRef: row.release_mandate_ref } : {}),
+    ...(row.release_execution_ref !== null ? { releaseExecutionRef: row.release_execution_ref } : {}),
+    ...(row.released_by !== null ? { releasedBy: row.released_by } : {}),
+    ...(row.release_reason_code !== null ? { releaseReasonCode: row.release_reason_code } : {}),
     idempotencyKey: row.idempotency_key,
     ...(row.correlation_id !== null ? { correlationId: row.correlation_id } : {}),
     createdAt: row.created_at,
@@ -727,16 +805,21 @@ export async function createSqliteGovernedAuthorityStore(
       | { schema_version: string }
       | undefined;
     if (existingVersion !== undefined && existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION) {
-      // v1 and v2 are brought forward rather than refused, because both changes
-      // are additive: new tables, one widened status set, and not a single
-      // existing row's meaning altered or digest recomputed. Every other version
-      // still refuses, so these are two known migrations rather than a general
-      // "try to upgrade anything" policy — and refusing outright would have
-      // stopped every deployment that already holds authority state, to add
-      // tables they have no rows for.
+      // v1, v2 and v3 are brought forward rather than refused, because every
+      // one of those changes is additive: new tables, one widened status set,
+      // five nullable columns and one partial index, and not a single existing
+      // row's meaning altered or digest recomputed. A v3 encumbrance that was
+      // never released projects byte-identically under v4's digest, because
+      // every release lineage field is conditional on being present — which is
+      // precisely why no historical release is re-interpreted and no row is
+      // re-sealed. Every other version still refuses, so these are three known
+      // migrations rather than a general "try to upgrade anything" policy — and
+      // refusing outright would have stopped every deployment that already
+      // holds authority state, to add columns they have no values for.
       if (
         existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_V1 &&
-        existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_V2
+        existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_V2 &&
+        existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_V3
       ) {
         db.close();
         throw new AuthorityGovernanceError(
@@ -758,6 +841,10 @@ export async function createSqliteGovernedAuthorityStore(
   db.exec(SCHEMA_V2);
   if (migrateReservationCheck) migrateReservationsToV3(db);
   db.exec(SCHEMA_V3);
+  // v4's release lineage. Unconditional, because `SCHEMA_V3`'s
+  // `CREATE TABLE IF NOT EXISTS` leaves a fresh database at the v3 shape too;
+  // one path brings a new store and a migrated one to exactly the same place.
+  applyEncumbranceReleaseColumns(db);
   const recordedVersion = db.prepare(`SELECT schema_version FROM governed_authority_store_versions ORDER BY id DESC LIMIT 1`).get() as
     | { schema_version: string }
     | undefined;
@@ -872,24 +959,35 @@ export async function createSqliteGovernedAuthorityStore(
   const selectEncumbrancesByMandate = db.prepare(
     `SELECT * FROM governed_authority_encumbrances WHERE tenant_id = ? AND source_mandate_ref = ? ORDER BY encumbrance_id ASC`,
   );
+  const selectEncumbranceByReleaseExecution = db.prepare(
+    `SELECT * FROM governed_authority_encumbrances WHERE tenant_id = ? AND release_execution_ref = ?`,
+  );
   const insertEncumbrance = db.prepare(
     `INSERT INTO governed_authority_encumbrances (
        encumbrance_id, tenant_id, holder_ref, resource_kind, resource_id, governed_right,
        scope_kind, scope_basis_points, scope_units, scope_unit_denomination,
        source_action, source_mandate_ref, source_execution_ref, source_reservation_ref,
-       effective_from, status, released_at, release_basis, idempotency_key, correlation_id,
+       effective_from, status, released_at, release_basis,
+       release_action, release_mandate_ref, release_execution_ref, released_by, release_reason_code,
+       idempotency_key, correlation_id,
        created_at, updated_at, encumbrance_digest, schema_version
      ) VALUES (
        @encumbrance_id, @tenant_id, @holder_ref, @resource_kind, @resource_id, @governed_right,
        @scope_kind, @scope_basis_points, @scope_units, @scope_unit_denomination,
        @source_action, @source_mandate_ref, @source_execution_ref, @source_reservation_ref,
-       @effective_from, @status, @released_at, @release_basis, @idempotency_key, @correlation_id,
+       @effective_from, @status, @released_at, @release_basis,
+       @release_action, @release_mandate_ref, @release_execution_ref, @released_by, @release_reason_code,
+       @idempotency_key, @correlation_id,
        @created_at, @updated_at, @encumbrance_digest, @schema_version
      )`,
   );
   const updateEncumbranceRelease = db.prepare(
     `UPDATE governed_authority_encumbrances
-       SET status = @status, released_at = @released_at, release_basis = @release_basis, updated_at = @updated_at, encumbrance_digest = @encumbrance_digest
+       SET status = @status, released_at = @released_at, release_basis = @release_basis,
+           release_action = @release_action, release_mandate_ref = @release_mandate_ref,
+           release_execution_ref = @release_execution_ref, released_by = @released_by,
+           release_reason_code = @release_reason_code,
+           updated_at = @updated_at, encumbrance_digest = @encumbrance_digest
        WHERE encumbrance_id = @encumbrance_id`,
   );
   const countActiveEncumbrances = db.prepare(`SELECT COUNT(*) AS total FROM governed_authority_encumbrances WHERE status = 'active'`);
@@ -1038,6 +1136,11 @@ export async function createSqliteGovernedAuthorityStore(
       status: sealed.status,
       released_at: sealed.releasedAt ?? null,
       release_basis: sealed.releaseBasis ?? null,
+      release_action: sealed.releaseAction ?? null,
+      release_mandate_ref: sealed.releaseMandateRef ?? null,
+      release_execution_ref: sealed.releaseExecutionRef ?? null,
+      released_by: sealed.releasedBy ?? null,
+      release_reason_code: sealed.releaseReasonCode ?? null,
       idempotency_key: sealed.idempotencyKey,
       correlation_id: sealed.correlationId ?? null,
       created_at: sealed.createdAt,
@@ -1048,20 +1151,36 @@ export async function createSqliteGovernedAuthorityStore(
     return sealed;
   }
 
-  /** Moves an encumbrance to `'released'`, re-sealing its digest over the new bytes so the row stays verifiable rather than becoming a permanent integrity failure. */
+  /**
+   * Moves an encumbrance to `'released'`, re-sealing its digest over the new
+   * bytes so the row stays verifiable rather than becoming a permanent
+   * integrity failure.
+   *
+   * The status change and the lineage that justifies it are written by one
+   * statement. A row that said `'released'` without naming what released it
+   * would be exactly the unattributable state this phase exists to make
+   * impossible, and the partial UNIQUE index on the release execution is
+   * enforced by the same write — so a second constraint claiming one confirmed
+   * release fails at the database rather than at a read.
+   */
   function writeEncumbranceRelease(
     encumbrance: GovernedAuthorityEncumbrance,
     releasedAt: string,
     basis: ReleaseGovernedAuthorityEncumbranceInput['basis'],
   ): GovernedAuthorityEncumbrance {
     const { digest: _digest, ...rest } = encumbrance;
-    const next = { ...rest, status: 'released' as const, releasedAt, releaseBasis: basis, updatedAt: releasedAt };
+    const next = { ...rest, status: 'released' as const, releasedAt, ...projectReleaseBasis(basis), updatedAt: releasedAt };
     const sealed: GovernedAuthorityEncumbrance = { ...next, digest: computeEncumbranceDigest(next) };
     updateEncumbranceRelease.run({
       encumbrance_id: sealed.id,
       status: sealed.status,
       released_at: sealed.releasedAt ?? null,
       release_basis: sealed.releaseBasis ?? null,
+      release_action: sealed.releaseAction ?? null,
+      release_mandate_ref: sealed.releaseMandateRef ?? null,
+      release_execution_ref: sealed.releaseExecutionRef ?? null,
+      released_by: sealed.releasedBy ?? null,
+      release_reason_code: sealed.releaseReasonCode ?? null,
       updated_at: sealed.updatedAt,
       encumbrance_digest: sealed.digest,
     });
@@ -1614,7 +1733,17 @@ export async function createSqliteGovernedAuthorityStore(
     },
   );
 
-  /** One commit section for release: read the current status and write the terminal one together, so two concurrent releases cannot both observe `'active'`. */
+  /**
+   * One commit section for release: read the current status, check the grounds
+   * against what is already stored, and write the terminal state together, so
+   * two concurrent releases cannot both observe `'active'` and both restore the
+   * same capacity.
+   *
+   * No capacity is written here, and that is the point. Availability is
+   * *derived* from the constraints still active, so terminalizing one row is
+   * the whole of the operation — there is no `available += released` step that
+   * a retry, a race or a crash could apply twice.
+   */
   const commitEncumbranceRelease = db.transaction(
     (input: ReleaseGovernedAuthorityEncumbranceInput, releasedAt: string): GovernedAuthorityEncumbrance => {
       const row = selectEncumbranceById.get(input.tenantId, input.encumbranceId) as EncumbranceRow | undefined;
@@ -1626,12 +1755,45 @@ export async function createSqliteGovernedAuthorityStore(
         );
       }
       const encumbrance = toEncumbrance(row);
-      // Already released: return it unchanged. Capacity is derived from the
-      // constraints still active rather than from a counter, so a second
-      // release cannot free the same authority twice even if one occurred — but
-      // returning the record rather than rewriting it keeps the audit honest
-      // about when the release actually happened.
-      if (encumbrance.status === 'released') return encumbrance;
+
+      // Already released: return it unchanged when the grounds match the ones
+      // already recorded, and refuse when they do not. Capacity is derived from
+      // the constraints still active rather than from a counter, so a second
+      // release cannot free the same authority twice either way — but returning
+      // the record rather than rewriting it keeps the audit honest about when
+      // the release actually happened, and refusing *different* grounds
+      // surfaces two lifecycles both believing they discharged one constraint.
+      if (encumbrance.status === 'released') {
+        if (!encumbranceReleaseReplayMatches(encumbrance, input.basis)) {
+          throw new AuthorityGovernanceError(
+            'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT',
+            `Governed authority encumbrance '${encumbrance.id}' was already released on different grounds; refusing to restate why a terminal constraint ended.`,
+            { encumbranceId: encumbrance.id, recordedBasis: encumbrance.releaseBasis, presentedBasis: input.basis.kind },
+          );
+        }
+        return encumbrance;
+      }
+
+      // One confirmed release execution terminalizes at most one constraint.
+      // Checked here as well as by the partial UNIQUE index, so the refusal
+      // arrives as this module's own error rather than as a driver constraint
+      // violation — the index remains the durable defence against a writer this
+      // process never sees.
+      if (input.basis.kind === 'governed-execution') {
+        const claimed = selectEncumbranceByReleaseExecution.get(input.tenantId, input.basis.executionRef) as EncumbranceRow | undefined;
+        if (claimed !== undefined && claimed.encumbrance_id !== encumbrance.id) {
+          throw new AuthorityGovernanceError(
+            'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT',
+            `Release execution '${input.basis.executionRef}' already terminalized governed authority encumbrance '${claimed.encumbrance_id}'; one confirmed release discharges exactly the constraint it discharged.`,
+            {
+              releaseExecutionRef: input.basis.executionRef,
+              releasedEncumbranceId: claimed.encumbrance_id,
+              presentedEncumbranceId: encumbrance.id,
+            },
+          );
+        }
+      }
+
       return writeEncumbranceRelease(encumbrance, releasedAt, input.basis);
     },
   );
@@ -1817,17 +1979,30 @@ export async function createSqliteGovernedAuthorityStore(
 
     async releaseEncumbrance(context: AuthorityGovernanceContext, input: ReleaseGovernedAuthorityEncumbranceInput) {
       requireAuthorityAccessToOrganization(context, input.tenantId);
-      // Privileged, always. There is no basis a request path could supply, so
-      // there is no context a request path could reach this from.
-      if (!context.system) {
+      // An administrative withdrawal stays privileged, exactly as it always
+      // was. A governed-execution basis is not, because what makes it
+      // trustworthy is the execution reference it carries rather than the
+      // caller's context — see the interface documentation on
+      // `GovernedAuthorityStore.releaseEncumbrance`.
+      if (input.basis.kind === 'administrative' && !context.system) {
         throw new AuthorityGovernanceError(
-          'GOVERNED_AUTHORITY_BOOTSTRAP_NOT_PERMITTED',
-          'Releasing a persistent governed authority constraint requires a privileged system context; a party can never free constrained authority by asking.',
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_NOT_PERMITTED',
+          'A privileged administrative withdrawal of a persistent governed authority constraint requires a system context; ordinary discharge goes through the governed release lifecycle.',
           { encumbranceId: input.encumbranceId },
         );
       }
+      assertEncumbranceReleaseBasisAcceptable(input.basis, { encumbranceId: input.encumbranceId });
       const releasedAt = requireStrictUtcAuthorityTimestamp(input.releasedAt ?? now(), 'releasedAt');
       return commitEncumbranceRelease(input, releasedAt);
+    },
+
+    async getEncumbranceByReleaseExecutionRef(context: AuthorityGovernanceContext, tenantId: string, releaseExecutionRef: string) {
+      requireAuthorityAccessToOrganization(context, tenantId);
+      const row = selectEncumbranceByReleaseExecution.get(tenantId, releaseExecutionRef) as EncumbranceRow | undefined;
+      // A cross-tenant reference reads as absent rather than as a refusal,
+      // exactly as `getEncumbrance` does.
+      if (row === undefined) return null;
+      return toEncumbrance(row);
     },
 
     async getEncumbrance(context: AuthorityGovernanceContext, tenantId: string, encumbranceId: string) {

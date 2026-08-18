@@ -22,6 +22,7 @@ export { governedAuthorityEncumbranceConstrains } from './governed-authority-enc
 export type {
   GovernedAuthorityEncumbrance,
   GovernedAuthorityEncumbranceReleaseBasis,
+  GovernedAuthorityEncumbranceReleaseBasisKind,
   GovernedAuthorityEncumbranceStatus,
 } from './governed-authority-encumbrance.js';
 

@@ -389,7 +389,17 @@ authority layer's own code, exactly as an unconservable execution already was.
   has its own model — `GovernedAuthorityEncumbrance`, with no expiry at all —
   precisely so that "committed until execution" and "constrained indefinitely
   afterwards" never become the same word. The finding here is unchanged; what
-  changed is that the second model now exists to hand the commitment to.
+  changed is that the second model now exists to hand the commitment to, and
+  that the constraint now has a governed way to end:
+
+  ```
+  reservation -> encumbrance -> governed release -> capacity restored
+  ```
+
+  Only for the actions that leave a persistent constraint behind. A `TRANSFER`
+  reservation is *consumed* by its execution and there is nothing left to
+  release; a release is not the inverse of a reservation and does not exist for
+  one. See `AOC_GOVERNED_ENCUMBRANCE_RELEASE.md`.
 - **No renewal or resizing.** Reservations are immutable except in status. If a
   mandate's validity is ever extended, a corresponding governed extension would
   be needed; there is none, because mandates cannot currently be extended.

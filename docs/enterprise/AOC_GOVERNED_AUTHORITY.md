@@ -284,6 +284,11 @@ how much of that authority is still *free*. Four questions, kept apart:
 >
 > **Action-available governed authority** answers "how much can still be
 > committed now?" — `held − committed − encumbered`.
+>
+> **Governed release** answers "may a constraint legitimately stop constraining,
+> and on whose say-so?" — `RELEASE_ENCUMBRANCE`, the fifth governed action. It
+> restores availability without creating authority: the position is unchanged,
+> and only the set of constraints counted against it shrinks.
 
 Neither record changes a position. Alice with 5 000 bp and a 3 000 bp
 reservation still *holds* 5 000 bp, and so does Alice with a 3 000 bp
@@ -308,10 +313,30 @@ overpromise.
 A reservation is acquired atomically as the last step before a mandate is
 issued. It is consumed in the same transaction as the transition an execution
 causes, or handed over in the same transaction as the constraint an execution
-creates. See `AOC_GOVERNED_AUTHORITY_RESERVATION.md`,
+creates.
+
+The full lifecycle of a commitment that persists, end to end:
+
+```
+governance -> reservation -> mandate -> execution -> encumbrance
+                                                         │
+                                             governed release
+                                                         │
+                                                 capacity restored
+```
+
+Only the last two steps are new, and they apply only to actions that leave a
+persistent constraint — today, `COLLATERALIZE` alone. A release ends a
+constraint; it never debits or credits a position, never produces a
+`GovernedAuthorityTransition`, and never authorizes the future action that the
+restored capacity makes possible.
+
+See `AOC_GOVERNED_AUTHORITY_RESERVATION.md`,
 `AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`,
-`docs/architecture/ADR-GOVERNED-AUTHORITY-RESERVATION.md` and
-`docs/architecture/ADR-GOVERNED-AUTHORITY-ENCUMBRANCE.md`.
+`AOC_GOVERNED_ENCUMBRANCE_RELEASE.md`,
+`docs/architecture/ADR-GOVERNED-AUTHORITY-RESERVATION.md`,
+`docs/architecture/ADR-GOVERNED-AUTHORITY-ENCUMBRANCE.md` and
+`docs/architecture/ADR-GOVERNED-ENCUMBRANCE-RELEASE.md`.
 
 ## Not implemented, deliberately
 
@@ -331,4 +356,8 @@ creates. See `AOC_GOVERNED_AUTHORITY_RESERVATION.md`,
   cross-action rule that does exist is structural rather than commercial: AOC
   refuses a transition that would leave a persistent constraint referring to
   authority its holder no longer possesses.
-- **A fifth governed action.** This is foundation work only.
+- **A fifth governed action.** This document's own foundation work added none.
+  One was added later, by the phase that closed the encumbrance-release gap:
+  `RELEASE_ENCUMBRANCE`. It uses the authority machinery described here
+  unchanged — the same Authority Graph, the same delegation lineage rules, the
+  same Kernel — and adds no bypass. See `AOC_GOVERNED_ENCUMBRANCE_RELEASE.md`.
