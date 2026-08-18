@@ -1,4 +1,9 @@
 import { GOVERNED_RIGHT_TYPES, type GovernedRightType, type GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
+import type {
+  GovernedRepresentativeAuthority,
+  GovernedRepresentativeBasis,
+  GovernedRepresentativeScopeLimit,
+} from '@aoc-enterprise/governed-authority';
 import { ENTERPRISE_COLLATERALIZE_CAPABILITY, type EnterpriseCollateralizationTerms } from '@aoc-enterprise/collateralization-mandate';
 import { ENTERPRISE_LICENSE_CAPABILITY, ENTERPRISE_LICENSED_USE_TYPES, type EnterpriseLicenseTerms } from '@aoc-enterprise/license-mandate';
 import { ENTERPRISE_TOKENIZE_CAPABILITY, type EnterpriseTokenizationTerms } from '@aoc-enterprise/tokenization-mandate';
@@ -15,8 +20,12 @@ import { createManualClock, createSequentialIdGenerator, type RuntimeContext } f
 import { createAocKernel, type AocKernel } from '../../kernel/index.js';
 import {
   createGovernedAuthorityResolver,
+  createGovernedRepresentationResolver,
   createInMemoryGovernedAuthorityStore,
+  createInMemoryGovernedRepresentationStore,
   type GovernedAuthorityStore,
+  type GovernedRepresentationDelegationPort,
+  type GovernedRepresentationStore,
   type UnenrolledResourcePolicy,
 } from '../authority-governance/index.js';
 import { createInMemoryCollateralizationMandateStore } from '../collateralization-governance/in-memory-mandate-store.js';
@@ -92,6 +101,11 @@ export const GA_TRUST_DOMAIN_ID = 'trust-domain-meridian-holdings';
 export const GA_ORG_ACTOR_ID = 'actor-meridian-holdings';
 /** The delegated administrator that submits every request below. Holds no governed right of its own, ever. */
 export const GA_MANAGER_ACTOR_ID = 'actor-rights-manager';
+/** Recognized, but holds no capability token and no authority grant. Proves that a valid representation rescues nothing. */
+export const GA_UNAUTHORIZED_ACTOR_ID = 'actor-unauthorized-administrator';
+export const GA_UNAUTHORIZED_PASSPORT_ID = 'passport-unauthorized-administrator';
+/** A second representative, used to show that bindings to the same holder are independent of one another. */
+export const GA_SECOND_MANAGER_ACTOR_ID = 'actor-rights-manager-two';
 
 export const GA_ASSET = { kind: 'asset', id: 'governed-asset-a', tenantId: GA_TENANT_A } as const;
 export const GA_ASSET_SCOPE = `${GA_ASSET.kind}:${GA_ASSET.id}`;
@@ -99,6 +113,8 @@ export const GA_TENANT_B_ASSET = { kind: 'asset', id: 'northwind-asset-b', tenan
 
 export const GA_MANAGER_PASSPORT_ID = 'passport-rights-manager';
 export const GA_MANAGER_TOKEN_ID = 'cap-manager-governed-actions';
+export const GA_ALICE_PASSPORT_ID = 'passport-alice';
+export const GA_ALICE_TOKEN_ID = 'cap-alice-governed-actions';
 
 /** Holds the whole economic interest at the start of the reference scenario. */
 export const ALICE = 'party-alice';
@@ -126,6 +142,8 @@ export interface GovernedAuthorityWorld {
   readonly kernel: AocKernel;
   readonly governanceStore: GovernanceStore;
   readonly authorityStore: GovernedAuthorityStore;
+  /** Present only when the world was built with `withRepresentation`. Absent reproduces a deployment that has not adopted holder-bound representation. */
+  readonly representationStore?: GovernedRepresentationStore;
   readonly transferStore: TransferMandateStore;
   readonly transfer: TransferGovernanceService;
   readonly license: LicenseGovernanceService;
@@ -144,6 +162,20 @@ export interface GovernedAuthorityWorldOverrides {
   readonly unenrolledResourcePolicy?: UnenrolledResourcePolicy;
   /** Omits the transfer service's authority store, so executions record evidence and move no authority — the pre-foundation behaviour, kept reachable for the before/after comparison. */
   readonly withoutTransferAuthorityTransition?: boolean;
+  /**
+   * Configures the Kernel's holder-bound representation provider.
+   *
+   * Deliberately **off by default**, and that default is what makes the
+   * before/after measurement possible rather than asserted: every existing test
+   * in this directory builds a world without it and continues to observe the
+   * pre-hardening behaviour, while the representation suite builds one with it
+   * and observes the same requests denied. Turning it on globally would have
+   * rewritten the prior foundation's findings instead of adding to them.
+   */
+  readonly withRepresentation?: boolean;
+  readonly representationStore?: GovernedRepresentationStore;
+  /** Lets a test ground representations in Authority Graph delegations, and revoke those delegations to prove the dependency is dynamic. */
+  readonly delegations?: GovernedRepresentationDelegationPort;
 }
 
 export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOverrides = {}): GovernedAuthorityWorld {
@@ -184,6 +216,61 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
     trustDomainId: trustDomain.id,
   });
 
+  // Alice, additionally registered as an actor that can *call*.
+  //
+  // Holder refs and actor ids are different namespaces on purpose — a holder
+  // "need not be an actor that can call anything" — but a holder that also
+  // happens to be one is the ordinary case, and it is the only way to exercise
+  // the direct-holder path for the reference holder. Purely additive: every
+  // pre-existing test submits as the manager and is unaffected by Alice
+  // gaining the ability to submit for herself.
+  const aliceActor = recognitionRuntime.registerActor({
+    id: ALICE,
+    type: 'organization',
+    displayName: 'Alice',
+    issuerId: org.id,
+    trustDomainId: trustDomain.id,
+  });
+  recognitionRuntime.issuePassport({
+    id: GA_ALICE_PASSPORT_ID,
+    type: 'organization_passport',
+    subjectActorId: aliceActor.id,
+    issuerActorId: org.id,
+    trustDomainId: trustDomain.id,
+  });
+  recognitionRuntime.issueCapabilityToken({
+    id: GA_ALICE_TOKEN_ID,
+    subjectActorId: aliceActor.id,
+    principalActorId: aliceActor.id,
+    issuerActorId: org.id,
+    trustDomainId: trustDomain.id,
+    capability: ENTERPRISE_TRANSFER_CAPABILITY,
+    actions: capabilities,
+    resourceScopes: [GA_ASSET_SCOPE],
+    riskLevel: 'critical',
+  });
+  approvalRuntime.registerApproverRecognitionStatus(aliceActor.id, 'recognized');
+
+  // A recognized actor that is deliberately given **no** capability token and
+  // **no** authority grant. It exists for one row of the dual-proof matrix:
+  // an actor that can be granted a perfectly valid representation and still
+  // must not get anywhere, because representation is not action authority and
+  // never substitutes for it.
+  const outsider = recognitionRuntime.registerActor({
+    id: GA_UNAUTHORIZED_ACTOR_ID,
+    type: 'human',
+    displayName: 'Unauthorized Administrator',
+    issuerId: org.id,
+    trustDomainId: trustDomain.id,
+  });
+  recognitionRuntime.issuePassport({
+    id: GA_UNAUTHORIZED_PASSPORT_ID,
+    type: 'human_passport',
+    subjectActorId: outsider.id,
+    issuerActorId: org.id,
+    trustDomainId: trustDomain.id,
+  });
+
   // One broad, bare *asset-scoped* capability and authority grant covering all
   // four actions. Deliberately broad: the manager can call anything on this
   // asset, so nothing below is denied by the capability chain and every denial
@@ -215,8 +302,26 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
     canDelegate: false,
   });
   approvalRuntime.registerApproverRecognitionStatus(manager.id, 'recognized');
+  authorityRuntime.issueAuthorityGrant({
+    id: 'authority-grant-alice-governed-actions',
+    issuerActorId: org.id,
+    subjectActorId: ALICE,
+    trustDomainId: trustDomain.id,
+    capability: ENTERPRISE_TRANSFER_CAPABILITY,
+    actions: capabilities,
+    resourceScopes: [GA_ASSET_SCOPE],
+    canDelegate: false,
+  });
 
   const authorityStore = overrides.authorityStore ?? createInMemoryGovernedAuthorityStore({ now: () => GA_NOW });
+  const representationStore =
+    overrides.withRepresentation === true || overrides.representationStore !== undefined
+      ? (overrides.representationStore ??
+        createInMemoryGovernedRepresentationStore({
+          now: () => GA_NOW,
+          ...(overrides.delegations !== undefined ? { delegations: overrides.delegations } : {}),
+        }))
+      : undefined;
 
   const kernel = createAocKernel({
     recognitionProvider: bridgeRecognitionRuntime(recognitionRuntime),
@@ -227,6 +332,13 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
       : {
           governedAuthorityProvider: createGovernedAuthorityResolver(authorityStore, {
             ...(overrides.unenrolledResourcePolicy !== undefined ? { unenrolledResourcePolicy: overrides.unenrolledResourcePolicy } : {}),
+          }),
+        }),
+    ...(representationStore === undefined
+      ? {}
+      : {
+          governedRepresentationProvider: createGovernedRepresentationResolver(representationStore, {
+            ...(overrides.delegations !== undefined ? { delegations: overrides.delegations } : {}),
           }),
         }),
   });
@@ -245,6 +357,7 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
     kernel,
     governanceStore,
     authorityStore,
+    ...(representationStore !== undefined ? { representationStore } : {}),
     transferStore,
     transfer: createTransferGovernanceService({
       ...shared,
@@ -429,3 +542,85 @@ export function conformingExecution(
 }
 
 export { GOVERNED_RIGHT_TYPES };
+
+
+// ---------------------------------------------------------------------------
+// Holder-bound representation helpers.
+//
+// Granting is a *store* operation reachable only from a system context —
+// never a request an actor could submit about itself, and never something a
+// representative can do on its own behalf. These helpers make that shape
+// visible at every call site rather than hiding it behind a service.
+// ---------------------------------------------------------------------------
+
+/** The world's representation store, or a clear failure. Every helper below goes through this so a test that forgot `withRepresentation` fails saying so. */
+export function representationStoreOf(world: GovernedAuthorityWorld): GovernedRepresentationStore {
+  const store = world.representationStore;
+  if (store === undefined) throw new Error('This world was built without holder-bound representation; pass `withRepresentation: true`.');
+  return store;
+}
+
+export interface GrantRepresentationOptions {
+  readonly tenantId?: string;
+  readonly resource?: { readonly kind: string; readonly id: string };
+  readonly scopeLimit?: GovernedRepresentativeScopeLimit;
+  readonly actions?: readonly string[];
+  readonly effectiveFrom?: string;
+  readonly expiresAt?: string;
+  readonly canRedelegate?: boolean;
+  readonly basis?: GovernedRepresentativeBasis;
+  readonly context?: { readonly system: boolean; readonly organizationId?: string; readonly actorId?: string };
+  readonly idempotencyKey?: string;
+}
+
+/**
+ * Records "`representativeRef` may exercise `holderRef`'s authority", bounded
+ * to the given rights, actions and ceiling.
+ *
+ * Defaults to a bounded ceiling and the `TRANSFER` capability, because those
+ * are what the mandatory scenario needs; every dimension is overridable so a
+ * negative test can vary exactly one of them and hold the rest fixed.
+ */
+export async function grantRepresentation(
+  world: GovernedAuthorityWorld,
+  representativeRef: string,
+  holderRef: string,
+  governedRights: readonly GovernedRightType[],
+  options: GrantRepresentationOptions = {},
+): Promise<GovernedRepresentativeAuthority> {
+  const outcome = await representationStoreOf(world).grantRepresentativeAuthority(options.context ?? ADMIN_CONTEXT, {
+    tenantId: options.tenantId ?? GA_TENANT_A,
+    holderRef,
+    representativeRef,
+    resource: options.resource ?? { kind: GA_ASSET.kind, id: GA_ASSET.id },
+    governedRights,
+    scopeLimit: options.scopeLimit ?? { kind: 'bounded', maximum: { kind: 'proportional', basisPoints: 2_000 } },
+    actions: options.actions ?? [ENTERPRISE_TRANSFER_CAPABILITY],
+    effectiveFrom: options.effectiveFrom ?? GA_NOW,
+    canRedelegate: options.canRedelegate ?? false,
+    basis: options.basis ?? { kind: 'administrative-bootstrap', assertedBy: 'actor-administrator' },
+    ...(options.expiresAt !== undefined ? { expiresAt: options.expiresAt } : {}),
+    ...(options.idempotencyKey !== undefined ? { idempotencyKey: options.idempotencyKey } : {}),
+  });
+  return outcome.representation;
+}
+
+/** Withdraws a representation from the privileged context, so a test can say what it means without restating the tenancy plumbing. */
+export async function revokeRepresentation(world: GovernedAuthorityWorld, representationId: string, tenantId: string = GA_TENANT_A): Promise<void> {
+  await representationStoreOf(world).revokeRepresentativeAuthority(ADMIN_CONTEXT, tenantId, representationId);
+}
+
+/** A bounded proportional ceiling, so a test reads "up to 2000 bp" rather than restating the union. */
+export function upTo(basisPoints: number): GovernedRepresentativeScopeLimit {
+  return { kind: 'bounded', maximum: { kind: 'proportional', basisPoints } };
+}
+
+/** The deliberate "no numeric limit of its own" ceiling. Spelled out at call sites so an unbounded representation is never something a test created by omission. */
+export const UNBOUNDED: GovernedRepresentativeScopeLimit = { kind: 'unbounded' };
+
+export {
+  ENTERPRISE_COLLATERALIZE_CAPABILITY,
+  ENTERPRISE_LICENSE_CAPABILITY,
+  ENTERPRISE_TOKENIZE_CAPABILITY,
+  ENTERPRISE_TRANSFER_CAPABILITY,
+};

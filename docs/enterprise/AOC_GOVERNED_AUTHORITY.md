@@ -35,12 +35,14 @@ remain separate evidentiary questions.
 | **Governed authority transition** | One recorded change: a quantity of one right arriving at one party and, when the basis conserves, leaving another. |
 | **Coverage** | The single verdict the enforcement path asks for and gets back. |
 
-## Three artifacts that are easy to confuse
+## Four artifacts that are easy to confuse
 
 ```
-GovernedAuthorizationArtifact   Was action X authorized?          immutable, one decision
-AuthorityGrant                  May this actor call action X?     administrative, scopes calling
-GovernedAuthorityPosition       What right does this actor hold?  mutable, conserved
+GovernedAuthorizationArtifact    Was action X authorized?           immutable, one decision
+AuthorityGrant                   May this actor call action X?      administrative, scopes calling
+GovernedAuthorityPosition        What right does this actor hold?   mutable, conserved
+GovernedRepresentativeAuthority  May this actor exercise THAT       administrative, holder-bound
+                                 holder's authority?
 ```
 
 A mandate answers the first and never changes. An `AuthorityGrant` answers the
@@ -48,6 +50,19 @@ second and is issued administratively. A position answers the third — the
 question neither of the other two could, and the one a completed `TRANSFER`
 changes. A position may reference the mandate and execution that produced it;
 it is neither of them.
+
+The fourth was added afterwards, and the distinction between it and the third
+is the one worth holding onto:
+
+> **`GovernedAuthorityPosition` answers "who possesses the underlying governed
+> authority?". `GovernedRepresentativeAuthority` answers "who may exercise that
+> holder's authority?".**
+
+They are separate records in separate stores consulted through separate Kernel
+ports, and a delegated request needs an affirmative answer from both. Creating
+or withdrawing a representation changes no position at all, and a representative
+never acquires the holder's underlying right by acting for it. See
+`AOC_GOVERNED_REPRESENTATIVE_AUTHORITY.md`.
 
 ## Positions
 
@@ -166,6 +181,14 @@ every existing deployment is **legacy asset-scoped**. The policy is
 
 Deployments that have finished migrating set
 `unenrolledResourcePolicy: 'deny'`, making unenrolled resources unreachable.
+
+Holder-bound representation reuses this same enrolment signal rather than adding
+a second compatibility policy of its own: a requester acting for a *different*
+party must prove representation exactly where right-scoped authority is
+enforced, and nowhere else. An existing action/resource `DelegationGrant` proves
+the delegate may invoke the action; on an enrolled resource it does **not**, by
+itself, prove which holder the delegate may act for. See
+`AOC_GOVERNED_REPRESENTATIVE_AUTHORITY.md`, "Legacy compatibility".
 
 ## Where it sits
 

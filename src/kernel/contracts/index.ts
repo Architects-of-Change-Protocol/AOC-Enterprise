@@ -5,7 +5,9 @@ export type {
   RecognitionEvaluation,
   AuthorityEvaluation,
   GovernedAuthorityEvaluation,
+  GovernedRepresentationEvaluation,
   GovernedRightEvaluation,
+  GovernedRightRepresentationEvaluation,
   PolicyEvaluation,
   ApprovalEvaluation,
   ApprovalStatus,
@@ -20,6 +22,7 @@ export type {
   RecognitionVerificationResult,
   PolicyPackProvider,
   GovernedAuthorityProvider,
+  GovernedRepresentationProvider,
   KernelClock,
   KernelIdGenerator,
 } from './ports.js';

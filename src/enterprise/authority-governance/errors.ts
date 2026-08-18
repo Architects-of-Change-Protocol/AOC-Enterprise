@@ -36,7 +36,28 @@ export type AuthorityGovernanceErrorCode =
   | 'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION'
   | 'GOVERNED_AUTHORITY_STORE_UNAVAILABLE'
   /** A stored row's digest does not match its contents, or a transition chain link is broken. Reads fail closed rather than reconstructing authority from bytes that changed after commit. */
-  | 'GOVERNED_AUTHORITY_RECORD_CORRUPTED';
+  | 'GOVERNED_AUTHORITY_RECORD_CORRUPTED'
+  // -------------------------------------------------------------------------
+  // Holder-bound representation. Same taxonomy, same discipline, and the same
+  // deliberate absence: there is **no code for "this representative may not
+  // act for that holder"**. That is a governance denial, produced by the
+  // Kernel from a `GovernedRepresentationCoverage` verdict, not an exception.
+  // The codes below are about representations that could not be *written* or
+  // *trusted*.
+  // -------------------------------------------------------------------------
+  /** A representation was granted outside a context permitted to grant it — a non-system caller using an issuing basis, or a redelegation by someone other than the parent's representative. There is no self-appointment path. */
+  | 'GOVERNED_REPRESENTATION_GRANT_NOT_PERMITTED'
+  /** A representation's own fields are not internally coherent: no rights, no actions, a party representing itself, an unknown governed right, or a malformed ceiling. */
+  | 'GOVERNED_REPRESENTATION_INVALID'
+  /** A basis that could not be corroborated: an `authority-graph-delegation` naming a grant that is absent, not live, in another trust domain, delegated to someone else, or held for a different principal; an evidence basis with no evidence; a redelegation naming a parent that does not exist or may not be redelegated. */
+  | 'GOVERNED_REPRESENTATION_BASIS_INVALID'
+  /** A redelegation would be wider than the representation it derives from, on any of the seven dimensions. No chain operation may broaden holder, resource, right, action, ceiling or either end of the validity window. */
+  | 'GOVERNED_REPRESENTATION_SCOPE_EXPANSION'
+  | 'GOVERNED_REPRESENTATION_NOT_FOUND'
+  /** The same idempotency key was reused for a materially different representation. Refused rather than reinterpreted. */
+  | 'GOVERNED_REPRESENTATION_CONFLICT'
+  /** A stored representation's digest does not match its contents. Reads fail closed rather than recognizing a representation from bytes that changed after commit. */
+  | 'GOVERNED_REPRESENTATION_RECORD_CORRUPTED';
 
 export class AuthorityGovernanceError extends Error {
   constructor(
