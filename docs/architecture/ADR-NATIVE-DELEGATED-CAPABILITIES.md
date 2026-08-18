@@ -96,6 +96,45 @@ Recognition Runtime already consults the Authority Graph through
 to `createDefaultAuthorityPolicyChain()` therefore reaches the Kernel with no
 Kernel code, no new port, and no API-freeze impact.
 
+### Four further holes, found in review
+
+The first implementation of the above closed the four measured gaps and left
+four more, each on an axis this ADR claims. All four were reproduced before
+being fixed:
+
+```
+delegation derived from a canDelegate:false grant           -> authority_valid
+chain deeper than the root grant's maxDelegationDepth       -> authority_valid
+grant with a dangling parentGrantId, untrusted issuer       -> authority_valid
+capability broadening the ExecutionGrant it derives from    -> lineage valid
+```
+
+They share one shape: a check that exists, but not over the record that can
+actually be forged.
+
+- `DelegationDepthPolicy` compares a delegation's depth against the ceiling
+  **that same record declares**, and reads `canRedelegate` on delegation parents
+  only. The root of a one-hop chain is a grant, so `AuthorityGrant.canDelegate`
+  and its `maxDelegationDepth` were never consulted at evaluation at all. The
+  lineage walk now reads both from the grant.
+- `IssuerAuthorityPolicy` requires the top grant to trace to a registered root
+  issuer **only when it names no parent**. A grant whose `parentGrantId` dangles
+  satisfies neither branch. The walk now continues through the grant ancestry
+  and refuses a dangling link — and therefore runs for chains with no delegation
+  in them, which is why it no longer short-circuits on `delegations.length === 0`.
+- A lineage longer than `AuthorityResolver`'s `MAX_ANCESTRY_HOPS` was walked to
+  64 hops here while the policies saw 51, so this component would report a chain
+  rooted whose deeper ancestors nothing had judged for revocation or expiry. The
+  constant is now exported and shared, and exceeding it is a breach.
+- An `ExecutionGrant` parent was checked for existence, revocation, expiry and
+  organization and then accepted, without comparing the child against the access
+  the grant actually authorized. Its `input.access` is now projected into the
+  same constraint vocabulary and run through the identical containment check.
+
+The lesson is recorded because it generalizes: **a creation-time check and an
+evaluation-time check over different records are not the same check**, and the
+axis a policy is named for is not necessarily the axis it covers.
+
 ## The rejected alternatives
 
 | option | verdict |

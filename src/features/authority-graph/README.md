@@ -102,7 +102,7 @@ first that fails:
 3. `issuer_authority_required` -- did every issuer actually hold what it issued from?
 4. `ancestor_revocation_denied` -- is every ancestor still active?
 5. `ancestor_expiration_denied` -- has every ancestor not expired?
-6. `delegation_lineage_valid` -- does the delegation lineage terminate at a real grant, without a cycle, without changing hands, and without gaining an action?
+6. `delegation_lineage_valid` -- does the lineage terminate at a fully-rooted grant, without a cycle, without changing hands, without gaining an action, and within what that grant permitted to be delegated?
 7. `delegation_scope_contained` -- is the requested resource within scope, all the way up?
 8. `delegation_depth_limited` -- is every delegation within its permitted depth?
 9. `non_delegable_action_denied` -- was a non-delegable action delegated anyway?
@@ -123,10 +123,24 @@ never did for `actions`.
 
 `DelegationLineageVerifier` walks the lineage separately and asks the opposite
 question: not "what can be assembled?" but "does what was assembled actually
-terminate at a real `AuthorityGrant`, without revisiting itself, without
-changing hands, and without gaining an action?". It reports one typed breach --
-`source_missing`, `cycle`, `delegator_not_source_holder`, or `action_expanded`
--- and `delegation_lineage_valid` turns that into a denial.
+terminate at an `AuthorityGrant` that names no parent of its own, without
+revisiting itself, without changing hands, without gaining an action, and within
+what that grant was ever willing to permit?". It reports one typed breach --
+`source_missing`, `cycle`, `delegator_not_source_holder`, `action_expanded`,
+`source_not_delegable`, `depth_exceeds_source` or `beyond_policy_horizon` -- and
+`delegation_lineage_valid` turns that into a denial.
+
+Three of those close gaps the surrounding policies structurally cannot.
+`DelegationDepthPolicy` compares a record's depth against the ceiling that same
+record declares and reads `canRedelegate` on delegation parents only, so a
+record derived straight from a `canDelegate: false` grant passed; only the grant
+knows how far it was willing to be delegated. `IssuerAuthorityPolicy` skips its
+accepted-root check whenever the top grant *has* a `parentGrantId`, so a grant
+naming a nonexistent parent escaped the root-issuer requirement -- which is why
+this walk continues through the grant ancestry, and runs even when the chain
+contains no delegation. And a lineage longer than `MAX_ANCESTRY_HOPS` is refused
+rather than vouched for, because past that point the resolver has stopped
+filling the chain and no other policy can see those hops.
 
 It is a **projection, never a stored record**. Nothing is copied into a
 descendant at creation, so revoking or deleting an ancestor invalidates its whole

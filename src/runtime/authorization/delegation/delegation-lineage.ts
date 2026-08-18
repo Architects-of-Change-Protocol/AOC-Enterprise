@@ -1,3 +1,5 @@
+import { legacyResourceIdentifier } from '@aoc-enterprise/scoped-access';
+
 import type { DelegatedCapability, DelegatedCapabilityPayload, ExecutionGrant } from '../../context.js';
 
 /**
@@ -180,6 +182,31 @@ export function delegationConstraintBreach(
   return null;
 }
 
+/**
+ * An execution grant's authorized access, expressed in the same vocabulary a
+ * delegated capability's constraints use.
+ *
+ * An `ExecutionGrant` is not a delegation envelope -- it carries an
+ * `AuthorizationGrantInput`, whose `access` names exactly one action, one
+ * resource and one requested scope. Projecting it into
+ * `DelegationLineageConstraints` lets the identical containment check run
+ * against it, rather than a second, subtly different comparison written for
+ * this one case.
+ *
+ * Without this the grant was checked for existence, revocation, expiry and
+ * organization and then declared a valid root, so a capability rooted in a
+ * grant for `LICENSE` on asset A could carry `TRANSFER` on asset B -- the exact
+ * broadening this module exists to refuse, one hop from where it refuses it.
+ */
+function executionGrantConstraints(grant: ExecutionGrant): DelegationLineageConstraints {
+  const access = grant.payload.input.access;
+  return {
+    resource: legacyResourceIdentifier(access.resource),
+    ...(access.action !== undefined ? { action: access.action } : {}),
+    ...(access.requestedScope !== undefined ? { scope: access.requestedScope } : {}),
+  };
+}
+
 /** What a lineage walk established. `depth` is 0 for a capability that claims no parent -- a root, which is what every capability issued before this existed is. */
 export interface DelegationLineageResult {
   readonly valid: boolean;
@@ -316,9 +343,22 @@ export async function resolveDelegationLineage(
     if (isExpiredAt(grant.payload.expiresAt, at)) {
       return breach(depth, chainRefs, { kind: 'parent_expired', parentRef: grantId });
     }
-    if (grant.payload.subject.orgId !== child.orgId) {
-      return breach(depth, chainRefs, { kind: 'tenant_expanded', parentOrgId: grant.payload.subject.orgId, childOrgId: child.orgId });
-    }
+
+    const containment = delegationConstraintBreach(
+      {
+        orgId: grant.payload.subject.orgId,
+        ref: grantId,
+        constraints: executionGrantConstraints(grant),
+        ...(grant.payload.expiresAt !== undefined ? { expiresAt: grant.payload.expiresAt } : {}),
+      },
+      {
+        orgId: child.orgId,
+        constraints: readDelegationLineageConstraints(child.constraints),
+        ...(child.expiresAt !== undefined ? { expiresAt: child.expiresAt } : {}),
+      },
+    );
+    if (containment !== null) return breach(depth, chainRefs, containment);
+
     return { valid: true, depth, chainRefs, breach: null };
   }
 

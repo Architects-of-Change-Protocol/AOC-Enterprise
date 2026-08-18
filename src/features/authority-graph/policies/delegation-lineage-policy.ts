@@ -18,6 +18,14 @@ const POLICY_ID = 'delegation_lineage_valid';
  * a cycle was `authority_valid`, and a hop whose delegator had never held the
  * thing it delegated was `authority_valid`.
  *
+ * It also asks two questions the depth policy structurally cannot.
+ * `DelegationDepthPolicy` compares a delegation's depth against the ceiling
+ * that same record declares, and inspects `canRedelegate` on delegation parents
+ * only -- so a record derived straight from a `canDelegate: false` grant,
+ * declaring whatever ceiling it liked, passed. The grant at the root is the
+ * only thing that knows how far it was ever willing to be delegated, and it is
+ * what this asks.
+ *
  * Placed after revocation and expiry and before scope: an ancestor that is
  * revoked should say so rather than report the structural consequence, while a
  * chain that never terminated anywhere should be refused before its narrowing
@@ -83,6 +91,24 @@ function describe(breach: DelegationLineageBreach): Pick<AuthorityPolicyOutcome,
         reasonCode: 'DELEGATION_ACTION_EXCEEDS_PARENT',
         reason: `Delegation grant ${breach.delegationGrantId} carries action ${breach.action}, which its source authority does not permit.`,
         decisionType: 'scope_expansion_detected',
+      };
+    case 'source_not_delegable':
+      return {
+        reasonCode: 'SOURCE_AUTHORITY_NOT_DELEGABLE',
+        reason: `Delegation grant ${breach.delegationGrantId} derives from ${breach.sourceAuthorityGrantId}, which does not permit being delegated.`,
+        decisionType: 'delegation_not_allowed',
+      };
+    case 'depth_exceeds_source':
+      return {
+        reasonCode: 'DELEGATION_DEPTH_EXCEEDS_SOURCE_AUTHORITY',
+        reason: `The chain reaches depth ${breach.depth}, beyond the ${breach.maxDelegationDepth} its root authority grant permits.`,
+        decisionType: 'delegation_depth_exceeded',
+      };
+    case 'beyond_policy_horizon':
+      return {
+        reasonCode: 'DELEGATION_LINEAGE_BEYOND_POLICY_HORIZON',
+        reason: `The lineage is ${breach.hops} hops deep, beyond what the resolver materializes for the other policies to judge.`,
+        decisionType: 'delegation_lineage_broken',
       };
   }
 }

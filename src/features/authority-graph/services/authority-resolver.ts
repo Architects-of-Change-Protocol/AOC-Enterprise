@@ -4,7 +4,15 @@ import type { DelegationGrant } from '../domain/delegation-grant.js';
 import type { AuthorityRuntimeContext } from '../runtime/authority-runtime-context.js';
 import type { AuthorityGraphStore } from './authority-graph-store.js';
 
-const MAX_ANCESTRY_HOPS = 50;
+/**
+ * How many ancestor hops the resolver will materialize into an `AuthorityChain`.
+ *
+ * Exported because `DelegationLineageVerifier` must refuse a lineage longer than
+ * this rather than vouch for hops the policies never received: everything past
+ * this point is absent from `chain.grants`/`chain.delegations`, so revocation,
+ * expiry and scope containment are never evaluated over it.
+ */
+export const MAX_ANCESTRY_HOPS = 50;
 
 export class AuthorityResolver {
   constructor(

@@ -293,7 +293,9 @@ describe('Derived authority — a child may narrow and never broaden', () => {
     forge(runtime, { id: 'd-c', delegatorActorId: B, delegateActorId: C, sourceAuthorityGrantId: b, delegationDepth: 2, canRedelegate: true, maxDelegationDepth: 99 });
     const decision = verify(runtime, C, 'TRANSFER');
     assert.equal(decision.valid, false);
-    assert.equal(decision.reasonCode, 'REDELEGATION_NOT_PERMITTED');
+    // The lineage walk reaches it first, and says the more specific thing: the
+    // source itself never permitted being delegated onward.
+    assert.equal(decision.reasonCode, 'SOURCE_AUTHORITY_NOT_DELEGABLE');
   });
 
   it('13. depth: a hop past the source grant’s ceiling is refused', () => {
@@ -303,9 +305,77 @@ describe('Derived authority — a child may narrow and never broaden', () => {
     assert.equal(runtime.store.getDelegation(b)?.canRedelegate, false);
 
     forge(runtime, { id: 'd-c', delegatorActorId: B, delegateActorId: C, sourceAuthorityGrantId: b, delegationDepth: 2, maxDelegationDepth: 1 });
+    assert.equal(verify(runtime, C, 'TRANSFER').valid, false);
+  });
+
+  it('13b. depth: the *grant\u2019s* ceiling binds, not the ceiling a forged record declares for itself', () => {
+    // `DelegationDepthPolicy` compares a record's depth against the limit that
+    // same record carries, so a forger who writes both halves always passes it.
+    // Every hop below is internally consistent and self-declares a ceiling of
+    // 99; only the grant knows it was never willing to be delegated past 1.
+    const { runtime, rootGrantId } = world({ maxDepth: 1 });
+    forge(runtime, { id: 'd-b', delegatorActorId: A, delegateActorId: B, sourceAuthorityGrantId: rootGrantId, delegationDepth: 1, canRedelegate: true, maxDelegationDepth: 99 });
+    forge(runtime, { id: 'd-c', delegatorActorId: B, delegateActorId: C, sourceAuthorityGrantId: 'd-b', delegationDepth: 2, canRedelegate: true, maxDelegationDepth: 99 });
+
     const decision = verify(runtime, C, 'TRANSFER');
     assert.equal(decision.valid, false);
-    assert.equal(decision.reasonCode, 'DELEGATION_DEPTH_EXCEEDED');
+    assert.equal(decision.reasonCode, 'DELEGATION_DEPTH_EXCEEDS_SOURCE_AUTHORITY');
+  });
+
+  it('13c. a delegation forged straight from a non-delegable grant is refused', () => {
+    // The root of a one-hop chain is a grant, and `DelegationDepthPolicy`
+    // inspects `canRedelegate` on delegation parents only -- so nothing else in
+    // the chain ever reads `AuthorityGrant.canDelegate` at evaluation.
+    const { runtime, rootGrantId } = world();
+    runtime.store.importGrant({ ...runtime.store.getGrant(rootGrantId)!, canDelegate: false });
+    forge(runtime, { id: 'd-b', delegatorActorId: A, delegateActorId: B, sourceAuthorityGrantId: rootGrantId, delegationDepth: 1, canRedelegate: true, maxDelegationDepth: 99 });
+
+    const decision = verify(runtime, B, 'TRANSFER');
+    assert.equal(decision.valid, false);
+    assert.equal(decision.reasonCode, 'SOURCE_AUTHORITY_NOT_DELEGABLE');
+  });
+
+  it('13d. a grant whose own parent dangles is not a root, delegated or direct', () => {
+    // `IssuerAuthorityPolicy` requires the top grant to trace to a registered
+    // root issuer, but only when it names no parent -- so an imported grant
+    // from an untrusted issuer naming a nonexistent parent satisfied neither
+    // branch and escaped the requirement entirely.
+    const { runtime } = world();
+    runtime.store.importGrant({
+      id: 'grant-forged', issuerActorId: 'actor-untrusted', subjectActorId: D, trustDomainId: TRUST_DOMAIN,
+      capability: 'asset.governance', actions: ['TRANSFER'], resourceScopes: [ASSET_A],
+      canDelegate: true, maxDelegationDepth: 5, parentGrantId: 'grant-that-does-not-exist',
+      status: 'active', issuedAt: NOW,
+    });
+    assert.equal(verify(runtime, D, 'TRANSFER').reasonCode, 'DELEGATION_SOURCE_AUTHORITY_MISSING');
+
+    forge(runtime, { id: 'd-forged', delegatorActorId: D, delegateActorId: C, sourceAuthorityGrantId: 'grant-forged' });
+    assert.equal(verify(runtime, C, 'TRANSFER').reasonCode, 'DELEGATION_SOURCE_AUTHORITY_MISSING');
+  });
+
+  it('13e. a lineage deeper than the resolver materializes is refused, not vouched for', () => {
+    // Past `MAX_ANCESTRY_HOPS` the resolver stops filling the chain, so the
+    // revocation, expiry and scope policies never see those hops. Reporting
+    // such a lineage as rooted would be asserting a property over records
+    // nothing else judged.
+    const { runtime, rootGrantId } = world({ maxDepth: 999 });
+    let previous = rootGrantId;
+    for (let hop = 1; hop <= 60; hop += 1) {
+      forge(runtime, {
+        id: `hop-${hop}`,
+        delegatorActorId: hop === 1 ? A : `actor-hop-${hop - 1}`,
+        delegateActorId: `actor-hop-${hop}`,
+        sourceAuthorityGrantId: previous,
+        delegationDepth: hop,
+        canRedelegate: true,
+        maxDelegationDepth: 999,
+      });
+      previous = `hop-${hop}`;
+    }
+
+    const decision = verify(runtime, 'actor-hop-60', 'TRANSFER');
+    assert.equal(decision.valid, false);
+    assert.equal(decision.reasonCode, 'DELEGATION_LINEAGE_BEYOND_POLICY_HORIZON');
   });
 
   it('14. trust domain: a hop cannot move authority into another domain', () => {

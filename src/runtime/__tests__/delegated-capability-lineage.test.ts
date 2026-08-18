@@ -296,18 +296,67 @@ describe('Delegated capability lineage — walked against current store state', 
   it('21. a chain rooted in a live execution grant resolves, and stops there', async () => {
     const store = stores();
     store.putGrant('grant-1', ORG, MUCH_LATER);
-    const child = capability({ delegationId: 'c', parentGrantId: 'grant-1' });
+    // Within the grant's own authorized access: TRANSFER on asset:a for
+    // [asset:write]. The grant is an envelope like any other parent.
+    const child = capability({ delegationId: 'c', parentGrantId: 'grant-1', constraints: { scope: ['asset:write'], resource: 'asset:a', action: 'TRANSFER' } });
 
     const result = await resolveDelegationLineage(child, store, NOW);
     assert.equal(result.valid, true);
     assert.deepEqual(result.chainRefs, ['grant-1']);
   });
 
+  it('21b. a child cannot broaden the execution grant it is carved out of', async () => {
+    // The grant authorizes TRANSFER on asset:a for [asset:write]. Before this,
+    // the grant was checked for existence, revocation, expiry and organization
+    // and then declared a valid root, so each of these passed.
+    const store = stores();
+    store.putGrant('grant-1', ORG, MUCH_LATER);
+
+    const widerResource = await resolveDelegationLineage(
+      capability({ delegationId: 'r', parentGrantId: 'grant-1', constraints: { scope: ['asset:write'], resource: 'asset:b', action: 'TRANSFER' } }),
+      store,
+      NOW,
+    );
+    assert.equal(widerResource.breach?.kind, 'resource_expanded');
+
+    const widerAction = await resolveDelegationLineage(
+      capability({ delegationId: 'a', parentGrantId: 'grant-1', constraints: { scope: ['asset:write'], resource: 'asset:a', action: 'LICENSE' } }),
+      store,
+      NOW,
+    );
+    assert.equal(widerAction.breach?.kind, 'action_expanded');
+
+    const widerScope = await resolveDelegationLineage(
+      capability({ delegationId: 's', parentGrantId: 'grant-1', constraints: { scope: ['asset:write', 'asset:admin'], resource: 'asset:a', action: 'TRANSFER' } }),
+      store,
+      NOW,
+    );
+    assert.equal(widerScope.breach?.kind, 'scope_expanded');
+
+    const noConstraints = await resolveDelegationLineage(
+      capability({ delegationId: 'n', parentGrantId: 'grant-1', constraints: {} }),
+      store,
+      NOW,
+    );
+    assert.equal(noConstraints.breach?.kind, 'resource_expanded', 'dropping an inherited constraint is a widening, not an inheritance');
+  });
+
+  it('21c. a child cannot outlive the execution grant it is carved out of', async () => {
+    const store = stores();
+    store.putGrant('grant-1', ORG, LATER);
+    const result = await resolveDelegationLineage(
+      capability({ delegationId: 'c', parentGrantId: 'grant-1', expiresAt: MUCH_LATER, constraints: { scope: ['asset:write'], resource: 'asset:a', action: 'TRANSFER' } }),
+      store,
+      NOW,
+    );
+    assert.equal(result.breach?.kind, 'validity_expanded');
+  });
+
   it('22. a chain rooted in a revoked execution grant is refused', async () => {
     const store = stores();
     store.putGrant('grant-1', ORG, MUCH_LATER);
     store.revokeGrant('grant-1');
-    const result = await resolveDelegationLineage(capability({ delegationId: 'c', parentGrantId: 'grant-1' }), store, NOW);
+    const result = await resolveDelegationLineage(capability({ delegationId: 'c', parentGrantId: 'grant-1', constraints: { scope: ['asset:write'], resource: 'asset:a', action: 'TRANSFER' } }), store, NOW);
     assert.equal(result.valid, false);
     assert.equal(result.breach?.kind, 'parent_revoked');
   });
@@ -315,7 +364,7 @@ describe('Delegated capability lineage — walked against current store state', 
   it('23. a chain rooted in an execution grant belonging to another organization is refused', async () => {
     const store = stores();
     store.putGrant('grant-1', 'org-other', MUCH_LATER);
-    const result = await resolveDelegationLineage(capability({ delegationId: 'c', parentGrantId: 'grant-1' }), store, NOW);
+    const result = await resolveDelegationLineage(capability({ delegationId: 'c', parentGrantId: 'grant-1', constraints: { scope: ['asset:write'], resource: 'asset:a', action: 'TRANSFER' } }), store, NOW);
     assert.equal(result.valid, false);
     assert.equal(result.breach?.kind, 'tenant_expanded');
   });

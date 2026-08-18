@@ -110,11 +110,50 @@ on none.
 | scope | — | `constraints.scope` subset |
 | tenant / trust domain | `trustDomainId` identity | `orgId` identity |
 | validity window | ancestor expiry, dynamically | parent `expiresAt` |
-| delegation depth | `maxDelegationDepth` | `constraints.maxDelegationDepth`, default 8 |
-| redelegation | `canRedelegate` | `constraints.canRedelegate` |
-| rootedness | terminates at an `AuthorityGrant` | terminates at a root or an `ExecutionGrant` |
+| delegation depth | the **root grant's** `maxDelegationDepth` | `constraints.maxDelegationDepth`, default 8 |
+| redelegation | `canRedelegate`, and the root grant's `canDelegate` | `constraints.canRedelegate` |
+| rootedness | terminates at an `AuthorityGrant` naming no parent | terminates at a root or an `ExecutionGrant` |
 | continuity | delegator held the source | — (envelope-based) |
 | cycles | refused by identity | refused by identity |
+| traversal horizon | refused past `MAX_ANCESTRY_HOPS` | refused past depth 8 |
+
+### Ceilings are read from the grant, never from the record being judged
+
+`DelegationDepthPolicy` compares a delegation's `delegationDepth` against the
+`maxDelegationDepth` **that same record carries**, and inspects `canRedelegate`
+on delegation parents only. A record written straight into the store supplies
+both halves of that comparison, and the root of a one-hop chain is a grant
+rather than a delegation — so a delegation derived directly from a
+`canDelegate: false` grant, declaring whatever ceiling it liked, satisfied it.
+
+The `AuthorityGrant` at the root is the only thing that knows how far it was
+ever willing to be delegated, so that is what the lineage walk asks.
+
+### A grant whose own parent dangles is not a root
+
+`IssuerAuthorityPolicy` requires the top grant of a chain to trace to a
+registered root issuer — but only when that grant names no parent, on the
+assumption that a grant naming one will be judged through it. A grant whose
+`parentGrantId` resolves to nothing satisfies neither branch, so an imported
+grant from an untrusted issuer could name a nonexistent parent and stand. The
+lineage walk continues through the grant ancestry and refuses a dangling link,
+which is why it runs even for chains containing no delegation at all.
+
+### The walk stops where the policies stop seeing
+
+`AuthorityResolver` materializes at most `MAX_ANCESTRY_HOPS` ancestors into the
+chain the policies receive. A lineage longer than that is **refused**, not
+vouched for: beyond that horizon, reporting it as rooted would assert a property
+over hops that revocation, expiry and scope containment never judged. The two
+walks share one exported constant so they cannot drift apart.
+
+### An execution grant is an envelope, not just a lifecycle check
+
+A `parentGrantId` names the execution authorization a capability was carved out
+of. Its `input.access` — one action, one resource, one requested scope — is
+projected into the same constraint vocabulary a delegation carries and compared
+with the identical containment check, so a capability rooted in a grant for
+`LICENSE` on asset A cannot carry `TRANSFER` on asset B.
 
 **Governed right and governed-rights scope are deliberately absent from both
 columns.** A capability delegation carries no governed right, so it cannot
