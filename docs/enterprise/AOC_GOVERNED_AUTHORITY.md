@@ -264,15 +264,34 @@ succeeded, and a no-op once every execution has moved authority.
 
 ## Reservation
 
-Authorization reserves nothing; conservation is enforced at execution.
+A position answers how much a holder possesses. It deliberately does not change
+when a mandate is issued — permission to move a right must not move it — which
+means it cannot, on its own, answer how much of that authority is *still
+uncommitted*. Three questions, kept apart:
 
-Two mandates may each be authorized for 6 000 bp against the same 10 000 bp
-position. Only the second **execution** is refused. The exposure is bounded —
-no movement can overdraw, the total is conserved, and the window closes as soon
-as the first movement completes. What can happen is a mandate that is
-authorized and later cannot be executed.
+> **`GovernedAuthorityPosition`** answers "how much underlying authority does
+> Holder H possess?"
+>
+> **`GovernedAuthorityReservation`** answers "how much of that authority is
+> already committed to still-live governed authorizations?"
+>
+> **Available governed authority** answers "how much can still be committed
+> now?" — `held − committed`.
 
-See the ADR for why generic reservation was deferred rather than built.
+A reservation changes no position. Alice with 5 000 bp and a 3 000 bp
+reservation still *holds* 5 000 bp; what changed is that only 2 000 bp remains
+committable. It is not ownership, not a transfer, not delegation, not
+representation and not a database lock.
+
+Reservation applies to **`TRANSFER` only**, because `TRANSFER` is the only
+governed action that debits a position. `TOKENIZE`, `COLLATERALIZE` and
+`LICENSE` never call this store and therefore have no finite capacity for a
+competing authorization to overpromise.
+
+It is acquired atomically as the last step before a mandate is issued, and
+consumed in the same transaction as the transition its execution causes. See
+`AOC_GOVERNED_AUTHORITY_RESERVATION.md` and
+`docs/architecture/ADR-GOVERNED-AUTHORITY-RESERVATION.md`.
 
 ## Not implemented, deliberately
 

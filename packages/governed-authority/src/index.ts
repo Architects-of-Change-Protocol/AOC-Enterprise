@@ -6,6 +6,18 @@ export type { GovernedAuthorityBasis, GovernedAuthorityBasisKind } from './gover
 
 export type { GovernedAuthorityTransition } from './governed-authority-transition.js';
 
+export {
+  governedAuthorityReservationReducesAvailability,
+  governedAuthorityReservationState,
+  isGovernedAuthorityAvailable,
+} from './governed-authority-reservation.js';
+export type {
+  GovernedAuthorityAvailability,
+  GovernedAuthorityReservation,
+  GovernedAuthorityReservationState,
+  GovernedAuthorityReservationStatus,
+} from './governed-authority-reservation.js';
+
 export { isGovernedAuthorityCovered } from './governed-authority-coverage.js';
 export type { GovernedAuthorityCoverage, GovernedAuthorityProviderPort, GovernedAuthorityQuery } from './governed-authority-coverage.js';
 

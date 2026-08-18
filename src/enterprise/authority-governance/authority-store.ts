@@ -1,15 +1,24 @@
-import type { GovernedAuthorityPosition, GovernedAuthorityTransition } from '@aoc-enterprise/governed-authority';
+import type {
+  GovernedAuthorityAvailability,
+  GovernedAuthorityPosition,
+  GovernedAuthorityReservation,
+  GovernedAuthorityTransition,
+} from '@aoc-enterprise/governed-authority';
 import type { GovernedRightType } from '@aoc-enterprise/governed-authorization';
 
 import { AuthorityGovernanceError } from './errors.js';
 import type {
+  AcquireGovernedAuthorityReservationInput,
+  AcquireGovernedAuthorityReservationOutcome,
   ApplyGovernedAuthorityTransitionInput,
   ApplyGovernedAuthorityTransitionOutcome,
   AuthorityGovernanceContext,
   BootstrapGovernedAuthorityInput,
   GovernedAuthorityProvenance,
   GovernedAuthorityResourceRef,
+  GovernedAuthorityAvailabilityQuery,
   GovernedAuthorityStoreHealth,
+  ReleaseGovernedAuthorityReservationInput,
 } from './contracts.js';
 
 /**
@@ -25,10 +34,28 @@ import type {
  * `../transfer-governance/` already establish.
  *
  * Deliberately entity-specific rather than a generic ledger abstraction. There
- * are exactly two ways state changes here — issue authority that did not exist
- * (privileged), and move authority that did (evidenced) — so there is no
+ * are exactly two ways *authority* changes here — issue authority that did not
+ * exist (privileged), and move authority that did (evidenced) — so there is no
  * generic `update`, no `setBalance`, no `delete`, and no path by which a
  * caller could write a position directly.
+ *
+ * ## Why reservations live here
+ *
+ * This store also holds `GovernedAuthorityReservation`s: how much of each
+ * position is already committed to a still-live authorization. They are here,
+ * rather than beside the mandates they belong to, for one reason that admits
+ * no alternative — **availability is a function of positions and reservations
+ * together, so the check and the write must share a transaction.** Split
+ * across two stores, "read availability, then commit" would be two unprotected
+ * steps and the double commitment would simply move one layer up. Here it is
+ * one synchronous critical section in memory and one `db.transaction(...)` in
+ * SQLite, and terminalizing a reservation commits atomically with the debit it
+ * accompanies.
+ *
+ * That placement is deliberate about what it does *not* mix in. A reservation
+ * records no mandate terms, no policy, no approvals and no evidence; it records
+ * a quantity, whose authority it stands against, and which artifact it stands
+ * for. Mandate lifecycle stays in the mandate stores, where it belongs.
  *
  * Note what this interface deliberately does *not* offer, and why:
  *
@@ -39,9 +66,6 @@ import type {
  *   governance act rather than persisting one.
  * - **No reversal.** A reported reversal is an observation, and an observation
  *   must not silently rewrite authority.
- * - **No reservation.** Mandate issuance reserves nothing; see
- *   `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`, "Reservation
- *   decision".
  * - **No broad query surface.** `listPositionsForHolder` and `getProvenance`
  *   exist for enforcement and audit respectively; there is no "list everything
  *   this tenant holds" report, because nothing needs one yet.
@@ -116,6 +140,85 @@ export interface GovernedAuthorityStore {
     tenantId: string,
     executionRef: string,
   ): Promise<readonly GovernedAuthorityTransition[]>;
+
+  // -------------------------------------------------------------------------
+  // Reservation. The commitment side of the same authority.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Atomically checks that enough authority is still uncommitted and, if so,
+   * records the commitment.
+   *
+   * **Check and write are one operation, and there is deliberately no
+   * separately callable "check" that could be used to build them out of two.**
+   * `resolveAvailability` exists for explanation and audit, and its answer is
+   * explicitly a snapshot — a caller that read 5 000 bp available and then
+   * asked for 4 000 can still lose here, and must, because another commitment
+   * may have won the race in between. This method re-derives availability
+   * inside its own transaction and refuses on the state it finds there.
+   *
+   * Throws `GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT` when standing
+   * commitments leave too little — distinct from
+   * `GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE`, which means the holder never held
+   * enough at all. Throws `GOVERNED_AUTHORITY_RESERVATION_CONFLICT` when the
+   * idempotency key is reused for a materially different commitment.
+   *
+   * Idempotent on the idempotency key: replaying an acquisition already made
+   * returns the original reservation with `replayed: true` and commits no
+   * second quantity.
+   */
+  acquireReservation(
+    context: AuthorityGovernanceContext,
+    input: AcquireGovernedAuthorityReservationInput,
+  ): Promise<AcquireGovernedAuthorityReservationOutcome>;
+
+  /**
+   * Ends a still-active commitment without any authority having moved, so the
+   * capacity becomes available again. The position is untouched: a release is
+   * not a credit.
+   *
+   * Idempotent and non-accumulating. Releasing an already-released reservation
+   * returns it unchanged rather than freeing capacity twice — which is safe by
+   * construction anyway, because availability is derived from the reservations
+   * that are still active rather than from a counter that could be decremented
+   * twice. Releasing a `'consumed'` reservation is refused with
+   * `GOVERNED_AUTHORITY_RESERVATION_CONFLICT`: the authority has already moved,
+   * and treating that as returnable capacity would fabricate it.
+   *
+   * `reason: 'administrative'` requires `context.system`.
+   */
+  releaseReservation(context: AuthorityGovernanceContext, input: ReleaseGovernedAuthorityReservationInput): Promise<GovernedAuthorityReservation>;
+
+  /**
+   * What the holder possesses, what stands committed against it, and what can
+   * still be committed now.
+   *
+   * For explanation, audit and denial evidence. **Never a gate**: an answer
+   * from here is a snapshot of a moment that has already passed by the time a
+   * caller acts on it, and only `acquireReservation` decides.
+   */
+  resolveAvailability(context: AuthorityGovernanceContext, query: GovernedAuthorityAvailabilityQuery): Promise<GovernedAuthorityAvailability>;
+
+  /** Tenant-scoped lookup of one reservation, or `null`. */
+  getReservation(context: AuthorityGovernanceContext, tenantId: string, reservationId: string): Promise<GovernedAuthorityReservation | null>;
+
+  /**
+   * Tenant-scoped, stably-ordered reservations recorded against one
+   * authorization artifact — the audit link from a mandate to the capacity it
+   * committed, and what makes "was this mandate ever supported by a
+   * reservation?" decidable rather than assumed.
+   */
+  listReservationsByMandateRef(
+    context: AuthorityGovernanceContext,
+    tenantId: string,
+    sourceMandateRef: string,
+  ): Promise<readonly GovernedAuthorityReservation[]>;
+
+  /** Every reservation still reducing availability for one holder, resource and right at an instant. Used by audit and by availability explanation; the enforcement path uses `acquireReservation`. */
+  listActiveReservations(
+    context: AuthorityGovernanceContext,
+    query: GovernedAuthorityAvailabilityQuery,
+  ): Promise<readonly GovernedAuthorityReservation[]>;
 
   health(): Promise<GovernedAuthorityStoreHealth>;
 

@@ -173,7 +173,12 @@ converted to another. Both are refused as `GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE
 
 ## Reservation decision
 
-> **DEFERRED — EXECUTION-TIME CONSERVATION ONLY.**
+> **SUPERSEDED by `ADR-GOVERNED-AUTHORITY-RESERVATION.md`.** The decision below
+> is preserved as written, because the risk it quantified is exactly what the
+> later ADR measured and closed. Reservation now exists, applies to `TRANSFER`
+> only, and is acquired atomically before mandate issuance.
+
+> **DEFERRED — EXECUTION-TIME CONSERVATION ONLY.** *(at the time of this ADR)*
 
 Authorization reserves nothing. Two mandates may each be authorized for 6 000
 bp against the same 10 000 bp position; only the second *execution* is refused.
@@ -210,6 +215,16 @@ a denial at request time. Measured in
 A deployment that cannot tolerate that window needs reservation, and the
 foundation does not prevent adding it: a reservation is a further quantity on
 the same position, keyed by mandate, with its own lifecycle.
+
+*That is what was built.* `GovernedAuthorityReservation` lives in this store
+beside the positions, is keyed by the mandate it stands for, and carries the
+lifecycle described in `ADR-GOVERNED-AUTHORITY-RESERVATION.md`. The measurement
+in `governed-authority-transfer-integration.test.ts` now asserts the closed
+behaviour: the second mandate is refused at issuance rather than at execution.
+Three of this section's premises survived unchanged — the four actions still do
+not share reservation semantics (only `TRANSFER` reserves), the four quantities
+are still kept apart, and no lifecycle was invented beyond what `TRANSFER`
+drives.
 
 ## Legacy authority compatibility
 

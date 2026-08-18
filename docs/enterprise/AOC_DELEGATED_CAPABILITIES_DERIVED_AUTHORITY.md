@@ -244,8 +244,15 @@ and single-shot, so an execution grant is consumable exactly once.
 
 Adding a usage counter to delegations would require conservation semantics
 across siblings — whether two children of a 10-use parent may each be given 8 —
-and that is authority reservation, which this architecture has deliberately
-deferred. See "Deferred" below.
+and that is authority reservation, which this architecture had deliberately
+deferred.
+
+**Re-evaluated once `GovernedAuthorityReservation` existed, and still
+deferred.** Reservation conserves *a holder's authority over a right of a
+resource*, which is not what a use-count of a delegation conserves. Reusing it
+would mean modelling a delegation as a holder and a use as a quantity of a
+governed right, and both are false. Delegation-level max-use needs its own
+accounting domain; it did not get one. See "Deferred" below.
 
 ## No self-minted authority
 
@@ -275,10 +282,18 @@ portable across deployments. The bounded claim is exactly:
 
 ## Deferred
 
-- **Authority reservation.** A ceiling is not a reservation; delegating debits
-  nothing. Conservation across concurrent siblings remains unsolved and is a
-  foundation of its own.
+- **Delegation-layer conservation.** Authority reservation now exists
+  (`AOC_GOVERNED_AUTHORITY_RESERVATION.md`), but it conserves a *holder's*
+  authority over a right, not a *delegation's* remaining uses. A ceiling is
+  still not a reservation, delegating still debits nothing, and conservation
+  across concurrent siblings remains unsolved — in its own domain rather than
+  this one.
 - **Durable Authority Graph state.** Grants and delegations are in-memory.
+  Reservations are durable, and that asymmetry is consistent rather than
+  accidental: a mandate is valid after issuance independently of its lineage, so
+  the reservation supporting it must survive a restart even where the delegation
+  behind it does not. Availability is computed from positions and reservations,
+  never from the graph.
 - **Cross-deployment delegation portability.** Proving to another sovereign
   deployment that an actor holds delegated authority originating elsewhere would
   be Protocol work. Nothing here requires it.

@@ -1,4 +1,9 @@
-import type { GovernedAuthorityBasis, GovernedAuthorityPosition, GovernedAuthorityTransition } from '@aoc-enterprise/governed-authority';
+import type {
+  GovernedAuthorityBasis,
+  GovernedAuthorityPosition,
+  GovernedAuthorityReservation,
+  GovernedAuthorityTransition,
+} from '@aoc-enterprise/governed-authority';
 import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
 
 /**
@@ -75,6 +80,26 @@ export interface ApplyGovernedAuthorityTransitionInput {
   readonly basis: Extract<GovernedAuthorityBasis, { kind: 'governed-execution' }>;
   readonly occurredAt: string;
   readonly correlationId?: string;
+  /**
+   * The mandate whose reservation this movement consumes.
+   *
+   * Present, every active reservation recorded against that mandate is moved
+   * to `'consumed'` **inside the same commit section as the debit and the
+   * credit**. That coupling is the whole point of putting reservations in this
+   * store: releasing capacity and debiting the position are one durable step,
+   * so neither of the two bad crash windows exists — capacity is never freed
+   * for a movement that did not happen, and a completed movement never strands
+   * its reservation active forever.
+   *
+   * Absent, no reservation is touched. That is the correct behaviour for a
+   * deployment that has not adopted reservation and for an execution under a
+   * mandate that never needed one.
+   *
+   * It rides on the existing `executionRef` idempotency: a replayed execution
+   * returns early with `replayed: true`, so the reservation is consumed exactly
+   * once no matter how the execution is retried.
+   */
+  readonly consumesReservationsForMandateRef?: string;
 }
 
 /** What an apply produced, and whether it produced it now or had already produced it. `replayed` is the signal a caller uses to distinguish "moved" from "already moved" without comparing balances. */
@@ -95,4 +120,87 @@ export interface GovernedAuthorityStoreHealth {
   readonly schemaVersion: string;
   readonly positionCount: number;
   readonly transitionCount: number;
+  /** How many reservations currently carry `status: 'active'`. Counts stored status only: an active-but-lapsed row is still stored active, and is excluded from availability by the clock rather than by a rewrite. */
+  readonly activeReservationCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// Governed authority reservation.
+// ---------------------------------------------------------------------------
+
+/**
+ * Committing a finite quantity of a holder's authority to one authorization
+ * artifact, so a competing authorization cannot promise the same capacity.
+ *
+ * Note what a caller does **not** supply: a status, a digest, or an
+ * `available` figure it measured earlier. Status and digest are the store's;
+ * availability is recomputed inside the acquiring transaction, because an
+ * availability a caller observed before it called is a snapshot, not a
+ * guarantee — and acting on the snapshot is precisely the time-of-check /
+ * time-of-use race this operation exists to close.
+ */
+export interface AcquireGovernedAuthorityReservationInput {
+  readonly tenantId: string;
+  /** Whose authority is committed. Never the requester's or the representative's, unless they happen to be the holder. */
+  readonly holderRef: string;
+  readonly resource: GovernedAuthorityResourceRef;
+  readonly governedRight: GovernedRightType;
+  readonly scope: GovernedRightsScope;
+  /** The governed action being authorized, in the same capability vocabulary a `governed-execution` basis uses. */
+  readonly action: string;
+  readonly sourceRequestRef: string;
+  readonly sourceDecisionRef?: string;
+  /** The authorization artifact this capacity is committed to. Supplied rather than derived because the artifact's identity must be fixed *before* the commitment is made — a reservation acquired for an artifact that does not yet have a name could not be released if issuing it then failed. */
+  readonly sourceMandateRef: string;
+  readonly effectiveFrom: string;
+  /** Required. Set from the mandate's own expiry, so a commitment never outlives the authorization justifying it. */
+  readonly expiresAt: string;
+  /** Defaults to `sourceMandateRef`, which is already one-per-authorization. Supplied explicitly when a caller has its own request-level idempotency identity. */
+  readonly idempotencyKey?: string;
+  readonly correlationId?: string;
+}
+
+/**
+ * What an acquisition produced.
+ *
+ * Two outcomes rather than one, for the same reason `GovernedAuthorityCoverage`
+ * carries `resource_not_enrolled`: a resource this deployment holds no
+ * governed authority state for has no capacity for anything to commit, so
+ * there is no double commitment to prevent and nothing to record. Refusing
+ * such a request would deny every unenrolled resource in every existing
+ * deployment on the day this shipped, and silently reserving against a
+ * position that does not exist would be worse.
+ *
+ * The boundary is per-resource and one-way, exactly as enrolment already is:
+ * the moment a resource has any position at all, every conserving
+ * authorization over it must acquire a commitment, including for rights nobody
+ * was bootstrapped into — those fail closed.
+ */
+export type AcquireGovernedAuthorityReservationOutcome =
+  /** Capacity was committed. `replayed` distinguishes "committed now" from "already committed" without comparing availability. */
+  | { readonly outcome: 'reserved'; readonly reservation: GovernedAuthorityReservation; readonly replayed: boolean }
+  /** The resource is not enrolled in right-scoped authority. Nothing was committed, and nothing needed to be. */
+  | { readonly outcome: 'resource_not_enrolled' };
+
+/** Why a still-active reservation is being ended without the authority ever having moved. Both are terminal and both restore availability; they are kept apart because "the authorization was withdrawn" and "the artifact was never issued" are different governance facts. */
+export type GovernedAuthorityReservationReleaseReason =
+  /** The authorization artifact was revoked, cancelled, or never came into existence — including the compensation path when mandate persistence failed after the capacity was committed. */
+  | 'authorization_ended'
+  /** A privileged administrative withdrawal. Requires a system context. */
+  | 'administrative';
+
+export interface ReleaseGovernedAuthorityReservationInput {
+  readonly tenantId: string;
+  readonly reservationId: string;
+  readonly reason: GovernedAuthorityReservationReleaseReason;
+  readonly releasedAt?: string;
+}
+
+/** The tuple availability is asked about. Identical in shape to the coverage query's identity fields, so one identity rule is learned once. */
+export interface GovernedAuthorityAvailabilityQuery {
+  readonly tenantId: string;
+  readonly holderRef: string;
+  readonly resource: GovernedAuthorityResourceRef;
+  readonly governedRight: GovernedRightType;
+  readonly at: string;
 }

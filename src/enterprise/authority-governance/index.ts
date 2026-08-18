@@ -24,13 +24,18 @@ export { AuthorityGovernanceError, isAuthorityGovernanceError } from './errors.j
 export type { AuthorityGovernanceErrorCode } from './errors.js';
 
 export type {
+  AcquireGovernedAuthorityReservationInput,
+  AcquireGovernedAuthorityReservationOutcome,
   ApplyGovernedAuthorityTransitionInput,
   ApplyGovernedAuthorityTransitionOutcome,
   AuthorityGovernanceContext,
   BootstrapGovernedAuthorityInput,
+  GovernedAuthorityAvailabilityQuery,
   GovernedAuthorityProvenance,
+  GovernedAuthorityReservationReleaseReason,
   GovernedAuthorityResourceRef,
   GovernedAuthorityStoreHealth,
+  ReleaseGovernedAuthorityReservationInput,
 } from './contracts.js';
 
 export {
@@ -43,6 +48,14 @@ export {
 export type { GovernedAuthorityStore } from './authority-store.js';
 
 export { assertTransitionChain, assertTransitionIntegrity, assertPositionIntegrity } from './lifecycle.js';
+
+export {
+  assertReservationIntegrity,
+  computeAvailability,
+  computeReservationDigest,
+  governedActionCommitsAuthority,
+  GOVERNED_AUTHORITY_CONSERVING_ACTIONS,
+} from './reservation-lifecycle.js';
 
 export { createInMemoryGovernedAuthorityStore, GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION } from './in-memory-authority-store.js';
 export type { CreateInMemoryGovernedAuthorityStoreOptions } from './in-memory-authority-store.js';

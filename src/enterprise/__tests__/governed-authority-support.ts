@@ -39,7 +39,12 @@ import { createInMemoryTokenizationMandateStore } from '../tokenization-governan
 import { createTokenizationGovernanceService, type TokenizationGovernanceService } from '../tokenization-governance/service.js';
 import { createInMemoryTransferMandateStore } from '../transfer-governance/in-memory-mandate-store.js';
 import type { TransferMandateStore } from '../transfer-governance/mandate-store.js';
-import { createTransferGovernanceService, type RecordTransferExecutionRequest, type TransferGovernanceService } from '../transfer-governance/service.js';
+import {
+  createTransferGovernanceService,
+  type RecordTransferExecutionRequest,
+  type TransferAuthorityPort,
+  type TransferGovernanceService,
+} from '../transfer-governance/service.js';
 
 /**
  * One seeded world in which **all four governed actions run over one Kernel,
@@ -188,6 +193,17 @@ export interface GovernedAuthorityWorldOverrides {
   readonly unenrolledResourcePolicy?: UnenrolledResourcePolicy;
   /** Omits the transfer service's authority store, so executions record evidence and move no authority — the pre-foundation behaviour, kept reachable for the before/after comparison. */
   readonly withoutTransferAuthorityTransition?: boolean;
+  /**
+   * Substitutes the port the transfer service reaches governed authority
+   * through, so a test can fail one operation and leave the rest real.
+   *
+   * For exercising the seam between two durable stores that cannot share a
+   * transaction — the one place a partial failure is genuinely possible — and
+   * nothing else. It is a fault injector, not a policy switch: a test that used
+   * it to make a governed request succeed would be testing its own double
+   * rather than the runtime.
+   */
+  readonly transferAuthorityPort?: TransferAuthorityPort;
   /**
    * Configures the Kernel's holder-bound representation provider.
    *
@@ -425,7 +441,9 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
     transfer: createTransferGovernanceService({
       ...shared,
       store: transferStore,
-      ...(overrides.withoutTransferAuthorityTransition === true ? {} : { authorityStore }),
+      ...(overrides.withoutTransferAuthorityTransition === true
+        ? {}
+        : { authorityStore: overrides.transferAuthorityPort ?? authorityStore }),
     }),
     license: createLicenseGovernanceService({ ...shared, store: createInMemoryLicenseMandateStore({ now: () => GA_NOW }) }),
     tokenization: createTokenizationGovernanceService({ ...shared, store: createInMemoryTokenizationMandateStore({ now: () => GA_NOW }) }),

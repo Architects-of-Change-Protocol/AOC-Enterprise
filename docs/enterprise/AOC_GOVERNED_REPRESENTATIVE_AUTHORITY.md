@@ -123,6 +123,23 @@ more, the representative may exercise more, up to the unchanged ceiling. A
 representation is a ceiling over dynamically resolved holder state, never a
 snapshot of holdings and never a lien on them.
 
+That remains exactly true now that `GovernedAuthorityReservation` exists, and
+the two answer different questions:
+
+> **Representative authority** answers "*who* may exercise Holder H's
+> authority?"
+>
+> **Reservation** answers "*how much* of H's authority remains available for a
+> new commitment?"
+
+A representation still reserves nothing at the moment it is granted. What
+reserves is a governed authorization actually being issued — and when one is,
+the commitment is recorded against **the holder**, never against the
+representative. Two independent representatives of the same holder therefore
+draw on one pool: a 3 000 bp commitment made through R leaves 2 000 bp for R2,
+even though the two bindings know nothing of each other. See
+`AOC_GOVERNED_AUTHORITY_RESERVATION.md`.
+
 `unbounded` is the deliberate "no numeric limit of *my own*" ceiling. It is not
 "100%" and not "everything forever": the holder's current position remains the
 hard cap at every instant. It is a discriminated variant rather than an omitted
