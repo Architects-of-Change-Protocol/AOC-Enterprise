@@ -131,14 +131,27 @@ the two answer different questions:
 >
 > **Reservation** answers "*how much* of H's authority remains available for a
 > new commitment?"
+>
+> **Encumbrance** answers "*how much* of H's authority stays constrained after a
+> governed action has already executed?"
 
-A representation still reserves nothing at the moment it is granted. What
-reserves is a governed authorization actually being issued — and when one is,
-the commitment is recorded against **the holder**, never against the
-representative. Two independent representatives of the same holder therefore
-draw on one pool: a 3 000 bp commitment made through R leaves 2 000 bp for R2,
-even though the two bindings know nothing of each other. See
-`AOC_GOVERNED_AUTHORITY_RESERVATION.md`.
+A representation still reserves nothing at the moment it is granted, and
+constrains nothing at any moment. What reserves is a governed authorization
+actually being issued; what constrains is one actually executing — and in both
+cases the record is against **the holder**, never against the representative,
+who acquires nothing and is constrained by nothing. Two independent
+representatives of the same holder therefore draw on one pool, both before and
+after execution: a 3 000 bp commitment made through R leaves 2 000 bp for R2,
+and so does a 3 000 bp constraint left behind by R's completed
+collateralization, even though the two bindings know nothing of each other. See
+`AOC_GOVERNED_AUTHORITY_RESERVATION.md` and
+`AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`.
+
+These are independent dimensions, and neither implies the other. A
+representation over an encumbered holder is exactly as valid as one over an
+unencumbered holder — the constraint bounds *how much*, never *who* — and a
+constraint confers no representation on the secured party, the executor or
+anyone else named anywhere near it.
 
 `unbounded` is the deliberate "no numeric limit of *my own*" ceiling. It is not
 "100%" and not "everything forever": the holder's current position remains the
@@ -396,8 +409,11 @@ See `AOC_DELEGATED_CAPABILITIES_DERIVED_AUTHORITY.md` and
 
 - **No `DELEGATE` governed action.** This is authority infrastructure, not a
   fifth domain action. See the ADR's "Future `DELEGATE` threshold".
-- **No generic reservation.** A ceiling is not a lien; execution-time
-  conservation remains the model.
+- **No generic reservation, and no encumbrance.** A ceiling is neither a
+  commitment nor a constraint: granting a representation neither reserves nor
+  encumbers anything, and revoking one neither releases nor discharges anything.
+  Those quantities live in `GovernedAuthorityReservation` and
+  `GovernedAuthorityEncumbrance`, against the holder.
 - **No revocation cascade onto issued mandates.** See the temporal boundary
   above.
 - **No representation on the position record.** A holder's authority state must

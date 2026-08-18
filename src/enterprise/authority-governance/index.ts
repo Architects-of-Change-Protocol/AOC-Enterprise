@@ -7,7 +7,9 @@
  * The two halves answer questions that must never be confused:
  *
  * ```
- * GovernedAuthorityStore        which party holds this governed right, and how much?
+ * GovernedAuthorityStore        which party holds this governed right, how much of it stands
+ *                               committed to a live authorization, and how much of it remains
+ *                               persistently constrained by one that already executed?
  * GovernedRepresentationStore   which party may exercise that holder's authority?
  * ```
  *
@@ -17,7 +19,11 @@
  *
  * See `docs/enterprise/AOC_GOVERNED_AUTHORITY.md`,
  * `docs/enterprise/AOC_GOVERNED_REPRESENTATIVE_AUTHORITY.md`,
- * `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md` and
+ * `docs/enterprise/AOC_GOVERNED_AUTHORITY_RESERVATION.md`,
+ * `docs/enterprise/AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`,
+ * `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`,
+ * `docs/architecture/ADR-GOVERNED-AUTHORITY-RESERVATION.md`,
+ * `docs/architecture/ADR-GOVERNED-AUTHORITY-ENCUMBRANCE.md` and
  * `docs/architecture/ADR-HOLDER-BOUND-REPRESENTATIVE-AUTHORITY.md`.
  */
 export { AuthorityGovernanceError, isAuthorityGovernanceError } from './errors.js';
@@ -35,6 +41,9 @@ export type {
   GovernedAuthorityReservationReleaseReason,
   GovernedAuthorityResourceRef,
   GovernedAuthorityStoreHealth,
+  RecordGovernedAuthorityEncumbranceInput,
+  RecordGovernedAuthorityEncumbranceOutcome,
+  ReleaseGovernedAuthorityEncumbranceInput,
   ReleaseGovernedAuthorityReservationInput,
 } from './contracts.js';
 
@@ -54,8 +63,18 @@ export {
   computeAvailability,
   computeReservationDigest,
   governedActionCommitsAuthority,
+  governedActionConservesAuthority,
   GOVERNED_AUTHORITY_CONSERVING_ACTIONS,
 } from './reservation-lifecycle.js';
+
+export {
+  assertEncumbranceIntegrity,
+  assertRemainingScopeCoversEncumbrances,
+  computeCapacity,
+  computeEncumbranceDigest,
+  governedActionEncumbersAuthority,
+  GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS,
+} from './encumbrance-lifecycle.js';
 
 export { createInMemoryGovernedAuthorityStore, GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION } from './in-memory-authority-store.js';
 export type { CreateInMemoryGovernedAuthorityStoreOptions } from './in-memory-authority-store.js';

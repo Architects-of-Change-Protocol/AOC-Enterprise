@@ -1,14 +1,13 @@
-import {
-  governedAuthorityReservationReducesAvailability,
-  type GovernedAuthorityAvailability,
-  type GovernedAuthorityPosition,
-  type GovernedAuthorityReservation,
+import type {
+  GovernedAuthorityAvailability,
+  GovernedAuthorityPosition,
+  GovernedAuthorityReservation,
 } from '@aoc-enterprise/governed-authority';
-import { governedRightsScopeSum, serializeGovernedRightsScope, type GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
+import { serializeGovernedRightsScope, type GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
 
 import { computeDigest } from '../governance-store/digest.js';
+import { computeCapacity, governedActionEncumbersAuthority } from './encumbrance-lifecycle.js';
 import { AuthorityGovernanceError } from './errors.js';
-import { subtractAuthorityScope } from './lifecycle.js';
 
 /**
  * The rules deciding what a reservation may be and when capacity is still
@@ -44,15 +43,22 @@ import { subtractAuthorityScope } from './lifecycle.js';
 //                                  there is no capacity for a reservation to
 //                                  protect.
 //
-//   COLLATERALIZE   NON-CONSERVING never calls the authority store either. Its
-//                                  `committedScope` accumulates *within one
-//                                  mandate*, and a reported release does not
-//                                  decrement it. What it creates is a
-//                                  long-lived encumbrance that outlives
-//                                  execution — which a pre-execution
-//                                  reservation cannot model, and must not
-//                                  pretend to. See the ADR, "Long-lived
-//                                  encumbrance boundary".
+//   COLLATERALIZE   COMMITTING,    still debits no position — Alice keeps her
+//                   NOT CONSERVING 5 000 bp — but executing it leaves a
+//                                  persistent constraint that outlives the
+//                                  mandate. Its `committedScope` accumulates
+//                                  only *within one mandate*, so two
+//                                  independent mandates could each commit the
+//                                  same authority; that measured hole is what
+//                                  `GovernedAuthorityEncumbrance` closes.
+//                                  Reservation was withheld from it in the
+//                                  previous phase because a reservation
+//                                  released at execution would free capacity at
+//                                  exactly the moment the constraint became
+//                                  real. With a persistent sink to hand the
+//                                  commitment to, that objection no longer
+//                                  holds: the reservation is not released at
+//                                  execution, it becomes `'encumbered'`.
 //
 //   LICENSE         NON-CONSERVING never calls the authority store, and
 //                                  frequently carries no scope at all. An
@@ -62,8 +68,10 @@ import { subtractAuthorityScope } from './lifecycle.js';
 //                                  ceilings, duration) is action-local policy,
 //                                  not holder-authority accounting.
 //
-// A deployment that later makes one of the other three conserving adds it here,
-// in one place, alongside the evidence for the change.
+// A deployment that later makes one of the other two commit authority adds it
+// to the appropriate list — here if it debits a position, in
+// `GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS` if it constrains one — in one place,
+// alongside the evidence for the change.
 // ---------------------------------------------------------------------------
 
 /** The capability vocabulary `GovernedAuthorityBasis`'s `governed-execution` variant already uses. */
@@ -73,8 +81,22 @@ export const GOVERNED_AUTHORITY_CONSERVING_ACTIONS: readonly string[] = ['transf
  * Whether authorizing this governed action commits a finite quantity of the
  * holder's underlying authority, and therefore requires a reservation before
  * the authorization artifact may exist.
+ *
+ * The union of the two ways a commitment can end up being real: the action
+ * debits the position (`conserving`), or it leaves a persistent constraint
+ * over it (`encumbering`). Both make the authorized-but-not-yet-executed scope
+ * finite capacity another authorization must not also promise, which is
+ * precisely what a reservation protects. The two lists stay separate because
+ * they decide different things at execution time — whether the reservation
+ * becomes `'consumed'` against a debited position, or `'encumbered'` against
+ * an untouched one.
  */
 export function governedActionCommitsAuthority(action: string): boolean {
+  return GOVERNED_AUTHORITY_CONSERVING_ACTIONS.includes(action) || governedActionEncumbersAuthority(action);
+}
+
+/** Whether executing this governed action debits a `GovernedAuthorityPosition`. Distinct from committing capacity: `COLLATERALIZE` commits without conserving. */
+export function governedActionConservesAuthority(action: string): boolean {
   return GOVERNED_AUTHORITY_CONSERVING_ACTIONS.includes(action);
 }
 
@@ -83,80 +105,26 @@ export function governedActionCommitsAuthority(action: string): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Sums the reservations that still reduce availability, or `null` when there
- * are none.
- *
- * `null` rather than a zero: a zero scope would have to name a kind and, for
- * unitized quantities, a denomination — and inventing one for "nothing is
- * committed" is exactly the synthetic quantity this model refuses elsewhere.
- * Callers treat `null` as "the whole position is available", which is the same
- * statement without the fabrication.
- */
-export function sumActiveReservations(
-  reservations: readonly GovernedAuthorityReservation[],
-  at: string,
-): GovernedRightsScope | null | 'incompatible' {
-  let total: GovernedRightsScope | null = null;
-  for (const reservation of reservations) {
-    if (!governedAuthorityReservationReducesAvailability(reservation, at)) continue;
-    if (total === null) {
-      total = reservation.scope;
-      continue;
-    }
-    const next = governedRightsScopeSum(total, reservation.scope);
-    if (next === null) return 'incompatible';
-    total = next;
-  }
-  return total;
-}
-
-/**
  * The availability verdict for one position and the commitments standing
- * against it.
+ * against it, with no persistent constraints in play.
+ *
+ * A thin delegation to `computeCapacity`, deliberately: capacity is now a
+ * function of positions, reservations *and* encumbrances together, and having
+ * two implementations of "how much is left" — one that knows about persistent
+ * constraints and one that does not — is exactly how a caller ends up
+ * committing authority a constraint already accounts for. There is one
+ * computation; this name remains for the question that genuinely has no
+ * encumbrances to consider.
  *
  * Never throws: availability is a *fact* about state, and an inconsistent
- * state is one of the facts it can report. Turning `overcommitted` into an
- * exception here would make an invariant breach indistinguishable from an
- * unreadable store, and the two need different responses.
+ * state is one of the facts it can report.
  */
 export function computeAvailability(
   position: GovernedAuthorityPosition | null,
   reservations: readonly GovernedAuthorityReservation[],
   at: string,
 ): GovernedAuthorityAvailability {
-  if (position === null) return { outcome: 'no_authority' };
-
-  const committed = sumActiveReservations(reservations, at);
-  if (committed === 'incompatible') {
-    return { outcome: 'incompatible', positionId: position.id, held: serializeGovernedRightsScope(position.scope) };
-  }
-  const held = serializeGovernedRightsScope(position.scope);
-  if (committed === null) return { outcome: 'available', positionId: position.id, held, available: held };
-
-  let available: GovernedRightsScope;
-  try {
-    available = subtractAuthorityScope(position.scope, committed, { positionId: position.id });
-  } catch (error) {
-    // The two ways the subtraction refuses are two different facts, and both
-    // must reach the caller as facts rather than as a thrown store failure:
-    // incommensurable quantities were never comparable, while a shortfall means
-    // more capacity stands committed than the holder holds — an invariant
-    // breach this runtime has no path to, and one that must be surfaced rather
-    // than clamped to zero.
-    const code = error instanceof AuthorityGovernanceError ? error.code : undefined;
-    if (code === 'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE') {
-      return { outcome: 'overcommitted', positionId: position.id, held, committed: serializeGovernedRightsScope(committed) };
-    }
-    return { outcome: 'incompatible', positionId: position.id, held };
-  }
-
-  return {
-    outcome: 'available',
-    positionId: position.id,
-    held,
-    committed: serializeGovernedRightsScope(committed),
-    available: serializeGovernedRightsScope(available),
-  };
+  return computeCapacity(position, reservations, [], at);
 }
 
 // ---------------------------------------------------------------------------

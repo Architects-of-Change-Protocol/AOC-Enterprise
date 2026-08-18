@@ -60,6 +60,7 @@ export { createSqliteCollateralizationMandateStore } from './sqlite-mandate-stor
 export type { CreateSqliteCollateralizationMandateStoreOptions } from './sqlite-mandate-store.js';
 
 export { createCollateralizationGovernanceService } from './service.js';
+export type { CollateralizationAuthorityPort } from './service.js';
 export type {
   CollateralizationGovernanceService,
   CollateralizationGovernanceServiceDependencies,

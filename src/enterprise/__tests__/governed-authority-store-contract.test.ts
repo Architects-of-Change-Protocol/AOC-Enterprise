@@ -97,6 +97,7 @@ function reservation(
     governedRight?: typeof ECONOMIC | typeof USAGE;
     expiresAt?: string;
     idempotencyKey?: string;
+    action?: string;
   } = {},
 ) {
   return {
@@ -105,13 +106,49 @@ function reservation(
     resource: overrides.resource ?? ASSET,
     governedRight: overrides.governedRight ?? ECONOMIC,
     scope,
-    action: 'transfer',
+    action: overrides.action ?? 'transfer',
     sourceRequestRef: `request-for-${mandateRef}`,
     sourceDecisionRef: `decision-for-${mandateRef}`,
     sourceMandateRef: mandateRef,
     effectiveFrom: NOW,
     expiresAt: overrides.expiresAt ?? MUCH_LATER,
     ...(overrides.idempotencyKey !== undefined ? { idempotencyKey: overrides.idempotencyKey } : {}),
+  };
+}
+
+/**
+ * A persistent constraint, named by the execution that produced it.
+ *
+ * `sourceAction` defaults to `'collateralize'` because that is the one action
+ * classified as leaving a constraint behind; the tests that pass anything else
+ * are asserting that nothing else can.
+ */
+function encumbrance(
+  sourceExecutionRef: string,
+  sourceMandateRef: string,
+  holderRef: string,
+  scope: GovernedRightsScope,
+  overrides: {
+    tenantId?: string;
+    resource?: { kind: string; id: string };
+    governedRight?: typeof ECONOMIC | typeof USAGE;
+    sourceAction?: string;
+    consumesReservationsForMandateRef?: string;
+  } = {},
+) {
+  return {
+    tenantId: overrides.tenantId ?? TENANT_A,
+    holderRef,
+    resource: overrides.resource ?? ASSET,
+    governedRight: overrides.governedRight ?? ECONOMIC,
+    scope,
+    sourceAction: overrides.sourceAction ?? 'collateralize',
+    sourceMandateRef,
+    sourceExecutionRef,
+    effectiveFrom: NOW,
+    ...(overrides.consumesReservationsForMandateRef !== undefined
+      ? { consumesReservationsForMandateRef: overrides.consumesReservationsForMandateRef }
+      : {}),
   };
 }
 
@@ -1045,6 +1082,620 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
         });
       });
     }
+
+    // -------------------------------------------------------------------
+    // Persistent constraints. Everything a reservation is not: created by a
+    // completed execution rather than by an authorization, outliving the
+    // mandate that produced it, and ended only by a privileged act.
+    // -------------------------------------------------------------------
+
+    describe('encumbrance', () => {
+      it('records a constraint from a trusted execution, and leaves the position exactly where it was', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        const outcome = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(outcome.outcome === 'encumbered');
+        assert.equal(outcome.replayed, false);
+        assert.equal(outcome.encumbrance.status, 'active');
+        assert.equal(outcome.encumbrance.holderRef, 'party-alice');
+        assert.equal(outcome.encumbrance.sourceExecutionRef, 'exec-1');
+        assert.equal(outcome.encumbrance.sourceMandateRef, 'mandate-1');
+        assert.deepEqual(outcome.encumbrance.scope, proportional(4_000));
+        // No expiry, deliberately. The mandate's expiry bounds how long an
+        // executor may act; it says nothing about how long the arrangement that
+        // executor created continues to exist.
+        assert.ok(!('expiresAt' in outcome.encumbrance));
+
+        // The whole point: constraining is not moving. Alice still holds every
+        // basis point she held before.
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(5_000));
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.held, proportional(5_000), 'held is unchanged');
+        assert.deepEqual(capacity.encumbered, proportional(4_000));
+        assert.deepEqual(capacity.available, proportional(1_000), 'but only the unconstrained part is committable');
+        await store.close();
+      });
+
+      it('refuses a constraint that no encumbering action produced — there is no self-asserted encumbrance path', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        // The exact shape a caller would use to claim "my authority is
+        // encumbered, take my word for it". Every non-encumbering action is
+        // refused, including the one that genuinely moves authority.
+        for (const action of ['transfer', 'tokenize', 'license', 'encumber', 'lien']) {
+          assert.equal(
+            await errorCode(() => store.recordEncumbrance(ADMIN, encumbrance(`exec-${action}`, 'mandate-x', 'party-alice', proportional(1_000), { sourceAction: action }))),
+            'GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID',
+            `'${action}' must not be able to constrain authority`,
+          );
+        }
+        // And a constraint with no execution behind it at all.
+        assert.equal(
+          await errorCode(() => store.recordEncumbrance(ADMIN, encumbrance('', 'mandate-x', 'party-alice', proportional(1_000)))),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID',
+        );
+        assert.equal(
+          await errorCode(() => store.recordEncumbrance(ADMIN, encumbrance('exec-orphan', '', 'party-alice', proportional(1_000)))),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID',
+        );
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.available, proportional(5_000), 'nothing was constrained by any of it');
+        await store.close();
+      });
+
+      it('is idempotent on the execution that produced it: a retry restates one constraint rather than adding a second', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        const first = await store.recordEncumbrance(ADMIN, encumbrance('exec-retry', 'mandate-1', 'party-alice', proportional(4_000)));
+        const again = await store.recordEncumbrance(ADMIN, encumbrance('exec-retry', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(first.outcome === 'encumbered' && again.outcome === 'encumbered');
+        assert.equal(again.replayed, true);
+        assert.equal(again.encumbrance.id, first.encumbrance.id);
+
+        // The property that matters: capacity was constrained once, not twice.
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.encumbered, proportional(4_000));
+        assert.deepEqual(capacity.available, proportional(1_000));
+        await store.close();
+      });
+
+      it('refuses a replay that restates the same execution under different terms', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-bob', proportional(5_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-conflict', 'mandate-1', 'party-alice', proportional(4_000)));
+
+        for (const [label, input] of [
+          ['a different quantity', encumbrance('exec-conflict', 'mandate-1', 'party-alice', proportional(2_000))],
+          ['a different holder', encumbrance('exec-conflict', 'mandate-1', 'party-bob', proportional(4_000))],
+          ['a different mandate', encumbrance('exec-conflict', 'mandate-2', 'party-alice', proportional(4_000))],
+          ['a different resource', encumbrance('exec-conflict', 'mandate-1', 'party-alice', proportional(4_000), { resource: OTHER_ASSET })],
+        ] as const) {
+          assert.equal(await errorCode(() => store.recordEncumbrance(ADMIN, input)), 'GOVERNED_AUTHORITY_ENCUMBRANCE_CONFLICT', label);
+        }
+        await store.close();
+      });
+
+      it('constrains only the holder, the resource and the right it names', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-bob', proportional(5_000));
+        await seed(store, 'party-alice', proportional(5_000), { right: USAGE });
+        await seed(store, 'party-alice', proportional(5_000), { resource: OTHER_ASSET });
+
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-scoped', 'mandate-1', 'party-alice', proportional(4_000)));
+
+        for (const [label, query] of [
+          ['another holder', availabilityOf('party-bob')],
+          ['another right of the same resource', availabilityOf('party-alice', { governedRight: USAGE })],
+          ['the same right of another resource', availabilityOf('party-alice', { resource: OTHER_ASSET })],
+        ] as const) {
+          const untouched = await store.resolveAvailability(ADMIN, query);
+          assert.ok(untouched.outcome === 'available');
+          assert.deepEqual(untouched.available, proportional(5_000), `${label} is unconstrained`);
+          assert.equal(untouched.encumbered, undefined, `and reports no constraint at all, rather than a synthesized zero`);
+        }
+        await store.close();
+      });
+
+      it('aggregates several constraints over one right, and refuses the one that would exceed what is left', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-a', 'mandate-a', 'party-alice', proportional(3_000)));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-b', 'mandate-b', 'party-alice', proportional(2_000)));
+
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.encumbered, proportional(5_000), 'the two aggregate');
+        assert.deepEqual(capacity.available, proportional(5_000));
+
+        // The exact boundary, asserted from both sides.
+        assert.equal(
+          await errorCode(() => store.recordEncumbrance(ADMIN, encumbrance('exec-over', 'mandate-c', 'party-alice', proportional(5_001)))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        const exact = await store.recordEncumbrance(ADMIN, encumbrance('exec-exact', 'mandate-c', 'party-alice', proportional(5_000)));
+        assert.ok(exact.outcome === 'encumbered');
+        await store.close();
+      });
+
+      it('counts a live commitment and a standing constraint together', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-a', 'mandate-a', 'party-alice', proportional(4_000)));
+        await store.acquireReservation(ADMIN, reservation('mandate-b', 'party-alice', proportional(3_000)));
+
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.encumbered, proportional(4_000));
+        assert.deepEqual(capacity.committed, proportional(3_000));
+        assert.deepEqual(capacity.available, proportional(3_000), 'both subtract, and neither substitutes for the other');
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-c', 'party-alice', proportional(3_001)))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        await store.close();
+      });
+
+      it('releases only from a privileged context, and a release is not a credit', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+
+        // A tenant caller may read its own state and may not free it. There is
+        // no basis a request path could supply, so there is no context a
+        // request path could reach this from.
+        assert.equal(
+          await errorCode(() => store.releaseEncumbrance(TENANT_A_CONTEXT, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative' })),
+          'GOVERNED_AUTHORITY_BOOTSTRAP_NOT_PERMITTED',
+        );
+
+        const released = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+        assert.equal(released.status, 'released');
+        assert.equal(released.releaseBasis, 'administrative');
+        assert.equal(released.releasedAt, LATER);
+
+        // The capacity returns and the position does not change. Alice held
+        // 5 000 throughout: before, during and after.
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(5_000));
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice', { at: LATER }));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.held, proportional(5_000));
+        assert.equal(capacity.encumbered, undefined);
+        assert.deepEqual(capacity.available, proportional(5_000));
+        await store.close();
+      });
+
+      it('releasing twice returns the record unchanged rather than returning the capacity twice', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+
+        const first = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+        const second = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: MUCH_LATER });
+        assert.equal(second.releasedAt, first.releasedAt, 'the audit stays honest about when the release actually happened');
+
+        // Safe by construction anyway: capacity is derived from the constraints
+        // still active, never from a counter something could decrement twice.
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice', { at: MUCH_LATER }));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.available, proportional(5_000), 'and never 9 000');
+        await store.close();
+      });
+
+      it('keeps a released constraint readable — the history is not deleted', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+        await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+
+        assert.equal((await store.getEncumbrance(ADMIN, TENANT_A, created.encumbrance.id))?.status, 'released');
+        assert.equal((await store.listEncumbrancesByMandateRef(ADMIN, TENANT_A, 'mandate-1')).length, 1);
+        assert.equal((await store.listActiveEncumbrances(ADMIN, availabilityOf('party-alice', { at: LATER }))).length, 0, 'but it no longer constrains anything');
+        await store.close();
+      });
+
+      it('keeps tenants apart on every operation', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-alice', proportional(5_000), { tenantId: TENANT_B });
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+
+        // Reading across the boundary is refused, and an id from another tenant
+        // reads as absent rather than as a refusal, so identifiers cannot be
+        // probed by telling "denied" apart from "no such thing".
+        assert.equal(await errorCode(() => store.getEncumbrance(TENANT_B_CONTEXT, TENANT_A, created.encumbrance.id)), 'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION');
+        assert.equal(await store.getEncumbrance(TENANT_B_CONTEXT, TENANT_B, created.encumbrance.id), null);
+        assert.equal(
+          await errorCode(() => store.releaseEncumbrance(ADMIN, { tenantId: TENANT_B, encumbranceId: created.encumbrance.id, basis: 'administrative' })),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_NOT_FOUND',
+        );
+        assert.equal(
+          await errorCode(() => store.recordEncumbrance(TENANT_B_CONTEXT, encumbrance('exec-cross', 'mandate-x', 'party-alice', proportional(1_000)))),
+          'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION',
+        );
+
+        // And Tenant B's own capacity is untouched by Tenant A's constraint.
+        const tenantB = await store.resolveAvailability(TENANT_B_CONTEXT, availabilityOf('party-alice', { tenantId: TENANT_B }));
+        assert.ok(tenantB.outcome === 'available');
+        assert.deepEqual(tenantB.available, proportional(5_000));
+        await store.close();
+      });
+
+      it('reports a state where constraints outrun the position rather than clamping it to zero', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-a', 'mandate-a', 'party-alice', proportional(6_000)));
+        // Alice's position shrinks by a route that does not consult
+        // constraints: a movement out of a *different* right cannot do it, so
+        // this is reached the only way it can be — the transferee giving some
+        // back is fine, but here we simulate the inconsistency an import, a
+        // restore or a tampered row could produce, by constraining and then
+        // moving what the structural guard would normally refuse.
+        assert.equal(
+          await errorCode(() => store.applyTransition(ADMIN, movement('exec-strand', 'party-alice', 'party-bob', proportional(6_000)))),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_UNCOVERED',
+          'the guard is what makes overencumbrance unreachable through the runtime',
+        );
+        await store.close();
+      });
+
+      it('an unenrolled resource has nothing to constrain, and says so rather than refusing', async () => {
+        const store = await open();
+        // No position anywhere for this resource: the deployment has not
+        // enrolled it, exactly as `acquireReservation` treats the same case.
+        const outcome = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.equal(outcome.outcome, 'resource_not_enrolled');
+        await store.close();
+      });
+
+      it('a resource that is enrolled but holds nothing for this holder fails closed', async () => {
+        const store = await open();
+        await seed(store, 'party-bob', proportional(5_000));
+        assert.equal(
+          await errorCode(() => store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)))),
+          'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE',
+        );
+        await store.close();
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // The handoff. Two phases of one commitment, never two commitments.
+    // -------------------------------------------------------------------
+
+    describe('reservation to encumbrance handoff', () => {
+      it('hands the commitment over with no gap and no double count', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        // T0 — nothing committed, nothing constrained.
+        const t0 = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(t0.outcome === 'available');
+        assert.deepEqual(t0.available, proportional(5_000));
+
+        // T1 — the authorization exists and holds capacity.
+        const acquired = await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+        assert.ok(acquired.outcome === 'reserved');
+        const t1 = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(t1.outcome === 'available');
+        assert.deepEqual(t1.committed, proportional(4_000));
+        assert.equal(t1.encumbered, undefined);
+        assert.deepEqual(t1.available, proportional(1_000));
+
+        // T2 — the execution is confirmed and the commitment changes phase.
+        const handed = await store.recordEncumbrance(
+          ADMIN,
+          encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000), { consumesReservationsForMandateRef: 'mandate-1' }),
+        );
+        assert.ok(handed.outcome === 'encumbered');
+        assert.equal(handed.encumbrance.sourceReservationRef, acquired.reservation.id, 'the constraint names the commitment it took over from');
+
+        const t2 = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(t2.outcome === 'available');
+        assert.deepEqual(t2.held, proportional(5_000), 'the position never moved');
+        assert.equal(t2.committed, undefined, 'the commitment is terminal');
+        assert.deepEqual(t2.encumbered, proportional(4_000), 'and the constraint now accounts for it');
+        // The single most important number in this suite. Not 5 000 (a gap,
+        // which would let a competitor take the same authority) and not 1 000
+        // less again (a double count, which would strand capacity that was only
+        // ever promised once).
+        assert.deepEqual(t2.available, proportional(1_000));
+
+        // The commitment reached a terminal state that says what happened to
+        // it: not `'consumed'` (nothing was debited) and not `'released'`
+        // (nothing was returned).
+        assert.equal((await store.getReservation(ADMIN, TENANT_A, acquired.reservation.id))?.status, 'encumbered');
+        await store.close();
+      });
+
+      it('refuses to reopen a commitment that became a constraint', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const acquired = await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+        assert.ok(acquired.outcome === 'reserved');
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000), { consumesReservationsForMandateRef: 'mandate-1' }));
+
+        assert.equal(
+          await errorCode(() => store.releaseReservation(ADMIN, { tenantId: TENANT_A, reservationId: acquired.reservation.id, reason: 'authorization_ended' })),
+          'GOVERNED_AUTHORITY_RESERVATION_CONFLICT',
+        );
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.available, proportional(1_000), 'and the authority stayed constrained');
+        await store.close();
+      });
+
+      it('retrying the handoff neither constrains twice nor frees capacity twice', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          await store.recordEncumbrance(
+            ADMIN,
+            encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000), { consumesReservationsForMandateRef: 'mandate-1' }),
+          );
+        }
+
+        assert.equal((await store.listEncumbrancesByMandateRef(ADMIN, TENANT_A, 'mandate-1')).length, 1);
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.available, proportional(1_000));
+        await store.close();
+      });
+
+      it('keeps a partially-executed mandate’s remaining authorization protected while counting the executed part once', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+
+        // The first instalment of a mandate whose terms permit several. The
+        // reservation must not simply vanish: the 3 000 this mandate may still
+        // execute has to stay protected, or a competitor could take it and the
+        // second instalment would arrive with nowhere to be recorded.
+        await store.recordEncumbrance(
+          ADMIN,
+          encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(1_000), { consumesReservationsForMandateRef: 'mandate-1' }),
+        );
+
+        const midway = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(midway.outcome === 'available');
+        assert.deepEqual(midway.encumbered, proportional(1_000), 'the instalment that landed');
+        assert.deepEqual(midway.committed, proportional(3_000), 'net of it, the mandate still holds what it may still execute');
+        assert.deepEqual(midway.available, proportional(1_000), 'and the same 1 000 is free as before — the commitment was not counted twice');
+
+        // The last instalment closes the mandate out.
+        await store.recordEncumbrance(
+          ADMIN,
+          encumbrance('exec-2', 'mandate-1', 'party-alice', proportional(3_000), { consumesReservationsForMandateRef: 'mandate-1' }),
+        );
+        const done = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(done.outcome === 'available');
+        assert.equal(done.committed, undefined, 'now the commitment is terminal');
+        assert.deepEqual(done.encumbered, proportional(4_000));
+        assert.deepEqual(done.available, proportional(1_000));
+        await store.close();
+      });
+
+      it('refuses the capacity question outright when a mandate’s commitment and constraint are not commensurable', async () => {
+        // Unreachable through the runtime — an execution's scope is validated
+        // against its mandate's before the evidence is written — and worth
+        // pinning anyway, because the two ways a residual can fail to exist
+        // mean opposite things. A commitment wholly overtaken by its own
+        // constraints has nothing left to protect and may be skipped, since
+        // those constraints are counted in full separately. A commitment whose
+        // constraint is not a comparable quantity has no derivable residual at
+        // all, and skipping *that* would silently free exactly the capacity it
+        // holds.
+        const store = await open();
+        await seed(store, 'party-alice', unitized(100));
+        await store.acquireReservation(ADMIN, reservation('mandate-units', 'party-alice', unitized(40), { action: 'collateralize' }));
+
+        // A proportional constraint under the same mandate: a shape the
+        // enforced path cannot produce, and the shape an import or a restore
+        // could.
+        assert.equal(
+          await errorCode(() =>
+            store.recordEncumbrance(
+              ADMIN,
+              encumbrance('exec-mixed', 'mandate-units', 'party-alice', proportional(4_000), { consumesReservationsForMandateRef: 'mandate-units' }),
+            ),
+          ),
+          'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
+          'and the constraint is refused at the door rather than being allowed to poison the accounting',
+        );
+
+        // The commitment is untouched, and capacity still answers cleanly.
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.committed, unitized(40));
+        assert.deepEqual(capacity.available, unitized(60));
+        await store.close();
+      });
+
+      it('a competing acquisition never sees the handed-over capacity as free', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+
+        // Before the handoff the competitor loses to the commitment; after it,
+        // to the constraint. There is no third moment in between, because the
+        // handoff is one commit section.
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-2', 'party-alice', proportional(4_000)))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        await store.recordEncumbrance(
+          ADMIN,
+          encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000), { consumesReservationsForMandateRef: 'mandate-1' }),
+        );
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-3', 'party-alice', proportional(4_000)))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        await store.close();
+      });
+    });
+
+
+    describe('encumbrance — concurrency', () => {
+      it('lets exactly one of two incompatible concurrent constraints stand', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+
+        // 4000 + 4000 against 5000, from two independent executions. Both
+        // standing is the persistent form of the vulnerability this layer
+        // closes; neither standing would be a bug of its own.
+        const results = await Promise.allSettled([
+          store.recordEncumbrance(ADMIN, encumbrance('exec-race-a', 'mandate-race-a', 'party-alice', proportional(4_000))),
+          store.recordEncumbrance(ADMIN, encumbrance('exec-race-b', 'mandate-race-b', 'party-alice', proportional(4_000))),
+        ]);
+        assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1, 'exactly one, never two and never zero');
+
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available', 'never overencumbered, whichever won');
+        assert.deepEqual(capacity.encumbered, proportional(4_000));
+        await store.close();
+      });
+
+      it('never lets an acquisition slip through while a commitment is changing phase', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+
+        // The central race. If the handoff were two steps — end the commitment,
+        // then write the constraint — a competitor arriving between them would
+        // be told the whole 5 000 is free. It is one commit section, so there is
+        // no between.
+        const results = await Promise.allSettled([
+          store.recordEncumbrance(
+            ADMIN,
+            encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000), { consumesReservationsForMandateRef: 'mandate-1' }),
+          ),
+          store.acquireReservation(ADMIN, reservation('mandate-2', 'party-alice', proportional(4_000))),
+        ]);
+        assert.equal(results[0]?.status, 'fulfilled', 'the handoff itself always succeeds');
+        assert.equal(results[1]?.status, 'rejected', 'and the competitor never sees the capacity as free');
+
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.available, proportional(1_000), 'the quantity was counted exactly once throughout');
+        await store.close();
+      });
+
+      it('leaves a coherent state when a release and a fresh acquisition race', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+
+        // Either ordering is correct; what must never happen is both the
+        // constraint standing and the capacity being handed out.
+        const results = await Promise.allSettled([
+          store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative' }),
+          store.acquireReservation(ADMIN, reservation('mandate-2', 'party-alice', proportional(4_000))),
+        ]);
+        assert.equal(results[0]?.status, 'fulfilled', 'the privileged release always completes');
+
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        const acquired = results[1]?.status === 'fulfilled';
+        // The constraint is gone either way; the only question is whether the
+        // competitor got in before or after, and both answers are consistent.
+        assert.deepEqual(capacity.available, acquired ? proportional(1_000) : proportional(5_000));
+        await store.close();
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // Structural consistency. Not a business rule about what may be moved.
+    // -------------------------------------------------------------------
+
+    describe('structural consistency with active constraints', () => {
+      it('permits a movement the holder can still cover, and refuses the one that would strand a constraint', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+
+        // Emphatically not "encumbered authority cannot move". Alice keeps
+        // 4 500, which still covers the 4 000 standing over her, so this moves.
+        await store.applyTransition(ADMIN, movement('exec-small', 'party-alice', 'party-bob', proportional(500)));
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(4_500));
+
+        // This one would leave her with 2 500 and a 4 000 constraint referring
+        // to authority she no longer possesses. Refused — structurally, not
+        // commercially.
+        assert.equal(
+          await errorCode(() => store.applyTransition(ADMIN, movement('exec-big', 'party-alice', 'party-bob', proportional(2_000)))),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_UNCOVERED',
+        );
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(4_500), 'and nothing moved');
+        await store.close();
+      });
+
+      it('never moves a constraint to the recipient', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        await store.applyTransition(ADMIN, movement('exec-small', 'party-alice', 'party-bob', proportional(500)));
+
+        // Whether a constraint should follow the authority it constrains is a
+        // substantive decision this phase does not make. What it does not do is
+        // make it silently.
+        assert.equal((await store.listActiveEncumbrances(ADMIN, availabilityOf('party-bob'))).length, 0);
+        const bob = await store.resolveAvailability(ADMIN, availabilityOf('party-bob'));
+        assert.ok(bob.outcome === 'available');
+        assert.deepEqual(bob.available, proportional(500), 'Bob received authority, and no constraint came with it');
+        await store.close();
+      });
+
+      it('releases the constraint and the same movement then succeeds', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+        assert.equal(
+          await errorCode(() => store.applyTransition(ADMIN, movement('exec-blocked', 'party-alice', 'party-bob', proportional(5_000)))),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_UNCOVERED',
+        );
+
+        await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+        await store.applyTransition(ADMIN, movement('exec-now-fine', 'party-alice', 'party-bob', proportional(5_000)));
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-bob', ASSET, ECONOMIC))?.scope, proportional(5_000));
+        await store.close();
+      });
+
+      it('leaves a movement in an unconstrained right alone', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-alice', proportional(5_000), { right: USAGE });
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+
+        // The constraint is on the economic interest. Nothing about it says
+        // anything about the usage right, and inventing a cross-right conflict
+        // is exactly what this layer must not do.
+        await store.applyTransition(ADMIN, {
+          ...movement('exec-usage', 'party-alice', 'party-bob', proportional(5_000)),
+          governedRights: [USAGE],
+        });
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-bob', ASSET, USAGE))?.scope, proportional(5_000));
+        await store.close();
+      });
+    });
+
   });
 }
 
@@ -1268,8 +1919,9 @@ describe('Governed Authority Store — SQLite', () => {
   });
 
   it('brings a v1 database forward rather than refusing it, and adds no commitments to it', async () => {
-    // The one migration this runtime performs. A deployment already holding
-    // authority state must not be stopped by a release that adds a table it has
+    // The oldest migration this runtime performs, and the longest hop: v1 knows
+    // neither reservations nor encumbrances. A deployment already holding
+    // authority state must not be stopped by a release that adds tables it has
     // no rows for — and its existing positions and transitions must still
     // verify byte-for-byte afterwards, because the migration does not touch
     // them.
@@ -1299,8 +1951,9 @@ describe('Governed Authority Store — SQLite', () => {
     assert.deepEqual(availability.available, proportional(7_500), 'a migrated deployment has no commitments, so everything it holds is available');
 
     const health = await migrated.health();
-    assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v2');
+    assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v3');
     assert.equal(health.activeReservationCount, 0);
+    assert.equal(health.activeEncumbranceCount, 0, 'and no constraints were invented for history that predates them');
 
     // And it enforces from here on.
     await migrated.acquireReservation(ADMIN, reservation('mandate-post-migration', 'party-alice', proportional(7_000)));
@@ -1309,6 +1962,266 @@ describe('Governed Authority Store — SQLite', () => {
       'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
     );
     await migrated.close();
+  });
+
+
+  describe('encumbrance durability across restart', () => {
+    it('a constraint survives a restart, and still refuses the overlapping commitment afterwards', async () => {
+      // The property that makes this layer worth persisting at all. The
+      // external arrangement does not cease to exist because a process
+      // restarted, so neither may the governed state that accounts for it.
+      const path = join(directory, 'encumbrance-restart.sqlite');
+      const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      await seed(store, 'party-alice', proportional(5_000));
+      await store.acquireReservation(ADMIN, reservation('mandate-1', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+      await store.recordEncumbrance(
+        ADMIN,
+        encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000), { consumesReservationsForMandateRef: 'mandate-1' }),
+      );
+      await store.close();
+
+      const reopened = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      const capacity = await reopened.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+      assert.ok(capacity.outcome === 'available');
+      assert.deepEqual(capacity.held, proportional(5_000), 'the position is still what it always was');
+      assert.deepEqual(capacity.encumbered, proportional(4_000));
+      assert.deepEqual(capacity.available, proportional(1_000));
+
+      const health = await reopened.health();
+      assert.equal(health.activeEncumbranceCount, 1);
+      assert.equal(health.activeReservationCount, 0, 'and the commitment stayed terminal across the restart');
+
+      assert.equal(
+        await errorCode(() => reopened.acquireReservation(ADMIN, reservation('mandate-2', 'party-alice', proportional(4_000)))),
+        'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+      );
+      await reopened.close();
+    });
+
+    it('a released constraint stays released across a restart, and the capacity stays returned', async () => {
+      const path = join(directory, 'encumbrance-restart-released.sqlite');
+      const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      await seed(store, 'party-alice', proportional(5_000));
+      const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+      assert.ok(created.outcome === 'encumbered');
+      await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+      await store.close();
+
+      const reopened = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      assert.equal((await reopened.getEncumbrance(ADMIN, TENANT_A, created.encumbrance.id))?.status, 'released');
+      const capacity = await reopened.resolveAvailability(ADMIN, availabilityOf('party-alice', { at: MUCH_LATER }));
+      assert.ok(capacity.outcome === 'available');
+      assert.deepEqual(capacity.available, proportional(5_000));
+      assert.equal((await reopened.health()).activeEncumbranceCount, 0);
+      await reopened.close();
+    });
+
+    it('brings a v2 database forward, keeping its commitments and inventing no constraints', async () => {
+      // A deployment that adopted reservation but not yet encumbrance. Its
+      // reservations must survive byte-for-byte — the migration is a pure copy
+      // through a widened CHECK — and, critically, no historical execution may
+      // be retroactively turned into a constraint. Manufacturing history to
+      // make old data look like it went through the new lifecycle is precisely
+      // what a migration must not do.
+      const path = join(directory, 'schema-v2-migration.sqlite');
+      const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      await seed(store, 'party-alice', proportional(10_000));
+      await store.applyTransition(ADMIN, movement('exec-pre-v3', 'party-alice', 'party-bob', proportional(2_500)));
+      await store.acquireReservation(ADMIN, reservation('mandate-pre-v3', 'party-alice', proportional(3_000)));
+      await store.close();
+
+      const { default: Database } = await import('better-sqlite3');
+      const rewind = new Database(path);
+      rewind.prepare(`DELETE FROM governed_authority_store_versions`).run();
+      rewind.prepare(`INSERT INTO governed_authority_store_versions (schema_version, migration_state, recorded_at) VALUES (?, ?, ?)`).run(
+        'aoc.governed-authority-store.schema.v2',
+        'applied',
+        NOW,
+      );
+      rewind.prepare(`DROP TABLE governed_authority_encumbrances`).run();
+      rewind.close();
+
+      const migrated = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      assert.deepEqual((await migrated.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(7_500), 'the balances survived');
+      assert.equal((await migrated.listTransitionsByExecutionRef(ADMIN, TENANT_A, 'exec-pre-v3')).length, 1, 'and so did the history');
+
+      const carried = await migrated.listReservationsByMandateRef(ADMIN, TENANT_A, 'mandate-pre-v3');
+      assert.equal(carried.length, 1, 'and so did the commitment');
+      assert.equal(carried[0]?.status, 'active', 'with its status untouched — the rebuild is a copy, not a reinterpretation');
+
+      const health = await migrated.health();
+      assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v3');
+      assert.equal(health.activeEncumbranceCount, 0, 'no constraint was invented for history that predates them');
+
+      const capacity = await migrated.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+      assert.ok(capacity.outcome === 'available');
+      assert.deepEqual(capacity.available, proportional(4_500), 'and capacity is exactly what the surviving state implies');
+
+      // And the widened lifecycle works from here on.
+      await migrated.recordEncumbrance(
+        ADMIN,
+        encumbrance('exec-post-v3', 'mandate-pre-v3', 'party-alice', proportional(3_000), { consumesReservationsForMandateRef: 'mandate-pre-v3' }),
+      );
+      assert.equal((await migrated.listReservationsByMandateRef(ADMIN, TENANT_A, 'mandate-pre-v3'))[0]?.status, 'encumbered');
+      await migrated.close();
+    });
+  });
+
+  describe('encumbrance corruption fails closed', () => {
+    // Every dimension a tamper could use to free constrained authority or forge
+    // a constraint's basis *while leaving it attached to the same holder,
+    // resource and right*. Each is applied with the digest left alone, and each
+    // must make the capacity question itself fail — never quietly drop the row,
+    // which would release exactly the authority the tamper was after.
+    const tampers = [
+      ['scope', `UPDATE governed_authority_encumbrances SET scope_basis_points = 1`],
+      ['status', `UPDATE governed_authority_encumbrances SET status = 'released', released_at = '${LATER}', release_basis = 'administrative'`],
+      ['source action', `UPDATE governed_authority_encumbrances SET source_action = 'transfer'`],
+      ['source mandate', `UPDATE governed_authority_encumbrances SET source_mandate_ref = 'mandate-other'`],
+      ['source execution', `UPDATE governed_authority_encumbrances SET source_execution_ref = 'exec-other'`],
+      ['effective instant', `UPDATE governed_authority_encumbrances SET effective_from = '2027-01-01T00:00:00.000Z'`],
+      ['digest', `UPDATE governed_authority_encumbrances SET encumbrance_digest = 'sha256:${'0'.repeat(64)}'`],
+    ] as const;
+
+    for (const [dimension, sql] of tampers) {
+      it(`refuses an encumbrance whose ${dimension} was altered after commit`, async () => {
+        const path = join(directory, `encumbrance-tamper-${dimension.replace(/ /gu, '-')}.sqlite`);
+        const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-tampered', 'mandate-tampered', 'party-alice', proportional(4_000)));
+        await store.close();
+
+        const { default: Database } = await import('better-sqlite3');
+        const db = new Database(path);
+        db.prepare(sql).run();
+        db.close();
+
+        const reopened = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+        assert.equal(
+          await errorCode(() => reopened.resolveAvailability(ADMIN, availabilityOf('party-alice'))),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED',
+          'the capacity question fails rather than the tampered row silently freeing the authority it constrains',
+        );
+        // And nothing may be committed against a state AOC cannot trust.
+        assert.equal(
+          await errorCode(() => reopened.acquireReservation(ADMIN, reservation('mandate-after-tamper', 'party-alice', proportional(1_000)))),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED',
+        );
+        // Including a movement, which is where a freed constraint would do the
+        // most damage: the structural guard reads the same rows.
+        assert.equal(
+          await errorCode(() => reopened.applyTransition(ADMIN, movement('exec-after-tamper', 'party-alice', 'party-bob', proportional(5_000)))),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED',
+        );
+        await reopened.close();
+      });
+    }
+
+    for (const [dimension, sql] of [
+      ['holder', `UPDATE governed_authority_encumbrances SET holder_ref = 'party-mallory'`],
+      ['resource', `UPDATE governed_authority_encumbrances SET resource_id = 'asset-b'`],
+      ['governed right', `UPDATE governed_authority_encumbrances SET governed_right = 'usage-right'`],
+    ] as const) {
+      it(`detects an encumbrance relocated to another ${dimension}, at the tuple it was moved to`, async () => {
+        // A relocating tamper is, from the original tuple's point of view,
+        // indistinguishable from deleting the row — and no per-row digest can
+        // detect a deletion. This states that limitation exactly rather than
+        // implying a guarantee the mechanism does not provide, exactly as the
+        // reservation cases above do.
+        const path = join(directory, `encumbrance-relocate-${dimension.replace(/ /gu, '-')}.sqlite`);
+        const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-mallory', proportional(5_000));
+        await seed(store, 'party-alice', proportional(5_000), { right: USAGE });
+        await seed(store, 'party-alice', proportional(5_000), { resource: OTHER_ASSET });
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-relocated', 'mandate-relocated', 'party-alice', proportional(4_000)));
+        await store.close();
+
+        const { default: Database } = await import('better-sqlite3');
+        const db = new Database(path);
+        db.prepare(sql).run();
+        db.close();
+
+        const reopened = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+        const destination =
+          dimension === 'holder'
+            ? availabilityOf('party-mallory')
+            : dimension === 'resource'
+              ? availabilityOf('party-alice', { resource: OTHER_ASSET })
+              : availabilityOf('party-alice', { governedRight: USAGE });
+        assert.equal(await errorCode(() => reopened.resolveAvailability(ADMIN, destination)), 'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED');
+
+        const origin = await reopened.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(origin.outcome === 'available');
+        assert.deepEqual(origin.available, proportional(5_000), 'documented limitation: a relocated row frees its origin authority');
+        await reopened.close();
+      });
+    }
+
+    it('refuses a status the closed lifecycle does not contain, at the database level', async () => {
+      const path = join(directory, 'encumbrance-status-check.sqlite');
+      const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      await seed(store, 'party-alice', proportional(5_000));
+      await store.recordEncumbrance(ADMIN, encumbrance('exec-status', 'mandate-status', 'party-alice', proportional(1_000)));
+      await store.close();
+
+      const { default: Database } = await import('better-sqlite3');
+      const db = new Database(path);
+      // In particular `'expired'`, which is the state this model deliberately
+      // does not have: a constraint carries no expiry, so nothing could ever
+      // derive one, and a stored status claiming otherwise is unrepresentable.
+      assert.throws(() => db.prepare(`UPDATE governed_authority_encumbrances SET status = 'expired'`).run(), /CHECK constraint failed/);
+      assert.throws(
+        () => db.prepare(`UPDATE governed_authority_encumbrances SET status = 'released'`).run(),
+        /CHECK constraint failed/,
+        'and a release must say when and on what basis',
+      );
+      db.close();
+    });
+
+    it('cannot be made to constrain a negative quantity even by a writer bypassing the runtime entirely', async () => {
+      const path = join(directory, 'encumbrance-negative-check.sqlite');
+      const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      await seed(store, 'party-alice', proportional(5_000));
+      await store.recordEncumbrance(ADMIN, encumbrance('exec-negative', 'mandate-negative', 'party-alice', proportional(1_000)));
+      await store.close();
+
+      const { default: Database } = await import('better-sqlite3');
+      const db = new Database(path);
+      assert.throws(
+        () => db.prepare(`UPDATE governed_authority_encumbrances SET scope_basis_points = -1`).run(),
+        /CHECK constraint failed/,
+        'a negative constraint would manufacture capacity, and is unrepresentable',
+      );
+      db.close();
+    });
+
+    it('reports a state where constraints outrun the position rather than clamping it to zero', async () => {
+      // Unreachable through the runtime — the structural guard is what makes it
+      // so — and reported anyway, because an import, a restore or a privileged
+      // bootstrap gone wrong could produce it, and a silently-zeroed capacity
+      // would hide the breach until it became permanent.
+      const path = join(directory, 'encumbrance-overencumbered.sqlite');
+      const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      await seed(store, 'party-alice', proportional(5_000));
+      const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-over', 'mandate-over', 'party-alice', proportional(4_000)));
+      assert.ok(created.outcome === 'encumbered');
+      await store.close();
+
+      const { default: Database } = await import('better-sqlite3');
+      const db = new Database(path);
+      // The position is shrunk out of band, leaving the constraint referring to
+      // authority the holder no longer has. The position's own digest is left
+      // alone, so this is caught as an inconsistency rather than as corruption.
+      db.prepare(`UPDATE governed_authority_positions SET scope_basis_points = 3000, position_digest = ?`).run('sha256:placeholder');
+      db.close();
+
+      const reopened = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+      // The tampered position fails its own integrity check first, which is the
+      // stricter of the two answers and the right one.
+      assert.equal(await errorCode(() => reopened.resolveAvailability(ADMIN, availabilityOf('party-alice'))), 'GOVERNED_AUTHORITY_RECORD_CORRUPTED');
+      await reopened.close();
+    });
   });
 
   it('cannot be made to hold a negative quantity even by a writer bypassing the runtime entirely', async () => {

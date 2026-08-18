@@ -1,5 +1,7 @@
 import type {
   GovernedAuthorityBasis,
+  GovernedAuthorityEncumbrance,
+  GovernedAuthorityEncumbranceReleaseBasis,
   GovernedAuthorityPosition,
   GovernedAuthorityReservation,
   GovernedAuthorityTransition,
@@ -122,6 +124,8 @@ export interface GovernedAuthorityStoreHealth {
   readonly transitionCount: number;
   /** How many reservations currently carry `status: 'active'`. Counts stored status only: an active-but-lapsed row is still stored active, and is excluded from availability by the clock rather than by a rewrite. */
   readonly activeReservationCount: number;
+  /** How many encumbrances currently carry `status: 'active'`. Unlike reservations there is no clock qualification to make: an encumbrance has no expiry, so a stored active row is an active constraint. */
+  readonly activeEncumbranceCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -203,4 +207,92 @@ export interface GovernedAuthorityAvailabilityQuery {
   readonly resource: GovernedAuthorityResourceRef;
   readonly governedRight: GovernedRightType;
   readonly at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Governed authority encumbrance.
+// ---------------------------------------------------------------------------
+
+/**
+ * Recording that a successfully executed governed action left the holder's
+ * authority persistently constrained.
+ *
+ * Note what a caller does **not** supply, and why each absence matters:
+ *
+ * - **No status, no digest, no capacity figure it measured earlier.** Status
+ *   and digest are the store's; capacity is recomputed inside the creating
+ *   transaction, because a figure observed before the call is a snapshot
+ *   rather than a guarantee.
+ * - **No `reason` string.** The basis is `sourceExecutionRef` — a reference to
+ *   evidence the mandate store already re-asserted the mandate's own
+ *   authorization against. A constraint rooted in caller-supplied prose would
+ *   be a constraint a caller could invent, which is precisely what makes
+ *   "I hold this, so encumber it" impossible here.
+ * - **No `expiresAt`.** A collateral arrangement does not end because the
+ *   mandate authorizing it ran out. See `GovernedAuthorityEncumbrance`.
+ */
+export interface RecordGovernedAuthorityEncumbranceInput {
+  readonly tenantId: string;
+  /** Whose authority is constrained. Never the requester's, the executor's or the beneficiary's, unless one of them happens to be the holder. */
+  readonly holderRef: string;
+  readonly resource: GovernedAuthorityResourceRef;
+  readonly governedRight: GovernedRightType;
+  readonly scope: GovernedRightsScope;
+  /** The governed action that executed, in the same capability vocabulary a `governed-execution` basis uses. Must be classified as encumbering, or the call is refused. */
+  readonly sourceAction: string;
+  readonly sourceMandateRef: string;
+  /** The execution evidence this constraint is rooted in, and the idempotency key. */
+  readonly sourceExecutionRef: string;
+  readonly effectiveFrom: string;
+  /**
+   * The mandate whose reservation this constraint takes over from.
+   *
+   * Present, the reservations recorded against that mandate for this right are
+   * moved to `'encumbered'` **inside the same commit section as the
+   * constraint's creation**, but only once the constraints created under that
+   * mandate cover the whole of what it reserved. That is the whole point of
+   * putting encumbrances in this store: the pre-execution commitment and the
+   * post-execution constraint are two phases of one commitment, and handing
+   * over between them is one durable step. Neither of the two bad windows
+   * exists — capacity is never freed for a constraint that has not been
+   * recorded, and one commitment is never counted as two.
+   *
+   * A mandate whose terms permit several instalments keeps its reservation
+   * active until the last of them lands; the reservation's residual is netted
+   * against what has already been carved out of it, so the instalments still
+   * to come stay protected without the ones already recorded being counted
+   * twice.
+   *
+   * Absent, no reservation is touched. That is the correct behaviour for a
+   * deployment that has not adopted reservation.
+   */
+  readonly consumesReservationsForMandateRef?: string;
+  /** Defaults to `'<sourceExecutionRef>:<governedRight>'`, which is already one-per-execution-per-right. */
+  readonly idempotencyKey?: string;
+  readonly correlationId?: string;
+}
+
+/**
+ * What recording a constraint produced.
+ *
+ * Two outcomes rather than one, for exactly the reason
+ * `AcquireGovernedAuthorityReservationOutcome` has two: a resource this
+ * deployment holds no governed authority state for has no capacity to
+ * constrain, so there is nothing to record and nothing that would be made
+ * safer by recording it. The boundary is the same per-resource, one-way
+ * enrolment boundary, so an action behaves identically on both sides of the
+ * handoff.
+ */
+export type RecordGovernedAuthorityEncumbranceOutcome =
+  /** The constraint stands. `replayed` distinguishes "recorded now" from "already recorded" without comparing capacity. */
+  | { readonly outcome: 'encumbered'; readonly encumbrance: GovernedAuthorityEncumbrance; readonly replayed: boolean }
+  /** The resource is not enrolled in right-scoped authority. Nothing was recorded, and nothing needed to be. */
+  | { readonly outcome: 'resource_not_enrolled' };
+
+export interface ReleaseGovernedAuthorityEncumbranceInput {
+  readonly tenantId: string;
+  readonly encumbranceId: string;
+  /** Only `'administrative'` exists, and it requires `context.system`. See `GovernedAuthorityEncumbranceReleaseBasis` for why there is no evidence-reported basis. */
+  readonly basis: GovernedAuthorityEncumbranceReleaseBasis;
+  readonly releasedAt?: string;
 }

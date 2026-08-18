@@ -274,7 +274,17 @@ hatches.
 ## What this does not claim
 
 Not legal delegation. Not power of attorney. Not ownership delegation. Not
-portable across deployments. The bounded claim is exactly:
+portable across deployments.
+
+Nor does it bear on how much authority is left. Derived authority answers *how a
+requester came to hold the capability at all*; a reservation answers *how much
+of the holder's authority is promised*, and an encumbrance *how much stays
+constrained after an execution*. Every valid lineage reaching one holder draws
+on that holder's single pool: a flawless delegation chain confers no capacity of
+its own, and reaching a holder by a different route never opens a second
+allocation. See `AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`, "One pool per holder".
+
+The bounded claim is exactly:
 
 > AOC Enterprise can recognize and enforce authority derived through a typed,
 > bounded, traceable delegation lineage **within this deployment's governance
@@ -282,18 +292,22 @@ portable across deployments. The bounded claim is exactly:
 
 ## Deferred
 
-- **Delegation-layer conservation.** Authority reservation now exists
-  (`AOC_GOVERNED_AUTHORITY_RESERVATION.md`), but it conserves a *holder's*
-  authority over a right, not a *delegation's* remaining uses. A ceiling is
-  still not a reservation, delegating still debits nothing, and conservation
-  across concurrent siblings remains unsolved — in its own domain rather than
-  this one.
+- **Delegation-layer conservation.** Authority reservation and encumbrance now
+  both exist (`AOC_GOVERNED_AUTHORITY_RESERVATION.md`,
+  `AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`), and neither is this. Both account
+  for a *holder's* authority over a right of a resource; a delegation's
+  remaining uses is not that quantity, and modelling it as one would mean
+  treating a delegation as a holder and a use as a quantity of a governed right,
+  both of which are false. A ceiling is still neither a commitment nor a
+  constraint, delegating still debits nothing, and conservation across
+  concurrent siblings remains unsolved — in its own domain rather than this one.
 - **Durable Authority Graph state.** Grants and delegations are in-memory.
-  Reservations are durable, and that asymmetry is consistent rather than
-  accidental: a mandate is valid after issuance independently of its lineage, so
-  the reservation supporting it must survive a restart even where the delegation
-  behind it does not. Availability is computed from positions and reservations,
-  never from the graph.
+  Reservations and encumbrances are durable, and that asymmetry is consistent
+  rather than accidental: a mandate is valid after issuance independently of its
+  lineage, so the commitment supporting it must survive a restart even where the
+  delegation behind it does not — and a constraint left by a completed execution
+  must survive one whether or not any lineage still exists at all. Capacity is
+  computed from positions, reservations and encumbrances, never from the graph.
 - **Cross-deployment delegation portability.** Proving to another sovereign
   deployment that an actor holds delegated authority originating elsewhere would
   be Protocol work. Nothing here requires it.

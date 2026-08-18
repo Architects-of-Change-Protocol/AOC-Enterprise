@@ -188,11 +188,32 @@ export interface GovernedAuthorityWorldOverrides {
   readonly transferStore?: TransferMandateStore;
   /** Overrides the id prefix counter seed so a second process's ids do not collide with the first's. */
   readonly idSeed?: number;
+  /**
+   * Where the Kernel's own sequential decision/evaluation ids start.
+   *
+   * Needed only by a restart test, and needed there for a reason that has
+   * nothing to do with what is being measured: the Kernel's id generator is
+   * per-instance, so a second process composed over the same durable
+   * Governance Store would re-issue decision ids the first one already
+   * committed, and the append would be refused for a uniqueness violation
+   * rather than for anything about authority. A real deployment mints ids that
+   * do not restart with the process; this makes the fixture behave the same
+   * way.
+   */
+  readonly kernelIdSeed?: number;
   /** Omits the Kernel's governed-authority provider entirely, reproducing a deployment that has not adopted right-scoped authority at all. */
   readonly withoutGovernedAuthority?: boolean;
   readonly unenrolledResourcePolicy?: UnenrolledResourcePolicy;
   /** Omits the transfer service's authority store, so executions record evidence and move no authority — the pre-foundation behaviour, kept reachable for the before/after comparison. */
   readonly withoutTransferAuthorityTransition?: boolean;
+  /**
+   * Omits the collateralization service's authority store, so requests commit
+   * no capacity and executions leave no persistent constraint — the
+   * pre-encumbrance behaviour, kept reachable for the before/after comparison
+   * exactly as `withoutTransferAuthorityTransition` keeps the pre-transition
+   * behaviour reachable.
+   */
+  readonly withoutCollateralAuthorityEncumbrance?: boolean;
   /**
    * Substitutes the port the transfer service reaches governed authority
    * through, so a test can fail one operation and leave the rest real.
@@ -404,7 +425,7 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
   const kernel = createAocKernel({
     recognitionProvider: bridgeRecognitionRuntime(recognitionRuntime),
     clock: createManualEnforcementClock(GA_NOW),
-    idGenerator: createSequentialEnforcementIdGenerator(),
+    idGenerator: createSequentialEnforcementIdGenerator(overrides.kernelIdSeed ?? 1),
     ...(overrides.withoutGovernedAuthority === true
       ? {}
       : {
@@ -447,7 +468,11 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
     }),
     license: createLicenseGovernanceService({ ...shared, store: createInMemoryLicenseMandateStore({ now: () => GA_NOW }) }),
     tokenization: createTokenizationGovernanceService({ ...shared, store: createInMemoryTokenizationMandateStore({ now: () => GA_NOW }) }),
-    collateralization: createCollateralizationGovernanceService({ ...shared, store: createInMemoryCollateralizationMandateStore({ now: () => GA_NOW }) }),
+    collateralization: createCollateralizationGovernanceService({
+      ...shared,
+      store: createInMemoryCollateralizationMandateStore({ now: () => GA_NOW }),
+      ...(overrides.withoutCollateralAuthorityEncumbrance === true ? {} : { authorityStore }),
+    }),
   };
 }
 

@@ -8,6 +8,15 @@ records why each decision below was made rather than what it is, and to
 `AOC_GOVERNED_AUTHORITY.md`, which describes the authority this layer accounts
 for.
 
+> **The other half of the same commitment.** A reservation answers *how much
+> authority is temporarily committed to a live authorization that has not yet
+> reached its final domain effect?* Once that effect happens, the question
+> changes: *how much remains persistently constrained afterwards?* For
+> `TRANSFER` there is nothing left to ask — the execution debits the position,
+> and the new position is the whole of what is true. For `COLLATERALIZE` there
+> is, and `AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md` answers it. The two are two
+> phases of one commitment, never two commitments; see "The handoff" below.
+
 ## The problem
 
 A `GovernedAuthorityPosition` does not change when a mandate is issued, and it
@@ -90,18 +99,40 @@ Classified from what each action actually does to a position, not from its name:
 | Action | Debits a position? | Reservation | Evidence |
 | --- | --- | --- | --- |
 | **TRANSFER** | **yes** | **required** | Records a `governed-execution` transition debiting the transferor. Authorized scope not yet moved is finite capacity another authorization must not also promise. |
+| **COLLATERALIZE** | no | **required** | Debits no position, and still commits finite capacity: a successful execution leaves a persistent constraint that outlives the mandate. Its commitment ends `'encumbered'` rather than `'consumed'`. |
 | **TOKENIZE** | no | none | Never calls the authority store. Its scope bounds an issuance ceiling inside the mandate; executing it debits nothing. |
-| **COLLATERALIZE** | no | none | Never calls the authority store. `committedScope` accumulates *within one mandate*, and a reported release does not decrement it. What it creates is a long-lived encumbrance that outlives execution — which a pre-execution reservation cannot model, and must not pretend to. |
 | **LICENSE** | no | none | Never calls the authority store, and frequently carries no scope at all. An absent `rightsScope` is emphatically **not** 100%, so there is no quantity to commit. |
 
+Two questions, deliberately kept apart: *does executing this debit a position?*
+(**conserving**) and *does executing this commit finite capacity?*
+(**committing**). `TRANSFER` answers yes to both. `COLLATERALIZE` commits
+without conserving, which is the case that needed the constraint layer to
+exist before it could be classified honestly.
+
+`COLLATERALIZE`'s reclassification is deliberate, and this is what changed. It
+was previously withheld a reservation because one released at execution would
+free capacity at exactly the moment the encumbrance became real — correct, while
+there was nowhere for the commitment to go. Now the commitment is *handed over*
+rather than released, so the objection no longer applies, and withholding
+reservation would leave the cross-mandate hole open instead. See
+`docs/architecture/ADR-GOVERNED-AUTHORITY-ENCUMBRANCE.md`.
+
 The classification lives in one place —
-`src/enterprise/authority-governance/reservation-lifecycle.ts`,
-`governedActionCommitsAuthority` — rather than as an `action === 'TRANSFER'`
-test repeated through the runtime.
+`src/enterprise/authority-governance/reservation-lifecycle.ts` and
+`encumbrance-lifecycle.ts` — rather than as an `action === 'TRANSFER'` test
+repeated through the runtime.
 
 ## Lifecycle
 
-Three stored states, and one derived:
+Four stored states, and one derived. `'encumbered'` was added when
+`COLLATERALIZE` began committing capacity: it means the commitment was *spent*
+into a persistent constraint rather than debited from a position (`'consumed'`)
+or returned unused (`'released'`). Like `'consumed'`, it is terminal and cannot
+be reopened — the constraint now accounts for the quantity, and releasing the
+commitment as well would fabricate capacity. See
+`AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`, "The handoff".
+
+The three original states are unchanged:
 
 ```
 active     capacity stands committed; competing commitments must respect it
@@ -343,16 +374,22 @@ authority layer's own code, exactly as an unconservable execution already was.
 - **No fairness.** There is no queue, no priority and no scheduler. Under
   contention, whichever commitment reaches the transaction first wins, and a
   loser is not retried on its behalf.
-- **No inter-action conflict policy.** Generic reservation knows that two
-  `TRANSFER`s of the same right compete. It does **not** know whether
-  tokenizing 5 000 bp should conflict with collateralizing the same 5 000 bp —
-  that requires an explicit typed policy about what those actions mean to each
-  other, and inventing one here would be encoding a business assumption in
-  generic accounting.
-- **No long-lived encumbrance.** A reservation is *pre-execution* commitment
-  safety. `COLLATERALIZE`'s encumbrance survives execution and would need its own
-  model; overloading reservation to carry it would make "committed until
-  execution" and "encumbered indefinitely afterwards" the same word.
+- **No inter-action conflict policy.** Still deferred, and unchanged. Capacity
+  accounting knows that two commitments against the same right compete. It does
+  **not** know whether tokenizing 5 000 bp should conflict with collateralizing
+  the same 5 000 bp — that requires an explicit typed policy about what those
+  actions mean to each other, and inventing one here would be encoding a
+  business assumption in generic accounting. The one cross-action rule that was
+  added is structural rather than commercial: AOC refuses to leave a persistent
+  constraint referring to authority a holder no longer possesses. See
+  `AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`, "Structural consistency".
+- **No long-lived encumbrance *in this record*.** A reservation is still
+  *pre-execution* commitment safety, and still carries a required `expiresAt`
+  taken from its mandate. `COLLATERALIZE`'s constraint survives execution and
+  has its own model — `GovernedAuthorityEncumbrance`, with no expiry at all —
+  precisely so that "committed until execution" and "constrained indefinitely
+  afterwards" never become the same word. The finding here is unchanged; what
+  changed is that the second model now exists to hand the commitment to.
 - **No renewal or resizing.** Reservations are immutable except in status. If a
   mandate's validity is ever extended, a corresponding governed extension would
   be needed; there is none, because mandates cannot currently be extended.

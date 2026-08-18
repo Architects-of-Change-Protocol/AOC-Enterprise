@@ -1,6 +1,8 @@
 import {
+  governedAuthorityEncumbranceConstrains,
   governedAuthorityPositionKey,
   governedAuthorityReservationReducesAvailability,
+  type GovernedAuthorityEncumbrance,
   type GovernedAuthorityPosition,
   type GovernedAuthorityReservation,
   type GovernedAuthorityTransition,
@@ -28,10 +30,20 @@ import {
 import {
   assertReservationIntegrity,
   computeReservationDigest,
-  computeAvailability,
   deriveReservationId,
   reservationReplayMatches,
 } from './reservation-lifecycle.js';
+import {
+  assertEncumbranceIntegrity,
+  assertRemainingScopeCoversEncumbrances,
+  computeCapacity,
+  computeEncumbranceDigest,
+  deriveEncumbranceId,
+  deriveEncumbranceIdempotencyKey,
+  encumbranceReplayMatches,
+  governedActionEncumbersAuthority,
+  sumActiveEncumbrances,
+} from './encumbrance-lifecycle.js';
 import {
   requireAuthorityAccessToOrganization,
   requireStrictUtcAuthorityTimestamp,
@@ -47,16 +59,19 @@ import type {
   GovernedAuthorityProvenance,
   GovernedAuthorityResourceRef,
   GovernedAuthorityStoreHealth,
+  RecordGovernedAuthorityEncumbranceInput,
+  ReleaseGovernedAuthorityEncumbranceInput,
   ReleaseGovernedAuthorityReservationInput,
 } from './contracts.js';
 
 /**
  * Bumped whenever the durable shape changes. The SQLite store refuses to open a
- * database written under a different value — with exactly one exception, the
- * additive `v1 -> v2` migration that adds the reservations table — and this
- * constant is the single place both stores agree on it.
+ * database written under a different value — except for the additive
+ * migrations it knows how to bring forward, `v1 -> v2` (the reservations table)
+ * and `v2 -> v3` (the encumbrances table, and the widened reservation status
+ * check) — and this constant is the single place both stores agree on it.
  */
-export const GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION = 'aoc.governed-authority-store.schema.v2';
+export const GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION = 'aoc.governed-authority-store.schema.v3';
 
 export interface CreateInMemoryGovernedAuthorityStoreOptions {
   readonly now?: () => string;
@@ -93,6 +108,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
   const positions = new Map<string, GovernedAuthorityPosition>();
   const transitions: GovernedAuthorityTransition[] = [];
   const reservations = new Map<string, GovernedAuthorityReservation>();
+  const encumbrances = new Map<string, GovernedAuthorityEncumbrance>();
   const sequenceByTenant = new Map<string, number>();
   const lastDigestByTenant = new Map<string, string>();
   const issuanceOrdinalByTenant = new Map<string, number>();
@@ -183,6 +199,39 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
           reservation.governedRight === governedRight,
       )
       .map(assertReservationIntegrity)
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+
+  function putEncumbrance(draft: Omit<GovernedAuthorityEncumbrance, 'digest'>): GovernedAuthorityEncumbrance {
+    const sealed: GovernedAuthorityEncumbrance = { ...draft, digest: computeEncumbranceDigest(draft) };
+    encumbrances.set(sealed.id, sealed);
+    return sealed;
+  }
+
+  /**
+   * Every constraint standing over one holder's authority in one right of one
+   * resource, verified on read.
+   *
+   * Integrity is asserted here rather than filtered, exactly as it is for
+   * reservations: a tampered row must fail the whole capacity question, never
+   * quietly drop out of the sum and free the authority it constrains.
+   */
+  function readEncumbrancesFor(
+    tenantId: string,
+    holderRef: string,
+    resource: GovernedAuthorityResourceRef,
+    governedRight: GovernedRightType,
+  ): GovernedAuthorityEncumbrance[] {
+    return [...encumbrances.values()]
+      .filter(
+        (encumbrance) =>
+          encumbrance.tenantId === tenantId &&
+          encumbrance.holderRef === holderRef &&
+          encumbrance.resourceKind === resource.kind &&
+          encumbrance.resourceId === resource.id &&
+          encumbrance.governedRight === governedRight,
+      )
+      .map(assertEncumbranceIntegrity)
       .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   }
 
@@ -299,11 +348,31 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
           );
         }
         const target = readPosition(input.tenantId, input.toHolderRef, input.resource, governedRight);
+        const debited = subtractAuthorityScope(source.scope, input.scope, { positionId: source.id, governedRight });
+        // The structural invariant. What the source keeps must still cover the
+        // persistent constraints standing over it, because those constraints
+        // are holder-bound and do not follow the authority to the recipient.
+        //
+        // This is emphatically not "encumbered authority cannot be moved": a
+        // holder with 5 000 bp and a 4 000 bp constraint may still move 1 000,
+        // and does, right here. What it refuses is the movement that would
+        // leave AOC holding a constraint over authority its holder no longer
+        // possesses — a record referring to nothing, and a state in which every
+        // subsequent capacity question reports `overencumbered`.
+        //
+        // Checked at staging with every other right, so a two-right movement
+        // whose second right would strand a constraint moves neither.
+        assertRemainingScopeCoversEncumbrances(
+          debited,
+          readEncumbrancesFor(input.tenantId, input.fromHolderRef, input.resource, governedRight),
+          occurredAt,
+          { tenantId: input.tenantId, holderRef: input.fromHolderRef, governedRight, positionId: source.id },
+        );
         return {
           governedRight,
           source,
           target,
-          debited: subtractAuthorityScope(source.scope, input.scope, { positionId: source.id, governedRight }),
+          debited,
           credited: target === null ? serializeGovernedRightsScope(input.scope) : addAuthorityScopes(target.scope, input.scope, { positionId: target.id, governedRight }),
         };
       });
@@ -515,7 +584,13 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       // gate.
       const position = readPosition(input.tenantId, input.holderRef, input.resource, input.governedRight);
       const standing = readReservationsFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
-      const availability = computeAvailability(position, standing, recordedAt);
+      // Persistent constraints are part of the same gate, not a separate one.
+      // A commitment that ignored them would be exactly the post-execution
+      // double commitment this layer closes: the reservations behind an
+      // executed collateralization are terminal, so only its encumbrance still
+      // says that authority is spoken for.
+      const constraints = readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+      const availability = computeCapacity(position, standing, constraints, recordedAt);
 
       if (availability.outcome === 'no_authority') {
         // Enrolment is consulted only once the holder turns out to have no
@@ -549,21 +624,36 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
           },
         );
       }
+      if (availability.outcome === 'overencumbered') {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          `More governed authority stands persistently constrained against '${input.holderRef}' than that holder possesses; refusing to commit further until the inconsistency is resolved.`,
+          {
+            tenantId: input.tenantId,
+            holderRef: input.holderRef,
+            governedRight: input.governedRight,
+            held: availability.held,
+            encumbered: availability.encumbered,
+          },
+        );
+      }
 
       if (!governedRightsScopeWithin(serializeGovernedRightsScope(input.scope), availability.available)) {
         // Deliberately not `GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE`. The holder
         // may possess ample authority; what is exhausted is the portion not
-        // already promised elsewhere, and an operator's remedy for that is to
-        // wait or to release, never to acquire more of the right.
+        // already promised to a live authorization or constrained by one that
+        // already executed, and an operator's remedy for that is to wait or to
+        // release, never to acquire more of the right.
         throw new AuthorityGovernanceError(
           'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
-          `'${input.holderRef}' holds enough '${input.governedRight}' in total, but too much of it is already committed to still-live governed authorizations to commit this much more.`,
+          `'${input.holderRef}' holds enough '${input.governedRight}' in total, but too much of it is already committed or persistently constrained to commit this much more.`,
           {
             tenantId: input.tenantId,
             holderRef: input.holderRef,
             governedRight: input.governedRight,
             held: availability.held,
             ...(availability.committed !== undefined ? { committed: availability.committed } : {}),
+            ...(availability.encumbered !== undefined ? { encumbered: availability.encumbered } : {}),
             available: availability.available,
             requested: serializeGovernedRightsScope(input.scope),
           },
@@ -624,6 +714,19 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
           { reservationId: verified.id },
         );
       }
+      if (verified.status === 'encumbered') {
+        // The commitment did not lapse — it became a persistent constraint,
+        // which is now what accounts for the same quantity. Reopening the
+        // reservation would not return the capacity (the encumbrance still
+        // holds it) but it would misstate the lifecycle, and a later release of
+        // the constraint would then have to reason about a reservation that had
+        // been resurrected after being spent.
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_RESERVATION_CONFLICT',
+          `Governed authority reservation '${verified.id}' became a persistent encumbrance when its governed action executed; the commitment was spent rather than ended, and releasing it here would misstate what happened. Release the encumbrance instead.`,
+          { reservationId: verified.id },
+        );
+      }
       const releasedAt = requireStrictUtcAuthorityTimestamp(input.releasedAt ?? now(), 'releasedAt');
       return putReservation({ ...verified, status: 'released', updatedAt: releasedAt });
     },
@@ -632,7 +735,12 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       requireAuthorityAccessToOrganization(context, query.tenantId);
       const at = requireStrictUtcAuthorityTimestamp(query.at, 'at');
       const position = readPosition(query.tenantId, query.holderRef, query.resource, query.governedRight);
-      return computeAvailability(position, readReservationsFor(query.tenantId, query.holderRef, query.resource, query.governedRight), at);
+      return computeCapacity(
+        position,
+        readReservationsFor(query.tenantId, query.holderRef, query.resource, query.governedRight),
+        readEncumbrancesFor(query.tenantId, query.holderRef, query.resource, query.governedRight),
+        at,
+      );
     },
 
     async getReservation(context, tenantId, reservationId) {
@@ -661,6 +769,280 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       );
     },
 
+
+    // -----------------------------------------------------------------------
+    // Encumbrance. Every method below is one synchronous critical section, for
+    // the same reason the reservation methods are: `recordEncumbrance` decides
+    // capacity, writes the constraint and terminalizes the commitment it takes
+    // over from with no `await` between them, so no other caller can observe
+    // the intermediate state in which the reservation has ended and the
+    // constraint does not yet exist.
+    // -----------------------------------------------------------------------
+
+    async recordEncumbrance(context, input) {
+      requireAuthorityAccessToOrganization(context, input.tenantId);
+      assertKnownGovernedRight(input.governedRight);
+      assertValidAuthorityScope(input.scope, 'scope');
+      assertNonZeroAuthorityScope(input.scope, 'scope');
+
+      // The trusted basis, asserted before anything is read. An action that
+      // leaves no persistent constraint has no business recording one, and a
+      // constraint with no execution behind it is a constraint somebody
+      // asserted rather than earned.
+      if (!governedActionEncumbersAuthority(input.sourceAction)) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID',
+          `'${input.sourceAction}' is not classified as leaving a persistent governed authority constraint; refusing to record one for it.`,
+          { sourceAction: input.sourceAction },
+        );
+      }
+      if (input.sourceExecutionRef.length === 0 || input.sourceMandateRef.length === 0) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID',
+          'A persistent governed authority constraint must name both the authorization artifact it arose under and the execution evidence that created it.',
+          { sourceMandateRef: input.sourceMandateRef, sourceExecutionRef: input.sourceExecutionRef },
+        );
+      }
+
+      const effectiveFrom = requireStrictUtcAuthorityTimestamp(input.effectiveFrom, 'effectiveFrom');
+      const recordedAt = requireStrictUtcAuthorityTimestamp(now(), 'recordedAt');
+      const idempotencyKey = input.idempotencyKey ?? deriveEncumbranceIdempotencyKey(input.sourceExecutionRef, input.governedRight);
+
+      // Replay first, and before capacity is read: an execution AOC has already
+      // encumbered must not constrain a second quantity, whatever the current
+      // capacity happens to be. This is what makes an execution retry safe.
+      const existing = [...encumbrances.values()].find(
+        (encumbrance) => encumbrance.tenantId === input.tenantId && encumbrance.idempotencyKey === idempotencyKey,
+      );
+      if (existing !== undefined) {
+        const verified = assertEncumbranceIntegrity(existing);
+        if (
+          !encumbranceReplayMatches(verified, {
+            holderRef: input.holderRef,
+            resourceKind: input.resource.kind,
+            resourceId: input.resource.id,
+            governedRight: input.governedRight,
+            scope: input.scope,
+            sourceAction: input.sourceAction,
+            sourceMandateRef: input.sourceMandateRef,
+            sourceExecutionRef: input.sourceExecutionRef,
+          })
+        ) {
+          throw new AuthorityGovernanceError(
+            'GOVERNED_AUTHORITY_ENCUMBRANCE_CONFLICT',
+            `Idempotency key '${idempotencyKey}' already constrains governed authority under materially different terms; a replay must restate the same constraint.`,
+            { idempotencyKey, encumbranceId: verified.id },
+          );
+        }
+        return { outcome: 'encumbered', encumbrance: verified, replayed: true };
+      }
+
+      const position = readPosition(input.tenantId, input.holderRef, input.resource, input.governedRight);
+      if (position === null) {
+        // Enrolment is consulted only once the holder turns out to have no
+        // position, mirroring `acquireReservation` and `resolver.ts`. A
+        // resource with positions but none for this holder-and-right is
+        // enrolled, and fails closed.
+        if (!isEnrolled(input.tenantId, input.resource)) return { outcome: 'resource_not_enrolled' };
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE',
+          `'${input.holderRef}' holds no recognized authority over '${input.governedRight}' of this resource; there is nothing to constrain.`,
+          { tenantId: input.tenantId, holderRef: input.holderRef, governedRight: input.governedRight },
+        );
+      }
+
+      const standing = readReservationsFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+      const constraints = readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+
+      // The handoff's central accounting rule: the commitment being converted
+      // must not be counted against the constraint replacing it. Both describe
+      // the same promised authority, one instant apart, so the reservations
+      // recorded against this mandate are set aside while capacity for their
+      // successor is decided. Every *other* commitment and every other
+      // constraint still counts, which is what stops a competing mandate's
+      // capacity being spent here.
+      const surrendered =
+        input.consumesReservationsForMandateRef === undefined
+          ? new Set<string>()
+          : new Set(
+              standing
+                .filter((reservation) => reservation.sourceMandateRef === input.consumesReservationsForMandateRef && reservation.status === 'active')
+                .map((reservation) => reservation.id),
+            );
+      const capacity = computeCapacity(
+        position,
+        standing.filter((reservation) => !surrendered.has(reservation.id)),
+        constraints,
+        recordedAt,
+      );
+
+      if (capacity.outcome === 'incompatible') {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
+          'This governed authority cannot be constrained by that quantity: the position and the state standing against it are not commensurable with it.',
+          { tenantId: input.tenantId, holderRef: input.holderRef, governedRight: input.governedRight },
+        );
+      }
+      if (capacity.outcome === 'no_authority' || capacity.outcome === 'overcommitted' || capacity.outcome === 'overencumbered') {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          `The governed authority of '${input.holderRef}' is already inconsistent with what stands against it; refusing to record a further persistent constraint until it is resolved.`,
+          { tenantId: input.tenantId, holderRef: input.holderRef, governedRight: input.governedRight, capacity: capacity.outcome },
+        );
+      }
+      // Commensurability first, so an incomparable quantity is named as one
+      // rather than reported as a shortfall. `governedRightsScopeWithin` answers
+      // false for both, and an operator's remedy for "these are not the same
+      // kind of quantity" is nothing like their remedy for "too much is already
+      // spoken for".
+      const requestedScope = serializeGovernedRightsScope(input.scope);
+      if (
+        requestedScope.kind !== capacity.available.kind ||
+        (requestedScope.kind === 'unitized' &&
+          capacity.available.kind === 'unitized' &&
+          requestedScope.unitDenomination !== capacity.available.unitDenomination)
+      ) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
+          'This governed authority cannot be constrained by that quantity: the two scopes are of different kinds, or name different unit denominations, and AOC holds no conversion between them.',
+          {
+            tenantId: input.tenantId,
+            holderRef: input.holderRef,
+            governedRight: input.governedRight,
+            held: capacity.held,
+            requested: requestedScope,
+          },
+        );
+      }
+      if (!governedRightsScopeWithin(requestedScope, capacity.available)) {
+        // Deliberately the availability code rather than `INSUFFICIENT_SCOPE`.
+        // The holder may possess ample authority; what is exhausted is the
+        // portion of it not already promised or constrained, and an operator's
+        // remedy is to release, not to acquire more of the right.
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          `'${input.holderRef}' holds enough '${input.governedRight}' in total, but too much of it already stands committed or persistently constrained to constrain this much more.`,
+          {
+            tenantId: input.tenantId,
+            holderRef: input.holderRef,
+            governedRight: input.governedRight,
+            held: capacity.held,
+            ...(capacity.committed !== undefined ? { committed: capacity.committed } : {}),
+            ...(capacity.encumbered !== undefined ? { encumbered: capacity.encumbered } : {}),
+            available: capacity.available,
+            requested: requestedScope,
+          },
+        );
+      }
+
+      const sourceReservation = [...surrendered][0];
+      const encumbrance = putEncumbrance({
+        id: deriveEncumbranceId(input.tenantId, input.sourceExecutionRef, input.governedRight),
+        tenantId: input.tenantId,
+        holderRef: input.holderRef,
+        resourceKind: input.resource.kind,
+        resourceId: input.resource.id,
+        governedRight: input.governedRight,
+        scope: serializeGovernedRightsScope(input.scope),
+        sourceAction: input.sourceAction,
+        sourceMandateRef: input.sourceMandateRef,
+        sourceExecutionRef: input.sourceExecutionRef,
+        ...(sourceReservation !== undefined ? { sourceReservationRef: sourceReservation } : {}),
+        effectiveFrom,
+        status: 'active',
+        idempotencyKey,
+        ...(input.correlationId !== undefined ? { correlationId: input.correlationId } : {}),
+        createdAt: recordedAt,
+        updatedAt: recordedAt,
+      });
+
+      // The handoff, in the same critical section that just wrote the
+      // constraint. A commitment is terminalized only once the constraints
+      // created under its mandate cover the whole of what it reserved: a
+      // mandate whose terms permit instalments keeps its reservation active
+      // until the last one lands, and the reservation's residual — reserved
+      // less already-encumbered — is what protects the instalments still to
+      // come without double-counting the ones already recorded.
+      //
+      // There is no window here in which capacity looks free: the constraint
+      // exists before the commitment ends, and both happen before any other
+      // caller can run.
+      if (input.consumesReservationsForMandateRef !== undefined) {
+        const afterWrite = readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+        for (const reservationId of surrendered) {
+          const reservation = reservations.get(reservationId);
+          if (reservation === undefined || reservation.status !== 'active') continue;
+          const carvedOut = sumActiveEncumbrances(
+            afterWrite.filter(
+              (candidate) => candidate.sourceMandateRef === reservation.sourceMandateRef && candidate.governedRight === reservation.governedRight,
+            ),
+            recordedAt,
+          );
+          if (carvedOut === null || carvedOut === 'incompatible') continue;
+          if (!governedRightsScopeWithin(reservation.scope, carvedOut)) continue;
+          putReservation({ ...assertReservationIntegrity(reservation), status: 'encumbered', updatedAt: recordedAt });
+        }
+      }
+
+      return { outcome: 'encumbered', encumbrance, replayed: false };
+    },
+
+    async releaseEncumbrance(context, input) {
+      requireAuthorityAccessToOrganization(context, input.tenantId);
+      // Privileged, always. There is no basis a request path could supply, so
+      // there is no context a request path could reach this from.
+      if (!context.system) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_BOOTSTRAP_NOT_PERMITTED',
+          'Releasing a persistent governed authority constraint requires a privileged system context; a party can never free constrained authority by asking.',
+          { encumbranceId: input.encumbranceId },
+        );
+      }
+      const found = encumbrances.get(input.encumbranceId);
+      if (found === undefined || found.tenantId !== input.tenantId) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_NOT_FOUND',
+          `No governed authority encumbrance '${input.encumbranceId}' exists in this tenant.`,
+          { tenantId: input.tenantId, encumbranceId: input.encumbranceId },
+        );
+      }
+      const verified = assertEncumbranceIntegrity(found);
+      // Already released: return it unchanged. Capacity is derived from the
+      // constraints still active rather than from a counter, so a second
+      // release cannot free the same authority twice even if one occurred — but
+      // returning the record rather than rewriting it keeps the audit honest
+      // about when the release actually happened.
+      if (verified.status === 'released') return verified;
+      const releasedAt = requireStrictUtcAuthorityTimestamp(input.releasedAt ?? now(), 'releasedAt');
+      return putEncumbrance({ ...verified, status: 'released', releasedAt, releaseBasis: input.basis, updatedAt: releasedAt });
+    },
+
+    async getEncumbrance(context, tenantId, encumbranceId) {
+      requireAuthorityAccessToOrganization(context, tenantId);
+      const found = encumbrances.get(encumbranceId);
+      // A cross-tenant id reads as absent rather than as a refusal, exactly as
+      // `getReservation` does: a caller must not be able to probe another
+      // tenant's identifiers by telling "denied" apart from "no such thing".
+      if (found === undefined || found.tenantId !== tenantId) return null;
+      return assertEncumbranceIntegrity(found);
+    },
+
+    async listEncumbrancesByMandateRef(context, tenantId, sourceMandateRef) {
+      requireAuthorityAccessToOrganization(context, tenantId);
+      return [...encumbrances.values()]
+        .filter((encumbrance) => encumbrance.tenantId === tenantId && encumbrance.sourceMandateRef === sourceMandateRef)
+        .map(assertEncumbranceIntegrity)
+        .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    },
+
+    async listActiveEncumbrances(context, query) {
+      requireAuthorityAccessToOrganization(context, query.tenantId);
+      const at = requireStrictUtcAuthorityTimestamp(query.at, 'at');
+      return readEncumbrancesFor(query.tenantId, query.holderRef, query.resource, query.governedRight).filter((encumbrance) =>
+        governedAuthorityEncumbranceConstrains(encumbrance, at),
+      );
+    },
+
     async health() {
       return {
         providerKind: 'memory',
@@ -669,6 +1051,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
         positionCount: positions.size,
         transitionCount: transitions.length,
         activeReservationCount: [...reservations.values()].filter((reservation) => reservation.status === 'active').length,
+        activeEncumbranceCount: [...encumbrances.values()].filter((encumbrance) => encumbrance.status === 'active').length,
       };
     },
 
@@ -676,6 +1059,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       positions.clear();
       transitions.length = 0;
       reservations.clear();
+      encumbrances.clear();
       sequenceByTenant.clear();
       lastDigestByTenant.clear();
       issuanceOrdinalByTenant.clear();
