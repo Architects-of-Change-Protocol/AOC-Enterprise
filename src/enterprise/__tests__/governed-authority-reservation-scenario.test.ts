@@ -5,7 +5,8 @@ import type { GovernedRightType } from '@aoc-enterprise/governed-authorization';
 
 import { AOC_KERNEL_REASON_CODES } from '../../kernel/index.js';
 import { isAuthorityGovernanceError } from '../authority-governance/errors.js';
-import { GOVERNED_AUTHORITY_CONSERVING_ACTIONS, governedActionCommitsAuthority } from '../authority-governance/reservation-lifecycle.js';
+import { GOVERNED_AUTHORITY_CONSERVING_ACTIONS, governedActionCommitsAuthority, governedActionConservesAuthority } from '../authority-governance/reservation-lifecycle.js';
+import { GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS, governedActionEncumbersAuthority } from '../authority-governance/encumbrance-lifecycle.js';
 import {
   ALICE,
   BOB,
@@ -459,53 +460,91 @@ describe('Reservation — narrowing only, and never a rescue', () => {
 
 describe('Reservation — action applicability', () => {
   it('0. the classification names exactly one conserving action, and it is TRANSFER', () => {
-    // The single semantic location, asserted directly. The three
-    // non-conserving classifications below are measured behaviourally; this
-    // pins the table they are measured against, so a rename or a well-meaning
-    // addition cannot quietly change which actions commit capacity.
+    // The single semantic location, asserted directly. The classifications
+    // below are measured behaviourally; this pins the table they are measured
+    // against, so a rename or a well-meaning addition cannot quietly change
+    // which actions commit capacity.
+    //
+    // *Conserving* still means exactly one thing and names exactly one action:
+    // executing it debits a `GovernedAuthorityPosition`. That is unchanged, and
+    // `TRANSFER` is still the only action that does it.
     assert.deepEqual([...GOVERNED_AUTHORITY_CONSERVING_ACTIONS], [ENTERPRISE_TRANSFER_CAPABILITY]);
     assert.equal(governedActionCommitsAuthority(ENTERPRISE_TRANSFER_CAPABILITY), true);
-    for (const capability of [ENTERPRISE_TOKENIZE_CAPABILITY, ENTERPRISE_COLLATERALIZE_CAPABILITY, ENTERPRISE_LICENSE_CAPABILITY]) {
+
+    // *Committing* is the wider question, and `COLLATERALIZE` now answers it
+    // yes. This is a deliberate reclassification, not a drift: the earlier
+    // finding was that a reservation released at execution would free capacity
+    // at exactly the moment the encumbrance became real, which was correct
+    // while there was nowhere for the commitment to go. There is now — see
+    // `GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS` and the encumbrance suite — so
+    // the commitment is handed over rather than released, and withholding
+    // reservation from it would leave the cross-mandate hole open instead.
+    assert.deepEqual([...GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS], [ENTERPRISE_COLLATERALIZE_CAPABILITY]);
+    assert.equal(governedActionCommitsAuthority(ENTERPRISE_COLLATERALIZE_CAPABILITY), true);
+    assert.equal(governedActionConservesAuthority(ENTERPRISE_COLLATERALIZE_CAPABILITY), false, 'collateralizing still debits no position');
+
+    for (const capability of [ENTERPRISE_TOKENIZE_CAPABILITY, ENTERPRISE_LICENSE_CAPABILITY]) {
       assert.equal(governedActionCommitsAuthority(capability), false, `${capability} commits no governed authority`);
+      assert.equal(governedActionEncumbersAuthority(capability), false, `${capability} constrains no governed authority`);
     }
   });
 
-  it('16. TOKENIZE, COLLATERALIZE and LICENSE commit nothing, because none of them debits a position', async () => {
+  it('16. TOKENIZE and LICENSE commit nothing, because neither debits a position nor constrains one', async () => {
     const world = buildGovernedAuthorityWorld();
     await seedPosition(world, ALICE, ECONOMIC, bp(10_000));
 
-    // All three draw on Alice's authority and all three are authorized against
-    // it — and none of them moves it, so none of them has finite capacity for a
-    // competing authorization to overpromise. Committing on their behalf would
-    // be inventing a scarcity their own semantics do not have. See
-    // `reservation-lifecycle.ts` for the per-action evidence.
+    // Both draw on Alice's authority and both are authorized against it — and
+    // neither moves it nor leaves anything standing over it afterwards, so
+    // neither has finite capacity for a competing authorization to overpromise.
+    // Committing on their behalf would be inventing a scarcity their own
+    // semantics do not have: a tokenization's ceiling is bounded inside its own
+    // mandate, and the licence contract records that licensed units
+    // deliberately do not accumulate. See `reservation-lifecycle.ts` and
+    // `encumbrance-lifecycle.ts` for the per-action evidence.
     const tokenized = await world.tokenization.requestTokenization(
       TENANT_CONTEXT,
       GA_TENANT_A,
       tokenizationRequest('r-16-tokenize', ALICE, tokenizationTerms([ECONOMIC], bp(6_000))),
     );
-    const collateralized = await world.collateralization.requestCollateralization(
-      TENANT_CONTEXT,
-      GA_TENANT_A,
-      collateralizationRequest('r-16-collateral', ALICE, collateralizationTerms([ECONOMIC], bp(6_000))),
-    );
     const licensed = await world.license.requestLicense(TENANT_CONTEXT, GA_TENANT_A, licenseRequest('r-16-license', ALICE, licenseTerms([ECONOMIC])));
 
     for (const [action, outcome] of [
       ['TOKENIZE', tokenized],
-      ['COLLATERALIZE', collateralized],
       ['LICENSE', licensed],
     ] as const) {
       assert.equal(outcome.status, 'allowed', `${action} is still authorized`);
     }
-    assert.equal((await committed(world)).length, 0, 'and none of the three committed any of Alice’s authority');
+    assert.equal((await committed(world)).length, 0, 'and neither committed any of Alice’s authority');
     assert.deepEqual(await available(world), bp(10_000));
 
     // Which means a TRANSFER after them still sees the whole position — the
-    // deliberate consequence of classifying them as non-conserving, and the
-    // reason the ADR records inter-action conflict policy as a separate,
-    // deferred question rather than something generic reservation decides.
+    // deliberate consequence of classifying them as neither conserving nor
+    // encumbering, and the reason the ADRs record inter-action conflict policy
+    // as a separate, deferred question rather than something generic capacity
+    // accounting decides.
     await issue(world, 'r-16-transfer', transferOf(10_000, ALICE, BOB));
+  });
+
+  it('16b. COLLATERALIZE now commits, because a successful one leaves the holder’s authority constrained', async () => {
+    const world = buildGovernedAuthorityWorld();
+    await seedPosition(world, ALICE, ECONOMIC, bp(10_000));
+
+    const collateralized = await world.collateralization.requestCollateralization(
+      TENANT_CONTEXT,
+      GA_TENANT_A,
+      collateralizationRequest('r-16b-collateral', ALICE, collateralizationTerms([ECONOMIC], bp(6_000))),
+    );
+    assert.equal(collateralized.status, 'allowed');
+
+    // The measured difference from the previous phase. A collateralization now
+    // holds capacity from the moment its mandate exists — and still moves
+    // nothing: Alice's position is untouched.
+    const held = await committed(world);
+    assert.equal(held.length, 1, 'the authorization committed the holder’s capacity');
+    assert.equal(held[0]?.action, ENTERPRISE_COLLATERALIZE_CAPABILITY);
+    assert.equal(held[0]?.holderRef, ALICE, 'against the holder, never the requester');
+    assert.deepEqual(await available(world), bp(4_000));
+    assert.deepEqual(await heldScope(world, ALICE, ECONOMIC), bp(10_000), 'and nothing moved');
   });
 
   it('17. LICENSE with no fractional scope commits nothing and is not read as the whole', async () => {

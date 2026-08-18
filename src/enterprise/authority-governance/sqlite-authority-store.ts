@@ -2,9 +2,12 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import {
+  governedAuthorityEncumbranceConstrains,
   governedAuthorityReservationReducesAvailability,
   isGovernedAuthorityIssuanceBasis,
   type GovernedAuthorityBasis,
+  type GovernedAuthorityEncumbrance,
+  type GovernedAuthorityEncumbranceStatus,
   type GovernedAuthorityPosition,
   type GovernedAuthorityReservation,
   type GovernedAuthorityReservationStatus,
@@ -32,11 +35,21 @@ import {
 } from './lifecycle.js';
 import {
   assertReservationIntegrity,
-  computeAvailability,
   computeReservationDigest,
   deriveReservationId,
   reservationReplayMatches,
 } from './reservation-lifecycle.js';
+import {
+  assertEncumbranceIntegrity,
+  assertRemainingScopeCoversEncumbrances,
+  computeCapacity,
+  computeEncumbranceDigest,
+  deriveEncumbranceId,
+  deriveEncumbranceIdempotencyKey,
+  encumbranceReplayMatches,
+  governedActionEncumbersAuthority,
+  sumActiveEncumbrances,
+} from './encumbrance-lifecycle.js';
 import { requireAuthorityAccessToOrganization, requireStrictUtcAuthorityTimestamp, type GovernedAuthorityStore } from './authority-store.js';
 import type {
   AcquireGovernedAuthorityReservationInput,
@@ -46,6 +59,9 @@ import type {
   BootstrapGovernedAuthorityInput,
   GovernedAuthorityAvailabilityQuery,
   GovernedAuthorityResourceRef,
+  RecordGovernedAuthorityEncumbranceInput,
+  RecordGovernedAuthorityEncumbranceOutcome,
+  ReleaseGovernedAuthorityEncumbranceInput,
   ReleaseGovernedAuthorityReservationInput,
 } from './contracts.js';
 
@@ -178,11 +194,15 @@ const SCHEMA_V1 = `
 //    "was this mandate supported by a reservation?" a single-row question, and
 //    what stops a second acquisition being laundered through a fresh
 //    idempotency key for the same mandate.
-//  - `CHECK (status IN ('active','consumed','released'))` -> the closed
-//    lifecycle is enforced by the database, not only by the code above it.
-//    There is deliberately no `'expired'`: expiry is derived from `expires_at`
-//    against the clock, so a stopped cleanup process can never leave a stored
-//    status disagreeing with it.
+//  - `CHECK (status IN ('active','consumed','encumbered','released'))` -> the
+//    closed lifecycle is enforced by the database, not only by the code above
+//    it. There is deliberately no `'expired'`: expiry is derived from
+//    `expires_at` against the clock, so a stopped cleanup process can never
+//    leave a stored status disagreeing with it. `'encumbered'` was added in v3;
+//    this DDL carries it because `CREATE TABLE IF NOT EXISTS` runs only when the
+//    table is absent, so a database seeing it for the first time gets the
+//    current shape, while one that already has the v2 shape is rebuilt by
+//    `migrateReservationsToV3`.
 //  - `CHECK (scope_basis_points >= 0)` / `CHECK (scope_units >= 0)` -> a
 //    negative commitment, which would *manufacture* availability, is
 //    unrepresentable.
@@ -218,7 +238,7 @@ const SCHEMA_V2 = `
     schema_version TEXT NOT NULL,
     UNIQUE (tenant_id, idempotency_key),
     UNIQUE (tenant_id, source_mandate_ref, governed_right),
-    CHECK (status IN ('active', 'consumed', 'released')),
+    CHECK (status IN ('active', 'consumed', 'encumbered', 'released')),
     CHECK (scope_basis_points IS NULL OR scope_basis_points >= 0),
     CHECK (scope_units IS NULL OR scope_units >= 0)
   );
@@ -229,8 +249,128 @@ const SCHEMA_V2 = `
     ON governed_authority_reservations(tenant_id, source_mandate_ref);
 `;
 
-/** The one predecessor this runtime knows how to bring forward. Anything else still refuses to open. */
+// ---------------------------------------------------------------------------
+// Schema v3 adds one table and widens one CHECK: the persistent constraints a
+// successfully executed governed action leaves over a position, and the fourth
+// terminal reservation status a commitment reaches when it becomes one.
+//
+// Additive in the same sense v2 was — no position, transition or reservation
+// row is read, rewritten or re-digested, so a v2 database's entire history
+// keeps verifying byte-for-byte, and a v2 deployment's capacity on the day it
+// upgrades is simply its availability, correct because it had no constraints to
+// account for.
+//
+// SQLite cannot alter a CHECK in place, so widening the reservation status set
+// to admit `'encumbered'` is done by the standard rebuild
+// (`create the new table, copy, drop, rename`) in `migrateReservationsToV3`
+// below, inside one transaction with `foreign_keys` already on and nothing
+// referencing the table.
+//
+// Durable invariants pushed down to the database, in the same spirit as the
+// tables before it:
+//
+//  - `UNIQUE (tenant_id, idempotency_key)` -> one constraint per idempotency
+//    identity. A retried execution collides rather than constraining a second
+//    quantity, and the constraint holds across processes where an in-memory
+//    replay check would not.
+//  - `UNIQUE (tenant_id, source_execution_ref, governed_right)` -> one
+//    execution constrains each right at most once. This is what makes
+//    "did this execution already encumber?" a single-row question, and what
+//    stops a second constraint being laundered through a fresh idempotency key
+//    for the same execution.
+//  - `CHECK (status IN ('active','released'))` -> the closed two-state
+//    lifecycle is enforced by the database, not only by the code above it.
+//    There is deliberately no `'expired'`: this record carries no expiry, and a
+//    stored status that could disagree with one is precisely what is not wanted.
+//  - `CHECK (released_at IS NULL) = (status = 'active')` in effect, expressed as
+//    the two CHECKs below -> a released row must say when and on what basis, and
+//    an active one must claim neither.
+//  - `CHECK (scope_basis_points >= 0)` / `CHECK (scope_units >= 0)` -> a
+//    negative constraint, which would *manufacture* capacity, is
+//    unrepresentable.
+//
+// The partial index on active rows is what the capacity read uses: the
+// enforcement path asks this question on every committing authorization, and it
+// must not scan released history to answer it.
+// ---------------------------------------------------------------------------
+const SCHEMA_V3 = `
+  CREATE TABLE IF NOT EXISTS governed_authority_encumbrances (
+    encumbrance_id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    holder_ref TEXT NOT NULL,
+    resource_kind TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    governed_right TEXT NOT NULL,
+    scope_kind TEXT NOT NULL,
+    scope_basis_points INTEGER,
+    scope_units INTEGER,
+    scope_unit_denomination TEXT,
+    source_action TEXT NOT NULL,
+    source_mandate_ref TEXT NOT NULL,
+    source_execution_ref TEXT NOT NULL,
+    source_reservation_ref TEXT,
+    effective_from TEXT NOT NULL,
+    status TEXT NOT NULL,
+    released_at TEXT,
+    release_basis TEXT,
+    idempotency_key TEXT NOT NULL,
+    correlation_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    encumbrance_digest TEXT NOT NULL,
+    schema_version TEXT NOT NULL,
+    UNIQUE (tenant_id, idempotency_key),
+    UNIQUE (tenant_id, source_execution_ref, governed_right),
+    CHECK (status IN ('active', 'released')),
+    CHECK (status <> 'active' OR (released_at IS NULL AND release_basis IS NULL)),
+    CHECK (status <> 'released' OR (released_at IS NOT NULL AND release_basis IS NOT NULL)),
+    CHECK (scope_basis_points IS NULL OR scope_basis_points >= 0),
+    CHECK (scope_units IS NULL OR scope_units >= 0)
+  );
+  CREATE INDEX IF NOT EXISTS idx_governed_authority_encumbrances_active
+    ON governed_authority_encumbrances(tenant_id, holder_ref, resource_kind, resource_id, governed_right)
+    WHERE status = 'active';
+  CREATE INDEX IF NOT EXISTS idx_governed_authority_encumbrances_mandate
+    ON governed_authority_encumbrances(tenant_id, source_mandate_ref);
+`;
+
+/** The reservations table as v3 defines it: identical to v2 except that the status CHECK admits `'encumbered'`. Used only by the rebuild migration. */
+const SCHEMA_V3_RESERVATIONS_REBUILD = `
+  CREATE TABLE governed_authority_reservations_v3 (
+    reservation_id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    holder_ref TEXT NOT NULL,
+    resource_kind TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    governed_right TEXT NOT NULL,
+    scope_kind TEXT NOT NULL,
+    scope_basis_points INTEGER,
+    scope_units INTEGER,
+    scope_unit_denomination TEXT,
+    action TEXT NOT NULL,
+    source_request_ref TEXT NOT NULL,
+    source_decision_ref TEXT,
+    source_mandate_ref TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    status TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    correlation_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    reservation_digest TEXT NOT NULL,
+    schema_version TEXT NOT NULL,
+    UNIQUE (tenant_id, idempotency_key),
+    UNIQUE (tenant_id, source_mandate_ref, governed_right),
+    CHECK (status IN ('active', 'consumed', 'encumbered', 'released')),
+    CHECK (scope_basis_points IS NULL OR scope_basis_points >= 0),
+    CHECK (scope_units IS NULL OR scope_units >= 0)
+  );
+`;
+
+/** The predecessors this runtime knows how to bring forward. Anything else still refuses to open. */
 const GOVERNED_AUTHORITY_STORE_SCHEMA_V1 = 'aoc.governed-authority-store.schema.v1';
+const GOVERNED_AUTHORITY_STORE_SCHEMA_V2 = 'aoc.governed-authority-store.schema.v2';
 
 interface ReservationRow {
   readonly reservation_id: string;
@@ -255,6 +395,32 @@ interface ReservationRow {
   readonly created_at: string;
   readonly updated_at: string;
   readonly reservation_digest: string;
+}
+
+interface EncumbranceRow {
+  readonly encumbrance_id: string;
+  readonly tenant_id: string;
+  readonly holder_ref: string;
+  readonly resource_kind: string;
+  readonly resource_id: string;
+  readonly governed_right: string;
+  readonly scope_kind: string;
+  readonly scope_basis_points: number | null;
+  readonly scope_units: number | null;
+  readonly scope_unit_denomination: string | null;
+  readonly source_action: string;
+  readonly source_mandate_ref: string;
+  readonly source_execution_ref: string;
+  readonly source_reservation_ref: string | null;
+  readonly effective_from: string;
+  readonly status: string;
+  readonly released_at: string | null;
+  readonly release_basis: string | null;
+  readonly idempotency_key: string;
+  readonly correlation_id: string | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+  readonly encumbrance_digest: string;
 }
 
 interface PositionRow {
@@ -387,8 +553,19 @@ function toPosition(row: PositionRow): GovernedAuthorityPosition {
 }
 
 function readReservationStatus(value: string, recordId: string): GovernedAuthorityReservationStatus {
-  if (value === 'active' || value === 'consumed' || value === 'released') return value;
+  if (value === 'active' || value === 'consumed' || value === 'encumbered' || value === 'released') return value;
   throw corrupted(`Stored governed authority reservation '${recordId}' has an unknown status '${value}'.`, { recordId });
+}
+
+function readEncumbranceStatus(value: string, recordId: string): GovernedAuthorityEncumbranceStatus {
+  if (value === 'active' || value === 'released') return value;
+  throw corrupted(`Stored governed authority encumbrance '${recordId}' has an unknown status '${value}'.`, { recordId });
+}
+
+/** The only release basis this model has. A stored row naming anything else was not written by this runtime, and is refused rather than read. */
+function readEncumbranceReleaseBasis(value: string, recordId: string): 'administrative' {
+  if (value === 'administrative') return value;
+  throw corrupted(`Stored governed authority encumbrance '${recordId}' has an unknown release basis '${value}'.`, { recordId });
 }
 
 /** Reads a reservation back, verifying its digest. A tampered row fails the read rather than dropping out of it: skipping one would silently free the capacity it commits. */
@@ -413,6 +590,32 @@ function toReservation(row: ReservationRow): GovernedAuthorityReservation {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     digest: row.reservation_digest,
+  });
+}
+
+/** Reads an encumbrance back, verifying its digest. A tampered row fails the read rather than dropping out of it: skipping one would silently free the authority it constrains. */
+function toEncumbrance(row: EncumbranceRow): GovernedAuthorityEncumbrance {
+  return assertEncumbranceIntegrity({
+    id: row.encumbrance_id,
+    tenantId: row.tenant_id,
+    holderRef: row.holder_ref,
+    resourceKind: row.resource_kind,
+    resourceId: row.resource_id,
+    governedRight: readGovernedRight(row.governed_right, row.encumbrance_id),
+    scope: readScopeColumns(row, row.encumbrance_id),
+    sourceAction: row.source_action,
+    sourceMandateRef: row.source_mandate_ref,
+    sourceExecutionRef: row.source_execution_ref,
+    ...(row.source_reservation_ref !== null ? { sourceReservationRef: row.source_reservation_ref } : {}),
+    effectiveFrom: row.effective_from,
+    status: readEncumbranceStatus(row.status, row.encumbrance_id),
+    ...(row.released_at !== null ? { releasedAt: row.released_at } : {}),
+    ...(row.release_basis !== null ? { releaseBasis: readEncumbranceReleaseBasis(row.release_basis, row.encumbrance_id) } : {}),
+    idempotencyKey: row.idempotency_key,
+    ...(row.correlation_id !== null ? { correlationId: row.correlation_id } : {}),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    digest: row.encumbrance_digest,
   });
 }
 
@@ -445,6 +648,39 @@ function resolveOnDisk(dbPath: string): string {
 
 function resolveBusyTimeoutMs(value: number | undefined): number {
   return value !== undefined && Number.isFinite(value) && value >= 0 ? Math.floor(value) : DEFAULT_BUSY_TIMEOUT_MS;
+}
+
+/**
+ * Widens the reservations table's status CHECK to admit `'encumbered'`.
+ *
+ * SQLite cannot alter a CHECK in place, so this is the standard rebuild —
+ * create the new table, copy every row across unchanged, drop the old one,
+ * rename — run inside one transaction so a crash leaves either the v2 table or
+ * the v3 one, never neither.
+ *
+ * Deliberately a pure copy. Not one status is reinterpreted, not one digest is
+ * recomputed, and no row acquires the new state retroactively: a v2 database's
+ * reservations verify byte-for-byte afterwards exactly as they did before, and
+ * `'encumbered'` only ever arises from a Phase 5.5 handoff that actually
+ * happened. Manufacturing history to make old data look like it went through
+ * the new lifecycle is precisely what a migration must not do.
+ *
+ * The indexes are recreated because dropping the table drops them with it.
+ */
+function migrateReservationsToV3(db: { exec: (sql: string) => unknown; transaction: (fn: () => void) => () => void }): void {
+  db.transaction(() => {
+    db.exec(SCHEMA_V3_RESERVATIONS_REBUILD);
+    db.exec(`INSERT INTO governed_authority_reservations_v3 SELECT * FROM governed_authority_reservations;`);
+    db.exec(`DROP TABLE governed_authority_reservations;`);
+    db.exec(`ALTER TABLE governed_authority_reservations_v3 RENAME TO governed_authority_reservations;`);
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_governed_authority_reservations_active
+        ON governed_authority_reservations(tenant_id, holder_ref, resource_kind, resource_id, governed_right)
+        WHERE status = 'active';
+      CREATE INDEX IF NOT EXISTS idx_governed_authority_reservations_mandate
+        ON governed_authority_reservations(tenant_id, source_mandate_ref);
+    `);
+  })();
 }
 
 /**
@@ -484,32 +720,44 @@ export async function createSqliteGovernedAuthorityStore(
   // Fail closed on a database written by a different schema version, before
   // any DDL runs — never silently reuse or migrate a mismatched store.
   const versionTable = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`).get('governed_authority_store_versions');
-  let migrateFromV1 = false;
+  let migrating = false;
+  let migrateReservationCheck = false;
   if (versionTable !== undefined) {
     const existingVersion = db.prepare(`SELECT schema_version FROM governed_authority_store_versions ORDER BY id DESC LIMIT 1`).get() as
       | { schema_version: string }
       | undefined;
     if (existingVersion !== undefined && existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION) {
-      // v1 -> v2 is brought forward rather than refused, because the change is
-      // purely additive: one new table, and not a single existing row read,
-      // rewritten or re-digested. Every other version still refuses, so this is
-      // one known migration rather than a general "try to upgrade anything"
-      // policy — and refusing v1 outright would have stopped every deployment
-      // that already holds authority state, to add a table they have no rows
-      // for.
-      if (existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_V1) {
+      // v1 and v2 are brought forward rather than refused, because both changes
+      // are additive: new tables, one widened status set, and not a single
+      // existing row's meaning altered or digest recomputed. Every other version
+      // still refuses, so these are two known migrations rather than a general
+      // "try to upgrade anything" policy — and refusing outright would have
+      // stopped every deployment that already holds authority state, to add
+      // tables they have no rows for.
+      if (
+        existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_V1 &&
+        existingVersion.schema_version !== GOVERNED_AUTHORITY_STORE_SCHEMA_V2
+      ) {
         db.close();
         throw new AuthorityGovernanceError(
           'GOVERNED_AUTHORITY_STORE_UNAVAILABLE',
           `Governed Authority Store schema version '${existingVersion.schema_version}' is not supported by this runtime (expected '${GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION}'). Refusing to open the store.`,
         );
       }
-      migrateFromV1 = true;
+      migrating = true;
+      // Only a database that already carries the v2 reservations table needs
+      // its status CHECK widened. A v1 database has no such table yet, so the
+      // `SCHEMA_V2` DDL below creates it — with v3's own CHECK, since that DDL
+      // has been updated in place and `CREATE TABLE IF NOT EXISTS` only ever
+      // runs when the table is absent.
+      migrateReservationCheck = existingVersion.schema_version === GOVERNED_AUTHORITY_STORE_SCHEMA_V2;
     }
   }
 
   db.exec(SCHEMA_V1);
   db.exec(SCHEMA_V2);
+  if (migrateReservationCheck) migrateReservationsToV3(db);
+  db.exec(SCHEMA_V3);
   const recordedVersion = db.prepare(`SELECT schema_version FROM governed_authority_store_versions ORDER BY id DESC LIMIT 1`).get() as
     | { schema_version: string }
     | undefined;
@@ -519,10 +767,10 @@ export async function createSqliteGovernedAuthorityStore(
       'applied',
       now(),
     );
-  } else if (migrateFromV1) {
+  } else if (migrating) {
     // Appended, never overwritten: the version table is a history, and a
     // reader must be able to see that this database was migrated rather than
-    // created at v2.
+    // created at v3.
     db.prepare(`INSERT INTO governed_authority_store_versions (schema_version, migration_state, recorded_at) VALUES (?, ?, ?)`).run(
       GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION,
       'migrated',
@@ -613,6 +861,38 @@ export async function createSqliteGovernedAuthorityStore(
   const updateReservationStatus = db.prepare(
     `UPDATE governed_authority_reservations SET status = @status, updated_at = @updated_at, reservation_digest = @reservation_digest WHERE reservation_id = @reservation_id`,
   );
+
+  const selectEncumbrancesFor = db.prepare(
+    `SELECT * FROM governed_authority_encumbrances
+       WHERE tenant_id = ? AND holder_ref = ? AND resource_kind = ? AND resource_id = ? AND governed_right = ?
+       ORDER BY encumbrance_id ASC`,
+  );
+  const selectEncumbranceById = db.prepare(`SELECT * FROM governed_authority_encumbrances WHERE tenant_id = ? AND encumbrance_id = ?`);
+  const selectEncumbranceByIdempotencyKey = db.prepare(`SELECT * FROM governed_authority_encumbrances WHERE tenant_id = ? AND idempotency_key = ?`);
+  const selectEncumbrancesByMandate = db.prepare(
+    `SELECT * FROM governed_authority_encumbrances WHERE tenant_id = ? AND source_mandate_ref = ? ORDER BY encumbrance_id ASC`,
+  );
+  const insertEncumbrance = db.prepare(
+    `INSERT INTO governed_authority_encumbrances (
+       encumbrance_id, tenant_id, holder_ref, resource_kind, resource_id, governed_right,
+       scope_kind, scope_basis_points, scope_units, scope_unit_denomination,
+       source_action, source_mandate_ref, source_execution_ref, source_reservation_ref,
+       effective_from, status, released_at, release_basis, idempotency_key, correlation_id,
+       created_at, updated_at, encumbrance_digest, schema_version
+     ) VALUES (
+       @encumbrance_id, @tenant_id, @holder_ref, @resource_kind, @resource_id, @governed_right,
+       @scope_kind, @scope_basis_points, @scope_units, @scope_unit_denomination,
+       @source_action, @source_mandate_ref, @source_execution_ref, @source_reservation_ref,
+       @effective_from, @status, @released_at, @release_basis, @idempotency_key, @correlation_id,
+       @created_at, @updated_at, @encumbrance_digest, @schema_version
+     )`,
+  );
+  const updateEncumbranceRelease = db.prepare(
+    `UPDATE governed_authority_encumbrances
+       SET status = @status, released_at = @released_at, release_basis = @release_basis, updated_at = @updated_at, encumbrance_digest = @encumbrance_digest
+       WHERE encumbrance_id = @encumbrance_id`,
+  );
+  const countActiveEncumbrances = db.prepare(`SELECT COUNT(*) AS total FROM governed_authority_encumbrances WHERE status = 'active'`);
 
   /** The chain position the next transition for a tenant will occupy. Read inside the caller's transaction, so it cannot straddle another writer. */
   function nextSequenceFor(tenantId: string): number {
@@ -731,6 +1011,63 @@ export async function createSqliteGovernedAuthorityStore(
     return sealed;
   }
 
+  function readEncumbrancesFor(
+    tenantId: string,
+    holderRef: string,
+    resource: GovernedAuthorityResourceRef,
+    governedRight: GovernedRightType,
+  ): GovernedAuthorityEncumbrance[] {
+    return (selectEncumbrancesFor.all(tenantId, holderRef, resource.kind, resource.id, governedRight) as EncumbranceRow[]).map(toEncumbrance);
+  }
+
+  function insertSealedEncumbrance(draft: Omit<GovernedAuthorityEncumbrance, 'digest'>): GovernedAuthorityEncumbrance {
+    const sealed: GovernedAuthorityEncumbrance = { ...draft, digest: computeEncumbranceDigest(draft) };
+    insertEncumbrance.run({
+      encumbrance_id: sealed.id,
+      tenant_id: sealed.tenantId,
+      holder_ref: sealed.holderRef,
+      resource_kind: sealed.resourceKind,
+      resource_id: sealed.resourceId,
+      governed_right: sealed.governedRight,
+      ...writeScopeColumns(sealed.scope),
+      source_action: sealed.sourceAction,
+      source_mandate_ref: sealed.sourceMandateRef,
+      source_execution_ref: sealed.sourceExecutionRef,
+      source_reservation_ref: sealed.sourceReservationRef ?? null,
+      effective_from: sealed.effectiveFrom,
+      status: sealed.status,
+      released_at: sealed.releasedAt ?? null,
+      release_basis: sealed.releaseBasis ?? null,
+      idempotency_key: sealed.idempotencyKey,
+      correlation_id: sealed.correlationId ?? null,
+      created_at: sealed.createdAt,
+      updated_at: sealed.updatedAt,
+      encumbrance_digest: sealed.digest,
+      schema_version: GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION,
+    });
+    return sealed;
+  }
+
+  /** Moves an encumbrance to `'released'`, re-sealing its digest over the new bytes so the row stays verifiable rather than becoming a permanent integrity failure. */
+  function writeEncumbranceRelease(
+    encumbrance: GovernedAuthorityEncumbrance,
+    releasedAt: string,
+    basis: ReleaseGovernedAuthorityEncumbranceInput['basis'],
+  ): GovernedAuthorityEncumbrance {
+    const { digest: _digest, ...rest } = encumbrance;
+    const next = { ...rest, status: 'released' as const, releasedAt, releaseBasis: basis, updatedAt: releasedAt };
+    const sealed: GovernedAuthorityEncumbrance = { ...next, digest: computeEncumbranceDigest(next) };
+    updateEncumbranceRelease.run({
+      encumbrance_id: sealed.id,
+      status: sealed.status,
+      released_at: sealed.releasedAt ?? null,
+      release_basis: sealed.releaseBasis ?? null,
+      updated_at: sealed.updatedAt,
+      encumbrance_digest: sealed.digest,
+    });
+    return sealed;
+  }
+
   /** One commit section: append the issuance transition and create or increase the position together, or neither. */
   const commitBootstrap = db.transaction((input: BootstrapGovernedAuthorityInput, recordedAt: string, occurredAt: string): GovernedAuthorityPosition => {
     const existing = readPosition(input.tenantId, input.holderRef, input.resource, input.governedRight);
@@ -806,11 +1143,26 @@ export async function createSqliteGovernedAuthorityStore(
           );
         }
         const target = readPosition(input.tenantId, input.toHolderRef, input.resource, governedRight);
+        const debited = subtractAuthorityScope(source.scope, input.scope, { positionId: source.id, governedRight });
+        // The structural invariant, read inside this transaction so it cannot
+        // straddle a concurrent constraint being recorded. What the source keeps
+        // must still cover the persistent constraints standing over it, because
+        // those constraints are holder-bound and do not follow the authority to
+        // the recipient. Not "encumbered authority cannot move" — a holder with
+        // 5 000 bp and a 4 000 bp constraint may still move 1 000 — but a
+        // refusal to leave AOC holding a constraint over authority its holder no
+        // longer possesses.
+        assertRemainingScopeCoversEncumbrances(
+          debited,
+          readEncumbrancesFor(input.tenantId, input.fromHolderRef, input.resource, governedRight),
+          input.occurredAt,
+          { tenantId: input.tenantId, holderRef: input.fromHolderRef, governedRight, positionId: source.id },
+        );
         return {
           governedRight,
           source,
           target,
-          debited: subtractAuthorityScope(source.scope, input.scope, { positionId: source.id, governedRight }),
+          debited,
           credited:
             target === null ? serializeGovernedRightsScope(input.scope) : addAuthorityScopes(target.scope, input.scope, { positionId: target.id, governedRight }),
         };
@@ -938,7 +1290,17 @@ export async function createSqliteGovernedAuthorityStore(
       }
 
       const position = readPosition(input.tenantId, input.holderRef, input.resource, input.governedRight);
-      const availability = computeAvailability(position, readReservationsFor(input.tenantId, input.holderRef, input.resource, input.governedRight), recordedAt);
+      // Persistent constraints are part of the same gate, not a separate one. A
+      // commitment that ignored them would be exactly the post-execution double
+      // commitment this layer closes: the reservations behind an executed
+      // collateralization are terminal, so only its encumbrance still says that
+      // authority is spoken for.
+      const availability = computeCapacity(
+        position,
+        readReservationsFor(input.tenantId, input.holderRef, input.resource, input.governedRight),
+        readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight),
+        recordedAt,
+      );
 
       if (availability.outcome === 'no_authority') {
         // Enrolment is consulted only once the holder turns out to have no
@@ -973,17 +1335,31 @@ export async function createSqliteGovernedAuthorityStore(
           },
         );
       }
+      if (availability.outcome === 'overencumbered') {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          `More governed authority stands persistently constrained against '${input.holderRef}' than that holder possesses; refusing to commit further until the inconsistency is resolved.`,
+          {
+            tenantId: input.tenantId,
+            holderRef: input.holderRef,
+            governedRight: input.governedRight,
+            held: availability.held,
+            encumbered: availability.encumbered,
+          },
+        );
+      }
 
       if (!governedRightsScopeWithin(serializeGovernedRightsScope(input.scope), availability.available)) {
         throw new AuthorityGovernanceError(
           'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
-          `'${input.holderRef}' holds enough '${input.governedRight}' in total, but too much of it is already committed to still-live governed authorizations to commit this much more.`,
+          `'${input.holderRef}' holds enough '${input.governedRight}' in total, but too much of it is already committed or persistently constrained to commit this much more.`,
           {
             tenantId: input.tenantId,
             holderRef: input.holderRef,
             governedRight: input.governedRight,
             held: availability.held,
             ...(availability.committed !== undefined ? { committed: availability.committed } : {}),
+            ...(availability.encumbered !== undefined ? { encumbered: availability.encumbered } : {}),
             available: availability.available,
             requested: serializeGovernedRightsScope(input.scope),
           },
@@ -1033,8 +1409,232 @@ export async function createSqliteGovernedAuthorityStore(
         { reservationId: reservation.id },
       );
     }
+    if (reservation.status === 'encumbered') {
+      // The commitment did not lapse — it became a persistent constraint, which
+      // is now what accounts for the same quantity. Reopening the reservation
+      // would not return the capacity (the encumbrance still holds it) but it
+      // would misstate the lifecycle, and a later release of the constraint
+      // would then have to reason about a reservation resurrected after being
+      // spent.
+      throw new AuthorityGovernanceError(
+        'GOVERNED_AUTHORITY_RESERVATION_CONFLICT',
+        `Governed authority reservation '${reservation.id}' became a persistent encumbrance when its governed action executed; the commitment was spent rather than ended, and releasing it here would misstate what happened. Release the encumbrance instead.`,
+        { reservationId: reservation.id },
+      );
+    }
     return writeReservationStatus(reservation, 'released', releasedAt);
   });
+
+  /**
+   * One commit section for the whole handoff: decide capacity, write the
+   * persistent constraint, and terminalize the commitment it takes over from —
+   * or none of it.
+   *
+   * This is the transaction the whole phase turns on. Both rows live in this
+   * database, so this is a real atomicity claim rather than a coordination
+   * story: there is no instant at which the reservation has ended and the
+   * constraint does not yet exist, and therefore no window in which a
+   * competing acquisition is told the authority is free. Crashing before COMMIT
+   * rolls back both, leaving the reservation active over an unconstrained
+   * position — conservative, self-describing, and safe to retry, because the
+   * retry is idempotent on the execution reference.
+   *
+   * `UNIQUE (tenant_id, idempotency_key)` and
+   * `UNIQUE (tenant_id, source_execution_ref, governed_right)` refuse a
+   * duplicate even if one somehow reached the insert.
+   */
+  const commitEncumbrance = db.transaction(
+    (
+      input: RecordGovernedAuthorityEncumbranceInput,
+      idempotencyKey: string,
+      effectiveFrom: string,
+      recordedAt: string,
+    ): RecordGovernedAuthorityEncumbranceOutcome => {
+      const existingRow = selectEncumbranceByIdempotencyKey.get(input.tenantId, idempotencyKey) as EncumbranceRow | undefined;
+      if (existingRow !== undefined) {
+        const existing = toEncumbrance(existingRow);
+        if (
+          !encumbranceReplayMatches(existing, {
+            holderRef: input.holderRef,
+            resourceKind: input.resource.kind,
+            resourceId: input.resource.id,
+            governedRight: input.governedRight,
+            scope: input.scope,
+            sourceAction: input.sourceAction,
+            sourceMandateRef: input.sourceMandateRef,
+            sourceExecutionRef: input.sourceExecutionRef,
+          })
+        ) {
+          throw new AuthorityGovernanceError(
+            'GOVERNED_AUTHORITY_ENCUMBRANCE_CONFLICT',
+            `Idempotency key '${idempotencyKey}' already constrains governed authority under materially different terms; a replay must restate the same constraint.`,
+            { idempotencyKey, encumbranceId: existing.id },
+          );
+        }
+        return { outcome: 'encumbered' as const, encumbrance: existing, replayed: true };
+      }
+
+      const position = readPosition(input.tenantId, input.holderRef, input.resource, input.governedRight);
+      if (position === null) {
+        const enrolled = ((countPositionsForResource.get(input.tenantId, input.resource.kind, input.resource.id) as { total: number } | undefined)?.total ?? 0) > 0;
+        if (!enrolled) return { outcome: 'resource_not_enrolled' as const };
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE',
+          `'${input.holderRef}' holds no recognized authority over '${input.governedRight}' of this resource; there is nothing to constrain.`,
+          { tenantId: input.tenantId, holderRef: input.holderRef, governedRight: input.governedRight },
+        );
+      }
+
+      const standing = readReservationsFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+      const constraints = readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+
+      // The handoff's central accounting rule: the commitment being converted
+      // must not be counted against the constraint replacing it. Both describe
+      // the same promised authority, one instant apart, so the reservations
+      // recorded against this mandate are set aside while capacity for their
+      // successor is decided. Every *other* commitment and every other
+      // constraint still counts, which is what stops a competing mandate's
+      // capacity being spent here.
+      const surrendered =
+        input.consumesReservationsForMandateRef === undefined
+          ? new Set<string>()
+          : new Set(
+              standing
+                .filter((reservation) => reservation.sourceMandateRef === input.consumesReservationsForMandateRef && reservation.status === 'active')
+                .map((reservation) => reservation.id),
+            );
+      const capacity = computeCapacity(
+        position,
+        standing.filter((reservation) => !surrendered.has(reservation.id)),
+        constraints,
+        recordedAt,
+      );
+
+      if (capacity.outcome === 'incompatible') {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
+          'This governed authority cannot be constrained by that quantity: the position and the state standing against it are not commensurable with it.',
+          { tenantId: input.tenantId, holderRef: input.holderRef, governedRight: input.governedRight },
+        );
+      }
+      if (capacity.outcome === 'no_authority' || capacity.outcome === 'overcommitted' || capacity.outcome === 'overencumbered') {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          `The governed authority of '${input.holderRef}' is already inconsistent with what stands against it; refusing to record a further persistent constraint until it is resolved.`,
+          { tenantId: input.tenantId, holderRef: input.holderRef, governedRight: input.governedRight, capacity: capacity.outcome },
+        );
+      }
+      // Commensurability first, so an incomparable quantity is named as one
+      // rather than reported as a shortfall. `governedRightsScopeWithin` answers
+      // false for both, and an operator's remedy for "these are not the same
+      // kind of quantity" is nothing like their remedy for "too much is already
+      // spoken for".
+      const requestedScope = serializeGovernedRightsScope(input.scope);
+      if (
+        requestedScope.kind !== capacity.available.kind ||
+        (requestedScope.kind === 'unitized' &&
+          capacity.available.kind === 'unitized' &&
+          requestedScope.unitDenomination !== capacity.available.unitDenomination)
+      ) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
+          'This governed authority cannot be constrained by that quantity: the two scopes are of different kinds, or name different unit denominations, and AOC holds no conversion between them.',
+          {
+            tenantId: input.tenantId,
+            holderRef: input.holderRef,
+            governedRight: input.governedRight,
+            held: capacity.held,
+            requested: requestedScope,
+          },
+        );
+      }
+      if (!governedRightsScopeWithin(requestedScope, capacity.available)) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+          `'${input.holderRef}' holds enough '${input.governedRight}' in total, but too much of it already stands committed or persistently constrained to constrain this much more.`,
+          {
+            tenantId: input.tenantId,
+            holderRef: input.holderRef,
+            governedRight: input.governedRight,
+            held: capacity.held,
+            ...(capacity.committed !== undefined ? { committed: capacity.committed } : {}),
+            ...(capacity.encumbered !== undefined ? { encumbered: capacity.encumbered } : {}),
+            available: capacity.available,
+            requested: requestedScope,
+          },
+        );
+      }
+
+      const sourceReservation = [...surrendered][0];
+      const encumbrance = insertSealedEncumbrance({
+        id: deriveEncumbranceId(input.tenantId, input.sourceExecutionRef, input.governedRight),
+        tenantId: input.tenantId,
+        holderRef: input.holderRef,
+        resourceKind: input.resource.kind,
+        resourceId: input.resource.id,
+        governedRight: input.governedRight,
+        scope: serializeGovernedRightsScope(input.scope),
+        sourceAction: input.sourceAction,
+        sourceMandateRef: input.sourceMandateRef,
+        sourceExecutionRef: input.sourceExecutionRef,
+        ...(sourceReservation !== undefined ? { sourceReservationRef: sourceReservation } : {}),
+        effectiveFrom,
+        status: 'active',
+        idempotencyKey,
+        ...(input.correlationId !== undefined ? { correlationId: input.correlationId } : {}),
+        createdAt: recordedAt,
+        updatedAt: recordedAt,
+      });
+
+      // The handoff, in the same transaction that just wrote the constraint. A
+      // commitment is terminalized only once the constraints created under its
+      // mandate cover the whole of what it reserved: a mandate whose terms
+      // permit instalments keeps its reservation active until the last one
+      // lands, and the reservation's residual — reserved less already-encumbered
+      // — is what protects the instalments still to come without double-counting
+      // the ones already recorded.
+      if (input.consumesReservationsForMandateRef !== undefined) {
+        const afterWrite = readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+        for (const reservationId of surrendered) {
+          const reservation = standing.find((candidate) => candidate.id === reservationId);
+          if (reservation === undefined || reservation.status !== 'active') continue;
+          const carvedOut = sumActiveEncumbrances(
+            afterWrite.filter(
+              (candidate) => candidate.sourceMandateRef === reservation.sourceMandateRef && candidate.governedRight === reservation.governedRight,
+            ),
+            recordedAt,
+          );
+          if (carvedOut === null || carvedOut === 'incompatible') continue;
+          if (!governedRightsScopeWithin(reservation.scope, carvedOut)) continue;
+          writeReservationStatus(reservation, 'encumbered', recordedAt);
+        }
+      }
+
+      return { outcome: 'encumbered' as const, encumbrance, replayed: false };
+    },
+  );
+
+  /** One commit section for release: read the current status and write the terminal one together, so two concurrent releases cannot both observe `'active'`. */
+  const commitEncumbranceRelease = db.transaction(
+    (input: ReleaseGovernedAuthorityEncumbranceInput, releasedAt: string): GovernedAuthorityEncumbrance => {
+      const row = selectEncumbranceById.get(input.tenantId, input.encumbranceId) as EncumbranceRow | undefined;
+      if (row === undefined) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_NOT_FOUND',
+          `No governed authority encumbrance '${input.encumbranceId}' exists in this tenant.`,
+          { tenantId: input.tenantId, encumbranceId: input.encumbranceId },
+        );
+      }
+      const encumbrance = toEncumbrance(row);
+      // Already released: return it unchanged. Capacity is derived from the
+      // constraints still active rather than from a counter, so a second
+      // release cannot free the same authority twice even if one occurred — but
+      // returning the record rather than rewriting it keeps the audit honest
+      // about when the release actually happened.
+      if (encumbrance.status === 'released') return encumbrance;
+      return writeEncumbranceRelease(encumbrance, releasedAt, input.basis);
+    },
+  );
 
   return {
     providerKind: 'sqlite',
@@ -1153,7 +1753,12 @@ export async function createSqliteGovernedAuthorityStore(
       requireAuthorityAccessToOrganization(context, query.tenantId);
       const at = requireStrictUtcAuthorityTimestamp(query.at, 'at');
       const position = readPosition(query.tenantId, query.holderRef, query.resource, query.governedRight);
-      return computeAvailability(position, readReservationsFor(query.tenantId, query.holderRef, query.resource, query.governedRight), at);
+      return computeCapacity(
+        position,
+        readReservationsFor(query.tenantId, query.holderRef, query.resource, query.governedRight),
+        readEncumbrancesFor(query.tenantId, query.holderRef, query.resource, query.governedRight),
+        at,
+      );
     },
 
     async getReservation(context: AuthorityGovernanceContext, tenantId: string, reservationId: string) {
@@ -1179,6 +1784,75 @@ export async function createSqliteGovernedAuthorityStore(
       );
     },
 
+    async recordEncumbrance(context: AuthorityGovernanceContext, input: RecordGovernedAuthorityEncumbranceInput) {
+      requireAuthorityAccessToOrganization(context, input.tenantId);
+      assertKnownGovernedRight(input.governedRight);
+      assertValidAuthorityScope(input.scope, 'scope');
+      assertNonZeroAuthorityScope(input.scope, 'scope');
+
+      // The trusted basis, asserted before the transaction opens. An action
+      // that leaves no persistent constraint has no business recording one, and
+      // a constraint with no execution behind it is a constraint somebody
+      // asserted rather than earned.
+      if (!governedActionEncumbersAuthority(input.sourceAction)) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID',
+          `'${input.sourceAction}' is not classified as leaving a persistent governed authority constraint; refusing to record one for it.`,
+          { sourceAction: input.sourceAction },
+        );
+      }
+      if (input.sourceExecutionRef.length === 0 || input.sourceMandateRef.length === 0) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID',
+          'A persistent governed authority constraint must name both the authorization artifact it arose under and the execution evidence that created it.',
+          { sourceMandateRef: input.sourceMandateRef, sourceExecutionRef: input.sourceExecutionRef },
+        );
+      }
+
+      const effectiveFrom = requireStrictUtcAuthorityTimestamp(input.effectiveFrom, 'effectiveFrom');
+      const recordedAt = requireStrictUtcAuthorityTimestamp(now(), 'recordedAt');
+      const idempotencyKey = input.idempotencyKey ?? deriveEncumbranceIdempotencyKey(input.sourceExecutionRef, input.governedRight);
+      return commitEncumbrance(input, idempotencyKey, effectiveFrom, recordedAt);
+    },
+
+    async releaseEncumbrance(context: AuthorityGovernanceContext, input: ReleaseGovernedAuthorityEncumbranceInput) {
+      requireAuthorityAccessToOrganization(context, input.tenantId);
+      // Privileged, always. There is no basis a request path could supply, so
+      // there is no context a request path could reach this from.
+      if (!context.system) {
+        throw new AuthorityGovernanceError(
+          'GOVERNED_AUTHORITY_BOOTSTRAP_NOT_PERMITTED',
+          'Releasing a persistent governed authority constraint requires a privileged system context; a party can never free constrained authority by asking.',
+          { encumbranceId: input.encumbranceId },
+        );
+      }
+      const releasedAt = requireStrictUtcAuthorityTimestamp(input.releasedAt ?? now(), 'releasedAt');
+      return commitEncumbranceRelease(input, releasedAt);
+    },
+
+    async getEncumbrance(context: AuthorityGovernanceContext, tenantId: string, encumbranceId: string) {
+      requireAuthorityAccessToOrganization(context, tenantId);
+      // Scoped by tenant in the SQL itself, so a cross-tenant id reads as absent
+      // rather than as a refusal: a caller must not be able to probe another
+      // tenant's encumbrance identifiers by telling "denied" from "no such
+      // thing".
+      const row = selectEncumbranceById.get(tenantId, encumbranceId) as EncumbranceRow | undefined;
+      return row === undefined ? null : toEncumbrance(row);
+    },
+
+    async listEncumbrancesByMandateRef(context: AuthorityGovernanceContext, tenantId: string, sourceMandateRef: string) {
+      requireAuthorityAccessToOrganization(context, tenantId);
+      return (selectEncumbrancesByMandate.all(tenantId, sourceMandateRef) as EncumbranceRow[]).map(toEncumbrance);
+    },
+
+    async listActiveEncumbrances(context: AuthorityGovernanceContext, query: GovernedAuthorityAvailabilityQuery) {
+      requireAuthorityAccessToOrganization(context, query.tenantId);
+      const at = requireStrictUtcAuthorityTimestamp(query.at, 'at');
+      return readEncumbrancesFor(query.tenantId, query.holderRef, query.resource, query.governedRight).filter((encumbrance) =>
+        governedAuthorityEncumbranceConstrains(encumbrance, at),
+      );
+    },
+
     async health() {
       const positionCount = (db.prepare(`SELECT COUNT(*) AS total FROM governed_authority_positions`).get() as { total: number }).total;
       const transitionCount = (db.prepare(`SELECT COUNT(*) AS total FROM governed_authority_transitions`).get() as { total: number }).total;
@@ -1192,6 +1866,7 @@ export async function createSqliteGovernedAuthorityStore(
         positionCount,
         transitionCount,
         activeReservationCount,
+        activeEncumbranceCount: (countActiveEncumbrances.get() as { total: number }).total,
       };
     },
 

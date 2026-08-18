@@ -16,7 +16,9 @@
  *
  * The codes here are about *state that could not be written or trusted*:
  * a debit larger than the position, two quantities that cannot be added, a
- * tenant boundary crossed, a row whose digest no longer matches its contents.
+ * tenant boundary crossed, a row whose digest no longer matches its contents,
+ * or a persistent constraint that would be left referring to authority nobody
+ * holds.
  */
 export type AuthorityGovernanceErrorCode =
   /** A conserving transition asked to debit more than the source position holds. Authority is never negative and never clamped. */
@@ -49,6 +51,32 @@ export type AuthorityGovernanceErrorCode =
   | 'GOVERNED_AUTHORITY_RESERVATION_NOT_FOUND'
   /** A stored reservation's digest does not match its contents. Reads fail closed rather than dropping the row — silently skipping a tampered reservation would free exactly the capacity it commits. */
   | 'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED'
+  // -------------------------------------------------------------------------
+  // Governed authority encumbrance. Same discipline again, and the same
+  // deliberate absence of a "this holder lacks authority" code. What is here is
+  // about persistent constraints that could not be *written* or *trusted* — and
+  // one structural invariant that no governance act may breach.
+  // -------------------------------------------------------------------------
+  /** A constraint was proposed without a trusted execution basis: an action that is not classified as encumbering, or a source reference that is missing or empty. There is no self-asserted encumbrance path. */
+  | 'GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID'
+  /** The same execution identity came back naming a materially different constraint, or an encumbrance had already reached a terminal state incompatible with the operation. Refused rather than reinterpreted. */
+  | 'GOVERNED_AUTHORITY_ENCUMBRANCE_CONFLICT'
+  | 'GOVERNED_AUTHORITY_ENCUMBRANCE_NOT_FOUND'
+  /**
+   * A transition would leave the holder with less authority than the persistent
+   * constraints already standing over it.
+   *
+   * A *structural* refusal, not a business rule. AOC is not saying encumbered
+   * authority may never move — a holder with 5 000 bp and a 4 000 bp constraint
+   * may still transfer 1 000. It is saying AOC will not end up holding a
+   * constraint that refers to authority its holder no longer possesses, and
+   * will not silently move that constraint to the recipient to avoid the
+   * problem. Which of those a deployment eventually wants is action policy this
+   * layer does not invent.
+   */
+  | 'GOVERNED_AUTHORITY_ENCUMBRANCE_UNCOVERED'
+  /** A stored encumbrance's digest does not match its contents. Reads fail closed rather than dropping the row — silently skipping a tampered encumbrance would free exactly the authority it constrains. */
+  | 'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED'
   // -------------------------------------------------------------------------
   // Holder-bound representation. Same taxonomy, same discipline, and the same
   // deliberate absence: there is **no code for "this representative may not

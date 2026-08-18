@@ -11,7 +11,18 @@ import {
   type EnterpriseSecuredAmount,
 } from '@aoc-enterprise/collateralization-mandate';
 
+import type { GovernedAuthorityEncumbrance, GovernedAuthorityReservation } from '@aoc-enterprise/governed-authority';
+
 import type { KernelEvaluationOptions, KernelEvaluationRequest, KernelEvaluationResult } from '../../kernel/index.js';
+import { governedActionCommitsAuthority, governedActionEncumbersAuthority } from '../authority-governance/index.js';
+import type {
+  AcquireGovernedAuthorityReservationInput,
+  AcquireGovernedAuthorityReservationOutcome,
+  AuthorityGovernanceContext,
+  RecordGovernedAuthorityEncumbranceInput,
+  RecordGovernedAuthorityEncumbranceOutcome,
+  ReleaseGovernedAuthorityReservationInput,
+} from '../authority-governance/index.js';
 import type { GovernanceEnterpriseContext, GovernanceStoreAccessContext } from '../governance-store/contracts.js';
 import type { GovernanceStore } from '../governance-store/governance-store.js';
 import { isGovernanceStoreError } from '../governance-store/errors.js';
@@ -41,6 +52,45 @@ export interface CollateralizationKernelPort {
   evaluate(request: KernelEvaluationRequest, options?: KernelEvaluationOptions): Promise<KernelEvaluationResult>;
 }
 
+/**
+ * The Governed Authority Store surface this module needs, named structurally so
+ * `COLLATERALIZE` depends on the generic commitment and constraint primitives
+ * rather than on a concrete store — and so nothing collateral-shaped leaks into
+ * the authority layer. `GovernedAuthorityStore`
+ * (`../authority-governance/authority-store.ts`) satisfies it as-is.
+ *
+ * Note what is deliberately *not* here. There is no `debit`, no `credit` and no
+ * `applyTransition`: a collateralization moves no authority, and the absence of
+ * any means to move one is what makes that unmissable. There is no
+ * `releaseEncumbrance` either — releasing a persistent constraint requires a
+ * privileged system context, which this module never holds, so it is an
+ * operator act rather than something a governed request could reach.
+ */
+export interface CollateralizationAuthorityPort {
+  /** Commits a portion of the holder's still-uncommitted authority to a mandate about to be issued. Atomic: the capacity it decides on is the capacity inside its own transaction, never one this module measured earlier. */
+  acquireReservation(
+    context: AuthorityGovernanceContext,
+    input: AcquireGovernedAuthorityReservationInput,
+  ): Promise<AcquireGovernedAuthorityReservationOutcome>;
+  /** Ends a commitment without anything having been committed downstream, returning the capacity. Used when the authorization never came into existence, or was withdrawn before it was exercised. */
+  releaseReservation(context: AuthorityGovernanceContext, input: ReleaseGovernedAuthorityReservationInput): Promise<GovernedAuthorityReservation>;
+  listReservationsByMandateRef(
+    context: AuthorityGovernanceContext,
+    tenantId: string,
+    sourceMandateRef: string,
+  ): Promise<readonly GovernedAuthorityReservation[]>;
+  /** Turns a confirmed execution's commitment into a persistent constraint, and terminalizes the commitment, in one durable step. */
+  recordEncumbrance(
+    context: AuthorityGovernanceContext,
+    input: RecordGovernedAuthorityEncumbranceInput,
+  ): Promise<RecordGovernedAuthorityEncumbranceOutcome>;
+  listEncumbrancesByMandateRef(
+    context: AuthorityGovernanceContext,
+    tenantId: string,
+    sourceMandateRef: string,
+  ): Promise<readonly GovernedAuthorityEncumbrance[]>;
+}
+
 export interface CollateralizationGovernanceServiceDependencies {
   readonly store: CollateralizationMandateStore;
   /** The real `AocKernel`. Every authority, policy, approval and obligation determination for `COLLATERALIZE` comes from here — this module has no policy engine of its own. */
@@ -51,6 +101,20 @@ export interface CollateralizationGovernanceServiceDependencies {
   readonly enterpriseContext: () => GovernanceEnterpriseContext;
   readonly now: () => string;
   readonly nextId: (prefix: string) => string;
+  /**
+   * Optional Governed Authority Store. Omitted, this module behaves exactly as
+   * it did before persistent constraints existed: evidence is recorded, and
+   * nothing stops two independent mandates each committing the same authority.
+   *
+   * Present, issuing a mandate first commits the holder's capacity, and a
+   * recorded execution converts that commitment into a persistent constraint
+   * that outlives the mandate — so a later, independent mandate sees it. It is
+   * optional rather than required because a deployment that has not enrolled
+   * its resources in governed authority has no capacity for a commitment to
+   * stand against, and requiring the store would make every such deployment
+   * fail on its first request.
+   */
+  readonly authorityStore?: CollateralizationAuthorityPort;
 }
 
 /** What a caller submits. The canonical `EnterpriseCollateralizationRequest` is built (and validated) from this by the service; callers never hand in a pre-built mandate. */
@@ -210,7 +274,223 @@ function assertAssetBelongsToOrganization(asset: { readonly tenantId?: string },
 export function createCollateralizationGovernanceService(
   deps: CollateralizationGovernanceServiceDependencies,
 ): CollateralizationGovernanceService {
-  const { store, kernel, governanceStore, enterpriseContext, now, nextId } = deps;
+  const { store, kernel, governanceStore, enterpriseContext, now, nextId, authorityStore } = deps;
+
+  function toAuthorityContext(context: CollateralizationGovernanceContext): AuthorityGovernanceContext {
+    return {
+      system: context.system,
+      ...(context.organizationId !== undefined ? { organizationId: context.organizationId } : {}),
+      ...(context.actorId !== undefined ? { actorId: context.actorId } : {}),
+    };
+  }
+
+  /**
+   * Whose authority a request draws on.
+   *
+   * `EnterpriseCollateralizationTerms` names a secured party but no holder of
+   * the rights being encumbered, so this mirrors exactly what the Kernel's own
+   * governed-authority check ran against — `governedAuthorityHolderRef` when
+   * the submission named one, the requester otherwise. Deriving it any other
+   * way here would let the commitment stand against a different party from the
+   * one whose authority was actually verified.
+   */
+  function holderOf(request: EnterpriseCollateralizationRequest, input: SubmitCollateralizationRequestInput): string {
+    return input.authorityHolderRef ?? request.requestedBy;
+  }
+
+  /**
+   * Commits the holder's authority to a mandate that is about to exist, one
+   * reservation per governed right the terms name.
+   *
+   * ## Why the holder, and never the requester or the secured party
+   *
+   * The same reference the Kernel's coverage and holder-bound checks ran
+   * against. A delegated administrator, a representative and a subdelegated
+   * agent acting for the same holder all draw on that holder's one pool; none
+   * of them acquires capacity of its own, and none gets a second pool by
+   * coming through a different lineage. The secured party benefits from the
+   * arrangement and holds nothing here at all.
+   *
+   * ## All-or-nothing across rights
+   *
+   * A collateralization naming two rights either commits both or commits
+   * neither. The store cannot do this in one transaction across two rights'
+   * capacity (they are independent questions with independent answers), so a
+   * failure part-way through releases what was already acquired before
+   * propagating. Leaving a partial commitment behind would deny capacity in a
+   * right whose mandate never existed.
+   */
+  async function reserveCollateralAuthority(args: {
+    readonly context: CollateralizationGovernanceContext;
+    readonly organizationId: string;
+    readonly request: EnterpriseCollateralizationRequest;
+    readonly holderRef: string;
+    readonly mandateId: string;
+    readonly decisionRef: string;
+    readonly effectiveFrom: string;
+    readonly expiresAt: string;
+  }): Promise<readonly string[]> {
+    // A deployment that has not adopted governed authority has no positions for
+    // a commitment to stand against, and behaves exactly as it did before this
+    // layer existed.
+    if (authorityStore === undefined) return [];
+    // The eligibility question, asked once and in one place, rather than as an
+    // `action === 'COLLATERALIZE'` test scattered through the runtime.
+    //
+    // Asserted rather than branched on. If this ever became false — a rename of
+    // the capability constant would be enough — every collateralization would
+    // silently stop committing capacity, and the cross-mandate double
+    // commitment this integration exists to close would reopen with nothing to
+    // notice it. A loud failure is the only safe response to a classification
+    // that disagrees with this call site.
+    if (!governedActionCommitsAuthority(ENTERPRISE_COLLATERALIZE_CAPABILITY) || !governedActionEncumbersAuthority(ENTERPRISE_COLLATERALIZE_CAPABILITY)) {
+      throw new CollateralizationGovernanceError(
+        'COLLATERALIZATION_EVALUATION_FAILED',
+        `'${ENTERPRISE_COLLATERALIZE_CAPABILITY}' is not classified as committing and persistently constraining governed authority, but a successful collateralization leaves the holder's authority encumbered; refusing to issue a mandate that would rely on uncommitted capacity.`,
+        { capability: ENTERPRISE_COLLATERALIZE_CAPABILITY },
+      );
+    }
+
+    const authorityContext = toAuthorityContext(args.context);
+    const acquired: string[] = [];
+    try {
+      for (const governedRight of args.request.terms.rights) {
+        const outcome = await authorityStore.acquireReservation(authorityContext, {
+          tenantId: args.organizationId,
+          holderRef: args.holderRef,
+          resource: { kind: args.request.asset.kind, id: args.request.asset.id },
+          governedRight,
+          scope: args.request.terms.scope,
+          action: ENTERPRISE_COLLATERALIZE_CAPABILITY,
+          sourceRequestRef: args.request.id,
+          sourceDecisionRef: args.decisionRef,
+          sourceMandateRef: args.mandateId,
+          effectiveFrom: args.effectiveFrom,
+          // The mandate's own expiry, so a commitment never outlives the
+          // authorization justifying it — and covers exactly the window in
+          // which an external executor may still legitimately act. The
+          // *constraint* the execution later leaves behind carries no expiry at
+          // all, which is the whole distinction between the two records.
+          expiresAt: args.expiresAt,
+          // One commitment per right per mandate. The request reference alone
+          // would collide across the rights of a multi-right collateralization.
+          idempotencyKey: `${args.mandateId}:${governedRight}`,
+          correlationId: args.request.correlationId,
+        });
+        // An unenrolled resource has no capacity to commit and no competing
+        // commitment to prevent, so it proceeds exactly as it did before this
+        // layer existed.
+        if (outcome.outcome === 'reserved') acquired.push(outcome.reservation.id);
+      }
+    } catch (error) {
+      await releaseCollateralReservations(args.context, args.organizationId, acquired).catch(() => undefined);
+      throw error;
+    }
+    return acquired;
+  }
+
+  /** Returns committed capacity that no longer supports anything. Idempotent, and never touches a position: a release is not a credit. */
+  async function releaseCollateralReservations(
+    context: CollateralizationGovernanceContext,
+    organizationId: string,
+    reservationIds: readonly string[],
+  ): Promise<void> {
+    if (authorityStore === undefined || reservationIds.length === 0) return;
+    const authorityContext = toAuthorityContext(context);
+    for (const reservationId of reservationIds) {
+      await authorityStore.releaseReservation(authorityContext, { tenantId: organizationId, reservationId, reason: 'authorization_ended' });
+    }
+  }
+
+  /** Releases whatever of a mandate's commitments are still active, looking them up by the artifact rather than requiring a caller to have kept their identifiers. */
+  async function releaseActiveReservationsForMandate(
+    context: CollateralizationGovernanceContext,
+    organizationId: string,
+    mandateId: string,
+  ): Promise<void> {
+    if (authorityStore === undefined) return;
+    const authorityContext = toAuthorityContext(context);
+    const held = await authorityStore.listReservationsByMandateRef(authorityContext, organizationId, mandateId);
+    for (const reservation of held) {
+      if (reservation.status !== 'active') continue;
+      await authorityStore.releaseReservation(authorityContext, { tenantId: organizationId, reservationId: reservation.id, reason: 'authorization_ended' });
+    }
+  }
+
+  /**
+   * Records the persistent constraint a completed collateralization leaves
+   * behind, and hands this mandate's commitment over to it.
+   *
+   * Called only after the execution evidence is durably committed, and only
+   * with the values the *evidence* carries — the rights and the scope an
+   * external system reported, re-asserted against the mandate by the store
+   * before it was written. Not the mandate's authorized terms: what constrains
+   * authority is what was committed, not what was permitted to be.
+   *
+   * This is the whole of `COLLATERALIZE`'s authority integration. There is no
+   * balance arithmetic here, no position lookup and no debit of any kind: the
+   * generic primitive is handed a confirmed execution and constrains what it
+   * committed, while the holder's underlying position is left exactly as it
+   * was.
+   */
+  async function recordCollateralEncumbrance(
+    context: CollateralizationGovernanceContext,
+    mandate: CollateralizationMandateRecord,
+    execution: CollateralizationExecutionRecord,
+  ): Promise<void> {
+    if (authorityStore === undefined) return;
+    const authorityContext = toAuthorityContext(context);
+
+    // Whose authority this constrains is read from the commitment the mandate
+    // already holds, never re-derived here.
+    //
+    // `CollateralizationMandateRecord` records the requester but no holder —
+    // `EnterpriseCollateralizationTerms` has no field for one — so guessing
+    // `requestedBy` would constrain the wrong party's authority whenever a
+    // delegated administrator or a representative submitted the request, which
+    // is the ordinary case. The reservation is the durable record of the holder
+    // whose capacity was actually committed and whose authority the Kernel
+    // actually checked, so the constraint simply takes it over.
+    //
+    // No reservation means this mandate never passed a capacity gate — an
+    // unenrolled resource, or a deployment that adopted the authority store
+    // after the mandate was issued. Recording a constraint for it now would
+    // constrain authority nothing ever checked, so nothing is recorded and the
+    // execution evidence stands on its own, exactly as it did before this
+    // integration existed.
+    const commitments = await authorityStore.listReservationsByMandateRef(authorityContext, mandate.organizationId, mandate.id);
+    if (commitments.length === 0) return;
+
+    for (const governedRight of execution.rights) {
+      const commitment = commitments.find((reservation) => reservation.governedRight === governedRight);
+      if (commitment === undefined) continue;
+      await authorityStore.recordEncumbrance(authorityContext, {
+        tenantId: mandate.organizationId,
+        holderRef: commitment.holderRef,
+        resource: { kind: mandate.assetKind, id: mandate.assetId },
+        governedRight,
+        scope: execution.committedScope,
+        sourceAction: ENTERPRISE_COLLATERALIZE_CAPABILITY,
+        sourceMandateRef: mandate.id,
+        // The idempotency key. One recorded execution constrains authority
+        // once, however many times this is retried or replayed after a restart.
+        sourceExecutionRef: execution.id,
+        // The instant the arrangement took effect in the governed world, not
+        // when AOC heard about it.
+        effectiveFrom: execution.executedAt,
+        // Hand this mandate's commitment over in the same commit section that
+        // writes the constraint. The capacity is not "released" — it was spent,
+        // and the constraint now accounts for it — so continuing to subtract
+        // the reservation as well would count one commitment twice. Naming the
+        // mandate rather than the reservation keeps this module free of
+        // reservation identifiers it would otherwise have to thread through
+        // execution evidence.
+        consumesReservationsForMandateRef: mandate.id,
+        correlationId: execution.correlationId,
+      });
+    }
+  }
+
 
   function buildCanonicalRequest(
     input: SubmitCollateralizationRequestInput,
@@ -392,8 +672,47 @@ export function createCollateralizationGovernanceService(
         (value): value is string => value !== undefined,
       );
 
-      const mandate = await store.issueMandate(context, {
-        id: nextId('collateralization-mandate'),
+      // ---------------------------------------------------------------------
+      // The commitment gate.
+      //
+      // Everything above this line established that the action is *permitted*:
+      // recognition, action authority, delegated lineage, holder-bound
+      // representation, the holder's underlying authority, policy, approvals
+      // and obligations, all committed as one governance aggregate. None of it
+      // established that the authority it relies on is still *uncommitted and
+      // unconstrained* — and the Kernel could not, because any capacity it
+      // observed would already be stale by the time a mandate was written, and
+      // because coverage answers "does the holder possess this?" rather than
+      // "is enough of it still free?".
+      //
+      // So the last thing before the authorization artifact exists is an atomic
+      // acquire against the holder's remaining capacity, which now nets off
+      // both live commitments and the persistent constraints earlier
+      // collateralizations left behind. It can only ever narrow: an ALLOW that
+      // loses this race becomes a denial, and a DENY can never be rescued here,
+      // because a denied request never reaches this line.
+      //
+      // The mandate's id is minted first so the reservation can name the
+      // artifact it stands for. That ordering is what makes the compensation
+      // below possible: a commitment acquired for an artifact with no name
+      // could not be found again if issuing it then failed.
+      // ---------------------------------------------------------------------
+      const mandateId = nextId('collateralization-mandate');
+      const reservationIds = await reserveCollateralAuthority({
+        context,
+        organizationId,
+        request,
+        holderRef: holderOf(request, input),
+        mandateId,
+        decisionRef: result.decisionId,
+        effectiveFrom: requireStrictUtcCollateralizationTimestamp(result.evaluatedAt, 'result.evaluatedAt'),
+        expiresAt: mandateExpiresAt,
+      });
+
+      let mandate;
+      try {
+        mandate = await store.issueMandate(context, {
+        id: mandateId,
         organizationId,
         assetKind: request.asset.kind,
         assetId: request.asset.id,
@@ -417,7 +736,22 @@ export function createCollateralizationGovernanceService(
         ...(input.obligationRefs !== undefined ? { obligationRefs: input.obligationRefs } : {}),
         ...(request.evidenceRefs !== undefined ? { evidenceRefs: request.evidenceRefs } : {}),
         ...(input.auditRefs !== undefined ? { auditRefs: input.auditRefs } : {}),
-      });
+        });
+      } catch (error) {
+        // Compensation. The capacity was committed and the artifact it was
+        // committed for does not exist, so the commitment must not stand — a
+        // permanently stranded reservation would deny the holder capacity for
+        // an authorization nobody ever received.
+        //
+        // Deliberately best-effort, and deliberately not allowed to mask the
+        // real failure: if the release itself fails, the reservation still
+        // lapses on its own at `expiresAt` (never later than the mandate would
+        // have), so the worst case is bounded and self-healing rather than
+        // permanent. Losing the original error to a compensation error would be
+        // strictly worse than that.
+        await releaseCollateralReservations(context, organizationId, reservationIds).catch(() => undefined);
+        throw error;
+      }
 
       // Link the committed governance aggregate to the artifact it produced,
       // using the Governance Store's own reference surface rather than a
@@ -471,6 +805,19 @@ export function createCollateralizationGovernanceService(
         ...(input.priorityRank !== undefined ? { priorityRank: input.priorityRank } : {}),
         ...(input.evidenceRefs !== undefined ? { evidenceRefs: input.evidenceRefs } : {}),
       });
+
+      // The handoff, ordered after the execution evidence is durably committed
+      // and re-asserted against the mandate, and never before.
+      //
+      // That ordering is the safe one and the other is not. A constraint
+      // recorded before the external arrangement is known to exist would
+      // constrain authority for something that may never have happened; a
+      // constraint recorded after evidence is committed can, at worst, be
+      // missing after a crash — which leaves the *reservation* still active
+      // over the same quantity. That state is conservative (the capacity stays
+      // unavailable rather than becoming falsely free), self-describing, and
+      // repaired idempotently by replaying this execution.
+      await recordCollateralEncumbrance(context, recorded.mandate, recorded.execution);
 
       if (mandate.evaluationRef !== undefined) {
         // External execution evidence is correlated back to the governance
@@ -541,7 +888,7 @@ export function createCollateralizationGovernanceService(
 
     async revokeMandate(context, input) {
       const mandate = await store.getMandate(context, input.mandateId);
-      return store.revokeMandate(context, {
+      const outcome = await store.revokeMandate(context, {
         revocationId: nextId('collateralization-revocation'),
         mandateId: mandate.id,
         organizationId: mandate.organizationId,
@@ -552,6 +899,27 @@ export function createCollateralizationGovernanceService(
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.evidenceRefs !== undefined ? { evidenceRefs: input.evidenceRefs } : {}),
       });
+
+      // Revoking withdraws the authority to collateralize further, so the
+      // capacity this mandate was holding for an execution that will now never
+      // happen is capacity nothing can any longer draw on, and continuing to
+      // withhold it from the holder would be a penalty rather than an
+      // accounting fact.
+      //
+      // Revocation is still emphatically not release, and this is precisely
+      // where that distinction becomes operational rather than rhetorical.
+      // Only a still-`'active'` commitment is returned. A commitment that
+      // already became a persistent constraint is `'encumbered'`, which
+      // `releaseReservation` refuses to reopen, and the constraint itself is
+      // untouched — because an arrangement an external system already created
+      // does not cease to exist when AOC withdraws permission to create more of
+      // them.
+      //
+      // Ordered after the revocation is durably recorded, deliberately. The
+      // other ordering would free capacity for a mandate that might still turn
+      // out to be live.
+      await releaseActiveReservationsForMandate(context, mandate.organizationId, mandate.id);
+      return outcome;
     },
 
     async getEvidenceLineage(context, mandateId) {

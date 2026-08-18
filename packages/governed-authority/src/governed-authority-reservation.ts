@@ -127,22 +127,35 @@ export interface GovernedAuthorityReservation {
 }
 
 /**
- * The three states a governance act can put a reservation in.
+ * The four states a governance act can put a reservation in.
  *
  * ```
- * active     capacity stands committed; competing commitments must respect it
- * consumed   the governed execution applied the authority transition
- * released   the commitment ended without the authority ever moving
+ * active      capacity stands committed; competing commitments must respect it
+ * consumed    the governed execution applied the authority transition
+ * encumbered  the governed execution created a persistent constraint instead
+ * released    the commitment ended without the authority ever being committed further
  * ```
  *
- * `consumed` and `released` are both terminal and both stop reducing
- * availability, but they are not the same fact and are deliberately not
- * collapsed: `consumed` means the position has *already been debited*, so
- * continuing to subtract the reservation would count the same quantity twice;
- * `released` means the position was never debited, so the capacity genuinely
- * returns. A reader — and an auditor — must be able to tell which.
+ * All three terminal states stop reducing availability, and none of them is
+ * collapsed into another, because they are three different facts an auditor
+ * must be able to tell apart:
+ *
+ * - `consumed` — the position has *already been debited*. Continuing to
+ *   subtract the reservation would count the same quantity twice, because the
+ *   position itself now reflects the movement. `TRANSFER` ends here.
+ * - `encumbered` — the position was **not** debited, and the capacity was not
+ *   returned either. The commitment became a `GovernedAuthorityEncumbrance`,
+ *   which now accounts for the same quantity persistently. Continuing to
+ *   subtract the reservation as well would count one commitment twice.
+ *   `COLLATERALIZE` ends here.
+ * - `released` — nothing was ever committed downstream, so the capacity
+ *   genuinely returns. A revoked or never-issued authorization ends here.
+ *
+ * `consumed` and `encumbered` are the two ways a commitment was *spent*, and
+ * neither may be reopened: releasing either would fabricate capacity that
+ * something else is already accounting for.
  */
-export type GovernedAuthorityReservationStatus = 'active' | 'consumed' | 'released';
+export type GovernedAuthorityReservationStatus = 'active' | 'consumed' | 'encumbered' | 'released';
 
 /**
  * What a reservation is at an instant: its stored status, or `'expired'` when
@@ -189,11 +202,27 @@ export type GovernedAuthorityAvailability =
   | {
       readonly outcome: 'available';
       readonly positionId: string;
-      /** What the holder possesses. Unchanged by any reservation. */
+      /** What the holder possesses. Unchanged by any reservation and unchanged by any encumbrance. */
       readonly held: GovernedRightsScope;
-      /** The sum of every reservation still reducing availability. Absent when there are none — never a synthesized zero, because a zero of an unknown denomination is not a quantity AOC can produce. */
+      /**
+       * The sum of every reservation still reducing availability, net of the
+       * portion of it that has already become a persistent constraint under
+       * the same authorization.
+       *
+       * That netting is what keeps one commitment counted once across the
+       * handoff. A mandate that reserved 4 000 bp and has since encumbered all
+       * 4 000 contributes nothing here and 4 000 to `encumbered`; a mandate
+       * that reserved 4 000 and has encumbered 1 000 so far contributes the
+       * 3 000 it may still execute, so the authorization it still carries
+       * stays protected without the 1 000 being subtracted twice.
+       *
+       * Absent when there is none — never a synthesized zero, because a zero of
+       * an unknown denomination is not a quantity AOC can produce.
+       */
       readonly committed?: GovernedRightsScope;
-      /** What can still be committed now. */
+      /** The sum of every encumbrance still constraining this authority. Absent when there are none, for the same reason. */
+      readonly encumbered?: GovernedRightsScope;
+      /** What can still be committed now: `held` less `committed` less `encumbered`. */
       readonly available: GovernedRightsScope;
     }
   /** No live position for this holder and right, so nothing is available and nothing can be committed. Includes the not-enrolled and exhausted cases; availability does not distinguish them, because coverage already does. */
@@ -209,6 +238,23 @@ export type GovernedAuthorityAvailability =
    * permanent. Nothing may be committed against this state.
    */
   | { readonly outcome: 'overcommitted'; readonly positionId: string; readonly held: GovernedRightsScope; readonly committed: GovernedRightsScope }
+  /**
+   * Active *encumbrances* alone sum to more than the position holds.
+   *
+   * Kept apart from `overcommitted` rather than folded into it because the two
+   * inconsistencies are different facts with different remedies. An
+   * overcommitment is pre-execution and self-clearing — the reservations behind
+   * it lapse at their own `expiresAt`. An overencumbrance is not: the
+   * constraints behind it have no expiry, so the state persists until an
+   * operator resolves it, and it means AOC is carrying persistent constraints
+   * over authority the holder no longer possesses.
+   *
+   * Reported rather than clamped, for the same reason `overcommitted` is: a
+   * negative availability silently treated as zero would hide an invariant
+   * breach that an import, a restore, a privileged bootstrap or a tampered row
+   * could have produced. Nothing may be committed against this state.
+   */
+  | { readonly outcome: 'overencumbered'; readonly positionId: string; readonly held: GovernedRightsScope; readonly encumbered: GovernedRightsScope }
   /** The position and the standing commitments are not commensurable quantities — a proportional position against unitized reservations, or two unit denominations AOC holds no conversion between. Never coerced; nothing may be committed. */
   | { readonly outcome: 'incompatible'; readonly positionId: string; readonly held: GovernedRightsScope };
 

@@ -1,5 +1,6 @@
 import type {
   GovernedAuthorityAvailability,
+  GovernedAuthorityEncumbrance,
   GovernedAuthorityPosition,
   GovernedAuthorityReservation,
   GovernedAuthorityTransition,
@@ -18,6 +19,9 @@ import type {
   GovernedAuthorityResourceRef,
   GovernedAuthorityAvailabilityQuery,
   GovernedAuthorityStoreHealth,
+  RecordGovernedAuthorityEncumbranceInput,
+  RecordGovernedAuthorityEncumbranceOutcome,
+  ReleaseGovernedAuthorityEncumbranceInput,
   ReleaseGovernedAuthorityReservationInput,
 } from './contracts.js';
 
@@ -56,6 +60,32 @@ import type {
  * records no mandate terms, no policy, no approvals and no evidence; it records
  * a quantity, whose authority it stands against, and which artifact it stands
  * for. Mandate lifecycle stays in the mandate stores, where it belongs.
+ *
+ * ## Why encumbrances live here too
+ *
+ * The same argument, one lifecycle stage later, plus one that admits even less
+ * alternative. `GovernedAuthorityEncumbrance` is what a *completed* execution
+ * leaves behind, and it reduces the same capacity a reservation does, so the
+ * capacity question is a function of positions, reservations **and**
+ * encumbrances together — three dimensions of one deployment's authority
+ * accounting, which must be read and written under one consistency boundary or
+ * the double commitment simply moves one layer up.
+ *
+ * Beyond that, the handoff itself demands it. Turning a pre-execution
+ * commitment into a persistent constraint has to be **one** durable step:
+ * terminalize the reservation and record the constraint together, or neither.
+ * Split across two stores there would be a window in which the reservation had
+ * ended and the constraint did not yet exist, and a competitor arriving in that
+ * window would be told the authority is free — which is the exact
+ * vulnerability the whole layer exists to close.
+ *
+ * What this store still does *not* know is which future actions an encumbrance
+ * conflicts with. It records that a quantity of one holder's authority over one
+ * right of one resource stands constrained; deciding that collateralizing
+ * conflicts with collateralizing, or that it does not conflict with licensing,
+ * is action semantics and stays out of here. The only rule this layer enforces
+ * across actions is structural, not commercial: it will not leave a constraint
+ * referring to authority a holder no longer possesses.
  *
  * Note what this interface deliberately does *not* offer, and why:
  *
@@ -219,6 +249,95 @@ export interface GovernedAuthorityStore {
     context: AuthorityGovernanceContext,
     query: GovernedAuthorityAvailabilityQuery,
   ): Promise<readonly GovernedAuthorityReservation[]>;
+
+  // -------------------------------------------------------------------------
+  // Encumbrance. The persistent side of the same authority.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Atomically records that a successfully executed governed action left this
+   * authority persistently constrained, and hands the pre-execution commitment
+   * over to it in the same commit section.
+   *
+   * **There is deliberately no way to create a constraint that is not rooted in
+   * an execution.** The input has no free-text basis and no caller-chosen
+   * status; what it has is a `sourceExecutionRef`, and the action it names must
+   * be classified as encumbering
+   * (`GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS`) or the call is refused with
+   * `GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID`. A requester asserting "my
+   * authority is encumbered" has no path here at all, in the same way that
+   * "I hold 100%" has no path to `bootstrapPosition`.
+   *
+   * Capacity is re-derived inside this operation, from the position, the
+   * standing commitments and the constraints already recorded — never from a
+   * figure a caller measured earlier. The reservation being handed over is
+   * netted out rather than counted against the constraint replacing it, so one
+   * commitment is never counted twice at the moment it changes phase. Throws
+   * `GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT` when what is left cannot
+   * cover the constraint.
+   *
+   * Idempotent on the idempotency key, which defaults to the execution
+   * reference and right: replaying an execution AOC has already encumbered
+   * returns the original constraint with `replayed: true` and constrains no
+   * second quantity. Throws `GOVERNED_AUTHORITY_ENCUMBRANCE_CONFLICT` when the
+   * same execution identity comes back naming a different holder, resource,
+   * right, quantity, action or mandate.
+   */
+  recordEncumbrance(
+    context: AuthorityGovernanceContext,
+    input: RecordGovernedAuthorityEncumbranceInput,
+  ): Promise<RecordGovernedAuthorityEncumbranceOutcome>;
+
+  /**
+   * Ends a standing constraint, so the authority it constrained becomes
+   * committable again. The position is untouched: a release is not a credit,
+   * and a holder who kept 5 000 bp throughout still has exactly 5 000 bp
+   * afterwards.
+   *
+   * Requires `context.system`. The only basis is `'administrative'`, and that
+   * narrowness is deliberate rather than provisional: `COLLATERALIZE`'s
+   * `recordRelease` is an unverified external *observation*, which the
+   * collateralization module already refuses to let decrement its own
+   * `committedScope`, and letting it free authority capacity here would hand
+   * any tenant-scoped caller a way to manufacture headroom by reporting a
+   * release. An authorized discharge is a governed action that does not exist
+   * yet; until it does, releasing a constraint is an operator act.
+   *
+   * Idempotent and non-accumulating. Releasing an already-released constraint
+   * returns it unchanged rather than freeing capacity twice — which is safe by
+   * construction anyway, because capacity is derived from the constraints still
+   * active rather than from a counter that could be decremented twice.
+   */
+  releaseEncumbrance(
+    context: AuthorityGovernanceContext,
+    input: ReleaseGovernedAuthorityEncumbranceInput,
+  ): Promise<GovernedAuthorityEncumbrance>;
+
+  /** Tenant-scoped lookup of one encumbrance, or `null`. A cross-tenant id reads as absent rather than as a refusal, so identifiers cannot be probed. */
+  getEncumbrance(context: AuthorityGovernanceContext, tenantId: string, encumbranceId: string): Promise<GovernedAuthorityEncumbrance | null>;
+
+  /** Tenant-scoped, stably-ordered constraints recorded against one authorization artifact — the audit link from a mandate to what its execution left behind. */
+  listEncumbrancesByMandateRef(
+    context: AuthorityGovernanceContext,
+    tenantId: string,
+    sourceMandateRef: string,
+  ): Promise<readonly GovernedAuthorityEncumbrance[]>;
+
+  /**
+   * Every constraint still standing over one holder, resource and right at an
+   * instant.
+   *
+   * This is the cross-mandate question `committedScope` cannot answer: a
+   * mandate's own cumulative scope sees only its own executions, while this
+   * sees every constraint over the same authority whichever mandate produced
+   * it. Used by audit and by capacity explanation; the enforcement path uses
+   * `acquireReservation` and `recordEncumbrance`, which re-derive it inside
+   * their own transactions.
+   */
+  listActiveEncumbrances(
+    context: AuthorityGovernanceContext,
+    query: GovernedAuthorityAvailabilityQuery,
+  ): Promise<readonly GovernedAuthorityEncumbrance[]>;
 
   health(): Promise<GovernedAuthorityStoreHealth>;
 

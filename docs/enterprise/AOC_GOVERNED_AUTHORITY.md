@@ -34,6 +34,8 @@ remain separate evidentiary questions.
 | **Governed authority basis** | Why. One of three: administrative bootstrap, recognized external evidence, or a governed execution. |
 | **Governed authority transition** | One recorded change: a quantity of one right arriving at one party and, when the basis conserves, leaving another. |
 | **Coverage** | The single verdict the enforcement path asks for and gets back. |
+| **Governed authority reservation** | How much of a position is committed to a still-live authorization that has not yet executed. Pre-execution. |
+| **Governed authority encumbrance** | How much of a position remains persistently constrained by an action that already executed. Post-execution. |
 
 ## Four artifacts that are easy to confuse
 
@@ -262,36 +264,54 @@ evidence.
 the window. It is idempotent, safe to re-run without knowing whether it already
 succeeded, and a no-op once every execution has moved authority.
 
-## Reservation
+## Reservation and encumbrance
 
 A position answers how much a holder possesses. It deliberately does not change
-when a mandate is issued — permission to move a right must not move it — which
-means it cannot, on its own, answer how much of that authority is *still
-uncommitted*. Three questions, kept apart:
+when a mandate is issued — permission to move a right must not move it — and it
+deliberately does not change when a collateralization executes either, because
+encumbering a right is not moving it. So a position cannot, on its own, answer
+how much of that authority is still *free*. Four questions, kept apart:
 
 > **`GovernedAuthorityPosition`** answers "how much underlying authority does
 > Holder H possess?"
 >
 > **`GovernedAuthorityReservation`** answers "how much of that authority is
-> already committed to still-live governed authorizations?"
+> already committed to a still-live authorization that has not yet reached its
+> final domain effect?"
 >
-> **Available governed authority** answers "how much can still be committed
-> now?" — `held − committed`.
+> **`GovernedAuthorityEncumbrance`** answers "how much of it remains
+> persistently constrained after a governed action has already executed?"
+>
+> **Action-available governed authority** answers "how much can still be
+> committed now?" — `held − committed − encumbered`.
 
-A reservation changes no position. Alice with 5 000 bp and a 3 000 bp
-reservation still *holds* 5 000 bp; what changed is that only 2 000 bp remains
-committable. It is not ownership, not a transfer, not delegation, not
-representation and not a database lock.
+Neither record changes a position. Alice with 5 000 bp and a 3 000 bp
+reservation still *holds* 5 000 bp, and so does Alice with a 3 000 bp
+encumbrance; what changed is that only 2 000 bp remains committable. Neither is
+ownership, a transfer, delegation, representation or a database lock — and an
+encumbrance is not a legal lien, pledge or security interest.
 
-Reservation applies to **`TRANSFER` only**, because `TRANSFER` is the only
-governed action that debits a position. `TOKENIZE`, `COLLATERALIZE` and
-`LICENSE` never call this store and therefore have no finite capacity for a
-competing authorization to overpromise.
+The two are two phases of **one** commitment, never two:
 
-It is acquired atomically as the last step before a mandate is issued, and
-consumed in the same transaction as the transition its execution causes. See
-`AOC_GOVERNED_AUTHORITY_RESERVATION.md` and
-`docs/architecture/ADR-GOVERNED-AUTHORITY-RESERVATION.md`.
+```
+mandate issued      commitment ACTIVE
+execution confirmed
+    TRANSFER        position debited        -> commitment 'consumed'
+    COLLATERALIZE   constraint recorded     -> commitment 'encumbered'
+```
+
+Both apply to the actions that commit finite capacity — `TRANSFER` and
+`COLLATERALIZE` — and neither applies to `TOKENIZE` or `LICENSE`, which never
+call this store and have no finite capacity for a competing authorization to
+overpromise.
+
+A reservation is acquired atomically as the last step before a mandate is
+issued. It is consumed in the same transaction as the transition an execution
+causes, or handed over in the same transaction as the constraint an execution
+creates. See `AOC_GOVERNED_AUTHORITY_RESERVATION.md`,
+`AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`,
+`docs/architecture/ADR-GOVERNED-AUTHORITY-RESERVATION.md` and
+`docs/architecture/ADR-GOVERNED-AUTHORITY-ENCUMBRANCE.md`.
 
 ## Not implemented, deliberately
 
@@ -303,8 +323,12 @@ consumed in the same transaction as the transition its execution causes. See
   mirror.
 - **Protocolization, asset registration, title proof, notarization.** These may
   later become sources of positions. They are not here.
-- **Inter-action conflict policy.** A committed collateralization does not
-  reduce the underlying authority position. Whether an encumbrance should reduce
-  transferable capacity depends on encumbrance semantics and deployment policy,
-  and is not answered here.
+- **Inter-action conflict policy.** A committed collateralization still does not
+  reduce the underlying authority *position* — it reduces the capacity available
+  for a further commitment, which is a different quantity. Whether encumbering a
+  right should also make it unlicensable or untokenizable depends on what those
+  actions mean to each other, and is still not answered here. The one
+  cross-action rule that does exist is structural rather than commercial: AOC
+  refuses a transition that would leave a persistent constraint referring to
+  authority its holder no longer possesses.
 - **A fifth governed action.** This is foundation work only.

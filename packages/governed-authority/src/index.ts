@@ -18,6 +18,13 @@ export type {
   GovernedAuthorityReservationStatus,
 } from './governed-authority-reservation.js';
 
+export { governedAuthorityEncumbranceConstrains } from './governed-authority-encumbrance.js';
+export type {
+  GovernedAuthorityEncumbrance,
+  GovernedAuthorityEncumbranceReleaseBasis,
+  GovernedAuthorityEncumbranceStatus,
+} from './governed-authority-encumbrance.js';
+
 export { isGovernedAuthorityCovered } from './governed-authority-coverage.js';
 export type { GovernedAuthorityCoverage, GovernedAuthorityProviderPort, GovernedAuthorityQuery } from './governed-authority-coverage.js';
 
