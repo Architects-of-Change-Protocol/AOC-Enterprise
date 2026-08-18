@@ -10,7 +10,10 @@ import {
   type EnterpriseTransferableRightType,
 } from '@aoc-enterprise/transfer-mandate';
 
+import type { GovernedAuthorityTransition } from '@aoc-enterprise/governed-authority';
+
 import type { KernelEvaluationOptions, KernelEvaluationRequest, KernelEvaluationResult } from '../../kernel/index.js';
+import type { ApplyGovernedAuthorityTransitionInput, ApplyGovernedAuthorityTransitionOutcome, AuthorityGovernanceContext } from '../authority-governance/index.js';
 import type { GovernanceEnterpriseContext, GovernanceStoreAccessContext } from '../governance-store/contracts.js';
 import type { GovernanceStore } from '../governance-store/governance-store.js';
 import { isGovernanceStoreError } from '../governance-store/errors.js';
@@ -36,6 +39,24 @@ export interface TransferKernelPort {
   evaluate(request: KernelEvaluationRequest, options?: KernelEvaluationOptions): Promise<KernelEvaluationResult>;
 }
 
+/**
+ * The Governed Authority Store surface this module needs, named structurally
+ * so `TRANSFER` depends on the generic authority-transition primitive rather
+ * than on a concrete store — and so nothing transfer-shaped leaks into the
+ * authority layer. `GovernedAuthorityStore`
+ * (`../authority-governance/authority-store.ts`) satisfies it as-is.
+ *
+ * Deliberately two methods and no more. There is no
+ * `debitTransferor`/`creditTransferee` pair here, and no transfer-specific
+ * mutation of balances anywhere in this module: a completed transfer records
+ * the *same* generic transition a future authority-changing governed action
+ * would, distinguished only by the capability its basis names.
+ */
+export interface TransferAuthorityPort {
+  applyTransition(context: AuthorityGovernanceContext, input: ApplyGovernedAuthorityTransitionInput): Promise<ApplyGovernedAuthorityTransitionOutcome>;
+  listTransitionsByExecutionRef(context: AuthorityGovernanceContext, tenantId: string, executionRef: string): Promise<readonly GovernedAuthorityTransition[]>;
+}
+
 export interface TransferGovernanceServiceDependencies {
   readonly store: TransferMandateStore;
   /** The real `AocKernel`. Every authority, policy, approval and obligation determination for `TRANSFER` comes from here — this module has no policy engine of its own. */
@@ -46,6 +67,19 @@ export interface TransferGovernanceServiceDependencies {
   readonly enterpriseContext: () => GovernanceEnterpriseContext;
   readonly now: () => string;
   readonly nextId: (prefix: string) => string;
+  /**
+   * Optional Governed Authority Store. Omitted, this module behaves exactly as
+   * it did before right-scoped authority existed: evidence is recorded and no
+   * authority moves.
+   *
+   * Present, an accepted execution also commits the generic authority
+   * transition that debits the transferor and credits the transferee. It is
+   * optional rather than required because a deployment that has not enrolled
+   * its resources in governed authority has nothing for a transition to move,
+   * and requiring the store would make every such deployment fail on its first
+   * execution.
+   */
+  readonly authorityStore?: TransferAuthorityPort;
 }
 
 /** What a caller submits. The canonical `EnterpriseTransferRequest` is built (and validated) from this by the service; callers never hand in a pre-built mandate. */
@@ -173,6 +207,25 @@ export interface TransferGovernanceService {
 
   /** Assembles the complete governance chain behind a mandate from references already stored — never a second audit log. */
   getEvidenceLineage(context: TransferGovernanceContext, mandateId: string): Promise<TransferEvidenceLineage>;
+
+  /**
+   * Re-drives any authority transition an already-recorded execution should
+   * have produced but has not.
+   *
+   * The deterministic recovery path for the one cross-store window this module
+   * has. Execution evidence and governed authority live in two independent
+   * durable stores, so a crash between the two commits is possible, and the
+   * ordering is chosen so that the survivable failure is the safe one:
+   * evidence is committed first, and a missing transition means authority was
+   * under-credited rather than credited without evidence. This method closes
+   * that window on demand, and is safe to call at any time — every transition
+   * it applies is idempotent on the execution reference, so calling it on a
+   * fully-reconciled mandate does nothing at all.
+   *
+   * Returns the executions it had to repair, empty when there was nothing to
+   * do. A no-op when no authority store is configured.
+   */
+  reconcileAuthorityTransitions(context: TransferGovernanceContext, mandateId: string): Promise<readonly string[]>;
 }
 
 /** Default resource scope for a `TRANSFER` request: the same `kind:id` form Enterprise already uses for a resource identifier (see `legacyResourceIdentifier` in `@aoc-enterprise/scoped-access`). Asset-scoped, deliberately and observably. */
@@ -198,7 +251,58 @@ function assertAssetBelongsToOrganization(asset: { readonly tenantId?: string },
 }
 
 export function createTransferGovernanceService(deps: TransferGovernanceServiceDependencies): TransferGovernanceService {
-  const { store, kernel, governanceStore, enterpriseContext, now, nextId } = deps;
+  const { store, kernel, governanceStore, enterpriseContext, now, nextId, authorityStore } = deps;
+
+  /**
+   * Commits the governed authority transition a completed movement implies.
+   *
+   * Called only after the execution evidence is durably committed, and only
+   * with the values the *evidence* carries — the rights, quantity, source and
+   * recipient an external system reported, re-asserted against the mandate by
+   * the store before it was written. Not the mandate's authorized terms: what
+   * moves authority is what moved, not what was permitted to.
+   *
+   * This is the whole of `TRANSFER`'s authority integration. There is no
+   * balance arithmetic here, no position lookup, and no
+   * transferor/transferee-specific write path: the generic primitive is handed
+   * a movement and conserves it.
+   */
+  async function applyAuthorityTransition(
+    context: TransferGovernanceContext,
+    mandate: TransferMandateRecord,
+    execution: TransferExecutionRecord,
+  ): Promise<void> {
+    if (authorityStore === undefined) return;
+    const authorityContext: AuthorityGovernanceContext = {
+      system: context.system,
+      ...(context.organizationId !== undefined ? { organizationId: context.organizationId } : {}),
+      ...(context.actorId !== undefined ? { actorId: context.actorId } : {}),
+    };
+    await authorityStore.applyTransition(authorityContext, {
+      tenantId: mandate.organizationId,
+      resource: { kind: mandate.assetKind, id: mandate.assetId },
+      governedRights: execution.rights,
+      scope: execution.transferredScope,
+      fromHolderRef: execution.transferorRef,
+      toHolderRef: execution.transfereeRef,
+      basis: {
+        kind: 'governed-execution',
+        capability: ENTERPRISE_TRANSFER_CAPABILITY,
+        // The idempotency key. One recorded movement moves authority once,
+        // however many times this is retried or replayed after a restart.
+        executionRef: execution.id,
+        mandateRef: mandate.id,
+        ...(mandate.decisionRef !== undefined ? { decisionRef: mandate.decisionRef } : {}),
+        ...(mandate.evaluationRef !== undefined ? { evaluationRef: mandate.evaluationRef } : {}),
+        ...(execution.evidenceRefs !== undefined ? { evidenceRefs: execution.evidenceRefs } : {}),
+      },
+      // The instant the movement took effect in the governed world, falling
+      // back to when it was executed. Never `now()`: authority moved when the
+      // right did, not when AOC heard about it.
+      occurredAt: execution.transferEffectiveAt ?? execution.executedAt,
+      correlationId: execution.correlationId,
+    });
+  }
 
   function buildCanonicalRequest(input: SubmitTransferRequestInput, requestId: string, correlationId: string): EnterpriseTransferRequest {
     const candidate = {
@@ -272,6 +376,27 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
         sideEffectType: 'external_api_call',
         riskLevel: 'critical',
         parameters: { ...serializeEnterpriseTransferRequest(request) },
+        // The governed rights this movement engages, declared as typed
+        // vocabulary rather than left inside `parameters` where no authority
+        // check could reach them. This is the field that closes the finding in
+        // `../__tests__/transfer-authority-transition.test.ts`: an actor whose
+        // recognized authority is over the usage right can no longer move the
+        // ownership interest by naming a scope string that happens to contain.
+        governedRights: request.terms.rights,
+        governedRightsScope: request.terms.scope,
+        // The holder is the *transferor*, never the requester, and this is not
+        // a configuration choice. The rights leave the transferor, so the
+        // transferor is the party that must be recognized as holding them; the
+        // portfolio manager who submits the request is a delegated
+        // administrator who holds nothing. The Authority Graph still decides
+        // separately whether the manager may act at all — two independent
+        // checks, neither substituting for the other, and a delegated actor
+        // never acquires the holder's underlying right by acting for it.
+        //
+        // Deliberately not overridable from `SubmitTransferRequestInput`:
+        // pointing this at anyone other than the party being debited would
+        // check one party's authority while depleting another's.
+        governedAuthorityHolderRef: request.terms.transferorRef,
         counterpartyId: request.terms.transfereeRef,
         ...(request.evidenceRefs !== undefined ? { evidenceIds: request.evidenceRefs } : {}),
       },
@@ -463,12 +588,18 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
         // record alone.
         //
         // Note what this append does NOT do: it does not grant the transferee
-        // anything. A reference is evidence classification, never authority —
-        // and for this action that distinction carries more weight than for
-        // any sibling, because the recipient of a completed transfer is
-        // precisely the party a reader might wrongly assume has just acquired
-        // standing. It has not. See
-        // `docs/architecture/ADR-TRANSFER-ACTION.md`.
+        // anything. A reference is evidence classification, never authority,
+        // and appending one authorizes nothing.
+        //
+        // The transferee *does* acquire recognized governed authority from a
+        // completed transfer — but from the authority transition committed
+        // below, on the evidence this reference classifies, and never from the
+        // reference itself. Keeping those apart still matters for exactly the
+        // reason it always did: a reader must be able to tell an evidence
+        // classification from an authority consequence, especially for the one
+        // action where the two arrive together. See
+        // `docs/architecture/ADR-TRANSFER-ACTION.md` and
+        // `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`.
         await governanceStore.appendReference(
           { system: context.system, organizationId: mandate.organizationId, ...(context.actorId !== undefined ? { actorId: context.actorId } : {}) },
           {
@@ -481,6 +612,23 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
           },
         );
       }
+
+      // The authority transition, last and deliberately so.
+      //
+      // Two independent durable stores are involved and they cannot share a
+      // transaction, so one of the two orderings has to be chosen with its
+      // failure mode in mind. Evidence first means a crash in the window
+      // leaves authority *under*-credited — the recipient has not yet gained
+      // what it will gain — and the missing transition is recoverable from the
+      // evidence that survived, deterministically, via
+      // `reconcileAuthorityTransitions`. The other ordering would leave
+      // authority credited with no evidence behind it, which nothing could
+      // detect and nothing should be able to produce.
+      //
+      // A failure here therefore propagates rather than being swallowed: the
+      // caller must learn that the movement was recorded and the authority
+      // consequence was not.
+      await applyAuthorityTransition(context, recorded.mandate, recorded.execution);
 
       return recorded;
     },
@@ -543,6 +691,25 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.evidenceRefs !== undefined ? { evidenceRefs: input.evidenceRefs } : {}),
       });
+    },
+
+    async reconcileAuthorityTransitions(context, mandateId) {
+      if (authorityStore === undefined) return [];
+      const mandate = await store.getMandate(context, mandateId);
+      const executions = await store.listExecutions(context, mandateId);
+      const authorityContext: AuthorityGovernanceContext = {
+        system: context.system,
+        ...(context.organizationId !== undefined ? { organizationId: context.organizationId } : {}),
+        ...(context.actorId !== undefined ? { actorId: context.actorId } : {}),
+      };
+      const repaired: string[] = [];
+      for (const execution of executions) {
+        const existing = await authorityStore.listTransitionsByExecutionRef(authorityContext, mandate.organizationId, execution.id);
+        if (existing.length > 0) continue;
+        await applyAuthorityTransition(context, mandate, execution);
+        repaired.push(execution.id);
+      }
+      return repaired;
     },
 
     async getEvidenceLineage(context, mandateId) {

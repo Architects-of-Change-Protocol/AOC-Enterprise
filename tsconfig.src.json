@@ -17,6 +17,7 @@
     { "path": "./packages/tokenization-mandate" },
     { "path": "./packages/collateralization-mandate" },
     { "path": "./packages/governed-authorization" },
+    { "path": "./packages/governed-authority" },
     { "path": "./packages/license-mandate" },
     { "path": "./packages/transfer-mandate" }
   ]

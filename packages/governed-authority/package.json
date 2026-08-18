@@ -1,0 +1,25 @@
+{
+  "name": "@aoc-enterprise/governed-authority",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-owned, action-neutral vocabulary for governed authority state: the right-scoped authority position AOC recognizes an actor as holding, the basis by which it arose, the append-only transition that moves it, and the coverage question a governed action's authority check asks. Pure data only: no store, no resolver implementation, no persistence, no policy engine, no orchestration, and no claim of legal ownership.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test 'dist-test/__tests__/**/*.test.js'"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@aoc-enterprise/governed-authorization": "file:../governed-authorization"
+  }
+}

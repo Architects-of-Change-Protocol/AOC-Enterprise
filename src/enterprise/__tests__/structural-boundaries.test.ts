@@ -78,11 +78,62 @@ describe('Structural boundaries: src/enterprise, src/runtime, src/kernel', () =>
     const kernelFiles = walkTsFiles('src/kernel');
     const enterpriseFiles = walkTsFiles('src/enterprise').filter((f) => !f.includes('/__tests__/'));
 
-    const kernelImportsEnterprise = importsMatching(kernelFiles, /from ['"].*enterprise/);
+    // Matches the Enterprise *Host* — `src/enterprise`, by any relative path
+    // — rather than the string "enterprise" anywhere in a specifier. The
+    // distinction became load-bearing when the Kernel started consuming the
+    // governed-right vocabulary: `@aoc-enterprise/governed-authorization` is
+    // an npm scope naming ownership, not a layer, and a pure-data contract
+    // package is not the Host. The rule this guards is "the decision engine
+    // must not depend on the composition, stores and services layered above
+    // it", and that rule is unchanged. The companion test below is what keeps
+    // the looser regex honest.
+    const kernelImportsEnterpriseHost = importsMatching(kernelFiles, /from ['"](?:\.\.\/)+enterprise\//);
     const enterpriseImportsKernel = importsMatching(enterpriseFiles, /from ['"].*kernel\//);
 
-    assert.deepEqual(kernelImportsEnterprise, [], 'Kernel must never import Enterprise');
+    assert.deepEqual(kernelImportsEnterpriseHost, [], 'Kernel must never import the Enterprise Host');
     assert.ok(enterpriseImportsKernel.length > 0, 'Enterprise importing Kernel is the one legitimate direction');
+  });
+
+  it('src/kernel depends on workspace packages only where they are pure data — never on one carrying a runtime, a store or a service', () => {
+    const kernelFiles = walkTsFiles('src/kernel');
+
+    /**
+     * The complete allow-list, and it is short on purpose. Both entries are
+     * contract-only packages: no persistence, no policy engine, no
+     * orchestration, no service, no provider SDK. The Kernel imports them for
+     * the same reason it imports nothing else from `packages/` — because a
+     * governed right and an exact quantity of one are *types*, and encoding
+     * them as strings inside the kernel contracts is exactly the untyped
+     * convention this foundation exists to replace.
+     *
+     * Adding an entry here means claiming a package is pure data. Adding one
+     * that is not would put a store or a runtime underneath the decision
+     * engine, which is the failure this test exists to catch.
+     */
+    const PURE_DATA_PACKAGES = ['@aoc-enterprise/governed-authorization', '@aoc-enterprise/governed-authority'];
+
+    const imported = new Set<string>();
+    for (const file of kernelFiles) {
+      for (const match of readFileSync(file, 'utf8').matchAll(/from '(@aoc[^']*)'/g)) {
+        const specifier = match[1];
+        if (specifier !== undefined) imported.add(specifier);
+      }
+    }
+
+    const unexpected = [...imported].filter((specifier) => !PURE_DATA_PACKAGES.includes(specifier)).sort();
+    assert.deepEqual(unexpected, [], 'the Kernel may only import the pure-data contract packages on the allow-list above');
+
+    for (const name of PURE_DATA_PACKAGES) {
+      const root = join('packages', name.replace('@aoc-enterprise/', ''));
+      const sources = walkTsFiles(root).filter((file) => !file.includes('/__tests__/'));
+      assert.ok(sources.length > 0, `${name} must exist as a workspace package`);
+      // A pure-data package cannot reach a database, a filesystem, a network,
+      // a clock or a random source. Checked structurally rather than trusted,
+      // so a future edit that quietly adds persistence to one of these fails
+      // here rather than silently placing a store under the Kernel.
+      const impure = importsMatching(sources, /from ['"](?:node:|better-sqlite3|crypto|fs|path)/);
+      assert.deepEqual(impure, [], `${name} must remain pure data with no runtime dependency`);
+    }
   });
 });
 

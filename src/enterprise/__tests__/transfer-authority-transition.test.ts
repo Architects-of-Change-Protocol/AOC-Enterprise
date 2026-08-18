@@ -41,6 +41,25 @@ import {
  * The findings are recorded in
  * `docs/architecture/ADR-TRANSFER-ACTION.md` and
  * `docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md`.
+ *
+ * ## Both findings have since been resolved, and this suite is unchanged
+ *
+ * A generic governed-authority foundation now exists
+ * (`docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`): a completed
+ * transfer moves recognized authority, and an action's target right is checked
+ * against what its holder actually controls.
+ *
+ * Nothing below was rewritten to reflect that, and nothing below is stale.
+ * `buildTransferWorld` builds a world with **no governed authority state at
+ * all** — no positions, no resolver wired into the Kernel — which is precisely
+ * the *unenrolled* case the compatibility policy preserves byte-for-byte. What
+ * these tests measured about that case is still exactly true of it, and their
+ * continuing to pass is itself the evidence that existing deployments were not
+ * broken.
+ *
+ * The resolved behaviour is measured separately, against a world that *has*
+ * enrolled its resource, in `governed-authority-scenario.test.ts` — including
+ * the same before/after comparison run side by side.
  */
 
 const TENANT_CONTEXT = { system: false, organizationId: TRANSFER_TENANT_A, actorId: 'actor-test' } as const;

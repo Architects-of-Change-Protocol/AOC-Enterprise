@@ -58,6 +58,7 @@ export { createSqliteTransferMandateStore } from './sqlite-mandate-store.js';
 export type { CreateSqliteTransferMandateStoreOptions } from './sqlite-mandate-store.js';
 
 export { createTransferGovernanceService } from './service.js';
+export type { TransferAuthorityPort } from './service.js';
 export type {
   RecordTransferExecutionRequest,
   RecordTransferLifecycleRequest,

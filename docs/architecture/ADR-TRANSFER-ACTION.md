@@ -1,7 +1,11 @@
 # ADR: `TRANSFER` as the fourth governed enforcement
 
-- Status: accepted
-- Related: `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`,
+- Status: accepted. **Two findings below were subsequently resolved — see
+  "Resolution status" at the end of each. The findings themselves are
+  preserved verbatim: they were measurements of the architecture as it stood,
+  and they remain accurate about it.**
+- Related: `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`,
+  `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`,
   `docs/architecture/ADR-COLLATERALIZE-ACTION.md`,
   `docs/architecture/ADR-LICENSE-ACTION.md`,
   `docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md`
@@ -214,6 +218,53 @@ a transfer was authorized and reported executed. It cannot represent that
 authority moved, because no primitive for that exists at any layer. This is
 recorded as a genuine architectural gap and deliberately left open.
 
+### Resolution status: RESOLVED
+
+The gap was closed by a subsequent, generic foundation — not by a change to
+this action's semantics. See
+`docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md` and
+`docs/enterprise/AOC_GOVERNED_AUTHORITY.md`.
+
+What changed, precisely:
+
+- **The primitive now exists.** `GovernedAuthorityTransition`
+  (`@aoc-enterprise/governed-authority`) says "a quantity of right R moved from
+  A to B, on this evidence, at this instant", as a first-class, append-only,
+  conserved, replay-safe operation. It names no action; `TRANSFER` is its first
+  consumer and `basis.capability` carries whichever action produced the
+  evidence.
+- **The recipient now acquires authority**, and the transferor loses the
+  corresponding scope, on accepted execution evidence. `Alice 10 000 / Bob 0`
+  becomes `Alice 7 500 / Bob 2 500`, survives restart, and is enforced by the
+  same resolver all four governed actions consult.
+- **A second mandate for the same 25% is now denied** once the first has been
+  executed, with `AUTHORITY_GOVERNED_SCOPE_EXCEEDED`. The per-mandate rule is
+  no longer the only thing standing between a holder and moving the same
+  portion twice.
+- **The evidence lineage still derives no holder**, and that part of the
+  finding stands unchanged. The holder question now has an answer, but it lives
+  in the Governed Authority Store where a reader can see the basis it rests on,
+  rather than folded into transfer evidence where it would look like something
+  the movement itself established.
+
+What did **not** change, and why the reasoning above still holds:
+
+- **Option B is still rejected.** Authority does not move because AOC believes
+  a movement occurred; it moves because this deployment *accepted evidence* of
+  one, and the resulting state says exactly that and no more. The position
+  asserts recognized governed authority, never legal title. That is a different
+  claim from the derived current-holder state rejected above, and it is the
+  reason it is safe.
+- **Mandate issuance still moves nothing.** Permission that is never exercised
+  changes no authority.
+- **Lifecycle evidence still moves nothing.** A reported reversal produces no
+  inverse transition; that would let an external system rewrite AOC's authority
+  state by reporting.
+- **No transfer-specific write into the Authority Graph exists.**
+  `AuthorityGrant` is unmodified. The transition is a separate, generic
+  primitive, and this module hands it a recorded movement rather than mutating
+  a balance itself.
+
 ## Authority-source right vs action-target right
 
 The question `LICENSE` raised, answered from the code.
@@ -254,6 +305,34 @@ actually doing. Simulating a right-scoped check inside `TRANSFER` was refused:
 it would have been an action-local invention presenting itself as an
 architectural guarantee.
 
+### Resolution status: RESOLVED
+
+The distinction is now expressed architecturally, and — as the refusal above
+insisted — not inside `TRANSFER`.
+
+- `ActionDescriptor` carries typed `governedRights`, `governedRightsScope` and
+  `governedAuthorityHolderRef`. The target right is no longer opaque payload
+  that no authority check consults.
+- `AocKernel` gained one optional `GovernedAuthorityProvider` port, consulted
+  for every declared right, which can only narrow an already-viable outcome
+  into a denial. There is no second kernel and no second authorization engine.
+- The third measurement above — an actor scoped to `…:usage-right` moving the
+  **ownership interest** and being `allowed` — is now **denied** with
+  `AUTHORITY_GOVERNED_RIGHT_MISSING`, once the resource is enrolled. See
+  `src/enterprise/__tests__/governed-authority-scenario.test.ts`.
+- The first two measurements are **unchanged by design**, and this is the
+  compatibility policy rather than an oversight: `AuthorityGrant` is not
+  modified and still carries no governed-right field, so a bare asset-scoped
+  grant over a resource this deployment has recorded no positions for still
+  authorizes every right of it. Enrolment is per resource and one-way — the
+  moment a resource has any position, every right of it is enforced strictly.
+  See `ADR-GOVERNED-AUTHORITY-TRANSITION.md`, "Legacy authority compatibility".
+
+`src/enterprise/__tests__/transfer-authority-transition.test.ts` is left
+untouched and still passes: it builds a world with no governed authority state,
+which is exactly the unenrolled case, and what it measured about that case
+remains true of it.
+
 ## Protocol boundary
 
 Answered separately, per the six questions:
@@ -292,14 +371,45 @@ become a Protocol question only if authority transitions had to be recognized
 across independently-governed deployments — which `TRANSFER` did not
 demonstrate and which must not be implemented speculatively.
 
+### Resolution status: confirmed, and answer D revised
+
+Re-evaluated once the Enterprise foundation existed. The classification is now
+`ENTERPRISE FOUNDATION SUFFICIENT; PROTOCOL PORTABILITY DEFERRED`, and
+`@aoc/protocol` remains untouched — its consumption, contract-adoption and
+compatibility-lock checks all pass unchanged.
+
+A, B, C, E and F above stand as written. **D is revised**: "Can Enterprise own
+that state safely?" was answered *not on current evidence*, on the grounds that
+owning it would mean treating an unverified external report as an authority
+fact. The foundation answers it **yes**, by narrowing the claim rather than by
+acquiring verification. A position asserts recognized governed authority within
+this deployment, explicitly not legal title, and every position can name the
+basis it rests on. That is a proposition Enterprise can own honestly and one
+that is sufficient for AOC's own subsequent enforcement.
+
+The thresholds that would make this a Protocol question are unchanged and still
+unmet: an authority position having to cross Enterprise boundaries, two
+independent deployments needing common sovereign state, portable proof of a
+transition, or a resource's sovereignty anchor changing independently of any one
+installation.
+
 ## Known limitations
 
 - **No authority transition.** The finding above. A recipient must be granted
-  authority administratively.
-- **No right-scoped authority.** The finding above.
+  authority administratively. *(Resolved — see "Resolution status" under
+  "Post-transfer authority".)*
+- **No right-scoped authority.** The finding above. *(Resolved — see
+  "Resolution status" under "Authority-source right vs action-target right".)*
 - **Transferor holdings are not tracked.** AOC knows how much each *mandate*
   authorized and how much moved under it. It does not know how much a party
   holds, so two mandates can each authorize 25% of the same interest.
+  *(Partially resolved.* Holdings are now tracked, and a transferor's remaining
+  authority is checked before a mandate is issued. The over-authorization half
+  is **deliberately still open**: authorization reserves nothing, so two
+  mandates may still each be authorized against the same holdings, and only the
+  second execution is refused. See `ADR-GOVERNED-AUTHORITY-TRANSITION.md`,
+  "Reservation decision", for why reservation was deferred and how the residual
+  risk is bounded.*)
 - **The privileged-writer limitation is unchanged.** Digests detect
   after-the-fact corruption; they are not signatures. `TRANSFER` supplied no
   new sovereignty-boundary anchor requirement, so no signing, HSM, transparency

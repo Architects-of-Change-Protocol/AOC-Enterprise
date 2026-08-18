@@ -28,10 +28,20 @@ import type {
  * `update`, and both evidence tables are append-only with no delete path at
  * all.
  *
- * Note what this interface deliberately does not offer: no method that changes
- * who holds a right, no method that grants the transferee anything, and no
- * hook by which recorded evidence could reach the Authority Graph. See
- * `docs/architecture/ADR-TRANSFER-ACTION.md`, "Post-transfer authority".
+ * Note what this interface deliberately does not offer, and still does not:
+ * no method that changes who holds a right, no method that grants the
+ * transferee anything, and no hook by which recorded evidence could reach the
+ * Authority Graph.
+ *
+ * Authority *does* now move when a transfer is executed, and none of it happens
+ * here. The service layer hands the recorded movement to the generic
+ * `GovernedAuthorityStore` (`../authority-governance/`), which conserves it;
+ * this store's job is unchanged, which is to hold the authorization artifact
+ * and the evidence reported against it. Keeping the two apart is what makes
+ * the authority consequence auditable as something derived from evidence
+ * rather than as something a mandate store decided. See
+ * `docs/architecture/ADR-TRANSFER-ACTION.md`, "Post-transfer authority", and
+ * `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`.
  */
 export interface TransferMandateStore {
   readonly providerKind: 'memory' | 'sqlite';

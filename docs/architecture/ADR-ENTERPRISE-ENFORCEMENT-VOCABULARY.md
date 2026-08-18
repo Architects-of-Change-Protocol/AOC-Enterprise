@@ -307,6 +307,16 @@ distinctions or become a union every consumer must narrow.
   needed is the mechanism, not the taxonomy.
 - **Recorded as: AUTHORITY-TRANSITION GAP IDENTIFIED.** See
   `docs/architecture/ADR-TRANSFER-ACTION.md`.
+- **Resolution: the mechanism was built; the taxonomy still was not.** A
+  generic authority-transition primitive now exists
+  (`@aoc-enterprise/governed-authority`,
+  `src/enterprise/authority-governance/`), and `TRANSFER` records one on
+  accepted execution evidence. The decision above is unchanged and was
+  vindicated: no action is *marked* authority-mutating anywhere. An action that
+  moves authority calls the primitive, one that does not simply never calls it,
+  and `basis.capability` names whichever action produced the evidence — so no
+  registry, plugin table or per-action dispatch was needed to select behaviour.
+  See `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`.
 
 ### Candidate 11 — Tenant scoping and strict-UTC helpers (runtime layer)
 
