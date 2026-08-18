@@ -13,7 +13,7 @@ import { bridgeRecognitionRuntime } from '../../features/action-enforcement/fixt
 import { createManualEnforcementClock, createSequentialEnforcementIdGenerator } from '../../features/action-enforcement/runtime/enforcement-runtime-context.js';
 import { ApprovalRuntime } from '../../features/approval-runtime/runtime/approval-runtime.js';
 import { createApprovalRuntimeContext } from '../../features/approval-runtime/runtime/approval-runtime-context.js';
-import { createAuthorityGraphRuntime } from '../../features/authority-graph/runtime/authority-graph-runtime.js';
+import { createAuthorityGraphRuntime, type AuthorityGraphRuntime } from '../../features/authority-graph/runtime/authority-graph-runtime.js';
 import { createAuthorityRuntimeContext } from '../../features/authority-graph/runtime/authority-runtime-context.js';
 import { createAocRecognitionRuntime } from '../../features/recognition-runtime/runtime/aoc-recognition-runtime.js';
 import { createManualClock, createSequentialIdGenerator, type RuntimeContext } from '../../features/recognition-runtime/runtime/runtime-context.js';
@@ -107,6 +107,24 @@ export const GA_UNAUTHORIZED_PASSPORT_ID = 'passport-unauthorized-administrator'
 /** A second representative, used to show that bindings to the same holder are independent of one another. */
 export const GA_SECOND_MANAGER_ACTOR_ID = 'actor-rights-manager-two';
 
+/**
+ * An agent the manager can delegate to, for the derived-authority scenarios.
+ *
+ * An *agent* rather than a human on purpose: Recognition's `requiresAuthorityChain`
+ * routes every agent request through the Authority Graph, so a request submitted
+ * as this actor genuinely has to produce a valid delegation lineage rather than
+ * being satisfied by its capability token alone.
+ */
+export const GA_DELEGATE_ACTOR_ID = 'actor-delegated-agent';
+export const GA_DELEGATE_PASSPORT_ID = 'passport-delegated-agent';
+export const GA_DELEGATE_TOKEN_ID = 'cap-delegated-agent-governed-actions';
+/** A second agent, one hop further down, for the subdelegation scenarios. */
+export const GA_SUBDELEGATE_ACTOR_ID = 'actor-subdelegated-agent';
+export const GA_SUBDELEGATE_PASSPORT_ID = 'passport-subdelegated-agent';
+export const GA_SUBDELEGATE_TOKEN_ID = 'cap-subdelegated-agent-governed-actions';
+/** The manager's own asset-scoped grant, named so a test can revoke or subdelegate from it. */
+export const GA_MANAGER_GRANT_ID = 'authority-grant-manager-governed-actions';
+
 export const GA_ASSET = { kind: 'asset', id: 'governed-asset-a', tenantId: GA_TENANT_A } as const;
 export const GA_ASSET_SCOPE = `${GA_ASSET.kind}:${GA_ASSET.id}`;
 export const GA_TENANT_B_ASSET = { kind: 'asset', id: 'northwind-asset-b', tenantId: GA_TENANT_B } as const;
@@ -140,6 +158,14 @@ function testEnterpriseContext(): GovernanceEnterpriseContext {
 
 export interface GovernedAuthorityWorld {
   readonly kernel: AocKernel;
+  /**
+   * The Authority Graph runtime behind this world's Recognition provider.
+   *
+   * Exposed so a test can create, subdelegate and revoke `DelegationGrant`s and
+   * observe the effect on a real governed request. Purely additive: every
+   * pre-existing test ignores it and is unaffected.
+   */
+  readonly authorityRuntime: AuthorityGraphRuntime;
   readonly governanceStore: GovernanceStore;
   readonly authorityStore: GovernedAuthorityStore;
   /** Present only when the world was built with `withRepresentation`. Absent reproduces a deployment that has not adopted holder-bound representation. */
@@ -176,6 +202,14 @@ export interface GovernedAuthorityWorldOverrides {
   readonly representationStore?: GovernedRepresentationStore;
   /** Lets a test ground representations in Authority Graph delegations, and revoke those delegations to prove the dependency is dynamic. */
   readonly delegations?: GovernedRepresentationDelegationPort;
+  /**
+   * Makes the manager's asset-scoped grant delegable, up to this many hops.
+   *
+   * Off by default so the grant keeps the exact legacy shape every existing
+   * test observes -- `canDelegate: false`, which is what a grant that no one
+   * ever delegated from has always looked like.
+   */
+  readonly managerDelegationDepth?: number;
 }
 
 export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOverrides = {}): GovernedAuthorityWorld {
@@ -271,6 +305,31 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
     trustDomainId: trustDomain.id,
   });
 
+  // Two agents the manager may delegate to. They are registered and passported
+  // unconditionally, and hold capability tokens covering the four actions, so
+  // the *only* thing a derived-authority test has to arrange is the delegation
+  // itself. Neither holds an `AuthorityGrant`, which is the point: an agent's
+  // action authority has to arrive through a delegation or not at all.
+  for (const agent of [
+    { actorId: GA_DELEGATE_ACTOR_ID, passportId: GA_DELEGATE_PASSPORT_ID, tokenId: GA_DELEGATE_TOKEN_ID, name: 'Delegated Agent' },
+    { actorId: GA_SUBDELEGATE_ACTOR_ID, passportId: GA_SUBDELEGATE_PASSPORT_ID, tokenId: GA_SUBDELEGATE_TOKEN_ID, name: 'Subdelegated Agent' },
+  ]) {
+    recognitionRuntime.registerActor({ id: agent.actorId, type: 'agent', displayName: agent.name, issuerId: org.id, trustDomainId: trustDomain.id });
+    recognitionRuntime.issuePassport({ id: agent.passportId, type: 'agent_passport', subjectActorId: agent.actorId, issuerActorId: org.id, trustDomainId: trustDomain.id });
+    recognitionRuntime.issueCapabilityToken({
+      id: agent.tokenId,
+      subjectActorId: agent.actorId,
+      principalActorId: agent.actorId,
+      issuerActorId: org.id,
+      trustDomainId: trustDomain.id,
+      capability: ENTERPRISE_TRANSFER_CAPABILITY,
+      actions: capabilities,
+      resourceScopes: [GA_ASSET_SCOPE],
+      riskLevel: 'critical',
+    });
+    approvalRuntime.registerApproverRecognitionStatus(agent.actorId, 'recognized');
+  }
+
   // One broad, bare *asset-scoped* capability and authority grant covering all
   // four actions. Deliberately broad: the manager can call anything on this
   // asset, so nothing below is denied by the capability chain and every denial
@@ -291,7 +350,7 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
 
   authorityRuntime.registerRootIssuer(trustDomain.id, org.id);
   authorityRuntime.issueAuthorityGrant({
-    id: 'authority-grant-manager-governed-actions',
+    id: GA_MANAGER_GRANT_ID,
     issuerActorId: org.id,
     subjectActorId: manager.id,
     trustDomainId: trustDomain.id,
@@ -299,7 +358,10 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
     capability: ENTERPRISE_TRANSFER_CAPABILITY,
     actions: capabilities,
     resourceScopes: [GA_ASSET_SCOPE],
-    canDelegate: false,
+    canDelegate: overrides.managerDelegationDepth !== undefined,
+    ...(overrides.managerDelegationDepth !== undefined
+      ? { maxDelegationDepth: overrides.managerDelegationDepth, allowedDelegateActorTypes: ['agent', 'human', 'organization'] as const }
+      : {}),
   });
   approvalRuntime.registerApproverRecognitionStatus(manager.id, 'recognized');
   authorityRuntime.issueAuthorityGrant({
@@ -355,6 +417,7 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
 
   return {
     kernel,
+    authorityRuntime,
     governanceStore,
     authorityStore,
     ...(representationStore !== undefined ? { representationStore } : {}),

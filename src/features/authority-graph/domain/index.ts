@@ -18,6 +18,8 @@ export type {
 } from './authority-chain.js';
 export type { AuthorityLineageStep, AuthorityLineageStepType } from './authority-resolution.js';
 export type { AuthorityDecision, AuthorityDecisionType } from './authority-decision.js';
+export type { DelegationLineageAssessment, DelegationLineageBreach, DelegationLineageSource } from './delegation-lineage.js';
+export { NO_DELEGATION_LINEAGE, lineageSourceFromDelegation, lineageSourceFromGrant } from './delegation-lineage.js';
 export type { AuthorityProof } from './authority-proof.js';
 export { stableStringify, createDigest } from './authority-proof.js';
 export type { AuthorityEvent, AuthorityEventType } from './authority-event.js';

@@ -344,6 +344,37 @@ constraint.
 Creation is idempotent on an optional `idempotencyKey`; the same key with
 materially different terms is refused as a conflict rather than reinterpreted.
 
+## The fourth question, added later
+
+A later foundation added a question adjacent to this one. The two are close
+enough to be confused and must not be, so the distinction is recorded here
+rather than only in the newer document:
+
+```
+REPRESENTATIVE AUTHORITY   May requester R exercise holder H's authority?
+                           GovernedRepresentativeAuthority
+
+DERIVED AUTHORITY LINEAGE  Through what bounded chain does R possess the
+                           capability to make this request at all, and is
+                           every link in that chain still valid now?
+                           DelegationGrant / DelegatedCapability lineage
+```
+
+Nothing in this document changes. Representation still answers only its own
+question, is still required independently, and is still incapable of rescuing a
+denial from any other layer. What the newer layer adds is that R's *capability*
+must itself be a legitimate, non-amplifying, still-live derivation — which is a
+separate proof that a valid representation does not supply, and which does not
+supply a valid representation.
+
+Concretely: delegating a capability to an agent does **not** delegate the
+ability to represent the holders the delegator represents. An agent with a
+flawless delegation over an asset still cannot name a holder it is not itself
+bound to.
+
+See `AOC_DELEGATED_CAPABILITIES_DERIVED_AUTHORITY.md` and
+`docs/architecture/ADR-NATIVE-DELEGATED-CAPABILITIES.md`.
+
 ## Not implemented, deliberately
 
 - **No `DELEGATE` governed action.** This is authority infrastructure, not a

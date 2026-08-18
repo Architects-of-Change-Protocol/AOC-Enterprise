@@ -235,20 +235,43 @@ describe('Recognition Runtime + Authority Graph integration', () => {
   });
 
   it('6. recognized agent attempting a non-delegable action => policy_violation', () => {
-    const { recognitionRuntime, authorityRuntime, pmfreakPassport, pmfreakApprovePaymentToken, victorGrant } = setUp();
+    const { recognitionRuntime, authorityRuntime, pmfreakPassport, pmfreakApprovePaymentToken } = setUp();
+    // Victor genuinely holds payment approval, and it is marked non-delegable on
+    // the grant that confers it. Forging the delegation from *this* grant rather
+    // than from his project-closure grant leaves the record with exactly one
+    // defect -- it delegates something that may never be delegated -- so the
+    // denial this test asserts is attributable to non-delegability and nothing
+    // else. Sourced from the closure grant, the record would also have been an
+    // action expansion, and `DelegationLineagePolicy` would rightly stop it
+    // first for a reason this test is not about.
+    const paymentGrant = authorityRuntime.store.importGrant({
+      id: 'authority-grant-victor-payment-approval',
+      issuerActorId: DATASYS,
+      subjectActorId: VICTOR,
+      trustDomainId: TRUST_DOMAIN,
+      capability: 'payments.approval',
+      actions: ['approve_payment'],
+      resourceScopes: [PROJECT_SCOPE],
+      canDelegate: true,
+      maxDelegationDepth: 1,
+      nonDelegableActions: ['approve_payment'],
+      status: 'active',
+      issuedAt: NOW,
+    });
     authorityRuntime.store.importDelegation({
       id: 'delegation-grant-forged-approve-payment',
       delegatorActorId: VICTOR,
       delegateActorId: PMFREAK,
       principalActorId: VICTOR,
       trustDomainId: TRUST_DOMAIN,
-      sourceAuthorityGrantId: victorGrant.id,
+      sourceAuthorityGrantId: paymentGrant.id,
       capability: 'payments.approval',
       actions: ['approve_payment'],
       nonDelegableActions: ['approve_payment'],
       resourceScopes: [PROJECT_SCOPE],
       delegationDepth: 1,
       canRedelegate: false,
+      maxDelegationDepth: 1,
       status: 'active',
       issuedAt: NOW,
     });
