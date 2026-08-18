@@ -13,7 +13,14 @@ import { PostExecutionRecordMissingError } from '../features/action-enforcement/
 import { AocGuard, createAocGuard } from '../features/action-enforcement/sdk/aoc-guard.js';
 import type { KernelEnforcementResult } from './contracts/kernel-enforcement-result.js';
 import type { KernelEvaluationOptions } from './contracts/kernel-options.js';
-import type { GovernedAuthorityProvider, KernelClock, KernelIdGenerator, PolicyPackProvider, RecognitionProvider } from './contracts/ports.js';
+import type {
+  GovernedAuthorityProvider,
+  GovernedRepresentationProvider,
+  KernelClock,
+  KernelIdGenerator,
+  PolicyPackProvider,
+  RecognitionProvider,
+} from './contracts/ports.js';
 import type { KernelEvaluationRequest } from './contracts/kernel-request.js';
 import type { KernelEvaluationResult } from './contracts/kernel-result.js';
 import { KernelConfigurationError, KernelDependencyError, KernelExecutionError } from './errors/kernel-errors.js';
@@ -41,6 +48,19 @@ export interface AocKernelOptions {
    * produces a decision.
    */
   readonly governedAuthorityProvider?: GovernedAuthorityProvider;
+  /**
+   * Optional holder-bound representation provider, consulted alongside
+   * `governedAuthorityProvider` whenever a request's requester is not the
+   * holder whose authority it draws on.
+   *
+   * Configuring it is how a deployment adopts holder-bound representation, in
+   * exactly the sense configuring `governedAuthorityProvider` is how it adopts
+   * right-scoped authority. Omitted, kernel behaviour is identical to this
+   * layer not existing. Present, it can only narrow: it is consulted only for
+   * resources the authority provider reports as enrolled, and it never rescues
+   * a denial.
+   */
+  readonly governedRepresentationProvider?: GovernedRepresentationProvider;
   /** Defaults to a real-time clock. Tests should supply a deterministic one (see `AOC_KERNEL_INTEGRATION_GUIDE.md`). */
   readonly clock?: KernelClock;
   /** Defaults to `crypto.randomUUID()`-backed ids. Tests should supply a deterministic sequential generator. */
@@ -82,6 +102,7 @@ export class AocKernel {
   private readonly guard: AocGuard;
   private readonly ctx: EnforcementRuntimeContext;
   private readonly governedAuthorityProvider: GovernedAuthorityProvider | undefined;
+  private readonly governedRepresentationProvider: GovernedRepresentationProvider | undefined;
 
   constructor(options: AocKernelOptions) {
     if (options.recognitionProvider === undefined) {
@@ -103,6 +124,7 @@ export class AocKernel {
     this.runtime = createActionEnforcementRuntime(this.ctx, options.recognitionProvider, runtimeOptions);
     this.guard = createAocGuard(this.runtime);
     this.governedAuthorityProvider = options.governedAuthorityProvider;
+    this.governedRepresentationProvider = options.governedRepresentationProvider;
 
     for (const adapter of options.adapters ?? []) {
       this.runtime.registerAdapter(adapter);
@@ -164,7 +186,7 @@ export class AocKernel {
     const result =
       this.governedAuthorityProvider === undefined
         ? engineResult
-        : await applyGovernedAuthorityStep(this.governedAuthorityProvider, request, engineResult);
+        : await applyGovernedAuthorityStep(this.governedAuthorityProvider, this.governedRepresentationProvider, request, engineResult);
 
     assertKernelInvariants(request, requestSnapshot, result);
     return result;
@@ -199,7 +221,7 @@ export class AocKernel {
     // come back `duplicate_suppressed`.
     let governedAuthorityFacts: GovernedAuthorityFacts | undefined;
     if (this.governedAuthorityProvider !== undefined) {
-      const facts = await resolveGovernedAuthorityFacts(this.governedAuthorityProvider, request, this.ctx.clock.now());
+      const facts = await resolveGovernedAuthorityFacts(this.governedAuthorityProvider, this.governedRepresentationProvider, request, this.ctx.clock.now());
       governedAuthorityFacts = facts;
       if (facts.reasonCodes.length > 0) {
         const decisionId = this.ctx.ids.nextId('kernel-governed-authority-denied');
@@ -210,7 +232,11 @@ export class AocKernel {
           reasonCodes: [...facts.reasonCodes],
           summary: facts.summary,
           recognition: { performed: false },
-          authority: { performed: true, governedAuthority: facts.governedAuthority },
+          authority: {
+            performed: true,
+            governedAuthority: facts.governedAuthority,
+            ...(facts.representation !== undefined ? { representation: facts.representation } : {}),
+          },
           policies: [],
           approval: { performed: false, status: 'not_applicable' },
           evidence: [],
@@ -249,7 +275,14 @@ export class AocKernel {
     const result =
       governedAuthorityFacts === undefined
         ? enforced
-        : { ...enforced, authority: { ...enforced.authority, governedAuthority: governedAuthorityFacts.governedAuthority } };
+        : {
+            ...enforced,
+            authority: {
+              ...enforced.authority,
+              governedAuthority: governedAuthorityFacts.governedAuthority,
+              ...(governedAuthorityFacts.representation !== undefined ? { representation: governedAuthorityFacts.representation } : {}),
+            },
+          };
     assertKernelInvariants(request, requestSnapshot, result);
     return result;
   }

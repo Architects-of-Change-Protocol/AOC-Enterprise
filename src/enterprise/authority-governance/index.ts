@@ -1,10 +1,24 @@
 /**
  * The Governed Authority Runtime: the right-scoped authority state AOC
- * Enterprise recognizes, the append-only transitions that change it, and the
- * resolver that turns it into the one fact the Kernel asks for.
+ * Enterprise recognizes, the append-only transitions that change it, the
+ * holder-bound representations that say who may exercise whose authority, and
+ * the two resolvers that turn both into the facts the Kernel asks for.
  *
- * See `docs/enterprise/AOC_GOVERNED_AUTHORITY.md` and
- * `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`.
+ * The two halves answer questions that must never be confused:
+ *
+ * ```
+ * GovernedAuthorityStore        which party holds this governed right, and how much?
+ * GovernedRepresentationStore   which party may exercise that holder's authority?
+ * ```
+ *
+ * Separate stores, separate resolvers, separate Kernel ports. A request where
+ * the requester is not the holder needs an affirmative answer from both, and
+ * neither can substitute for the other.
+ *
+ * See `docs/enterprise/AOC_GOVERNED_AUTHORITY.md`,
+ * `docs/enterprise/AOC_GOVERNED_REPRESENTATIVE_AUTHORITY.md`,
+ * `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md` and
+ * `docs/architecture/ADR-HOLDER-BOUND-REPRESENTATIVE-AUTHORITY.md`.
  */
 export { AuthorityGovernanceError, isAuthorityGovernanceError } from './errors.js';
 export type { AuthorityGovernanceErrorCode } from './errors.js';
@@ -38,3 +52,32 @@ export type { CreateSqliteGovernedAuthorityStoreOptions } from './sqlite-authori
 
 export { createGovernedAuthorityResolver } from './resolver.js';
 export type { CreateGovernedAuthorityResolverOptions, UnenrolledResourcePolicy } from './resolver.js';
+
+// ---------------------------------------------------------------------------
+// Holder-bound representative authority.
+// ---------------------------------------------------------------------------
+
+export type {
+  GovernedRepresentationDelegationPort,
+  GovernedRepresentationDelegationRecord,
+  GovernedRepresentationStoreHealth,
+  GrantRepresentativeAuthorityInput,
+  GrantRepresentativeAuthorityOutcome,
+} from './representation-contracts.js';
+
+export type { GovernedRepresentationStore } from './representation-store.js';
+
+export {
+  assertRepresentationIntegrity,
+  computeRepresentationDigest,
+  delegationCorroborates,
+} from './representation-lifecycle.js';
+
+export { createInMemoryGovernedRepresentationStore, GOVERNED_REPRESENTATION_STORE_SCHEMA_VERSION } from './in-memory-representation-store.js';
+export type { CreateInMemoryGovernedRepresentationStoreOptions } from './in-memory-representation-store.js';
+
+export { createSqliteGovernedRepresentationStore } from './sqlite-representation-store.js';
+export type { CreateSqliteGovernedRepresentationStoreOptions } from './sqlite-representation-store.js';
+
+export { createGovernedRepresentationResolver } from './representation-resolver.js';
+export type { CreateGovernedRepresentationResolverOptions } from './representation-resolver.js';

@@ -1,4 +1,4 @@
-import type { GovernedAuthorityProviderPort } from '@aoc-enterprise/governed-authority';
+import type { GovernedAuthorityProviderPort, GovernedRepresentationProviderPort } from '@aoc-enterprise/governed-authority';
 
 import type {
   EnforcementRecognitionIntegration,
@@ -57,3 +57,26 @@ export type KernelIdGenerator = EnforcementRuntimeIdGenerator;
  * produces decisions.
  */
 export type GovernedAuthorityProvider = GovernedAuthorityProviderPort;
+
+/**
+ * Optional holder-bound representation provider: answers "may this requester
+ * exercise that holder's governed authority?" and nothing else.
+ *
+ * A *second* narrow port rather than a widening of `GovernedAuthorityProvider`,
+ * and the separation is the point. The two answer different questions, fail
+ * for disjoint reasons, and are independently configurable; folding them would
+ * force one coverage union to carry two verdicts and would make a denial
+ * unable to say which of the two proofs was missing. Both return pure-data
+ * types from `@aoc-enterprise/governed-authority`, so no store, table, tenancy
+ * guard or digest concept crosses into the kernel's contracts.
+ * `createGovernedRepresentationResolver`
+ * (`src/enterprise/authority-governance/representation-resolver.ts`) satisfies
+ * it structurally.
+ *
+ * Optional in exactly the sense its sibling is, and consulted only where the
+ * governed-authority check found the resource *enrolled*: a deployment that
+ * has recorded no authority state for a resource keeps its existing behaviour
+ * unchanged, and one that has keeps it fail-closed. Present, it can only ever
+ * narrow -- it never rescues a denial and never grants anything.
+ */
+export type GovernedRepresentationProvider = GovernedRepresentationProviderPort;

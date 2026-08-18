@@ -8,3 +8,25 @@ export type { GovernedAuthorityTransition } from './governed-authority-transitio
 
 export { isGovernedAuthorityCovered } from './governed-authority-coverage.js';
 export type { GovernedAuthorityCoverage, GovernedAuthorityProviderPort, GovernedAuthorityQuery } from './governed-authority-coverage.js';
+
+export {
+  governedRepresentativeAuthorityContainmentBreach,
+  governedRepresentativeAuthorityState,
+  governedRepresentativeScopeLimitWithin,
+} from './governed-representative-authority.js';
+export type {
+  GovernedRepresentativeAuthority,
+  GovernedRepresentativeAuthorityState,
+  GovernedRepresentativeContainmentBreach,
+  GovernedRepresentativeScopeLimit,
+} from './governed-representative-authority.js';
+
+export { isGovernedRepresentativeIssuanceBasis } from './governed-representative-basis.js';
+export type { GovernedRepresentativeBasis, GovernedRepresentativeBasisKind } from './governed-representative-basis.js';
+
+export { isGovernedRepresentationCovered } from './governed-representation-coverage.js';
+export type {
+  GovernedRepresentationCoverage,
+  GovernedRepresentationProviderPort,
+  GovernedRepresentationQuery,
+} from './governed-representation-coverage.js';

@@ -430,6 +430,14 @@ required, or a resource's sovereignty anchor had to change independently of any
 one installation. Reported as future thresholds; nothing speculative is
 implemented.
 
+Re-evaluated when holder-bound representative authority was added, and the
+answer did not change: representation is likewise Enterprise-local governance
+configuration with no Protocol counterpart, and it adds one further threshold to
+the list above — a representation having to be portable across independent
+sovereign deployments, so that one could prove to another that a representative
+legitimately represents a holder. Also not reached. See
+`ADR-HOLDER-BOUND-REPRESENTATIVE-AUTHORITY.md`, "Protocol boundary".
+
 ## Alternatives rejected
 
 - **Extend `AuthorityGrant` with a governed-right field.** Rejected: it would
@@ -460,6 +468,15 @@ implemented.
   acted upon, not *who* may act — that remains the Authority Graph's question,
   and a deployment narrows it with resource-scoped grants. Not newly introduced
   by this change.
+
+  > **Since closed.** This limitation was measured and found to be exactly as
+  > stated, then addressed by a separate layer rather than by any change to the
+  > model above. `GovernedRepresentativeAuthority` binds a requester to the
+  > specific holders whose authority it may exercise, and is required on every
+  > enrolled resource whenever the requester and the holder differ. The
+  > positions, transitions, conservation rules and coverage semantics recorded
+  > in this ADR are unchanged. See
+  > `ADR-HOLDER-BOUND-REPRESENTATIVE-AUTHORITY.md`.
 - Bootstrapping onto an existing position adds to its scope and does not rewrite
   its effective window; a deployment needing authority with a different window
   records it as a different position, which the current key does not permit for

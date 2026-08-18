@@ -55,6 +55,24 @@ export const AOC_KERNEL_REASON_CODES = {
   AUTHORITY_GOVERNED_SCOPE_EXCEEDED: 'AUTHORITY_GOVERNED_SCOPE_EXCEEDED',
   /** A position exists but not at the instant evaluated: it has ended, or has not yet begun. */
   AUTHORITY_GOVERNED_AUTHORITY_EXPIRED: 'AUTHORITY_GOVERNED_AUTHORITY_EXPIRED',
+
+  // Holder-bound representation codes. Three again, mirroring the three above
+  // one-for-one, and deliberately *separate* from them: the two checks fail
+  // for disjoint reasons, and a denial has to say which of the two proofs was
+  // missing. "The holder does not hold it" and "you may not spend the holder's
+  // authority" send an operator to entirely different places.
+  //
+  // Finer distinctions -- wrong holder, wrong right, wrong action, over
+  // ceiling, withdrawn, basis lapsed -- are carried by the
+  // `GovernedRepresentationCoverage` outcome reported in the evaluation facts,
+  // not multiplied into the public reason vocabulary. Three codes is what an
+  // integrator programs against; the outcome is what a reviewer reads.
+  /** The requester is not the holder and holds no representation permitting it to exercise that holder's authority for this right and action -- including the case where a representation exists for a *different* holder. This is the code that ends arbitrary holder substitution. */
+  AUTHORITY_REPRESENTATION_MISSING: 'AUTHORITY_REPRESENTATION_MISSING',
+  /** A representation covers the right and action, but the request exceeds its ceiling -- or names a quantity not commensurable with it, which is never coerced. */
+  AUTHORITY_REPRESENTATION_SCOPE_EXCEEDED: 'AUTHORITY_REPRESENTATION_SCOPE_EXCEEDED',
+  /** A representation exists but is not exercisable at the instant evaluated: it has ended, has not begun, was withdrawn, or the delegation it rests on is no longer live. */
+  AUTHORITY_REPRESENTATION_EXPIRED: 'AUTHORITY_REPRESENTATION_EXPIRED',
 } as const;
 
 export type AocKernelReasonCode = (typeof AOC_KERNEL_REASON_CODES)[keyof typeof AOC_KERNEL_REASON_CODES];

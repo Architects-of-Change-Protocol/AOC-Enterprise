@@ -75,6 +75,41 @@ export interface GovernedAuthorityEvaluation {
   readonly rights: readonly GovernedRightEvaluation[];
 }
 
+/**
+ * The holder-bound representation half of an authority evaluation: whether the
+ * requester was proven authorized to exercise the named holder's governed
+ * authority.
+ *
+ * `performed: false` means the question was not asked -- no provider is
+ * configured, the action declares no governed right, or the resource is not
+ * enrolled in right-scoped authority. `required: false` with
+ * `performed: true` is the direct-holder case: the requester *is* the holder,
+ * so nothing needed representing, and reporting that as a passed check would
+ * assert a proof that was never sought.
+ */
+export interface GovernedRepresentationEvaluation {
+  readonly performed: boolean;
+  /** Whether the requester and the holder differ, which is the only case in which a representation is needed at all. */
+  readonly required: boolean;
+  /** The party whose authority the request draws on. */
+  readonly holderRef: string;
+  /** The party that made the request. */
+  readonly representativeRef: string;
+  readonly rights: readonly GovernedRightRepresentationEvaluation[];
+}
+
+/** One governed right's representation verdict, reported per right for the same reason authority coverage is: a two-right action's denial must name the right that actually failed. */
+export interface GovernedRightRepresentationEvaluation {
+  readonly governedRight: string;
+  /** The `GovernedRepresentationCoverage` outcome, verbatim. Where the three public reason codes are compact, this is where the specific cause survives. */
+  readonly outcome: string;
+  readonly covered: boolean;
+  /** The representation relied on, when one was. Absent for a denial with no candidate binding, and for the direct-holder case. */
+  readonly representativeAuthorityId?: string;
+  /** The binding and its ancestors, root last, when a redelegated representation authorized the request. Present only on a pass, and only when a chain exists. */
+  readonly chain?: readonly string[];
+}
+
 /** Derived from the `authorityDecisionId`/`authorityProofId` references a recognition result carries -- Authority Graph's own decision object is not visible across the structural `EnforcementRecognitionIntegration` boundary, so no `valid` field is fabricated here -- plus, when configured, the governed-authority verdict `AocKernel` obtained directly from its own provider port. */
 export interface AuthorityEvaluation {
   readonly performed: boolean;
@@ -82,6 +117,8 @@ export interface AuthorityEvaluation {
   readonly proofId?: string;
   /** Present only when a `GovernedAuthorityProvider` is configured. Absent means the kernel asked no governed-right question, not that one passed. */
   readonly governedAuthority?: GovernedAuthorityEvaluation;
+  /** Present only when a `GovernedRepresentationProvider` is configured and the action declares a governed right. Absent means the kernel asked no representation question, not that one passed. */
+  readonly representation?: GovernedRepresentationEvaluation;
 }
 
 /** One-to-one with `EnforcementPolicyResult` from the wrapped engine's own (action-enforcement) policy chain. */
