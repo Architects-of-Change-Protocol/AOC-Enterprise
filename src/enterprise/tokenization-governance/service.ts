@@ -72,6 +72,18 @@ export interface SubmitTokenizationRequestInput {
   readonly issuerRef?: string;
   readonly obligationRefs?: readonly string[];
   readonly auditRefs?: readonly string[];
+  /**
+   * Whose governed authority this tokenization draws on, when it is not the
+   * requester's own.
+   *
+   * `EnterpriseTokenizationTerms` names no holder — the asset's authority
+   * holder is established upstream and never appears in the terms — so absent
+   * means the requester must itself hold the rights being represented. A
+   * deployment whose administrator submits on a holder's behalf names that
+   * holder here, and the Authority Graph still has to authorize the
+   * administrator separately: neither check substitutes for the other.
+   */
+  readonly authorityHolderRef?: string;
 }
 
 export interface RecordTokenizationExecutionRequest {
@@ -212,6 +224,15 @@ export function createTokenizationGovernanceService(deps: TokenizationGovernance
         sideEffectType: 'external_api_call',
         riskLevel: 'critical',
         parameters: { ...serializeEnterpriseTokenizationRequest(request) },
+        // The governed rights this request engages, declared as typed
+        // vocabulary rather than left inside `parameters` where no authority
+        // check could reach them. `TOKENIZE`'s scope is required and is an
+        // issuance ceiling, so it is forwarded verbatim: an actor may only
+        // represent externally as much of a right as it is recognized as
+        // controlling.
+        governedRights: request.terms.rights,
+        governedRightsScope: request.terms.scope,
+        ...(input.authorityHolderRef !== undefined ? { governedAuthorityHolderRef: input.authorityHolderRef } : {}),
         ...(request.evidenceRefs !== undefined ? { evidenceIds: request.evidenceRefs } : {}),
       },
       target: { id: request.asset.id, type: request.asset.kind },

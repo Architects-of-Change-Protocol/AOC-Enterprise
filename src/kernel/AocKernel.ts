@@ -13,10 +13,11 @@ import { PostExecutionRecordMissingError } from '../features/action-enforcement/
 import { AocGuard, createAocGuard } from '../features/action-enforcement/sdk/aoc-guard.js';
 import type { KernelEnforcementResult } from './contracts/kernel-enforcement-result.js';
 import type { KernelEvaluationOptions } from './contracts/kernel-options.js';
-import type { KernelClock, KernelIdGenerator, PolicyPackProvider, RecognitionProvider } from './contracts/ports.js';
+import type { GovernedAuthorityProvider, KernelClock, KernelIdGenerator, PolicyPackProvider, RecognitionProvider } from './contracts/ports.js';
 import type { KernelEvaluationRequest } from './contracts/kernel-request.js';
 import type { KernelEvaluationResult } from './contracts/kernel-result.js';
 import { KernelConfigurationError, KernelDependencyError, KernelExecutionError } from './errors/kernel-errors.js';
+import { applyGovernedAuthorityStep, resolveGovernedAuthorityFacts, type GovernedAuthorityFacts } from './orchestration/governed-authority-adapter.js';
 import { assertKernelInvariants, cloneKernelEvaluationRequest } from './orchestration/kernel-invariants.js';
 import { toGuardActionRequestInput, validateKernelEvaluationRequest } from './orchestration/request-adapter.js';
 import { toKernelEnforcementResult, toKernelEvaluationResult } from './orchestration/result-adapter.js';
@@ -28,6 +29,18 @@ export interface AocKernelOptions {
   readonly recognitionProvider: RecognitionProvider;
   /** Optional Domain Policy Pack Runtime integration. Omitted -> behavior is identical to no policy pack existing at all. */
   readonly policyPackProvider?: PolicyPackProvider;
+  /**
+   * Optional governed-authority state provider. Omitted -> behavior is
+   * identical to right-scoped authority not existing, which is exactly what a
+   * deployment holding no governed authority positions needs.
+   *
+   * Present, it answers "does this holder control this much of this right?"
+   * for every right a request declares in `action.governedRights`, and can
+   * only narrow an already-viable outcome into a denial. It never grants
+   * anything: this class remains the only component in AOC Enterprise that
+   * produces a decision.
+   */
+  readonly governedAuthorityProvider?: GovernedAuthorityProvider;
   /** Defaults to a real-time clock. Tests should supply a deterministic one (see `AOC_KERNEL_INTEGRATION_GUIDE.md`). */
   readonly clock?: KernelClock;
   /** Defaults to `crypto.randomUUID()`-backed ids. Tests should supply a deterministic sequential generator. */
@@ -68,6 +81,7 @@ export class AocKernel {
   private readonly runtime: ActionEnforcementRuntime;
   private readonly guard: AocGuard;
   private readonly ctx: EnforcementRuntimeContext;
+  private readonly governedAuthorityProvider: GovernedAuthorityProvider | undefined;
 
   constructor(options: AocKernelOptions) {
     if (options.recognitionProvider === undefined) {
@@ -88,6 +102,7 @@ export class AocKernel {
 
     this.runtime = createActionEnforcementRuntime(this.ctx, options.recognitionProvider, runtimeOptions);
     this.guard = createAocGuard(this.runtime);
+    this.governedAuthorityProvider = options.governedAuthorityProvider;
 
     for (const adapter of options.adapters ?? []) {
       this.runtime.registerAdapter(adapter);
@@ -138,7 +153,19 @@ export class AocKernel {
       return this.buildIndeterminateResult(request, new KernelDependencyError('recognitionProvider failed during evaluation', error));
     }
 
-    const result = toKernelEvaluationResult(request.requestId, decision, options, request.correlationId);
+    const engineResult = toKernelEvaluationResult(request.requestId, decision, options, request.correlationId);
+
+    // The governed-right authority step runs after the wrapped engine's own
+    // chain, and only ever narrows what that chain concluded. Placing it here
+    // rather than inside the chain keeps two properties that matter: the
+    // engine's 13 policies stay exactly as they were, and this step reads the
+    // engine's *outcome* rather than participating in it, so it cannot make
+    // anything allowed that was not already allowed.
+    const result =
+      this.governedAuthorityProvider === undefined
+        ? engineResult
+        : await applyGovernedAuthorityStep(this.governedAuthorityProvider, request, engineResult);
+
     assertKernelInvariants(request, requestSnapshot, result);
     return result;
   }
@@ -162,6 +189,41 @@ export class AocKernel {
     validateKernelEvaluationRequest(request);
     const requestSnapshot = cloneKernelEvaluationRequest(request);
 
+    // Governed-right authority is resolved *before* the executor can run.
+    // `guard.enforce()` preflights and invokes in one synchronous call, so
+    // there is no point inside it at which an asynchronous authority store
+    // could be consulted, and a check performed afterwards would be a check of
+    // a side effect that has already happened. Re-running `evaluate()` here
+    // was rejected for a concrete reason: it would consume the request's
+    // idempotency key, and the real enforcement immediately after it would
+    // come back `duplicate_suppressed`.
+    let governedAuthorityFacts: GovernedAuthorityFacts | undefined;
+    if (this.governedAuthorityProvider !== undefined) {
+      const facts = await resolveGovernedAuthorityFacts(this.governedAuthorityProvider, request, this.ctx.clock.now());
+      governedAuthorityFacts = facts;
+      if (facts.reasonCodes.length > 0) {
+        const decisionId = this.ctx.ids.nextId('kernel-governed-authority-denied');
+        const denied: KernelEvaluationResult = {
+          requestId: request.requestId,
+          decisionId,
+          status: 'denied',
+          reasonCodes: [...facts.reasonCodes],
+          summary: facts.summary,
+          recognition: { performed: false },
+          authority: { performed: true, governedAuthority: facts.governedAuthority },
+          policies: [],
+          approval: { performed: false, status: 'not_applicable' },
+          evidence: [],
+          trace: { steps: [], decisionId, kernelVersion: AOC_KERNEL_VERSION },
+          evaluatedAt: this.ctx.clock.now(),
+          kernelVersion: AOC_KERNEL_VERSION,
+          ...(request.correlationId !== undefined ? { correlationId: request.correlationId } : {}),
+        };
+        assertKernelInvariants(request, requestSnapshot, denied);
+        return { ...denied, execution: { status: 'not_executed', executed: false } };
+      }
+    }
+
     let outcome;
     try {
       outcome = await this.guard.enforce(toGuardActionRequestInput(request, options), executor);
@@ -179,7 +241,15 @@ export class AocKernel {
     // Outside the try/catch above: outcome now definitely exists, so any error from here on
     // (adaptation or an invariant violation) must propagate rather than be reported as
     // 'indeterminate' / not_executed, which would misrepresent whether executor already ran.
-    const result = toKernelEnforcementResult(request.requestId, outcome.decision, outcome.result, options, request.correlationId);
+    const enforced = toKernelEnforcementResult(request.requestId, outcome.decision, outcome.result, options, request.correlationId);
+    // The facts resolved above are re-attached rather than re-resolved: the
+    // authority state was read before the executor ran, and reporting a second
+    // read taken afterwards would describe a world the decision was not made
+    // in.
+    const result =
+      governedAuthorityFacts === undefined
+        ? enforced
+        : { ...enforced, authority: { ...enforced.authority, governedAuthority: governedAuthorityFacts.governedAuthority } };
     assertKernelInvariants(request, requestSnapshot, result);
     return result;
   }

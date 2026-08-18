@@ -13,6 +13,8 @@ export type {
   KernelDecisionStatus,
   RecognitionEvaluation,
   AuthorityEvaluation,
+  GovernedAuthorityEvaluation,
+  GovernedRightEvaluation,
   PolicyEvaluation,
   ApprovalEvaluation,
   ApprovalStatus,
@@ -28,6 +30,7 @@ export type {
   RecognitionVerificationInput,
   RecognitionVerificationResult,
   PolicyPackProvider,
+  GovernedAuthorityProvider,
   KernelClock,
   KernelIdGenerator,
 } from './contracts/index.js';

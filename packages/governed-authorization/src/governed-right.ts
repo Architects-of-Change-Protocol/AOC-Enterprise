@@ -59,12 +59,29 @@
  * AOC evaluates configured authority, policy, approvals and obligations; it
  * encodes no universal legal rule in this vocabulary.
  *
- * **This vocabulary participates in no authority evaluation.** The Authority
- * Graph scopes authority by capability, action and resource-scope string, and
- * holds no governed-right field. A value from this union is action payload
- * that policy may read; it is never, by itself, a statement that anyone holds
- * anything. See `docs/architecture/ADR-TRANSFER-ACTION.md`, "Authority-source
- * right vs action-target right".
+ * **A value from this union is never, by itself, a statement that anyone holds
+ * anything.** That has not changed and cannot: this package is vocabulary, and
+ * naming a right in an action's terms says what the action concerns, not who
+ * controls it.
+ *
+ * What *has* changed is that the vocabulary is no longer inert with respect to
+ * authority. When `TRANSFER` was implemented, the Authority Graph scoped
+ * authority by capability, action and resource-scope string alone, held no
+ * governed-right field, and no authority check consulted this union at all —
+ * so an actor scoped to `asset:work-a:usage-right` could move that asset's
+ * ownership interest and nothing objected. A governed authority layer was
+ * subsequently built *on top of* this vocabulary
+ * (`@aoc-enterprise/governed-authority`), which pairs a value from this union
+ * with a holder, a resource and a `GovernedRightsScope` to express recognized
+ * authority, and which `AocKernel` consults for every right an action
+ * declares.
+ *
+ * The `AuthorityGrant` statement above still holds exactly as written: it
+ * carries no governed-right field and was not modified. The governed-right
+ * check is an adjacent, typed layer, not a change to this package's meaning.
+ * See `docs/architecture/ADR-TRANSFER-ACTION.md`, "Authority-source right vs
+ * action-target right", and
+ * `docs/architecture/ADR-GOVERNED-AUTHORITY-TRANSITION.md`.
  */
 export const GOVERNED_RIGHT_TYPES = {
   ECONOMIC_INTEREST: 'economic-interest',

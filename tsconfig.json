@@ -9,6 +9,7 @@
     { "path": "./packages/collateralization-mandate" },
     { "path": "./packages/license-mandate" },
     { "path": "./packages/governed-authorization" },
+    { "path": "./packages/governed-authority" },
     { "path": "./packages/transfer-mandate" },
     { "path": "./packages/commercial-demo" },
     { "path": "./packages/agent-governance" },

@@ -41,6 +41,20 @@ export const AOC_KERNEL_REASON_CODES = {
   EXECUTION_TIMEOUT_EXCEEDED: 'EXECUTION_TIMEOUT_EXCEEDED',
   SIDE_EFFECT_BOUNDARY_VIOLATION: 'SIDE_EFFECT_BOUNDARY_VIOLATION',
   POST_EXECUTION_RECORD_INVALID: 'POST_EXECUTION_RECORD_INVALID',
+
+  // Governed-authority extension codes. Three, not a taxonomy: these name the
+  // three materially different ways a right-scoped authority check fails, and
+  // each one tells an operator to do something different. They sit alongside
+  // `AUTHORITY_SCOPE_EXCEEDED` rather than replacing it, because that code
+  // means "outside the granted resource scope" and these mean "outside the
+  // recognized governed-right authority" -- the two are independent checks and
+  // collapsing them would make a denial unactionable.
+  /** The holder controls none of the requested governed right of this resource -- including the case where it once did and has since transferred it all away. */
+  AUTHORITY_GOVERNED_RIGHT_MISSING: 'AUTHORITY_GOVERNED_RIGHT_MISSING',
+  /** The holder controls some of the right, but less than was requested -- or a quantity that is not commensurable with it, which is never coerced. */
+  AUTHORITY_GOVERNED_SCOPE_EXCEEDED: 'AUTHORITY_GOVERNED_SCOPE_EXCEEDED',
+  /** A position exists but not at the instant evaluated: it has ended, or has not yet begun. */
+  AUTHORITY_GOVERNED_AUTHORITY_EXPIRED: 'AUTHORITY_GOVERNED_AUTHORITY_EXPIRED',
 } as const;
 
 export type AocKernelReasonCode = (typeof AOC_KERNEL_REASON_CODES)[keyof typeof AOC_KERNEL_REASON_CODES];

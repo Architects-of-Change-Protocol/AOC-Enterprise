@@ -14,15 +14,23 @@
  * exception, and never converts an exception into a governance decision.
  *
  * Also deliberately absent, and specific to this action: no code here asserts
- * anything about the world outside AOC, and no code here asserts anything
- * about the *consequences* of a transfer inside AOC. There is no
- * `TRANSFER_TITLE_NOT_PASSED`, no `TRANSFEROR_DOES_NOT_HOLD_RIGHT`, no
- * `REGISTRY_NOT_UPDATED`, no `CONSIDERATION_UNPAID`, and -- most importantly
- * -- no `RECIPIENT_AUTHORITY_NOT_UPDATED`. AOC does not observe the first
- * four, and the fifth is not a failure at all: not moving authority is what
- * this module correctly does, and the fact that no mechanism exists to move it
- * is an architectural finding recorded in
- * `docs/architecture/ADR-TRANSFER-ACTION.md`, not a runtime error.
+ * anything about the world outside AOC. There is no `TRANSFER_TITLE_NOT_PASSED`,
+ * no `REGISTRY_NOT_UPDATED` and no `CONSIDERATION_UNPAID` — AOC observes none
+ * of those, and a code for one would be a claim it cannot support.
+ *
+ * There is also no `RECIPIENT_AUTHORITY_NOT_UPDATED`, and there still should
+ * not be. When this taxonomy was written, not moving authority was what this
+ * module correctly did, because no mechanism existed to move it — an
+ * architectural finding recorded in
+ * `docs/architecture/ADR-TRANSFER-ACTION.md`. That mechanism now exists, and a
+ * completed transfer does move recognized governed authority. It still does
+ * not produce an error code here: a transition that cannot be conserved
+ * surfaces as the authority layer's own
+ * `GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE`
+ * (`../authority-governance/errors.ts`), because "the transferor does not hold
+ * what is moving" is a fact about authority state rather than about this
+ * module's mandates. That is also why there is no
+ * `TRANSFEROR_DOES_NOT_HOLD_RIGHT` here.
  *
  * What this module can say is whether an execution stayed inside what it
  * authorized -- `TRANSFER_EXECUTION_NOT_AUTHORIZED`.

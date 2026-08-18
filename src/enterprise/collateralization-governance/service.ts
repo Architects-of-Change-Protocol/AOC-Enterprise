@@ -79,6 +79,17 @@ export interface SubmitCollateralizationRequestInput {
   readonly issuerRef?: string;
   readonly obligationRefs?: readonly string[];
   readonly auditRefs?: readonly string[];
+  /**
+   * Whose governed authority this collateralization draws on, when it is not
+   * the requester's own.
+   *
+   * `EnterpriseCollateralizationTerms` names a secured party but no holder of
+   * the rights being encumbered, so absent means the requester must itself
+   * hold them. A deployment whose administrator submits on a holder's behalf
+   * names that holder here; the Authority Graph still has to authorize the
+   * administrator separately.
+   */
+  readonly authorityHolderRef?: string;
 }
 
 export interface RecordCollateralizationExecutionRequest {
@@ -269,6 +280,16 @@ export function createCollateralizationGovernanceService(
         sideEffectType: 'external_api_call',
         riskLevel: 'critical',
         parameters: { ...serializeEnterpriseCollateralizationRequest(request) },
+        // The governed rights this request engages, declared as typed
+        // vocabulary. `COLLATERALIZE`'s scope is required and *accumulates* —
+        // encumbering a finite right twice exhausts it — but that accumulation
+        // is a property of the mandate, not of the underlying authority.
+        // What is checked here is only that the holder controls at least the
+        // scope being committed; how much of it a prior encumbrance has
+        // already tied up remains the mandate's own cumulative rule.
+        governedRights: request.terms.rights,
+        governedRightsScope: request.terms.scope,
+        ...(input.authorityHolderRef !== undefined ? { governedAuthorityHolderRef: input.authorityHolderRef } : {}),
         counterpartyId: request.terms.securedPartyRef,
         ...(request.evidenceRefs !== undefined ? { evidenceIds: request.evidenceRefs } : {}),
       },

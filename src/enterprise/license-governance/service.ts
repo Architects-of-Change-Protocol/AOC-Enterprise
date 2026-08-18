@@ -77,6 +77,18 @@ export interface SubmitLicenseRequestInput {
   readonly issuerRef?: string;
   readonly obligationRefs?: readonly string[];
   readonly auditRefs?: readonly string[];
+  /**
+   * Whose governed authority this licence draws on, when it is not the
+   * requester's own.
+   *
+   * `EnterpriseLicenseTerms` names a licensee — the party *receiving* the
+   * permission — and deliberately never names the licensor's underlying
+   * authority holder, which is established upstream. Absent therefore means
+   * the requester must itself hold the rights the permission draws on. Naming
+   * the licensee here would be exactly backwards: a licensee receives a
+   * permission, it does not supply the authority.
+   */
+  readonly authorityHolderRef?: string;
 }
 
 export interface RecordLicenseExecutionRequest {
@@ -252,6 +264,28 @@ export function createLicenseGovernanceService(deps: LicenseGovernanceServiceDep
         sideEffectType: 'external_api_call',
         riskLevel: 'critical',
         parameters: { ...serializeEnterpriseLicenseRequest(request) },
+        // The governed rights this permission draws on, declared as typed
+        // vocabulary.
+        //
+        // `rightsScope` is forwarded *only when the terms carry one*, and its
+        // absence is preserved rather than defaulted. This is the one place
+        // across the four actions where that matters most: `LICENSE` treats an
+        // absent rights scope as "not fractionally expressed" — emphatically
+        // not 100% — and substituting a full scope here would silently require
+        // whole-right authority for every unquantified permission, while
+        // substituting a zero one would require none. Neither is what the
+        // licence contract means. The resolver's own rule for an absent scope
+        // is "the holder must hold some live authority over this right, and
+        // this asserts nothing about how much".
+        //
+        // Note also what is *not* forwarded: the permission scope. A licence's
+        // `permittedUses`, exclusivity and term describe what the licensee may
+        // do, and are a different quantity from how much of the right the
+        // licensor holds. Conflating them would make a narrow permission
+        // demand broad authority, or the reverse.
+        governedRights: request.terms.rights,
+        ...(request.terms.rightsScope !== undefined ? { governedRightsScope: request.terms.rightsScope } : {}),
+        ...(input.authorityHolderRef !== undefined ? { governedAuthorityHolderRef: input.authorityHolderRef } : {}),
         counterpartyId: request.terms.licenseeRef,
         ...(request.evidenceRefs !== undefined ? { evidenceIds: request.evidenceRefs } : {}),
       },

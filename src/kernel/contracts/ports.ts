@@ -1,3 +1,5 @@
+import type { GovernedAuthorityProviderPort } from '@aoc-enterprise/governed-authority';
+
 import type {
   EnforcementRecognitionIntegration,
   RecognitionVerificationInput,
@@ -34,3 +36,24 @@ export type PolicyPackProvider = EnforcementPolicyPackIntegration;
 
 export type KernelClock = EnforcementRuntimeClock;
 export type KernelIdGenerator = EnforcementRuntimeIdGenerator;
+
+/**
+ * Optional governed-authority state provider: answers "does this holder
+ * control this much of this right of this resource?" and nothing else.
+ *
+ * A real port rather than a speculative one, and the boundary is narrow on
+ * purpose. It returns a `GovernedAuthorityCoverage` from
+ * `@aoc-enterprise/governed-authority` -- a pure-data package -- so no store,
+ * table, tenancy guard or digest concept crosses into the kernel's contracts.
+ * `createGovernedAuthorityResolver`
+ * (`src/enterprise/authority-governance/resolver.ts`) satisfies it
+ * structurally.
+ *
+ * Optional in the same sense `PolicyPackProvider` is: omitted, kernel
+ * behaviour is identical to this layer not existing, which is exactly what
+ * every deployment that has not enrolled a resource in right-scoped authority
+ * needs. Present, it can only ever *narrow* an outcome -- it never rescues a
+ * denial and never grants anything, because it produces facts and `AocKernel`
+ * produces decisions.
+ */
+export type GovernedAuthorityProvider = GovernedAuthorityProviderPort;
