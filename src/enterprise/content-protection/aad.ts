@@ -23,9 +23,8 @@
  * - `encryptionProfile` -- the profile/version this ciphertext was produced
  *   under (see `encryption-profile.ts`); a future v2 profile cannot be
  *   confused with v1 ciphertext even if every other field matched.
- * - `sovereignAssetRef`/`sovereignVersion` -- when this protection is
- *   sovereign-bound (see `sovereign-binding-port.ts`), the Protocol-owned
- *   asset/version reference it was verified against; `null` when absent.
+ * - `sovereignAssetId`/`manifestDigest`/`manifestVersion` -- for sovereign
+ *   resources, the Protocol identity and exact verified manifest context.
  *   Enterprise never mints these values, only carries them through.
  *
  * Encoded as canonical JSON over a fixed-order array (not delimiter-joined
@@ -42,8 +41,9 @@ export interface ContentProtectionAadContext {
   readonly organizationId: string;
   readonly resource: { readonly kind: string; readonly id: string };
   readonly encryptionProfile: string;
-  readonly sovereignAssetRef?: string;
-  readonly sovereignVersion?: string;
+  readonly sovereignAssetId?: string;
+  readonly manifestDigest?: string;
+  readonly manifestVersion?: number;
 }
 
 export function buildContentProtectionAad(context: ContentProtectionAadContext): Buffer {
@@ -54,8 +54,9 @@ export function buildContentProtectionAad(context: ContentProtectionAadContext):
     context.resource.kind,
     context.resource.id,
     context.encryptionProfile,
-    context.sovereignAssetRef ?? null,
-    context.sovereignVersion ?? null,
+    context.sovereignAssetId ?? null,
+    context.manifestDigest ?? null,
+    context.manifestVersion ?? null,
   ]);
   return Buffer.from(canonical, 'utf8');
 }

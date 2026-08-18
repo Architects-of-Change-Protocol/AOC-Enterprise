@@ -23,7 +23,7 @@ export interface CreateSqliteProtectedResourceStoreOptions {
 const DEFAULT_BUSY_TIMEOUT_MS = 5_000;
 
 // ---------------------------------------------------------------------------
-// Schema (`aoc.content-protection-store.schema.v1`). One table,
+// Schema (`aoc.content-protection-store.schema.v2`). One table,
 // current-state (never event-sourced) -- this module's lifecycle
 // (`pending -> active | failed | orphaned`) is a single-transition state
 // machine per record, exactly like `../access-governance/`'s
@@ -61,8 +61,11 @@ const SCHEMA_V1 = `
     storage_stored_at TEXT,
     storage_size_bytes INTEGER,
     sovereign_asset_id TEXT,
-    sovereign_version TEXT,
-    sovereign_content_digest TEXT,
+    sovereign_manifest_version INTEGER,
+    sovereign_manifest_digest TEXT,
+    sovereign_content_identity TEXT,
+    sovereign_canonicalization_profile TEXT,
+    sovereign_schema_version TEXT,
     sovereign_verified_at TEXT,
     failure_reason TEXT,
     created_at TEXT NOT NULL,
@@ -96,8 +99,11 @@ interface ProtectedResourceRow {
   readonly storage_stored_at: string | null;
   readonly storage_size_bytes: number | null;
   readonly sovereign_asset_id: string | null;
-  readonly sovereign_version: string | null;
-  readonly sovereign_content_digest: string | null;
+  readonly sovereign_manifest_version: number | null;
+  readonly sovereign_manifest_digest: string | null;
+  readonly sovereign_content_identity: string | null;
+  readonly sovereign_canonicalization_profile: string | null;
+  readonly sovereign_schema_version: string | null;
   readonly sovereign_verified_at: string | null;
   readonly failure_reason: string | null;
   readonly created_at: string;
@@ -123,12 +129,15 @@ function rowToRecord(row: ProtectedResourceRow): ProtectedResourceRecord {
       : undefined;
 
   const sovereignBinding =
-    row.sovereign_asset_id !== null && row.sovereign_content_digest !== null && row.sovereign_verified_at !== null
+    row.sovereign_asset_id !== null && row.sovereign_manifest_digest !== null && row.sovereign_manifest_version !== null && row.sovereign_content_identity !== null && row.sovereign_canonicalization_profile !== null && row.sovereign_schema_version !== null && row.sovereign_verified_at !== null
       ? {
           sovereignAssetId: row.sovereign_asset_id,
-          contentDigest: row.sovereign_content_digest,
+          manifestDigest: row.sovereign_manifest_digest,
+          manifestVersion: row.sovereign_manifest_version,
+          contentIdentity: JSON.parse(row.sovereign_content_identity),
+          canonicalizationProfile: row.sovereign_canonicalization_profile,
+          schemaVersion: row.sovereign_schema_version,
           verifiedAt: row.sovereign_verified_at,
-          ...(row.sovereign_version !== null ? { sovereignVersion: row.sovereign_version } : {}),
         }
       : undefined;
 
@@ -232,7 +241,9 @@ export async function createSqliteProtectedResourceStore(dbPath: string, options
     wrapped_key_kind = @wrappedKeyKind, wrapped_key_profile = @wrappedKeyProfile, wrapped_key_reference = @wrappedKeyReference,
     wrapped_key_dek = @wrappedKeyDek, wrapped_key_nonce = @wrappedKeyNonce, wrapped_key_auth_tag = @wrappedKeyAuthTag,
     storage_provider_system = @storageProviderSystem, storage_provider_ref = @storageProviderRef, storage_stored_at = @storageStoredAt, storage_size_bytes = @storageSizeBytes,
-    sovereign_asset_id = @sovereignAssetId, sovereign_version = @sovereignVersion, sovereign_content_digest = @sovereignContentDigest, sovereign_verified_at = @sovereignVerifiedAt,
+    sovereign_asset_id = @sovereignAssetId, sovereign_manifest_version = @sovereignManifestVersion, sovereign_manifest_digest = @sovereignManifestDigest,
+    sovereign_content_identity = @sovereignContentIdentity, sovereign_canonicalization_profile = @sovereignCanonicalizationProfile,
+    sovereign_schema_version = @sovereignSchemaVersion, sovereign_verified_at = @sovereignVerifiedAt,
     updated_at = @updatedAt
     WHERE protected_resource_id = @protectedResourceId AND state = 'pending'`);
   const updateFailed = db.prepare(`UPDATE protected_resources SET state = 'failed', failure_reason = @reason, updated_at = @updatedAt WHERE protected_resource_id = @protectedResourceId AND state = 'pending'`);
@@ -326,8 +337,11 @@ export async function createSqliteProtectedResourceStore(dbPath: string, options
           storageStoredAt: input.storageRef.storedAt,
           storageSizeBytes: input.storageRef.sizeBytes,
           sovereignAssetId: input.sovereignBinding?.sovereignAssetId ?? null,
-          sovereignVersion: input.sovereignBinding?.sovereignVersion ?? null,
-          sovereignContentDigest: input.sovereignBinding?.contentDigest ?? null,
+          sovereignManifestVersion: input.sovereignBinding?.manifestVersion ?? null,
+          sovereignManifestDigest: input.sovereignBinding?.manifestDigest ?? null,
+          sovereignContentIdentity: input.sovereignBinding === undefined ? null : JSON.stringify(input.sovereignBinding.contentIdentity),
+          sovereignCanonicalizationProfile: input.sovereignBinding?.canonicalizationProfile ?? null,
+          sovereignSchemaVersion: input.sovereignBinding?.schemaVersion ?? null,
           sovereignVerifiedAt: input.sovereignBinding?.verifiedAt ?? null,
           updatedAt: now(),
         }).changes;

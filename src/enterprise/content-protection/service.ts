@@ -1,49 +1,33 @@
-import { digestsEqual, encryptContent, generateDek, generateNonce, sha256Hex, zeroBuffer } from './aead.js';
+import { CANONICAL_JSON_PROFILE } from '@aoc/protocol/canonical';
+import { computeContentIdentity, contentIdentitiesEqual, parseSovereignAssetId } from '@aoc/protocol/identity';
+import type { SovereignAssetId } from '@aoc/protocol/identity';
+import {
+  computeManifestDigest,
+  resolveSovereignAsset,
+  resolveSovereignAssetVersion,
+  verifySovereignManifest,
+} from '@aoc/protocol/manifest';
+import type { SignedSovereignManifest, SovereignAssetRegistry } from '@aoc/protocol/manifest';
+
+import { encryptContent, generateDek, generateNonce, sha256Hex, zeroBuffer } from './aead.js';
 import { buildContentProtectionAad } from './aad.js';
 import { requireContentProtectionEncryptionProfile, CONTENT_PROTECTION_ENCRYPTION_PROFILE_V1 } from './encryption-profile.js';
 import { ContentProtectionError, isContentProtectionError } from './errors.js';
 import { requireContentProtectionAccessToOrganization } from './protected-resource-store.js';
 import type { ProtectedResourceStore } from './protected-resource-store.js';
-import { createBlockedSovereignAssetBindingPort } from './sovereign-binding-port.js';
-import type { SovereignAssetBindingPort } from './sovereign-binding-port.js';
 import type { KeyWrappingPort, WrappedDekMaterial } from './key-wrapping-port.js';
 import type { ContentStoragePort } from './storage-port.js';
 import type { ContentProtectionEvent, ContentProtectionEventType } from './evidence.js';
-import type {
-  ContentProtectionContext,
-  ContentProtectionResourceRef,
-  ContentProtectionSovereignBinding,
-  ProtectedResourceRecord,
-} from './contracts.js';
+import type { ContentProtectionContext, ContentProtectionResourceRef, ProtectedResourceRecord, VerifiedSovereignBinding } from './contracts.js';
 
-/**
- * The single authoritative protection orchestration path this slice adds
- * (Slice 2 requirement 10). Mirrors `../access-governance/service.ts`'s
- * `revokeGrant` in shape: one function, one durable write-ordering
- * discipline, no second code path that can reach a different outcome for
- * the same inputs.
- *
- * **No public decrypt path** (Slice 2 requirement 15/16, "CRITICAL security
- * invariant"): this service exposes `protectResource`/`getProtectedResource`
- * only. It never imports `decryptContent`, never calls
- * `KeyWrappingPort.unwrapKey`, and defines no function that could return
- * plaintext to a caller merely because they know a `protectedResourceId`.
- * Legitimate decryption is explicitly deferred to a future `ExecutionGrant`
- * + `KeyBroker` slice (see `key-wrapping-port.ts`'s module doc) -- this
- * module's own low-level primitives (`aead.ts`'s `decryptContent`,
- * `key-wrapping-port.ts`'s `unwrapKey`) remain available for that future
- * slice, and for this slice's own tests, but are never wired into anything
- * reachable from this service.
- */
 export interface ContentProtectionServiceDependencies {
   readonly store: ProtectedResourceStore;
   readonly keyWrapping: KeyWrappingPort;
   readonly storage: ContentStoragePort;
-  /** Defaults to `createBlockedSovereignAssetBindingPort()` -- see that module's doc for why (`SOVEREIGN_BINDING_GATE = BLOCKED_BY_PROTOCOL`). Only consulted when a request names `sovereignAssetId`. */
-  readonly sovereignBinding?: SovereignAssetBindingPort;
+  /** Protocol owns this interface; Enterprise only consumes/implements infrastructure behind it. */
+  readonly sovereignAssetRegistry?: SovereignAssetRegistry;
   readonly now: () => string;
   readonly nextId: (prefix: string) => string;
-  /** Optional evidence sink (Slice 2 requirement 24). Never receives plaintext, raw key material, or a raw caught exception -- see `evidence.ts`. */
   readonly onEvent?: (event: ContentProtectionEvent) => void;
 }
 
@@ -51,14 +35,13 @@ export interface ProtectResourceRequest {
   readonly protectedResourceId?: string;
   readonly organizationId: string;
   readonly resource: ContentProtectionResourceRef;
-  /** The plaintext bytes to protect. Never logged, never echoed into any error/event this service produces. */
   readonly plaintext: Buffer;
   readonly contentType?: string;
   readonly correlationId?: string;
   readonly encryptionProfile?: string;
-  /** When present, this protection is requested as sovereign-bound; see `sovereign-binding-port.ts`. Absent means an ordinary, non-sovereign-bound protection -- always available regardless of `SOVEREIGN_BINDING_GATE` (Slice 2 requirement 3). */
-  readonly sovereignAssetId?: string;
-  readonly sovereignVersion?: string;
+  readonly sovereignAssetId?: SovereignAssetId;
+  /** Exact historical version. Omit to bind the registry's latest resolved manifest. */
+  readonly manifestVersion?: number;
 }
 
 export interface ContentProtectionService {
@@ -67,23 +50,42 @@ export interface ContentProtectionService {
 }
 
 function describeFailureReason(error: unknown): string {
-  // Only ever a hand-authored, already-safe `ContentProtectionError` message
-  // is persisted/emitted -- an error from anywhere else (a raw driver
-  // exception, an unexpected adapter throw) is deliberately reduced to a
-  // fixed, generic sentence so no unvetted error content (which could
-  // embed anything, including fragments of a stack trace) ever reaches a
-  // durable `failureReason` column or an evidence event.
-  if (isContentProtectionError(error)) return error.message;
-  return 'An unexpected internal error occurred during content protection.';
+  return isContentProtectionError(error) ? error.message : 'An unexpected internal error occurred during content protection.';
+}
+
+function classifyVerificationFailure(signed: SignedSovereignManifest, reasons: readonly string[]): ContentProtectionError {
+  if (reasons.includes('UNSUPPORTED_SCHEMA_VERSION')) {
+    return new ContentProtectionError('CONTENT_PROTECTION_UNSUPPORTED_SOVEREIGN_SCHEMA', 'The resolved sovereign manifest uses an unsupported schema version.');
+  }
+  if (reasons.includes('UNSUPPORTED_CANONICALIZATION_PROFILE')) {
+    return new ContentProtectionError('CONTENT_PROTECTION_UNSUPPORTED_CANONICALIZATION_PROFILE', 'The resolved sovereign manifest uses an unsupported canonicalization profile.');
+  }
+  if (reasons.includes('MANIFEST_DIGEST_MISMATCH') || computeManifestDigest(signed.manifest) !== signed.manifestDigest) {
+    return new ContentProtectionError('CONTENT_PROTECTION_MANIFEST_DIGEST_MISMATCH', 'The resolved sovereign manifest digest does not match its canonical manifest.');
+  }
+  if (reasons.includes('CONTENT_IDENTITY_MISMATCH') || reasons.includes('CONTENT_DIGEST_MISMATCH')) {
+    return new ContentProtectionError('CONTENT_PROTECTION_CONTENT_IDENTITY_MISMATCH', 'The plaintext ContentIdentity does not match the sovereign manifest.');
+  }
+  return new ContentProtectionError('CONTENT_PROTECTION_SOVEREIGN_MANIFEST_INVALID', 'The resolved signed sovereign manifest failed cryptographic verification.');
+}
+
+function assertBinding(binding: VerifiedSovereignBinding): void {
+  if (
+    typeof binding.sovereignAssetId !== 'string' ||
+    !/^[0-9a-f]{64}$/.test(binding.manifestDigest) ||
+    !Number.isInteger(binding.manifestVersion) ||
+    binding.manifestVersion < 1 ||
+    binding.canonicalizationProfile !== CANONICAL_JSON_PROFILE
+  ) {
+    throw new ContentProtectionError('CONTENT_PROTECTION_MALFORMED_SOVEREIGN_BINDING', 'The derived sovereign binding is malformed.');
+  }
 }
 
 export function createContentProtectionService(deps: ContentProtectionServiceDependencies): ContentProtectionService {
   const { store, keyWrapping, storage, now, nextId } = deps;
-  const sovereignBinding = deps.sovereignBinding ?? createBlockedSovereignAssetBindingPort();
 
   function emit(type: ContentProtectionEventType, protectedResourceId: string, organizationId: string, correlationId: string, detail?: ContentProtectionEvent['detail']): void {
-    if (deps.onEvent === undefined) return;
-    const event: ContentProtectionEvent = {
+    deps.onEvent?.({
       eventId: nextId('content-protection-event'),
       type,
       occurredAt: now(),
@@ -91,123 +93,119 @@ export function createContentProtectionService(deps: ContentProtectionServiceDep
       protectedResourceId,
       correlationId,
       ...(detail !== undefined ? { detail } : {}),
-    };
-    deps.onEvent(event);
+    });
   }
 
   return {
     async protectResource(context, request) {
       requireContentProtectionAccessToOrganization(context, request.organizationId);
-
-      const profileDescriptor = requireContentProtectionEncryptionProfile(request.encryptionProfile ?? CONTENT_PROTECTION_ENCRYPTION_PROFILE_V1);
+      const profile = requireContentProtectionEncryptionProfile(request.encryptionProfile ?? CONTENT_PROTECTION_ENCRYPTION_PROFILE_V1).profile;
       const protectedResourceId = request.protectedResourceId ?? nextId('protected-resource');
       const correlationId = request.correlationId ?? nextId('content-protection-correlation');
+      let sovereignAssetId: SovereignAssetId | undefined;
+      let sovereignBinding: VerifiedSovereignBinding | undefined;
+
+      // Protocol validation precedes persistence, encryption, wrapping, and provider work.
+      if (request.sovereignAssetId !== undefined) {
+        emit('sovereign_binding_validation_started', protectedResourceId, request.organizationId, correlationId);
+        try {
+          try {
+            sovereignAssetId = parseSovereignAssetId(request.sovereignAssetId);
+          } catch {
+            throw new ContentProtectionError('CONTENT_PROTECTION_MALFORMED_SOVEREIGN_BINDING', 'The requested SovereignAssetId is malformed.');
+          }
+          const registry = deps.sovereignAssetRegistry;
+          if (registry === undefined) {
+            throw new ContentProtectionError('CONTENT_PROTECTION_SOVEREIGN_ASSET_UNRESOLVED', 'No SovereignAssetRegistry is configured for sovereign protection.');
+          }
+          if (request.manifestVersion !== undefined && (!Number.isInteger(request.manifestVersion) || request.manifestVersion < 1)) {
+            throw new ContentProtectionError('CONTENT_PROTECTION_MALFORMED_SOVEREIGN_BINDING', 'manifestVersion must be a positive integer.');
+          }
+          const signed = request.manifestVersion === undefined
+            ? await resolveSovereignAsset(registry, sovereignAssetId)
+            : await resolveSovereignAssetVersion(registry, sovereignAssetId, request.manifestVersion);
+          if (signed === null) {
+            throw new ContentProtectionError('CONTENT_PROTECTION_SOVEREIGN_ASSET_UNRESOLVED', `Sovereign asset '${sovereignAssetId}' could not be resolved.`);
+          }
+          if (request.manifestVersion !== undefined && signed.manifest.manifestVersion !== request.manifestVersion) {
+            throw new ContentProtectionError('CONTENT_PROTECTION_HISTORICAL_MANIFEST_SUBSTITUTION', 'The registry substituted a different manifest for the requested historical version.');
+          }
+          if (signed.manifest.sovereignAssetId !== sovereignAssetId) {
+            throw new ContentProtectionError('CONTENT_PROTECTION_SOVEREIGN_ASSET_ID_MISMATCH', 'The resolved manifest SovereignAssetId does not match the requested SovereignAssetId.');
+          }
+          const verification = await verifySovereignManifest(signed, { contentBytes: request.plaintext });
+          if (!verification.valid) throw classifyVerificationFailure(signed, verification.reasons);
+          if (verification.checks.contentDigest !== 'valid') {
+            throw new ContentProtectionError('CONTENT_PROTECTION_CONTENT_IDENTITY_MISMATCH', 'Protocol did not verify plaintext ContentIdentity against the sovereign manifest.');
+          }
+          const actualContentIdentity = computeContentIdentity(request.plaintext);
+          if (!contentIdentitiesEqual(actualContentIdentity, signed.manifest.contentIdentity)) {
+            throw new ContentProtectionError('CONTENT_PROTECTION_CONTENT_IDENTITY_MISMATCH', 'The plaintext ContentIdentity does not match the sovereign manifest.');
+          }
+          sovereignBinding = {
+            sovereignAssetId,
+            manifestDigest: signed.manifestDigest,
+            manifestVersion: signed.manifest.manifestVersion,
+            contentIdentity: signed.manifest.contentIdentity,
+            canonicalizationProfile: signed.manifest.canonicalizationProfile,
+            schemaVersion: signed.manifest.schemaVersion,
+            verifiedAt: now(),
+          };
+          assertBinding(sovereignBinding);
+          emit('sovereign_manifest_verified', protectedResourceId, request.organizationId, correlationId, { sovereignAssetId, manifestDigest: signed.manifestDigest, manifestVersion: signed.manifest.manifestVersion });
+          emit('sovereign_content_identity_matched', protectedResourceId, request.organizationId, correlationId, { sovereignAssetId });
+        } catch (error) {
+          emit('sovereign_binding_rejected', protectedResourceId, request.organizationId, correlationId, { reason: isContentProtectionError(error) ? error.code : 'CONTENT_PROTECTION_SOVEREIGN_MANIFEST_INVALID' });
+          throw isContentProtectionError(error) ? error : new ContentProtectionError('CONTENT_PROTECTION_SOVEREIGN_MANIFEST_INVALID', 'The resolved signed sovereign manifest could not be verified.');
+        }
+      }
 
       emit('protection_requested', protectedResourceId, request.organizationId, correlationId, { resourceKind: request.resource.kind, resourceId: request.resource.id });
-
-      // Persist the durable 'pending' fact BEFORE any encryption/wrapping/
-      // upload is attempted (mirrors AccessGrantStore.beginRevocation's
-      // "persist first" discipline) -- guarantees a durable row exists to
-      // transition to 'failed'/'orphaned'/'active' regardless of what
-      // happens next (Slice 2 requirement 11).
       await store.createPending(context, {
         protectedResourceId,
         organizationId: request.organizationId,
         resource: request.resource,
-        encryptionProfile: profileDescriptor.profile,
+        encryptionProfile: profile,
         correlationId,
-        ...(request.sovereignAssetId !== undefined ? { requestedSovereignAssetId: request.sovereignAssetId } : {}),
+        ...(sovereignAssetId !== undefined ? { requestedSovereignAssetId: sovereignAssetId } : {}),
       });
 
       let dek: Buffer | undefined;
       let outcomeFinalized = false;
-
       try {
-        let resolvedSovereignBinding: ContentProtectionSovereignBinding | undefined;
-
-        if (request.sovereignAssetId !== undefined) {
-          const manifest = await sovereignBinding.resolveSovereignAsset({
-            sovereignAssetId: request.sovereignAssetId,
-            ...(request.sovereignVersion !== undefined ? { sovereignVersion: request.sovereignVersion } : {}),
-          });
-          const verified = await sovereignBinding.verifySovereignManifest(manifest);
-          if (!verified) {
-            throw new ContentProtectionError('CONTENT_PROTECTION_SOVEREIGN_BINDING_BLOCKED', `Sovereign manifest for '${request.sovereignAssetId}' failed verification.`);
-          }
-
-          const plaintextDigestForVerification = sha256Hex(request.plaintext);
-          if (!digestsEqual(plaintextDigestForVerification, manifest.contentDigest)) {
-            emit('integrity_mismatch', protectedResourceId, request.organizationId, correlationId, {
-              expectedDigest: manifest.contentDigest,
-              actualDigest: plaintextDigestForVerification,
-            });
-            throw new ContentProtectionError(
-              'CONTENT_PROTECTION_CONTENT_INTEGRITY_MISMATCH',
-              `CONTENT_INTEGRITY_MISMATCH: plaintext digest does not match sovereign asset '${request.sovereignAssetId}''s recorded contentDigest. This protection was rejected before any encryption was performed.`,
-            );
-          }
-
-          resolvedSovereignBinding = {
-            sovereignAssetId: manifest.sovereignAssetId,
-            contentDigest: manifest.contentDigest,
-            verifiedAt: now(),
-            ...(manifest.sovereignVersion !== undefined ? { sovereignVersion: manifest.sovereignVersion } : {}),
-          };
-        }
-
         const plaintextDigest = sha256Hex(request.plaintext);
-
         dek = generateDek();
         const nonce = generateNonce();
         const aad = buildContentProtectionAad({
           protectedResourceId,
           organizationId: request.organizationId,
           resource: request.resource,
-          encryptionProfile: profileDescriptor.profile,
-          ...(resolvedSovereignBinding !== undefined ? { sovereignAssetRef: resolvedSovereignBinding.sovereignAssetId } : {}),
-          ...(resolvedSovereignBinding?.sovereignVersion !== undefined ? { sovereignVersion: resolvedSovereignBinding.sovereignVersion } : {}),
+          encryptionProfile: profile,
+          ...(sovereignBinding === undefined ? {} : {
+            sovereignAssetId: sovereignBinding.sovereignAssetId,
+            manifestDigest: sovereignBinding.manifestDigest,
+            manifestVersion: sovereignBinding.manifestVersion,
+          }),
         });
         const { ciphertext, authTag } = encryptContent({ plaintext: request.plaintext, key: dek, nonce, aad });
         const ciphertextDigest = sha256Hex(ciphertext);
-
         let wrappedKey: WrappedDekMaterial;
         try {
-          try {
-            wrappedKey = await keyWrapping.wrapKey(dek, { protectedResourceId, organizationId: request.organizationId });
-          } catch (error) {
-            // Normalizes ANY `KeyWrappingPort` failure -- whether it already
-            // threw this module's own `ContentProtectionError` or a raw
-            // adapter/SDK exception (a real KMS client would throw its own
-            // error type) -- onto this module's own taxonomy, exactly as
-            // `PinataProviderClientError` normalizes raw Pinata SDK failures
-            // in `../access-governance/`. Never re-throws an unrecognized
-            // error type past this point.
-            throw new ContentProtectionError('CONTENT_PROTECTION_KEY_WRAPPING_FAILED', isContentProtectionError(error) ? error.message : 'Key wrapping failed; protection aborted before any provider upload was attempted.');
-          }
+          wrappedKey = await keyWrapping.wrapKey(dek, { protectedResourceId, organizationId: request.organizationId });
+        } catch (error) {
+          throw new ContentProtectionError('CONTENT_PROTECTION_KEY_WRAPPING_FAILED', isContentProtectionError(error) ? error.message : 'Key wrapping failed; provider upload was not attempted.');
         } finally {
-          // The DEK is never needed again after wrapping (whether wrapping
-          // succeeded or failed) -- zeroed here, immediately, rather than
-          // left for GC (Slice 2 requirement 12).
           zeroBuffer(dek);
           dek = undefined;
         }
 
         let storageRef;
         try {
-          storageRef = await storage.store({
-            protectedResourceId,
-            organizationId: request.organizationId,
-            ciphertext,
-            ...(request.contentType !== undefined ? { contentType: request.contentType } : {}),
-          });
+          storageRef = await storage.store({ protectedResourceId, organizationId: request.organizationId, ciphertext, ...(request.contentType ? { contentType: request.contentType } : {}) });
         } catch (error) {
           throw new ContentProtectionError('CONTENT_PROTECTION_STORAGE_FAILED', isContentProtectionError(error) ? error.message : `Ciphertext upload to storage provider '${storage.providerSystem}' failed.`);
         }
-        emit('ciphertext_stored', protectedResourceId, request.organizationId, correlationId, {
-          providerSystem: storageRef.providerSystem,
-          sizeBytes: storageRef.sizeBytes,
-        });
-
+        emit('ciphertext_stored', protectedResourceId, request.organizationId, correlationId, { providerSystem: storageRef.providerSystem, sizeBytes: storageRef.sizeBytes });
         try {
           const active = await store.markActive(context, {
             protectedResourceId,
@@ -218,62 +216,31 @@ export function createContentProtectionService(deps: ContentProtectionServiceDep
             authTag: authTag.toString('base64'),
             wrappedKey,
             storageRef,
-            ...(resolvedSovereignBinding !== undefined ? { sovereignBinding: resolvedSovereignBinding } : {}),
+            ...(sovereignBinding ? { sovereignBinding } : {}),
           });
           outcomeFinalized = true;
+          emit('protected_resource_activated', protectedResourceId, request.organizationId, correlationId, sovereignBinding ? { sovereignAssetId: sovereignBinding.sovereignAssetId, manifestDigest: sovereignBinding.manifestDigest } : undefined);
           emit('protection_succeeded', protectedResourceId, request.organizationId, correlationId, { ciphertextDigest });
           return active;
         } catch {
-          // Ciphertext IS already durably uploaded (storageRef is real) --
-          // this is exactly Slice 2 requirement 11's "persistence failure
-          // after upload" case. Never leave the record silently 'pending'
-          // if an explicit orphan marking can succeed; if even that fails,
-          // the row remains 'pending' (durable and discoverable -- see
-          // `contracts.ts`'s `ProtectedResourceState` doc), never falsely
-          // 'active'.
           outcomeFinalized = true;
           try {
-            await store.markOrphaned(context, {
-              protectedResourceId,
-              organizationId: request.organizationId,
-              storageRef,
-              reason: `Ciphertext uploaded to '${storageRef.providerSystem}:${storageRef.providerRef}' but finalizing ProtectedResource persistence failed.`,
-            });
-          } catch {
-            // Best-effort only -- see the doc comment above.
-          }
+            await store.markOrphaned(context, { protectedResourceId, organizationId: request.organizationId, storageRef, reason: `Ciphertext uploaded to '${storageRef.providerSystem}:${storageRef.providerRef}' but final persistence failed.` });
+          } catch { /* best effort */ }
           emit('protection_failed', protectedResourceId, request.organizationId, correlationId, { reason: 'persistence-failed-after-upload' });
-          throw new ContentProtectionError(
-            'CONTENT_PROTECTION_STORE_UNAVAILABLE',
-            `ProtectedResource '${protectedResourceId}' persistence failed after ciphertext upload; the resource was marked 'orphaned' (or remains 'pending') for recovery, never 'active'.`,
-          );
+          throw new ContentProtectionError('CONTENT_PROTECTION_STORE_UNAVAILABLE', `ProtectedResource '${protectedResourceId}' persistence failed after ciphertext upload; it is never active.`);
         }
       } catch (error) {
         if (dek !== undefined) zeroBuffer(dek);
-
         if (!outcomeFinalized) {
           const reason = describeFailureReason(error);
-          try {
-            await store.markFailed(context, { protectedResourceId, organizationId: request.organizationId, reason });
-          } catch {
-            // Best-effort: the store itself may be unavailable, which is
-            // exactly the condition already being reported by rethrowing
-            // below.
-          }
-          const eventType: ContentProtectionEventType = isContentProtectionError(error) && error.code === 'CONTENT_PROTECTION_CONTENT_INTEGRITY_MISMATCH' ? 'integrity_mismatch' : 'protection_failed';
-          // The mismatch case already emitted 'integrity_mismatch' above,
-          // before the pending row existed to attach a failure reason to
-          // was even reachable -- guard against double emission.
-          if (eventType !== 'integrity_mismatch') {
-            emit('protection_failed', protectedResourceId, request.organizationId, correlationId, { reason });
-          }
+          try { await store.markFailed(context, { protectedResourceId, organizationId: request.organizationId, reason }); } catch { /* best effort */ }
+          emit('protection_failed', protectedResourceId, request.organizationId, correlationId, { reason });
         }
-
         throw isContentProtectionError(error) ? error : new ContentProtectionError('CONTENT_PROTECTION_VALIDATION_ERROR', describeFailureReason(error));
       }
     },
-
-    async getProtectedResource(context, protectedResourceId) {
+    getProtectedResource(context, protectedResourceId) {
       return store.getProtectedResource(context, protectedResourceId);
     },
   };

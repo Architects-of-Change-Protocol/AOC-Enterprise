@@ -74,49 +74,22 @@ finalizeRevocationEnforcement` two-phase write ordering
 
 ---
 
-## Sovereign binding: `SOVEREIGN_BINDING_GATE = BLOCKED_BY_PROTOCOL`
+## Sovereign binding: `SOVEREIGN_BINDING_GATE = INTEGRATED_WITH_PROTOCOL`
 
-Before implementation, the vendored `@aoc/protocol@0.1.0` tarball this
-repository actually consumes
-(`vendor/aoc-protocol-0.1.0.tgz`, pinned by `protocol-consumer.lock.json` to
-commit `ab2ac6ef573c871a029a67b13d33ba9738cb5939`) was extracted and its full
-compiled type surface (`dist/contracts`, `dist/claims`, `dist/adapters`,
-`dist/runtime-registry`, and every nested module) was grepped
-case-insensitively for `sovereign` and `contentDigest`. Zero matches. No
-`SovereignAssetId`, no `SovereignManifest`, no `contentDigest`, no
-`resolveSovereignAsset()`, no `verifySovereignManifest()`.
+Slice 2.1 vendors `@aoc/protocol@0.1.0` from pinned Protocol commit
+`c79e7529f4c0fda639803de861129335341e0744`. Enterprise consumes only the
+public `@aoc/protocol/identity`, `@aoc/protocol/canonical`, and
+`@aoc/protocol/manifest` entry points. Protocol owns `SovereignAssetId`,
+`ContentIdentity`, signed manifests, canonicalization, manifest digests,
+signature verification, and the `SovereignAssetRegistry` interface.
 
-Per the task's explicit instruction, this slice therefore did **not**
-invent `SovereignAssetId` or shadow-implement Protocol's eventual export.
-Instead:
-
-- `src/enterprise/content-protection/sovereign-binding-port.ts` defines a
-  provisional, Enterprise-side `SovereignAssetBindingPort` interface
-  (`resolveSovereignAsset`/`verifySovereignManifest`) mirroring the shape
-  the future Protocol export is expected to take, so that wiring the real
-  thing later changes only this file's default composition -- never
-  `service.ts`'s call sites, never `contracts.ts`'s
-  `ContentProtectionSovereignBinding` shape.
-  `createBlockedSovereignAssetBindingPort()` is the only implementation
-  this repository's own composition wires up; both methods reject
-  immediately with `SOVEREIGN_BINDING_GATE = 'BLOCKED_BY_PROTOCOL'`,
-  naming the exact missing exports.
-- `ContentProtectionService.protectResource` only ever consults this port
-  when a caller explicitly supplies `sovereignAssetId` in the request.
-  **This does not prevent protecting ordinary, non-sovereign-bound
-  resources** -- proven directly by
-  `content-protection-service.test.ts`'s "the default composition ...
-  reports SOVEREIGN_BINDING_GATE ... while ordinary protection is
-  unaffected" test, which protects an ordinary resource successfully and
-  *then* proves a sovereign-bound request against the same, real default
-  composition is rejected.
-- The verification/digest-comparison logic itself (content-digest
-  fail-closed matching, `ContentProtectionSovereignBinding` population) is
-  fully implemented and tested against a **test-only fake**
-  `SovereignAssetBindingPort` (`fakeSovereignBindingPort` in the test
-  file) standing in for a future real Protocol-backed adapter -- so the
-  logic is proven correct and ready the day Protocol ships the real
-  export; only the live binding is gated.
+`service.ts` resolves latest or exact historical signed manifests through
+that Protocol interface, verifies the signature/digest/schema/profile and
+plaintext ContentIdentity with Protocol code, and persists the immutable
+asset ID + exact manifest digest/version. `sovereign-registry.ts` is only an
+Enterprise infrastructure implementation behind the Protocol-owned
+interface; it rejects replacement of an already registered asset/version.
+Ordinary resources remain protectable without a registry or sovereign ID.
 
 ---
 
@@ -173,7 +146,7 @@ resource is one.
 
 - `src/enterprise/content-protection/` in full: `aead.ts`, `aad.ts`,
   `encryption-profile.ts`, `key-wrapping-port.ts`, `storage-port.ts`,
-  `pinata-storage-adapter.ts`, `sovereign-binding-port.ts`, `contracts.ts`,
+  `pinata-storage-adapter.ts`, `sovereign-registry.ts`, `contracts.ts`,
   `errors.ts`, `lifecycle.ts`, `protected-resource-store.ts`,
   `{in-memory,sqlite}-protected-resource-store.ts`, `service.ts`,
   `evidence.ts`, `index.ts`.
@@ -242,7 +215,7 @@ description specifies.
 `aad.ts`'s `buildContentProtectionAad` binds every encryption to
 `CONTENT_PROTECTION_AAD_PROFILE_V1`, `protectedResourceId`,
 `organizationId`, `resource.kind`/`resource.id`, `encryptionProfile`, and
-(when sovereign-bound) `sovereignAssetRef`/`sovereignVersion` -- encoded as
+(when sovereign-bound) `sovereignAssetId`/`manifestDigest`/`manifestVersion` -- encoded as
 canonical JSON over a fixed-order array, never delimiter-joined strings (no
 collision risk from a field containing the delimiter). Ciphertext moved to
 a different logical context (a different tenant, a different
@@ -435,8 +408,5 @@ adapter evidence). Full list and results in the final report.
   this slice's own test suite) without yet wiring public HTTP surface.
   `packages/pinata-adapter`'s new `uploadCiphertext` capability is
   correspondingly not yet exercised by any HTTP route.
-- A real, Protocol-backed `SovereignAssetBindingPort` implementation --
-  blocked on Protocol shipping `SovereignAssetId`/`SovereignManifest`/
-  `contentDigest`/`resolveSovereignAsset()`/`verifySovereignManifest()`;
-  this slice's own verification logic is ready and tested against a
-  test-only fake in the meantime.
+- `ExecutionGrant`, `KeyBroker`, governed runtime key release, and production
+  KMS/HSM integration remain future work; Slice 2.1 adds no decrypt service.

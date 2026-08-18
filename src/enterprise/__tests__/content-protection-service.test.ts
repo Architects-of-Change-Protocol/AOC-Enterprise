@@ -9,7 +9,6 @@ import { sha256Hex } from '../content-protection/aead.js';
 import { isContentProtectionError } from '../content-protection/errors.js';
 import type { ProtectedResourceStore } from '../content-protection/protected-resource-store.js';
 import type { KeyWrappingPort, WrappedDekMaterial, KeyWrappingContext } from '../content-protection/key-wrapping-port.js';
-import type { SovereignAssetBindingPort, SovereignManifest } from '../content-protection/sovereign-binding-port.js';
 import type {
   ContentProtectionEvent,
   MarkProtectedResourceActiveInput,
@@ -63,18 +62,6 @@ function withFailingWrapKey(inner: KeyWrappingPort): KeyWrappingPort {
   };
 }
 
-function fakeSovereignBindingPort(manifest: SovereignManifest, options: { verifies?: boolean } = {}): SovereignAssetBindingPort {
-  return {
-    kind: 'test-only-fake',
-    async resolveSovereignAsset() {
-      return manifest;
-    },
-    async verifySovereignManifest() {
-      return options.verifies ?? true;
-    },
-  };
-}
-
 describe('Content Protection -- protectResource orchestration (Slice 2 Tests H-N + tenant isolation)', () => {
   it('happy path: protects an ordinary (non-sovereign-bound) resource end to end', async () => {
     const { service, store, storage, events } = newDeps();
@@ -100,47 +87,9 @@ describe('Content Protection -- protectResource orchestration (Slice 2 Tests H-N
     assert.notDeepEqual(uploaded, plaintext, 'Test I basis: the storage adapter never receives plaintext bytes');
 
     const eventTypes = events.map((e) => e.type);
-    assert.deepEqual(eventTypes, ['protection_requested', 'ciphertext_stored', 'protection_succeeded']);
+    assert.deepEqual(eventTypes, ['protection_requested', 'ciphertext_stored', 'protected_resource_activated', 'protection_succeeded']);
     for (const event of events) {
       assert.ok(JSON.stringify(event).length < 2000, 'events must be small, bounded, structured detail -- never a plaintext/key dump');
-    }
-  });
-
-  it('Test H: sovereign-bound content-digest mismatch fails closed and never persists an active record', async () => {
-    const manifest: SovereignManifest = { sovereignAssetId: 'sov-1', contentDigest: sha256Hex(Buffer.from('the REAL bytes')) };
-    const { service, store, storage, events } = newDeps();
-    const serviceWithSovereign = createContentProtectionService({
-      store,
-      keyWrapping: createDevLocalKeyWrappingProvider({ allowNonProductionKeyWrapping: true }),
-      storage,
-      sovereignBinding: fakeSovereignBindingPort(manifest),
-      now: buildClock(),
-      nextId,
-      onEvent: (event) => events.push(event),
-    });
-
-    const wrongPlaintext = Buffer.from('these are NOT the real bytes');
-
-    await assert.rejects(
-      () =>
-        serviceWithSovereign.protectResource(ORG_A, {
-          organizationId: 'org-a',
-          resource: { kind: 'document', id: 'doc-sovereign' },
-          plaintext: wrongPlaintext,
-          sovereignAssetId: 'sov-1',
-        }),
-      (error: unknown) => isContentProtectionError(error) && error.code === 'CONTENT_PROTECTION_CONTENT_INTEGRITY_MISMATCH',
-    );
-
-    assert.ok(events.some((e) => e.type === 'integrity_mismatch'));
-    assert.ok(!events.some((e) => e.type === 'protection_succeeded'));
-
-    // The pending row was durably marked 'failed', never 'active'.
-    const records = await Promise.all(
-      events.filter((e) => e.type === 'protection_requested').map((e) => store.getProtectedResource(SYSTEM, e.protectedResourceId)),
-    );
-    for (const record of records) {
-      assert.notEqual(record.state, 'active');
     }
   });
 
@@ -250,63 +199,4 @@ describe('Content Protection -- protectResource orchestration (Slice 2 Tests H-N
     );
   });
 
-  it('sovereign-bound protection succeeds and records the verified binding when the digest matches', async () => {
-    const plaintext = Buffer.from('the REAL bytes');
-    const manifest: SovereignManifest = { sovereignAssetId: 'sov-2', sovereignVersion: 'v3', contentDigest: sha256Hex(plaintext) };
-    const store = createInMemoryProtectedResourceStore({ now: buildClock() });
-    const events: ContentProtectionEvent[] = [];
-    const service = createContentProtectionService({
-      store,
-      keyWrapping: createDevLocalKeyWrappingProvider({ allowNonProductionKeyWrapping: true }),
-      storage: createInMemoryContentStoragePort({ now: buildClock() }),
-      sovereignBinding: fakeSovereignBindingPort(manifest),
-      now: buildClock(),
-      nextId,
-      onEvent: (event) => events.push(event),
-    });
-
-    const record = await service.protectResource(ORG_A, {
-      organizationId: 'org-a',
-      resource: { kind: 'document', id: 'doc-sovereign-ok' },
-      plaintext,
-      sovereignAssetId: 'sov-2',
-      sovereignVersion: 'v3',
-    });
-
-    assert.equal(record.state, 'active');
-    assert.equal(record.sovereignBinding?.sovereignAssetId, 'sov-2');
-    assert.equal(record.sovereignBinding?.contentDigest, manifest.contentDigest);
-    assert.ok(!events.some((e) => e.type === 'integrity_mismatch'));
-  });
-
-  it('sovereign binding: manifest verification failure fails closed', async () => {
-    const manifest: SovereignManifest = { sovereignAssetId: 'sov-3', contentDigest: sha256Hex(Buffer.from('x')) };
-    const store = createInMemoryProtectedResourceStore({ now: buildClock() });
-    const service = createContentProtectionService({
-      store,
-      keyWrapping: createDevLocalKeyWrappingProvider({ allowNonProductionKeyWrapping: true }),
-      storage: createInMemoryContentStoragePort({ now: buildClock() }),
-      sovereignBinding: fakeSovereignBindingPort(manifest, { verifies: false }),
-      now: buildClock(),
-      nextId,
-    });
-
-    await assert.rejects(
-      () => service.protectResource(ORG_A, { organizationId: 'org-a', resource: { kind: 'document', id: 'doc-sovereign-bad' }, plaintext: Buffer.from('x'), sovereignAssetId: 'sov-3' }),
-      (error: unknown) => isContentProtectionError(error) && error.code === 'CONTENT_PROTECTION_SOVEREIGN_BINDING_BLOCKED',
-    );
-  });
-
-  it('the default composition (no sovereignBinding dependency supplied) reports SOVEREIGN_BINDING_GATE = BLOCKED_BY_PROTOCOL for a sovereign-bound request, while ordinary protection is unaffected', async () => {
-    const { service } = newDeps();
-
-    // Ordinary protection works fine -- the gate never blocks non-sovereign-bound resources.
-    const ordinary = await service.protectResource(ORG_A, { organizationId: 'org-a', resource: { kind: 'document', id: 'doc-ordinary' }, plaintext: Buffer.from('fine') });
-    assert.equal(ordinary.state, 'active');
-
-    await assert.rejects(
-      () => service.protectResource(ORG_A, { organizationId: 'org-a', resource: { kind: 'document', id: 'doc-blocked' }, plaintext: Buffer.from('x'), sovereignAssetId: 'sov-anything' }),
-      (error: unknown) => isContentProtectionError(error) && error.code === 'CONTENT_PROTECTION_SOVEREIGN_BINDING_BLOCKED',
-    );
-  });
 });

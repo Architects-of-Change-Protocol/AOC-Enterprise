@@ -11,7 +11,7 @@ import type {
   ProtectedResourceStoreHealth,
 } from './contracts.js';
 
-export const CONTENT_PROTECTION_STORE_SCHEMA_VERSION = 'aoc.content-protection-store.schema.v1';
+export const CONTENT_PROTECTION_STORE_SCHEMA_VERSION = 'aoc.content-protection-store.schema.v2';
 
 export interface CreateInMemoryProtectedResourceStoreOptions {
   readonly now?: () => string;

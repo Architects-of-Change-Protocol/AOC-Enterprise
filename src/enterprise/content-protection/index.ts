@@ -46,8 +46,7 @@ export type { ContentStoragePort, InMemoryContentStoragePort, StoreCiphertextInp
 export { createPinataContentStorageAdapter } from './pinata-storage-adapter.js';
 export type { CreatePinataContentStorageAdapterOptions } from './pinata-storage-adapter.js';
 
-export { SOVEREIGN_BINDING_GATE, createBlockedSovereignAssetBindingPort } from './sovereign-binding-port.js';
-export type { SovereignAssetBindingPort, SovereignManifest, ResolveSovereignAssetRequest } from './sovereign-binding-port.js';
+export { SOVEREIGN_BINDING_GATE, createInMemorySovereignAssetRegistry } from './sovereign-registry.js';
 
 export { ContentProtectionError, isContentProtectionError } from './errors.js';
 export type { ContentProtectionErrorCode } from './errors.js';
@@ -57,7 +56,7 @@ export { assertPendingTransitionAllowed, isActiveProtectedResource } from './lif
 export type {
   ContentProtectionContext,
   ContentProtectionResourceRef,
-  ContentProtectionSovereignBinding,
+  VerifiedSovereignBinding,
   ProtectedResourceState,
   ProtectedResourceRecord,
   CreatePendingProtectedResourceInput,

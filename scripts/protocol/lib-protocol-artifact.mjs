@@ -132,6 +132,9 @@ export const ALLOWED_PROTOCOL_SUBPATHS = Object.freeze([
   '@aoc/protocol/claims',
   '@aoc/protocol/adapters',
   '@aoc/protocol/runtime-registry',
+  '@aoc/protocol/canonical',
+  '@aoc/protocol/identity',
+  '@aoc/protocol/manifest',
 ]);
 
 const SIBLING_PATH_RE = /['"](?:\.\.\/)+Architects_of_Change_Protocol\b/;
