@@ -1,5 +1,5 @@
 /**
- * The Governed Authority Runtime: the right-scoped authority state AOC
+ * The Governed Authority Runtime: the right-scoped authority state Soberanía
  * Enterprise recognizes, the append-only transitions that change it, the
  * holder-bound representations that say who may exercise whose authority, and
  * the two resolvers that turn both into the facts the Kernel asks for.

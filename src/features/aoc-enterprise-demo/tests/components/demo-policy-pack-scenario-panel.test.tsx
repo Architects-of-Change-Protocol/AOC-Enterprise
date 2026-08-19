@@ -29,7 +29,7 @@ describe('DemoPolicyPackScenarioPanel', () => {
     assert.ok(html.includes(scenario.buyerPain));
   });
 
-  it('renders AOC value', () => {
+  it('renders Soberanía value', () => {
     const html = renderToStaticMarkup(<DemoPolicyPackScenarioPanel scenario={scenario} outcome={outcome} />);
     assert.ok(html.includes(scenario.aocValue));
   });

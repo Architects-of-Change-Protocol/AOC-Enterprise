@@ -18,7 +18,7 @@ export const POLICY_PACK_SPORTS_SETTLEMENT_EVENT_RECORD_REQUIRED_SCENARIO: DemoS
   category: 'policy_packs',
   summary:
     'PMFreak (delegated event-settlement authority from Victor) attempts settle_event_payment for a below-threshold amount with a known counterparty, but without the event_record evidence the sports-event-settlement-basic policy pack requires.',
-  enterpriseMessage: 'AOC can require event records before smart-contract or payment settlement actions are executed.',
+  enterpriseMessage: 'Soberanía can require event records before smart-contract or payment settlement actions are executed.',
   buyerPain: 'Enterprises automating sports/event settlement payments cannot let an agent release funds without a verified record of the event outcome it is settling against.',
   aocValue:
     'The sports-event-settlement-basic policy pack requires event_record evidence for settle_event_payment; Action Enforcement blocks the settlement until that evidence is attached, even though authority and counterparty checks already pass.',

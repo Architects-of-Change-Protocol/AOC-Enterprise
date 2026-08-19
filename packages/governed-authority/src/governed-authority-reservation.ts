@@ -217,7 +217,7 @@ export type GovernedAuthorityAvailability =
        * stays protected without the 1 000 being subtracted twice.
        *
        * Absent when there is none — never a synthesized zero, because a zero of
-       * an unknown denomination is not a quantity AOC can produce.
+       * an unknown denomination is not a quantity Soberanía can produce.
        */
       readonly committed?: GovernedRightsScope;
       /** The sum of every encumbrance still constraining this authority. Absent when there are none, for the same reason. */
@@ -246,7 +246,7 @@ export type GovernedAuthorityAvailability =
    * overcommitment is pre-execution and self-clearing — the reservations behind
    * it lapse at their own `expiresAt`. An overencumbrance is not: the
    * constraints behind it have no expiry, so the state persists until an
-   * operator resolves it, and it means AOC is carrying persistent constraints
+   * operator resolves it, and it means Soberanía is carrying persistent constraints
    * over authority the holder no longer possesses.
    *
    * Reported rather than clamped, for the same reason `overcommitted` is: a
@@ -255,7 +255,7 @@ export type GovernedAuthorityAvailability =
    * could have produced. Nothing may be committed against this state.
    */
   | { readonly outcome: 'overencumbered'; readonly positionId: string; readonly held: GovernedRightsScope; readonly encumbered: GovernedRightsScope }
-  /** The position and the standing commitments are not commensurable quantities — a proportional position against unitized reservations, or two unit denominations AOC holds no conversion between. Never coerced; nothing may be committed. */
+  /** The position and the standing commitments are not commensurable quantities — a proportional position against unitized reservations, or two unit denominations Soberanía holds no conversion between. Never coerced; nothing may be committed. */
   | { readonly outcome: 'incompatible'; readonly positionId: string; readonly held: GovernedRightsScope };
 
 /** True for the one outcome that lets a commitment be attempted. A function so no call site re-spells which outcomes are permissive, and so a future variant is a compile-time question rather than a silent widening. */

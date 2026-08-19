@@ -1,7 +1,7 @@
 # ADR — Governance Reference Integrity
 
 **Status:** Accepted
-**Scope:** AOC Enterprise Governance Store (`src/enterprise/governance-store/`)
+**Scope:** Soberanía Enterprise Governance Store (`src/enterprise/governance-store/`)
 **Supersedes nothing. Changes no historical record.**
 
 Related: `ADR-ENTERPRISE-GOVERNANCE-STORE.md`,
@@ -19,7 +19,7 @@ direct database writer could change a persisted `reference_type`,
 
 The consequential case is classification laundering: rewriting an
 `execution_record` (something an external system claims it did) into an
-`authorization_artifact` (something AOC itself authorized), or the reverse.
+`authorization_artifact` (something Soberanía itself authorized), or the reverse.
 That is the one distinction the reference vocabulary exists to make, and it
 was the one thing nothing protected.
 
@@ -198,6 +198,6 @@ Unchanged. This protects Enterprise-owned governance evidence. It creates no
 sovereignty capability and touches no Protocol contract.
 
 ```
-AOC Protocol    -> Sovereignty Capabilities
-AOC Enterprise  -> Governed Actions -> Enforcements -> Mandates -> Evidence
+Soberanía Protocol    -> Sovereignty Capabilities
+Soberanía Enterprise  -> Governed Actions -> Enforcements -> Mandates -> Evidence
 ```

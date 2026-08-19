@@ -8,7 +8,7 @@
  *
  * This is an Enterprise-owned, versioned AAD profile (`CONTENT_PROTECTION_AAD_PROFILE_V1`)
  * defined strictly for encryption context binding -- it does not duplicate,
- * and is not derived from, AOC Protocol's own canonicalization rules
+ * and is not derived from, Soberanía Protocol's own canonicalization rules
  * (`../governance-store/canonical-json.ts` is a distinct concern: Governance
  * Store record integrity, not encryption context). Fields bound, per Slice 2
  * requirement 9's minimum list:

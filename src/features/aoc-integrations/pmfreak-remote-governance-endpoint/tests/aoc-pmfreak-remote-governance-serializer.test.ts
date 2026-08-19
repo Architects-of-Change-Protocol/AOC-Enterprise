@@ -7,7 +7,7 @@ import { createAocPMFreakRemoteGovernanceEndpointError } from '../aoc-pmfreak-re
 import { AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_ID } from '../aoc-pmfreak-remote-governance-endpoint-constants.js';
 import { demoAocPMFreakBillingAllowedRequest, evaluateAocPMFreakGovernanceRequest } from '../../pmfreak-governance-request-intake/index.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- serializer', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- serializer', () => {
   const config = createAocPMFreakRemoteGovernanceEndpointConfig();
 
   it('success responses are always HTTP 200, even for a non-allow decision', () => {

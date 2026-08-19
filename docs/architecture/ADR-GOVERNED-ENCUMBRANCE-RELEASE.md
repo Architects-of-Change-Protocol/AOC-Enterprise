@@ -93,7 +93,7 @@ Four candidates were evaluated on semantics rather than English preference.
 | Candidate | Verdict |
 | --- | --- |
 | `release` | **Rejected.** Collides with three existing unrelated meanings in this codebase: `releaseReservation` (ending a pre-execution commitment), `releaseEncumbrance` (the store operation), and `COLLATERALIZE`'s `recordRelease` (an external observation). A capability literally named `release`, sitting in the same vocabulary as `collateralize`, would be ambiguous on its face. |
-| `discharge` | **Rejected.** Carries legal semantics AOC must not claim, and imports lending vocabulary this phase explicitly excludes. |
+| `discharge` | **Rejected.** Carries legal semantics Soberanía must not claim, and imports lending vocabulary this phase explicitly excludes. |
 | `release-collateral` | **Rejected.** Names the wrong object. What is governed is a `GovernedAuthorityEncumbrance`; today every one comes from `COLLATERALIZE`, but the action must survive a deployment classifying another action as encumbering. |
 | `release-encumbrance` | **Selected.** Precise about both verb and governed object. |
 
@@ -144,7 +144,7 @@ deployment would end up granting a wildcard and the scoping would be theatre.
 Scoping to the asset keeps release authority expressible in advance and keeps
 one resource identity universe.
 
-The `encumbranceRef` is Enterprise-local. **No AOC Protocol resource kind is
+The `encumbranceRef` is Enterprise-local. **No Soberanía Protocol resource kind is
 introduced**, because nothing crosses a deployment boundary here.
 
 ## Decision 5 — the target constraint is the source of truth
@@ -201,7 +201,7 @@ Only `confirmed_success` may terminalize. A call that threw is `indeterminate`
 rather than failed, because it may still have reached the provider.
 
 **A caller cannot supply an outcome.** There is no parameter through which one
-reaches the service, and the only confirmation AOC acts on is one returned by a
+reaches the service, and the only confirmation Soberanía acts on is one returned by a
 port invocation the service made itself. A confirmation naming a different
 constraint is downgraded to `confirmed_failure` with
 `executor_target_mismatch`.
@@ -333,9 +333,9 @@ concept.
 
 ## Legal boundary
 
-An AOC governed release means this deployment completed its configured governed
+A Soberanía governed release means this deployment completed its configured governed
 release process and no longer treats the constraint as active. It does not mean
 a lien was discharged, a security interest extinguished, a registry updated, a
 creditor paid or a debt satisfied. An executor's confirmation is bounded by that
-adapter's own contract, and AOC preserves the provider's reference without
+adapter's own contract, and Soberanía preserves the provider's reference without
 interpreting it.

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { demoAocPMFreakBillingAllowedRequest } from '../aoc-pmfreak-governance-intake-fixtures.js';
 import { validateAocPMFreakGovernanceRequest } from '../aoc-pmfreak-governance-intake-validator.js';
 
-describe('AOC PMFreak Governance Request Intake -- request compatibility shape', () => {
+describe('Soberanía PMFreak Governance Request Intake -- request compatibility shape', () => {
   it('accepts the PMFreak Governance Request Client v1 shape (providerId/consumerOf/requestMode)', () => {
     const request = demoAocPMFreakBillingAllowedRequest;
 

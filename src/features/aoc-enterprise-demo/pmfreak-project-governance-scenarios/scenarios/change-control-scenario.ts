@@ -20,7 +20,7 @@ export const changeControlRequestEvidenceScenario: PMFreakProjectGovernanceScena
   scenarioId: PMFREAK_SCENARIO_CHANGE_CONTROL_REQUEST_EVIDENCE_ID,
   title: 'Change Control -- Request Supporting Evidence',
   description:
-    'The Change Control Agent requests supporting evidence for the scope-adjustment change request. AOC Enterprise checks passport status, the real runtime guard, authority scope, capability, and a required change-request-record evidence signal before allowing the request to proceed.',
+    'The Change Control Agent requests supporting evidence for the scope-adjustment change request. Soberanía Enterprise checks passport status, the real runtime guard, authority scope, capability, and a required change-request-record evidence signal before allowing the request to proceed.',
   category: 'change_control',
   agentId: 'pmfreak.agent.change_control',
   primaryRole: 'change_control',
@@ -64,7 +64,7 @@ export const changeControlApproveChangeRequestScenario: PMFreakProjectGovernance
   scenarioId: PMFREAK_SCENARIO_CHANGE_CONTROL_APPROVE_CHANGE_REQUEST_ID,
   title: 'Change Control -- Approve Change Request',
   description:
-    'The Change Control Agent attempts to approve a customer-impacting change request. The real Change Control role profile explicitly prohibits this action, so AOC Enterprise denies the attempt regardless of evidence or approvals.',
+    'The Change Control Agent attempts to approve a customer-impacting change request. The real Change Control role profile explicitly prohibits this action, so Soberanía Enterprise denies the attempt regardless of evidence or approvals.',
   category: 'change_control',
   agentId: 'pmfreak.agent.change_control',
   primaryRole: 'change_control',

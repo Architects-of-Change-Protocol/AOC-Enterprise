@@ -11,13 +11,13 @@ const OPERATOR_PMO_ANALYST_PERSONA_ID = 'persona-operator-pmo-analyst';
 const OPERATOR_DELIVERY_MANAGER_PERSONA_ID = 'persona-operator-delivery-manager';
 
 /**
- * Datasys Internal PM / Project Governance Pilot -- shows how AOC governs
+ * Datasys Internal PM / Project Governance Pilot -- shows how Soberanía governs
  * autonomous project-management execution (PMFreak) end to end: recognized
  * reads, evidence-gated invoice support, approval-gated financial actions,
  * policy enforcement, and a verifiable export/audit trail. Orchestrates
  * existing runtime truth (Recognition Runtime, Authority Graph, Approval
  * Runtime, Domain Policy Pack Runtime, Evidence / Source / Citation Runtime,
- * Action Enforcement, AOC Control Plane, AOC Enterprise Demo, Verifiable
+ * Action Enforcement, Soberanía Control Plane, Soberanía Enterprise Demo, Verifiable
  * Export Package) -- it never invents its own decisions.
  */
 export const DATASYS_PROJECT_GOVERNANCE_PILOT_TEMPLATE: PilotTemplate = {
@@ -27,11 +27,11 @@ export const DATASYS_PROJECT_GOVERNANCE_PILOT_TEMPLATE: PilotTemplate = {
     'A bounded pilot showing how an autonomous project-management agent (PMFreak) can create/update tasks, prepare invoice support, request closure evidence, and read project summaries, with every action recognized, authorized, policy-checked, evidenced, enforced, and exportable for audit.',
   status: 'draft',
   industry: 'technology_services',
-  primaryUseCase: 'Autonomous PM / project governance execution governed end-to-end by AOC.',
+  primaryUseCase: 'Autonomous PM / project governance execution governed end-to-end by Soberanía.',
   businessPain:
     'PMO and delivery leadership cannot let an autonomous PM agent take real actions -- reading project data, preparing invoice support, requesting closure evidence, or touching anything financially adjacent -- without a governed, auditable trail proving every action was recognized, authorized, policy-checked and evidenced before it executed.',
   aocValueProposition:
-    'AOC can govern autonomous PM execution so project agents can move faster without bypassing evidence, approvals or auditability -- Recognition, Authority, Approval Runtime, the Domain Policy Pack Runtime, Evidence / Source / Citation Runtime and Action Enforcement jointly decide, and the Control Plane and Verifiable Export Package prove, that every PMFreak action stayed inside its bounded authority.',
+    'Soberanía can govern autonomous PM execution so project agents can move faster without bypassing evidence, approvals or auditability -- Recognition, Authority, Approval Runtime, the Domain Policy Pack Runtime, Evidence / Source / Citation Runtime and Action Enforcement jointly decide, and the Control Plane and Verifiable Export Package prove, that every PMFreak action stayed inside its bounded authority.',
   targetBuyerPersonaIds: [BUYER_COO_PERSONA_ID, BUYER_PMO_DIRECTOR_PERSONA_ID, BUYER_DELIVERY_DIRECTOR_PERSONA_ID],
   targetOperatorPersonaIds: [OPERATOR_PROJECT_MANAGER_PERSONA_ID, OPERATOR_PMO_ANALYST_PERSONA_ID, OPERATOR_DELIVERY_MANAGER_PERSONA_ID],
   trustDomainId: TRUST_DOMAIN_ID,
@@ -262,7 +262,7 @@ export const DATASYS_PROJECT_GOVERNANCE_PILOT_TEMPLATE: PilotTemplate = {
       expectedOutcome: 'evidence_required',
       controlPlaneFocus: 'evidence',
       exportPackageType: 'evidence_packet',
-      buyerMessage: 'PMFreak cannot prepare invoice support out of thin air -- AOC requires real invoice and purchase-order evidence first.',
+      buyerMessage: 'PMFreak cannot prepare invoice support out of thin air -- Soberanía requires real invoice and purchase-order evidence first.',
       operatorMessage: 'Open Evidence to see the open invoice/PO requirements, then Enforcement to see the evidence_required block.',
       technicalMessage: 'Domain Policy Pack Runtime returns requires_evidence; Action Enforcement blocks with evidence_required; Evidence Runtime tracks the open requirement.',
       acceptanceCriterionIds: ['datasys-acceptance-scenarios-pass'],
@@ -376,7 +376,7 @@ export const DATASYS_PROJECT_GOVERNANCE_PILOT_TEMPLATE: PilotTemplate = {
   acceptanceCriteria: [
     {
       id: 'datasys-acceptance-scenarios-pass',
-      title: 'All pilot scenarios run against real AOC runtimes and match expected outcomes',
+      title: 'All pilot scenarios run against real Soberanía runtimes and match expected outcomes',
       description: "Every declared pilot scenario binds to a real Enterprise Demo scenario and its runtime outcome matches the pilot's expected outcome.",
       type: 'runtime',
       required: true,
@@ -417,7 +417,7 @@ export const DATASYS_PROJECT_GOVERNANCE_PILOT_TEMPLATE: PilotTemplate = {
     { id: 'datasys-metric-operator-visibility', label: 'Operator walkthrough completeness', description: 'Control Plane sections an operator can inspect for this pilot.', category: 'operator_visibility', targetValue: 'All 6 walkthrough sections backed by real Control Plane rows', measurementMethod: 'Control Plane section availability check.' },
     { id: 'datasys-metric-policy-enforcement', label: 'Policy-pack-gated actions enforced', description: 'Share of policy-flagged actions actually blocked/warned by Action Enforcement.', category: 'policy_enforcement', targetValue: '100% of policy-flagged actions reflected in the enforcement decision', measurementMethod: 'Cross-check policyDecisionId on enforcement decisions.' },
     { id: 'datasys-metric-evidence-readiness', label: 'Evidence requirement resolution', description: 'Share of evidence requirements eventually satisfied with accepted evidence.', category: 'evidence_readiness', targetValue: 'Invoice/PO evidence requirements satisfied before invoice support proceeds', measurementMethod: 'Evidence Runtime requirement/satisfaction status check.' },
-    { id: 'datasys-metric-buyer-confidence', label: 'Buyer confidence in autonomous PM execution', description: 'Qualitative buyer confidence after the pilot.', category: 'buyer_confidence', targetValue: 'Buyer persona affirms AOC prevented at least one ungoverned action', measurementMethod: 'Buyer walkthrough sign-off.' },
+    { id: 'datasys-metric-buyer-confidence', label: 'Buyer confidence in autonomous PM execution', description: 'Qualitative buyer confidence after the pilot.', category: 'buyer_confidence', targetValue: 'Buyer persona affirms Soberanía prevented at least one ungoverned action', measurementMethod: 'Buyer walkthrough sign-off.' },
   ],
   risks: [
     { id: 'datasys-risk-demo-only-confusion', title: 'Demo-only policy packs mistaken for production policy', description: "Stakeholders might assume procurement-basic/financial-approval-basic reflect Datasys' actual finance policy.", severity: 'medium', mitigation: 'Every artifact and walkthrough explicitly labels the policy packs demo-only and non-production.', ownerPersonaId: BUYER_PMO_DIRECTOR_PERSONA_ID },
@@ -426,7 +426,7 @@ export const DATASYS_PROJECT_GOVERNANCE_PILOT_TEMPLATE: PilotTemplate = {
   script: {
     id: 'datasys-pilot-script',
     executiveTalkTrack: [
-      'PMFreak already reads, prepares, and requests -- the question is whether it can be trusted with autonomy. AOC is how you get a yes.',
+      'PMFreak already reads, prepares, and requests -- the question is whether it can be trusted with autonomy. Soberanía is how you get a yes.',
     ],
     operatorTalkTrack: [
       'Watch PMFreak attempt three real actions: a low-risk read, invoice support, and a payment approval.',
@@ -443,7 +443,7 @@ export const DATASYS_PROJECT_GOVERNANCE_PILOT_TEMPLATE: PilotTemplate = {
       { step: 3, title: 'Payment approval blocked', instruction: 'Run the payment-approval-required scenario.', expectedObservation: 'Execution blocked pending finance_review approval.' },
       { step: 4, title: 'Control Plane + export', instruction: 'Walk the Control Plane and export a verified decision packet.', expectedObservation: 'Verified export package with matching proof references.' },
     ],
-    closingStatement: 'AOC does not slow PMFreak down -- it draws the exact line between what it can do alone and what it cannot, and proves it.',
+    closingStatement: 'Soberanía does not slow PMFreak down -- it draws the exact line between what it can do alone and what it cannot, and proves it.',
     legalDisclaimer: 'This demo script uses demo-only policy packs and synthetic data. It is not legal advice and does not prove production compliance.',
   },
   nonGoals: [

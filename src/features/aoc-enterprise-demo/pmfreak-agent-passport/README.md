@@ -1,4 +1,4 @@
-# AOC PMFreak Agent Passport Demo Pack v1
+# Soberanía PMFreak Agent Passport Demo Pack v1
 
 Pack ID:
 
@@ -8,7 +8,7 @@ aoc.demo.pmfreak.agent_passport.v1
 
 Purpose:
 
-Demonstrates how PMFreak agents can operate with AOC Enterprise passports.
+Demonstrates how PMFreak agents can operate with Soberanía Enterprise passports.
 
 This pack models PMFreak agents as governed actors with identity, passport status, authority scope, capability tokens, evidence requirements, approval requirements, policy decisions, Control Plane summaries and export metadata.
 
@@ -28,7 +28,7 @@ PMFreak agents should not act only because they are technically able to act.
 
 They should act only when they have:
 - recognized identity
-- valid AOC Enterprise passport
+- valid Soberanía Enterprise passport
 - role-specific authority scope
 - active capability token
 - sufficient evidence
@@ -40,7 +40,7 @@ They should act only when they have:
 ```
 
 PMFreak demonstrates what autonomous project agents can do.
-AOC Enterprise demonstrates why those agents can be trusted to do it.
+Soberanía Enterprise demonstrates why those agents can be trusted to do it.
 
 ## Default status
 
@@ -66,7 +66,7 @@ Each role is defined in `pmfreak-agent-roles.ts` as a `PMFreakAgentRoleProfile`;
 
 The Billing Readiness Agent is the primary demo agent. It attempts to mark a project milestone as ready for billing (`pmfreak.action.billing.mark_ready`).
 
-AOC Enterprise checks:
+Soberanía Enterprise checks:
 
 - passport status (must be `active`, not `revoked`/`suspended`/`expired`/`draft`)
 - role authority (the action must be in `allowedActionIds`, not in `restrictedActionIds`)
@@ -78,7 +78,7 @@ AOC Enterprise checks:
 - applied policy packs and (opaque, typed-reference-only) jurisdiction packs
 - audit/export requirements
 
-A passport granting the Billing Readiness Agent authority to *attempt* this action never by itself marks a milestone billing-ready -- missing evidence or a missing approval always escalates the decision rather than silently allowing it. "AOC allows the agent to mark billing readiness in this demo" means exactly that; it never means the invoice is legally valid, that customer acceptance is certified, or that billing is guaranteed.
+A passport granting the Billing Readiness Agent authority to *attempt* this action never by itself marks a milestone billing-ready -- missing evidence or a missing approval always escalates the decision rather than silently allowing it. "Soberanía allows the agent to mark billing readiness in this demo" means exactly that; it never means the invoice is legally valid, that customer acceptance is certified, or that billing is guaranteed.
 
 ## Possible decisions
 
@@ -112,7 +112,7 @@ active           -> evaluated normally
 ```
 Policy Pack Foundation
   |
-AOC PMFreak Agent Passport Demo Pack v1  (this module)
+Soberanía PMFreak Agent Passport Demo Pack v1  (this module)
 ```
 
 This pack's manifest is a real `PolicyPackManifest`, built with the Policy Pack Foundation's `createPolicyPackManifest` -- it does not re-implement the manifest standard, the safe-framing shape, or the overclaim scanner. It re-scans every resolution, Control Plane summary, and export metadata record it produces with `assertNoPMFreakAgentPassportOverclaim` (which itself always runs the universal `assertNoPolicyPackOverclaim` first) as defense in depth.
@@ -147,4 +147,4 @@ No network calls, no LLM calls, no OCR/PDF parsing, no `Math.random()`, no `Date
 
 ## Future extension path
 
-A future `AOC PMFreak Project Governance Scenario Pack v1` may compose this passport demo with project-specific scenarios: milestone acceptance, billing readiness, schedule change, risk escalation, client communication, and change control -- built on top of, not instead of, the passport/authority/capability/evidence/approval model this pack establishes.
+A future `Soberanía PMFreak Project Governance Scenario Pack v1` may compose this passport demo with project-specific scenarios: milestone acceptance, billing readiness, schedule change, risk escalation, client communication, and change control -- built on top of, not instead of, the passport/authority/capability/evidence/approval model this pack establishes.

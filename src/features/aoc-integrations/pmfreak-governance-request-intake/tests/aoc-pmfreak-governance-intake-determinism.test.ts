@@ -53,7 +53,7 @@ function readModuleFile(relativePath: string): string {
   return readFileSync(resolve(process.cwd(), 'src/features/aoc-integrations/pmfreak-governance-request-intake', relativePath), 'utf8');
 }
 
-describe('AOC PMFreak Governance Request Intake -- determinism', () => {
+describe('Soberanía PMFreak Governance Request Intake -- determinism', () => {
   it('never uses network calls, LLM calls, OCR/PDF parsing, or non-deterministic clocks/randomness', () => {
     assert.ok(MODULE_RELATIVE_FILES.length > 5);
 

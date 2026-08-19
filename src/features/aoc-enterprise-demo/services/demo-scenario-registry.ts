@@ -16,7 +16,7 @@ function validateScenario(scenario: DemoScenario): void {
     throw new DemoScenarioValidationError(`Scenario "${scenario.id}" is missing a buyer pain statement.`);
   }
   if (scenario.aocValue.trim().length === 0) {
-    throw new DemoScenarioValidationError(`Scenario "${scenario.id}" is missing an AOC value statement.`);
+    throw new DemoScenarioValidationError(`Scenario "${scenario.id}" is missing a Soberanía value statement.`);
   }
   if (scenario.steps.length === 0) {
     throw new DemoScenarioValidationError(`Scenario "${scenario.id}" has no steps.`);

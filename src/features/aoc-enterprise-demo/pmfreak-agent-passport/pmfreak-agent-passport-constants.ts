@@ -1,5 +1,5 @@
 /**
- * AOC PMFreak Agent Passport Demo Pack v1 -- shared identifiers.
+ * Soberanía PMFreak Agent Passport Demo Pack v1 -- shared identifiers.
  *
  * This module carries no real PMFreak project, customer, or billing data.
  * Every id below is a deterministic, opaque demo identifier used to route
@@ -9,7 +9,7 @@
 
 export const PMFREAK_AGENT_PASSPORT_DEMO_PACK_ID = 'aoc.demo.pmfreak.agent_passport.v1' as const;
 
-export const PMFREAK_AGENT_PASSPORT_DEMO_PACK_NAME = 'AOC PMFreak Agent Passport Demo Pack v1' as const;
+export const PMFREAK_AGENT_PASSPORT_DEMO_PACK_NAME = 'Soberanía PMFreak Agent Passport Demo Pack v1' as const;
 
 export const PMFREAK_AGENT_PASSPORT_DEMO_PACK_VERSION = '1.0.0' as const;
 

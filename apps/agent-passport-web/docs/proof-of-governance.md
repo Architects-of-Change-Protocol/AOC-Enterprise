@@ -2,9 +2,9 @@
 
 ## Purpose
 
-The Proof of Governance demo shows that AOC Agent Passport is not just a badge, document, or governance ingredient list. It demonstrates a governed runtime decision path from Runtime Seal through Passport Verification, Policy Manifest Evaluation, Runtime Decision, Audit Event, and Execution Result.
+The Proof of Governance demo shows that Soberanía Agent Passport is not just a badge, document, or governance ingredient list. It demonstrates a governed runtime decision path from Runtime Seal through Passport Verification, Policy Manifest Evaluation, Runtime Decision, Audit Event, and Execution Result.
 
-AOC Agent Passport is not a promise that an AI agent will behave. It is the identity, policy, verification, and enforcement substrate that allows a governed runtime to decide whether an agent action is allowed to become real-world execution.
+Soberanía Agent Passport is not a promise that an AI agent will behave. It is the identity, policy, verification, and enforcement substrate that allows a governed runtime to decide whether an agent action is allowed to become real-world execution.
 
 ## Why this is not an ingredient list
 

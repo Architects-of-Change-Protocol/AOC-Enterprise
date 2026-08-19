@@ -58,7 +58,7 @@ import { ENTERPRISE_USAGE_EVENT_TYPES } from '@aoc-enterprise/usage-event';
  * design rationale and the R005.0 ADR's Phase 4/5/7 boundary this contract
  * implements.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/provider-adapter`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/provider-adapter`).
  */
 export const ENTERPRISE_PROVIDER_ADAPTER_SCHEMA_VERSION = '1.0.0' as const;
 

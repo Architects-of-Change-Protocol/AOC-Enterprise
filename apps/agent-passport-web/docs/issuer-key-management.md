@@ -1,6 +1,6 @@
 # Agent Passport issuer key management
 
-AOC Agent Passport now has an issuer key registry and server-side signer boundary for issuer metadata and production-hardening.
+Soberanía Agent Passport now has an issuer key registry and server-side signer boundary for issuer metadata and production-hardening.
 
 ## Concepts
 

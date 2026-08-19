@@ -1,6 +1,6 @@
-# AOC Jurisdiction Pack Runtime v1 (Policy Pack Foundation-aligned)
+# Soberanía Jurisdiction Pack Runtime v1 (Policy Pack Foundation-aligned)
 
-AOC Jurisdiction Pack Runtime is aligned with AOC Policy Pack Foundation v1.
+Soberanía Jurisdiction Pack Runtime is aligned with Soberanía Policy Pack Foundation v1.
 
 It consumes:
 
@@ -44,7 +44,7 @@ this module.
 
 ## Available jurisdiction packs
 
-- `aoc.jurisdiction.costa_rica.base.v1` -- AOC Jurisdiction Costa Rica Base
+- `aoc.jurisdiction.costa_rica.base.v1` -- Soberanía Jurisdiction Costa Rica Base
   Pack v1 (see `packs/costa-rica/README.md`). A **demo/system-authored
   baseline**: not legal advice, not a compliance certification, and not
   counsel-reviewed by default. It provides Costa Rica jurisdiction context,

@@ -5,7 +5,7 @@ import { validateAocPMFreakGovernanceRequest } from '../aoc-pmfreak-governance-i
 import { demoAocPMFreakBillingAllowedRequest } from '../aoc-pmfreak-governance-intake-fixtures.js';
 import type { AocPMFreakGovernanceRequest } from '../aoc-pmfreak-governance-intake-types.js';
 
-describe('AOC PMFreak Governance Request Intake -- validator', () => {
+describe('Soberanía PMFreak Governance Request Intake -- validator', () => {
   it('accepts a valid request', () => {
     const result = validateAocPMFreakGovernanceRequest(demoAocPMFreakBillingAllowedRequest);
     assert.equal(result.valid, true);

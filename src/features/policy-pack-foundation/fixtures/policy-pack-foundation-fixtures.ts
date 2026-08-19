@@ -12,7 +12,7 @@ import type { PolicyPackManifest } from '../manifest/policy-pack-manifest-types.
 export function buildGlobalBaselineManifestFixture(): PolicyPackManifest {
   return createPolicyPackManifest({
     id: 'aoc.global_legal_baseline.v1',
-    name: 'AOC Global Legal Baseline (Demo Fixture)',
+    name: 'Soberanía Global Legal Baseline (Demo Fixture)',
     version: '1.0.0',
     kind: 'global_baseline',
     domain: 'legal',
@@ -27,7 +27,7 @@ export function buildGlobalBaselineManifestFixture(): PolicyPackManifest {
 export function buildDemoLegalBaselineManifestFixture(): PolicyPackManifest {
   return createPolicyPackManifest({
     id: 'aoc.demo.legal_baseline.v1',
-    name: 'AOC Demo Legal Baseline',
+    name: 'Soberanía Demo Legal Baseline',
     version: '1.0.0',
     kind: 'demo_pack',
     domain: 'legal',
@@ -42,7 +42,7 @@ export function buildDemoLegalBaselineManifestFixture(): PolicyPackManifest {
 export function buildDemoJurisdictionManifestFixture(): PolicyPackManifest {
   return createPolicyPackManifest({
     id: 'aoc.demo.jurisdiction_baseline.v1',
-    name: 'AOC Demo Jurisdiction Baseline',
+    name: 'Soberanía Demo Jurisdiction Baseline',
     version: '1.0.0',
     kind: 'demo_pack',
     domain: 'jurisdiction',

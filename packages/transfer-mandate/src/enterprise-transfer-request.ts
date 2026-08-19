@@ -28,7 +28,7 @@ import type { EnterpriseTransferTerms, EnterpriseTransferTermsValidationCode, Se
  * Submitting one asserts nothing about who holds the asset's rights, nothing
  * about whether the requester may move them, nothing about whether the named
  * transferor genuinely holds them, and nothing about whether the recipient may
- * receive them: authority is evaluated by the primitives AOC already has
+ * receive them: authority is evaluated by the primitives Soberanía already has
  * (Authority Graph reached through Recognition Runtime, and the Approval
  * Runtime's own quorum and segregation-of-duties policies), and a request whose
  * requester holds no `TRANSFER` authority is denied by that evaluation, not by
@@ -51,7 +51,7 @@ import type { EnterpriseTransferTerms, EnterpriseTransferTermsValidationCode, Se
  * This is a pure data contract: no persistence, no service, no API, no policy
  * engine, no provider SDK, no execution.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/transfer-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/transfer-mandate`).
  */
 export interface EnterpriseTransferRequest {
   readonly schemaVersion: typeof ENTERPRISE_TRANSFER_SCHEMA_VERSION;
@@ -67,7 +67,7 @@ export interface EnterpriseTransferRequest {
   /** The expiry the requester asks the authorization to carry. A request, not a guarantee -- the issued mandate's own `expiresAt` is authoritative. */
   readonly requestedExpiresAt?: UtcDateTime;
   readonly justification?: string;
-  /** Opaque pointers to evidence records supporting this request -- a holding record, an agreement, a consideration arrangement, a diligence record. Mirrors `EnterpriseAccessDecision.evidenceRefs`. AOC never dereferences or interprets them. */
+  /** Opaque pointers to evidence records supporting this request -- a holding record, an agreement, a consideration arrangement, a diligence record. Mirrors `EnterpriseAccessDecision.evidenceRefs`. Soberanía never dereferences or interprets them. */
   readonly evidenceRefs?: readonly CanonicalId[];
 }
 

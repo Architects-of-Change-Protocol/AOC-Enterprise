@@ -24,7 +24,7 @@ export function createAgentConstitution(
     {
       number: 'I',
       title: 'Identity and Purpose',
-      content: `${input.agentName} is a governed AI agent operating under the AOC Protocol. Its declared purpose is: ${input.purpose}. This agent is owned by ${input.ownerName} (${input.ownerId}) and operates under jurisdiction: ${jurisdiction}.`,
+      content: `${input.agentName} is a governed AI agent operating under the Soberanía Protocol. Its declared purpose is: ${input.purpose}. This agent is owned by ${input.ownerName} (${input.ownerId}) and operates under jurisdiction: ${jurisdiction}.`,
     },
     {
       number: 'II',
@@ -66,7 +66,7 @@ export function createAgentConstitution(
       number: 'VIII',
       title: 'Suspension, Revocation, and Termination',
       content:
-        "This agent's passport may be suspended, revoked, or expired according to the AOC governance lifecycle. Removing the passport does not destroy the agent, but it destroys the agent's AOC-governed verification status. In governed runtimes, missing or invalid passports must cause governed execution to fail.",
+        "This agent's passport may be suspended, revoked, or expired according to the Soberanía governance lifecycle. Removing the passport does not destroy the agent, but it destroys the agent's Soberanía-governed verification status. In governed runtimes, missing or invalid passports must cause governed execution to fail.",
     },
   ];
 

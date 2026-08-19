@@ -32,7 +32,7 @@ jobs:
       - run: npm ci
       - name: Validate protocol-consumer.lock.json is well-formed
         run: npm run check:protocol-compatibility-lock
-      - name: Read the pinned AOC Protocol commit from the compatibility lock
+      - name: Read the pinned Soberanía Protocol commit from the compatibility lock
         id: lock
         run: echo "commit=$(node -e "console.log(require('./protocol-consumer.lock.json').commit)")" >> "$GITHUB_OUTPUT"
       - name: Build a reproducible @aoc/protocol tarball from the pinned commit

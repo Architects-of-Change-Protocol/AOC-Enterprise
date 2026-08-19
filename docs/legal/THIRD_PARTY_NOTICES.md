@@ -2,18 +2,18 @@
 
 > STATUS: DRAFT — PENDING PROFESSIONAL LEGAL REVIEW.
 > This file lists third-party software distributed with, or built by,
-> AOC Enterprise, and the license each is distributed under. It does not
+> Soberanía Enterprise, and the license each is distributed under. It does not
 > reproduce full license texts, because this repository does not
 > currently have `node_modules` installed (no build artifacts to extract
 > verified license text from) — see "Generating verbatim license texts"
 > below for how to complete this before external distribution.
 
-AOC Enterprise incorporates the following third-party open source
+Soberanía Enterprise incorporates the following third-party open source
 software. Each remains subject to its own license, listed below. See
 `docs/legal/OPEN_SOURCE_DEPENDENCIES.md` for the fuller inventory,
 classification, and evidence for each entry.
 
-## Direct dependencies distributed with AOC Enterprise
+## Direct dependencies distributed with Soberanía Enterprise
 
 | Package | License | Copyright |
 |---|---|---|
@@ -59,9 +59,9 @@ verification before external distribution:
   is not shipped in `dist/`).
 - Workspace-internal `@aoc-enterprise/*` packages — these are
   Onchainfest LLC's own proprietary code, not third-party notices.
-- AOC Protocol (`@aoc/protocol`) — governed by its own, separate license
+- Soberanía Protocol (`@aoc/protocol`) — governed by its own, separate license
   as a distinct project; see `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md`.
-  This file does not reproduce AOC Protocol's license because this
+  This file does not reproduce Soberanía Protocol's license because this
   review did not have verified access to it.
 
 ## Questions or corrections

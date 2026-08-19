@@ -38,7 +38,7 @@ function importsMatching(files: readonly string[], pattern: RegExp): string[] {
 }
 
 describe('Structural boundaries: src/enterprise, src/runtime, src/kernel', () => {
-  it('src/enterprise exists as the AOC Enterprise Host', () => {
+  it('src/enterprise exists as the Soberanía Enterprise Host', () => {
     assert.ok(existsSync('src/enterprise'), 'src/enterprise must exist');
     assert.ok(statSync('src/enterprise').isDirectory());
     assert.ok(existsSync('src/enterprise/index.ts'), 'src/enterprise must have a public index.ts');

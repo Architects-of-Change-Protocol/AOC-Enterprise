@@ -1,7 +1,7 @@
 import { PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID } from '../pmfreak-project-governance-scenarios/index.js';
 
 /**
- * AOC PMFreak Demo Control Plane View v1 -- shared identifiers.
+ * Soberanía PMFreak Demo Control Plane View v1 -- shared identifiers.
  *
  * This module carries no real PMFreak project, customer, or billing data.
  * Every id below is a deterministic, opaque demo identifier, never a claim
@@ -11,7 +11,7 @@ import { PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID } from '../pmfrea
 
 export const PMFREAK_DEMO_CONTROL_PLANE_VIEW_ID = 'aoc.demo.pmfreak.control_plane_view.v1' as const;
 
-export const PMFREAK_DEMO_CONTROL_PLANE_VIEW_NAME = 'AOC PMFreak Demo Control Plane View v1' as const;
+export const PMFREAK_DEMO_CONTROL_PLANE_VIEW_NAME = 'Soberanía PMFreak Demo Control Plane View v1' as const;
 
 export const PMFREAK_DEMO_CONTROL_PLANE_VIEW_VERSION = '1.0.0' as const;
 
@@ -46,7 +46,7 @@ export const PMFREAK_DEMO_CONTROL_PLANE_SECTION_IDS = {
  */
 export const PMFREAK_DEMO_CONTROL_PLANE_SAFE_LABELS = [
   'PMFreak demo Control Plane view',
-  'AOC-governed agent',
+  'Soberanía-governed agent',
   'Demo scenario',
   'Passport-gated',
   'Capability-gated',

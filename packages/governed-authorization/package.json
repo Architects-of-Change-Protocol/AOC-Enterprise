@@ -2,7 +2,7 @@
   "name": "@aoc-enterprise/governed-authorization",
   "version": "0.1.0",
   "private": true,
-  "description": "Enterprise-owned, action-neutral vocabulary shared by AOC Enterprise's governed actions: the governed-right categories, the exact rights-scope value type, the durable authorization-artifact skeleton and its two-state lifecycle, and the external execution/lifecycle evidence cores. Pure data only: no action terms, no validation rules, no error taxonomy, no party roles, no orchestration, no persistence, no policy engine, and no provider adapter.",
+  "description": "Enterprise-owned, action-neutral vocabulary shared by Soberanía Enterprise's governed actions: the governed-right categories, the exact rights-scope value type, the durable authorization-artifact skeleton and its two-state lifecycle, and the external execution/lifecycle evidence cores. Pure data only: no action terms, no validation rules, no error taxonomy, no party roles, no orchestration, no persistence, no policy engine, and no provider adapter.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

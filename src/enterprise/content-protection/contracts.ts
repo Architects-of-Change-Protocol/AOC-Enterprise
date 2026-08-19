@@ -18,7 +18,7 @@ import type { StorageRef } from './storage-port.js';
  *
  * Naming: `ProtectedResource`, not `ProtectedAsset` -- Enterprise already
  * uses provider-neutral *resource* vocabulary throughout
- * (`AccessGrantResource`, `ResourceRef`), and this module protects both AOC
+ * (`AccessGrantResource`, `ResourceRef`), and this module protects both Soberanía
  * Sovereign Assets (once Protocol exports that contract -- see
  * `sovereign-binding-port.ts`) and ordinary resources that were never
  * sovereignized through Protocol at all. Calling every protected thing an

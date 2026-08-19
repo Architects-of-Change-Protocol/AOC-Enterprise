@@ -226,7 +226,7 @@ export default function RegistryRecoverPage() {
           Automated recovery is not available without a recovery code or verified checkout session.
           <br />
           <a href="mailto:hello@architectsofchange.ai?subject=Registry+Access+Recovery" style={{ color: 'inherit', textDecoration: 'underline' }}>
-            Contact AOC support
+            Contact Soberanía support
           </a>
         </div>
       </div>

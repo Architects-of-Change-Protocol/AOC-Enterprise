@@ -2041,7 +2041,7 @@ describe('Governed Authority Store — SQLite', () => {
           'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED',
           'the availability question fails rather than the tampered row silently freeing its capacity',
         );
-        // And nothing may be committed against a state AOC cannot trust.
+        // And nothing may be committed against a state Soberanía cannot trust.
         assert.equal(
           await errorCode(() => reopened.acquireReservation(ADMIN, reservation('mandate-after-tamper', 'party-alice', proportional(4_000)))),
           'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED',
@@ -2398,7 +2398,7 @@ describe('Governed Authority Store — SQLite', () => {
           'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED',
           'the capacity question fails rather than the tampered row silently freeing the authority it constrains',
         );
-        // And nothing may be committed against a state AOC cannot trust.
+        // And nothing may be committed against a state Soberanía cannot trust.
         assert.equal(
           await errorCode(() => reopened.acquireReservation(ADMIN, reservation('mandate-after-tamper', 'party-alice', proportional(1_000)))),
           'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED',

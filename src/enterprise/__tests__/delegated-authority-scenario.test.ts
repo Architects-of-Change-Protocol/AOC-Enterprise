@@ -45,7 +45,7 @@ import {
 /**
  * The fourth authority question, measured end to end against the real runtimes.
  *
- * AOC Enterprise already answered three, and they remain separate below:
+ * Soberanía Enterprise already answered three, and they remain separate below:
  *
  * ```
  * A  action authority        may this actor invoke this action on this resource?
@@ -408,7 +408,7 @@ describe('Derived authority — revoking a link stops the request', () => {
     // Recording the execution of an already-issued mandate does not re-ask the
     // authority question, exactly as it does not for a revoked representation.
     // The revocation stops *new* requests; it does not reach backwards into an
-    // authorization AOC already issued. Asserted rather than assumed, because
+    // authorization Soberanía already issued. Asserted rather than assumed, because
     // this is the temporal boundary an integrator has to know about.
     const executed = await world.transfer.recordExecution(
       TENANT_CONTEXT,

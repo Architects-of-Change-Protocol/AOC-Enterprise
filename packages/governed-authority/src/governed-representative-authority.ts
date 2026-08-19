@@ -8,7 +8,7 @@ import type { GovernedRepresentativeBasis } from './governed-representative-basi
  *
  * ## The question this answers, and the two it does not
  *
- * AOC Enterprise now distinguishes three authority questions that were
+ * Soberanía Enterprise now distinguishes three authority questions that were
  * previously two:
  *
  * ```
@@ -32,7 +32,7 @@ import type { GovernedRepresentativeBasis } from './governed-representative-basi
  *
  * ## What it asserts, bounded on purpose
  *
- * > According to the governance state this AOC Enterprise deployment
+ * > According to the governance state this Soberanía Enterprise deployment
  * > recognizes, `representativeRef` may cause the holder `holderRef`'s
  * > authority over `governedRights` of the named resource to be exercised, for
  * > `actions`, up to `scopeLimit`, between `effectiveFrom` and `expiresAt`.

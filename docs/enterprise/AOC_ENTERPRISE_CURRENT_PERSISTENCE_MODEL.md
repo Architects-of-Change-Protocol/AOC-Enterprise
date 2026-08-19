@@ -1,6 +1,6 @@
-# AOC Enterprise — Current Persistence Model (pre-PR-004 baseline)
+# Soberanía Enterprise — Current Persistence Model (pre-PR-004 baseline)
 
-This document records, before any PR-004 refactoring, exactly what the AOC
+This document records, before any PR-004 refactoring, exactly what the Soberanía
 Enterprise Host's decision persistence does today — as established by
 PR-002 (Enterprise Host v1), the PR-002 iteration (naming/composition), and
 PR-003 (Module Lifecycle & Registry). It is the "prove understanding of what

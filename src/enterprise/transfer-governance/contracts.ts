@@ -46,14 +46,14 @@ import type { KernelDecisionStatus } from '../../kernel/index.js';
  * **Recording that a transfer executed does not move authority.** Nothing in
  * this module writes to the Authority Graph, issues a capability token, or
  * changes what the recipient may do. That is a deliberate architectural
- * position with a recorded consequence: after a fully-evidenced transfer, AOC
+ * position with a recorded consequence: after a fully-evidenced transfer, Soberanía
  * still does not recognize the recipient as authorized over the transferred
  * right, and a separate administrative act is required. See
  * `docs/architecture/ADR-TRANSFER-ACTION.md`, "Post-transfer authority", and
  * the test suite `src/enterprise/__tests__/transfer-authority-transition.test.ts`,
  * which measures this rather than assuming it.
  *
- * Boundary: AOC Enterprise governs the authority to transfer. It is not a
+ * Boundary: Soberanía Enterprise governs the authority to transfer. It is not a
  * registry, a transfer agent, a custodian, a settlement system, an escrow, or
  * a title system. Nothing in this module moves a right, updates a register,
  * prices or values anything, holds or settles consideration, calculates tax,
@@ -110,9 +110,9 @@ export interface TransferMandateRecord {
   /** The Governance Store aggregate that durably proves that decision (trace, reason codes, events, integrity chain). */
   readonly evaluationRef?: string;
 
-  /** When AOC's authority to move rights under this mandate begins. Not the external movement's effective date. */
+  /** When Soberanía's authority to move rights under this mandate begins. Not the external movement's effective date. */
   readonly effectiveFrom: string;
-  /** When AOC's authority to move rights under this mandate ends. Says nothing about rights already moved. */
+  /** When Soberanía's authority to move rights under this mandate ends. Says nothing about rights already moved. */
   readonly expiresAt: string;
   readonly correlationId: string;
   readonly issuerRef?: string;
@@ -136,7 +136,7 @@ export interface TransferMandateRecord {
    * ten seats to one licensee and ten to another exhausts nothing about the
    * asset, whereas moving 25% twice moves 50%.
    *
-   * A reported reversal or correction does **not** decrement it: AOC cannot
+   * A reported reversal or correction does **not** decrement it: Soberanía cannot
    * verify that an external movement was actually undone and must never create
    * fresh transfer capacity on the strength of an unverified report.
    */
@@ -176,7 +176,7 @@ export interface TransferExecutionRecord {
   readonly externalSystem?: string;
   readonly externalAgreementReference?: string;
   readonly externalAcceptanceReference?: string;
-  /** Opaque reference only — never an amount. AOC computes, holds and settles nothing. */
+  /** Opaque reference only — never an amount. Soberanía computes, holds and settles nothing. */
   readonly externalConsiderationReference?: string;
   readonly externalRegistrationReference?: string;
   readonly externalTransactionReference?: string;
@@ -232,7 +232,7 @@ export interface TransferMandateRevocationRecord {
    * Preserved deliberately, and — with `transferredScopeAtRevocation` — the
    * single most important semantic point of the whole module: revoking a
    * mandate withdraws the authority to move *further* rights and makes no
-   * claim whatsoever about rights an external system has already moved. AOC
+   * claim whatsoever about rights an external system has already moved. Soberanía
    * cannot pull a transferred right back, and a revocation that implied it
    * could would be the most consequential lie this system could tell.
    */

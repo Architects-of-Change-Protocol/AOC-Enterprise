@@ -1,12 +1,12 @@
-# AOC Runtime Guard Lite
+# Soberanía Runtime Guard Lite
 
 ## What Runtime Guard Lite Is
 
-Runtime Guard Lite is the first enforceable runtime layer in the AOC Agent Governance stack. It consumes an Agent Passport (produced by Agent Passport Core) and answers one question before a governed agent performs a real-world action:
+Runtime Guard Lite is the first enforceable runtime layer in the Soberanía Agent Governance stack. It consumes an Agent Passport (produced by Agent Passport Core) and answers one question before a governed agent performs a real-world action:
 
-> **Is this agent allowed to execute this requested action under its AOC Passport, Runtime Seal, Policy Manifest, and current passport status?**
+> **Is this agent allowed to execute this requested action under its Soberanía Passport, Runtime Seal, Policy Manifest, and current passport status?**
 
-Runtime Guard Lite converts AOC Agent Passport from a verifiable identity artifact into a runtime-enforceable control point.
+Runtime Guard Lite converts Soberanía Agent Passport from a verifiable identity artifact into a runtime-enforceable control point.
 
 Every governed execution passes through:
 
@@ -41,7 +41,7 @@ Runtime Guard Lite is built directly on top of Agent Passport Core (`packages/ag
 | `verifyAgentPassport()` | Called as step 2 of every guard evaluation |
 | `AgentPassportSignerPort` | Injected into the guard for both seal and passport verification |
 
-Outside a governed runtime, AOC Passport remains tamper-evident. Inside a governed runtime, Runtime Guard Lite makes the passport enforceable.
+Outside a governed runtime, Soberanía Passport remains tamper-evident. Inside a governed runtime, Runtime Guard Lite makes the passport enforceable.
 
 ---
 
@@ -101,7 +101,7 @@ evaluateAgentRuntimeGuard(input, deps)
 
 ---
 
-## Why This Makes AOC Passport Enforceable
+## Why This Makes Soberanía Passport Enforceable
 
 A signed passport without a runtime layer is only tamper-evident — it proves identity but cannot prevent action. Runtime Guard Lite closes this gap:
 

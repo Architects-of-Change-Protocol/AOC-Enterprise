@@ -1,5 +1,5 @@
 /**
- * AOC PMFreak Demo Narrative Export Pack v1 -- narrative export types.
+ * Soberanía PMFreak Demo Narrative Export Pack v1 -- narrative export types.
  *
  * This module models presentation/export data only. It never redeclares
  * passport, authority-scope, capability, evidence, or approval gating, and

@@ -1,5 +1,5 @@
 /**
- * Semantic version of the AOC Enterprise Host's own public surface
+ * Semantic version of the Soberanía Enterprise Host's own public surface
  * (`AocEnterprise`, `createEnterprise`, the wire/persistence/event
  * contracts in this module). Independent of `AOC_KERNEL_VERSION`
  * (`src/kernel/versioning.ts`) and of any version `src/runtime/` reports --

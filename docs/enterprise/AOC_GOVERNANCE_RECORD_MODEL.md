@@ -1,4 +1,4 @@
-# AOC Governance Record Model v1
+# Soberanía Governance Record Model v1
 
 Canonical contracts of the Governance Store (PR-004). Source of truth:
 `src/enterprise/governance-store/contracts.ts`.
@@ -175,13 +175,13 @@ artifact's own content digest, caller-supplied, never verified) and
 `referenceDigest?` (the Store's tamper-evidence digest) are different things.
 See "Two integrity domains" in `AOC_ENTERPRISE_GOVERNANCE_STORE.md`.
 
-`authorization_artifact` names a durable artifact **produced by AOC
+`authorization_artifact` names a durable artifact **produced by Soberanía
 Enterprise** that records or embodies authorization resulting from a governed
 enforcement decision — today `TokenizationMandate` and
 `CollateralizationMandate`. `external_artifact` is reserved for artifacts
-originating **outside** the AOC authorization machinery, and
+originating **outside** the Soberanía authorization machinery, and
 `execution_record` for a report that an external system acted on an
-authorization AOC issued. The classification is evidence vocabulary and never
+authorization Soberanía issued. The classification is evidence vocabulary and never
 authority; see "Reference vocabulary" in
 `AOC_ENTERPRISE_GOVERNANCE_STORE.md` for the trust boundary, the
 compatibility rules, and how historical rows are treated.

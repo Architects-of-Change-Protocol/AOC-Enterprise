@@ -7,7 +7,7 @@ import type {
 import type { PolicyPackCompositionDecision, PolicyPackCompositionResult } from '../../policy-pack-foundation/composition/policy-pack-composition-types.js';
 
 /**
- * AOC Jurisdiction Pack Runtime -- Policy Pack Foundation alignment layer.
+ * Soberanía Jurisdiction Pack Runtime -- Policy Pack Foundation alignment layer.
  *
  * This module does not encode any real jurisdiction's law, does not provide
  * legal advice, and does not certify jurisdictional compliance. It is

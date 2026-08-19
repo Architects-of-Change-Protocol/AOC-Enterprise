@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakGovernanceResponse } from '../aoc-pmfreak-governance-response-builder.js';
 import { demoAocPMFreakBillingAllowedRequest } from '../aoc-pmfreak-governance-intake-fixtures.js';
 
-describe('AOC PMFreak Governance Request Intake -- response builder', () => {
+describe('Soberanía PMFreak Governance Request Intake -- response builder', () => {
   it('creates a deterministic responseId derived from requestId', () => {
     const responseA = createAocPMFreakGovernanceResponse({ request: demoAocPMFreakBillingAllowedRequest, decision: 'allow' });
     const responseB = createAocPMFreakGovernanceResponse({ request: demoAocPMFreakBillingAllowedRequest, decision: 'allow' });

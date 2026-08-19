@@ -1,7 +1,7 @@
 import type { KernelDecisionStatus } from '../../kernel/index.js';
 
 /**
- * Operational metrics the AOC Enterprise Host owns. The Kernel stays
+ * Operational metrics the Soberanía Enterprise Host owns. The Kernel stays
  * deterministic and reports nothing about its own operational health --
  * these counters are derived entirely from the outside, by observing
  * `evaluate()` calls, never by asking the Kernel to instrument itself.

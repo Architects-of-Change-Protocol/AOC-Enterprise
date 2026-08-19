@@ -1,7 +1,7 @@
-# ADR: AOC Enterprise Governance Store v1
+# ADR: Soberanía Enterprise Governance Store v1
 
 - Status: Accepted (PR-004)
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: `ADR-ENTERPRISE-HOST-NAMING.md`, `ADR-ENTERPRISE-MODULE-LIFECYCLE.md`,
   `docs/enterprise/AOC_ENTERPRISE_GOVERNANCE_STORE.md`,
   `docs/enterprise/AOC_ENTERPRISE_CURRENT_PERSISTENCE_MODEL.md`
@@ -13,7 +13,7 @@
   boot versions — five tables, point lookups only.
 - PR-003 made that persistence a required lifecycle module, so readiness
   already depends on it.
-- AOC's product promise is traceability: future Evidence, Passport,
+- Soberanía's product promise is traceability: future Evidence, Passport,
   Audit, Replay, and Assurance layers must be able to reference and
   verify past decisions reliably.
 - The PR-002 storage was not a canonical audit record: the full Kernel
@@ -25,7 +25,7 @@
 
 ## Decision
 
-Create the AOC Enterprise Governance Store v1
+Create the Soberanía Enterprise Governance Store v1
 (`src/enterprise/governance-store/`):
 
 - **append-oriented** storage with no public update/delete surface;
@@ -84,7 +84,7 @@ Negative:
 ## Rejected alternatives
 
 - **Keep the minimal PR-002 persistence** — cannot answer the audit
-  questions AOC promises; no integrity, no reconstruction.
+  questions Soberanía promises; no integrity, no reconstruction.
 - **One opaque JSON blob per decision** — simple, but unqueryable and
   unverifiable at any useful granularity.
 - **Convert the platform to event sourcing** — a rewrite with system-wide

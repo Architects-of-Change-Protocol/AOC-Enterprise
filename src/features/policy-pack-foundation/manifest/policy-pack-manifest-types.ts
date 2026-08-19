@@ -1,7 +1,7 @@
 /**
  * The Policy Pack Manifest Standard.
  *
- * A universal manifest shape for every AOC policy pack -- global baseline,
+ * A universal manifest shape for every Soberanía policy pack -- global baseline,
  * legal baseline, jurisdiction, domain, use-case, customer, demo, security,
  * privacy, financial, healthcare, AI-governance and project-governance
  * packs alike. This is a horizontal metadata/composition/claim-safety layer;

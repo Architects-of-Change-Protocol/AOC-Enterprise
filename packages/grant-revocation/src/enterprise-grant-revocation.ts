@@ -34,7 +34,7 @@ import type { CanonicalId, UtcDateTime } from '@aoc/protocol';
  * scheduler, no runtime enforcement. `EnterpriseGrantRevocation` records that
  * a grant is no longer valid; it never makes that true anywhere else.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/grant-revocation`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/grant-revocation`).
  */
 export const ENTERPRISE_GRANT_REVOCATION_SCHEMA_VERSION = '1.0.0' as const;
 

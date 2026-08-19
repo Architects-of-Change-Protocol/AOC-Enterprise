@@ -18,7 +18,7 @@ export const POLICY_PACK_BANK_ACCOUNT_CHANGE_DENIED_SCENARIO: DemoScenario = {
   shortTitle: 'Policy: Bank Account Denied',
   category: 'policy_packs',
   summary: 'Victor attempts change_bank_account; the payments-basic policy pack denies bank account changes by default, regardless of recognition, authority or approval state.',
-  enterpriseMessage: 'AOC can enforce hard-deny enterprise policies at execution time, independent of every other governance layer already having allowed the request.',
+  enterpriseMessage: 'Soberanía can enforce hard-deny enterprise policies at execution time, independent of every other governance layer already having allowed the request.',
   buyerPain: 'A single misconfigured or compromised actor should never be able to redirect settlement funds -- enterprises need a hard, policy-enforced deny on bank account changes.',
   aocValue:
     'The payments-basic policy pack denies change_bank_account by default; Action Enforcement blocks the request even though Recognition, Authority and Approval all consider it a valid, in-scope action.',

@@ -1,4 +1,4 @@
-# AOC Enterprise Monorepo Boundaries & Strategy
+# Soberanía Enterprise Monorepo Boundaries & Strategy
 
 ## Recommended Monorepo Layout
 

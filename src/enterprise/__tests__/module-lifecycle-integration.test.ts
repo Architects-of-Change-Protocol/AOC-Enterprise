@@ -11,7 +11,7 @@ after(async () => {
   await Promise.all(startedServers.map((server) => server.close().catch(() => undefined)));
 });
 
-describe('AOC Enterprise Module Lifecycle & Registry (integration via createEnterprise)', () => {
+describe('Soberanía Enterprise Module Lifecycle & Registry (integration via createEnterprise)', () => {
   it('createEnterprise() auto-starts and reports the built-in modules as ready', async () => {
     const enterprise = await createEnterprise({ kernelProviders: buildTestKernelProviders() });
 

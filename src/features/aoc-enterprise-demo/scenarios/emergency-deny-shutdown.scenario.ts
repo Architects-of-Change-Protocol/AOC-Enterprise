@@ -17,7 +17,7 @@ export const EMERGENCY_DENY_SHUTDOWN_SCENARIO: DemoScenario = {
   shortTitle: 'Emergency Deny Shutdown',
   category: 'enforcement',
   summary: 'Emergency deny mode is activated, then PMFreak attempts the same draft-closure-email action that would otherwise be allowed.',
-  enterpriseMessage: 'AOC provides an enterprise kill switch for autonomous execution.',
+  enterpriseMessage: 'Soberanía provides an enterprise kill switch for autonomous execution.',
   buyerPain: 'Enterprises need one lever that stops every autonomous action immediately during an incident, not a per-agent shutdown.',
   aocValue: 'Action Enforcement checks a single emergency-deny flag before every other policy, so it overrides even an otherwise fully valid request.',
   personas: [PMFREAK_PERSONA_ID, AOC_OPERATOR_PERSONA_ID],

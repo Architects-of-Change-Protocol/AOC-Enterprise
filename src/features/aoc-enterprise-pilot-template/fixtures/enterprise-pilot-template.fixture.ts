@@ -9,13 +9,13 @@ function buyerPersona(id: string, title: string): PilotPersona {
     id,
     type: 'buyer',
     title,
-    description: `${title}: the business buyer who owns the pain this pilot addresses and evaluates whether AOC solves it.`,
+    description: `${title}: the business buyer who owns the pain this pilot addresses and evaluates whether Soberanía solves it.`,
     concerns: ['Business risk exposure', 'Time to value', 'Auditability of the outcome'],
     successQuestions: [
-      'Did AOC prevent at least one action that should not have executed unattended?',
+      'Did Soberanía prevent at least one action that should not have executed unattended?',
       'Can I show this pilot to my own stakeholders as proof, not a promise?',
     ],
-    messages: [`AOC gives ${title} a governed, auditable way to let autonomous agents act.`],
+    messages: [`Soberanía gives ${title} a governed, auditable way to let autonomous agents act.`],
   };
 }
 

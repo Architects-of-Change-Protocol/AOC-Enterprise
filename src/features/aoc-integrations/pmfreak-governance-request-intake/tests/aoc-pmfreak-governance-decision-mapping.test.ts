@@ -18,7 +18,7 @@ const ALL_DECISIONS: readonly AocPMFreakGovernanceDecision[] = [
   'require_executive_approval',
 ];
 
-describe('AOC PMFreak Governance Request Intake -- decision mapping', () => {
+describe('Soberanía PMFreak Governance Request Intake -- decision mapping', () => {
   it('maps every decision to a non-empty label', () => {
     for (const decision of ALL_DECISIONS) {
       assert.ok(mapAocPMFreakDecisionToLabel(decision).length > 0, `expected a label for "${decision}"`);

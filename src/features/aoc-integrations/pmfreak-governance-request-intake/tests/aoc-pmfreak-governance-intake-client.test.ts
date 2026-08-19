@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakGovernanceRequestIntakeClient } from '../aoc-pmfreak-governance-intake-client.js';
 import { demoAocPMFreakBillingAllowedRequest, demoAocPMFreakBillingMissingEvidenceRequest } from '../aoc-pmfreak-governance-intake-fixtures.js';
 
-describe('AOC PMFreak Governance Request Intake -- client/facade', () => {
+describe('Soberanía PMFreak Governance Request Intake -- client/facade', () => {
   it('exposes a descriptor and config', () => {
     const client = createAocPMFreakGovernanceRequestIntakeClient();
     assert.equal(client.descriptor.intakeId, 'aoc.integration.pmfreak.governance_request_intake.v1');

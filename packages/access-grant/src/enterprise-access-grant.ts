@@ -4,7 +4,7 @@ import { resourceRefIdentityEquals } from '@aoc-enterprise/resource-envelope';
 /**
  * Enterprise composition over `EnterpriseAccessDecision`
  * (`@aoc-enterprise/access-decision`) and `EnterpriseAccessObligation`
- * (`@aoc-enterprise/access-obligation`), and over AOC Protocol's `ResourceRef`.
+ * (`@aoc-enterprise/access-obligation`), and over Soberanía Protocol's `ResourceRef`.
  *
  * `EnterpriseAccessDecision` answers *"should access be granted?"*
  * (`outcome: 'allow' | 'deny' | 'conditional'`). `EnterpriseAccessObligation`
@@ -22,7 +22,7 @@ import { resourceRefIdentityEquals } from '@aoc-enterprise/resource-envelope';
  * `decisionRef: CanonicalId` (that decision's own `correlationId`) and
  * `EnterpriseAccessObligation`s by opaque `obligationRefs?: readonly
  * CanonicalId[]` (each obligation's own `id`) -- it never embeds either.
- * It composes AOC Protocol's `ResourceRef` directly (`resource: ResourceRef`),
+ * It composes Soberanía Protocol's `ResourceRef` directly (`resource: ResourceRef`),
  * the same identity primitive `EnterpriseResourceEnvelope` composes, but
  * -- deliberately -- not the envelope itself: a grant needs to know *which*
  * resource access was issued for, never where its bytes live, whether it is
@@ -37,7 +37,7 @@ import { resourceRefIdentityEquals } from '@aoc-enterprise/resource-envelope';
  * understands. That translation is a future Provider Adapter's job -- see
  * the package README's "Future integration path".
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/access-grant`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/access-grant`).
  *
  * See the package README for the full design rationale, including why
  * `status` is a two-state, non-time-derived vocabulary, and why no provider,

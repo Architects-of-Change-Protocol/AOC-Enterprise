@@ -1,13 +1,13 @@
-# AOC Enterprise ← AOC Protocol: Versioned Package Consumption
+# Soberanía Enterprise ← Soberanía Protocol: Versioned Package Consumption
 
 ## Architecture
 
-AOC Enterprise consumes AOC Protocol exclusively as a **published package boundary**, never as source:
+Soberanía Enterprise consumes Soberanía Protocol exclusively as a **published package boundary**, never as source:
 
 ```text
-AOC Protocol (packages/protocol, @aoc/protocol)
+Soberanía Protocol (packages/protocol, @aoc/protocol)
     ↓ versioned public package (peerDependency ">=0.1.0")
-AOC Enterprise (this repository)
+Soberanía Enterprise (this repository)
     ↓ proprietary runtime and implementation
 PMFreak
 ```
@@ -18,7 +18,7 @@ imports Protocol source files, `packages/protocol/src`, `dist` deep paths, or an
 into the `Architects_of_Change_Protocol` repository. `scripts/check-protocol-consumption.mjs`
 enforces this on every CI run.
 
-AOC Protocol is **not yet published to a registry**. Until it is, canonical compatibility between
+Soberanía Protocol is **not yet published to a registry**. Until it is, canonical compatibility between
 the two repositories is proven with a **reproducible tarball built from a pinned Protocol commit**,
 not by requiring both repositories to sit in sibling directories, and not by trusting a mutable
 branch.
@@ -187,7 +187,7 @@ tarball of that prior commit to confirm the rollback target still validates clea
 
 ## Registry transition
 
-AOC Protocol is **not currently published** to any npm registry, GitHub Packages, or equivalent.
+Soberanía Protocol is **not currently published** to any npm registry, GitHub Packages, or equivalent.
 This sprint's tarball-from-pinned-commit flow is an explicit interim measure. Once Protocol
 publishes a prerelease, this repository's canonical validation should move to installing
 `@aoc/protocol` from that registry at an exact version or governed semver range, and the tarball

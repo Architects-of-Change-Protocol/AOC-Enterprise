@@ -20,7 +20,7 @@ export function DemoScenarioDetail({ scenario, personas }: DemoScenarioDetailPro
         <p>{scenario.buyerPain}</p>
       </section>
       <section>
-        <h3>AOC value</h3>
+        <h3>Soberanía value</h3>
         <p>{scenario.aocValue}</p>
       </section>
       <section>

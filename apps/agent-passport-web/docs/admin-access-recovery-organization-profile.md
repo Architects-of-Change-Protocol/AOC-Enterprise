@@ -160,7 +160,7 @@ Verifies paid org registry session, email match → rotates access.
 
 Response includes `newAccessToken` and `newRecoveryCode` — shown once only.
 
-If buyer has lost both admin link and recovery code: no automated recovery. Show "Contact AOC support."
+If buyer has lost both admin link and recovery code: no automated recovery. Show "Contact Soberanía support."
 
 ---
 

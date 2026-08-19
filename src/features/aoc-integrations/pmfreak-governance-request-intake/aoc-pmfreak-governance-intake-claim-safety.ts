@@ -5,7 +5,7 @@ import type { AocPMFreakGovernanceIntakeClaimSafetyResult } from './aoc-pmfreak-
 /**
  * Intake-specific unsafe claims, additive to (never replacing) the universal
  * `POLICY_PACK_PROHIBITED_OVERCLAIM_PHRASES`. These stay local to this
- * intake rather than being merged into the universal list -- generic AOC
+ * intake rather than being merged into the universal list -- generic Soberanía
  * runtimes must not depend on PMFreak-governance-intake-specific vocabulary.
  */
 export const AOC_PMFREAK_GOVERNANCE_INTAKE_PROHIBITED_OVERCLAIM_PHRASES = [
@@ -50,7 +50,7 @@ function findAocPMFreakGovernanceIntakeSpecificPhrases(normalizedText: string): 
 }
 
 /**
- * Evaluates claim safety for AOC PMFreak Governance Request Intake output,
+ * Evaluates claim safety for Soberanía PMFreak Governance Request Intake output,
  * layering the intake-specific prohibited phrase list on top of the
  * universal `evaluatePolicyPackClaimSafety`. Never calls a network or
  * language model; a pure deterministic string scan.
@@ -72,7 +72,7 @@ export function evaluateAocPMFreakGovernanceIntakeClaimSafety(value: unknown): A
 }
 
 /**
- * Asserts claim safety for AOC PMFreak Governance Request Intake output.
+ * Asserts claim safety for Soberanía PMFreak Governance Request Intake output.
  * Runs the universal `assertNoPolicyPackOverclaim` first (throws on any
  * universal overclaim phrase), then additionally throws on any
  * intake-specific unsafe claim.
@@ -83,6 +83,6 @@ export function assertNoAocPMFreakGovernanceIntakeOverclaim(value: unknown): voi
   const normalized = stringifyForScan(value).toLowerCase();
   const localPhrasesFound = findAocPMFreakGovernanceIntakeSpecificPhrases(normalized);
   if (localPhrasesFound.length > 0) {
-    throw new Error(`AOC PMFreak governance intake overclaim detected: ${localPhrasesFound.join(', ')}`);
+    throw new Error(`Soberanía PMFreak governance intake overclaim detected: ${localPhrasesFound.join(', ')}`);
   }
 }

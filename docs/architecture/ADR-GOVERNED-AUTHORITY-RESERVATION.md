@@ -41,10 +41,10 @@ CONCURRENT  Promise.all([4 000, 4 000])
 
 The exposure is real but narrow, and naming it precisely is what decides the
 design. **No movement can overdraw**, and the total is conserved regardless.
-What happens is that AOC issues two authorization artifacts that cannot both be
+What happens is that Soberanía issues two authorization artifacts that cannot both be
 honoured, tells two counterparties they may act, and discovers the conflict only
 when one of them does. The failure is not lost authority; it is an authorization
-AOC could not stand behind.
+Soberanía could not stand behind.
 
 Three of the deferral's premises still hold and are preserved below — the four
 actions still do not share reservation semantics, the four quantities are still
@@ -166,13 +166,13 @@ acquire reservation  ──▶  issue mandate
 | reservation consumed, transition missing | impossible — same transaction | — | — |
 
 The inverse ordering was rejected outright: issuing the mandate first would let
-AOC produce a valid authorization artifact and only then discover it has no
+Soberanía produce a valid authorization artifact and only then discover it has no
 capacity behind it, which is precisely the failure this ADR exists to prevent.
 
 ## When a commitment begins
 
 After every governance check has passed and the aggregate is durably committed,
-and immediately before `issueMandate`. That is the first moment at which AOC is
+and immediately before `issueMandate`. That is the first moment at which Soberanía is
 about to create a still-live commitment a competing authorization must respect.
 
 Deliberately **not** earlier. A request that may still be denied by policy,

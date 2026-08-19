@@ -124,7 +124,7 @@ export interface SubmitTransferRequestInput {
    * matches `requested === granted || requested.startsWith(granted + ':')`.
    * But note precisely what that is and is not: it is a *string* convention
    * that a deployment may adopt, and nothing in the Authority Graph, the
-   * governed-right vocabulary, or this contract connects the two. AOC does not
+   * governed-right vocabulary, or this contract connects the two. Soberanía does not
    * check that a scope suffix names a real governed right, and an actor
    * granted the bare asset scope holds authority over every right of it. See
    * `docs/architecture/ADR-TRANSFER-ACTION.md`, "Authority-source right vs
@@ -140,7 +140,7 @@ export interface SubmitTransferRequestInput {
   /** Free-form context forwarded to the Kernel unchanged (passport id, capability token id, evidence...). Never interpreted here. */
   readonly context?: Readonly<Record<string, unknown>>;
   readonly idempotencyKey?: string;
-  /** The expiry the issued mandate will carry — AOC's authority window to move rights. Required: this module never invents an expiry, and `EnterpriseTransferMandate` cannot represent an authorization without one. */
+  /** The expiry the issued mandate will carry — Soberanía's authority window to move rights. Required: this module never invents an expiry, and `EnterpriseTransferMandate` cannot represent an authorization without one. */
   readonly mandateExpiresAt: string;
   readonly issuerRef?: string;
   readonly obligationRefs?: readonly string[];
@@ -215,7 +215,7 @@ export interface TransferGovernanceService {
    * Records that an external system reported a previously-effected movement as
    * registered, rejected, reversed, corrected or superseded. Observation only:
    * no authority is evaluated, no decision is produced, the mandate's status,
-   * execution count and transferred scope are unchanged, and AOC asserts
+   * execution count and transferred scope are unchanged, and Soberanía asserts
    * nothing about whether the reported outcome genuinely occurred.
    */
   recordLifecycleEvent(context: TransferGovernanceContext, input: RecordTransferLifecycleRequest): Promise<TransferLifecycleRecord>;
@@ -439,7 +439,7 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
       },
       // The instant the movement took effect in the governed world, falling
       // back to when it was executed. Never `now()`: authority moved when the
-      // right did, not when AOC heard about it.
+      // right did, not when Soberanía heard about it.
       occurredAt: execution.transferEffectiveAt ?? execution.executedAt,
       correlationId: execution.correlationId,
       // Terminalize this mandate's reservation in the same commit section that
@@ -497,10 +497,10 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
    *
    * `amount`/`currency` are deliberately not populated at all. A transfer
    * frequently has a price, and this is exactly the point at which it would be
-   * easy to start modelling one. AOC does not: it holds no amount anywhere in
+   * easy to start modelling one. Soberanía does not: it holds no amount anywhere in
    * this action, computes nothing, and a policy that needs consideration
    * expresses it as a *requirement that evidence be produced*
-   * (`considerationEvidenceRequired`), never as a number AOC would then be
+   * (`considerationEvidenceRequired`), never as a number Soberanía would then be
    * implicitly claiming to know.
    *
    * Because the policy layer receives the serialized terms, a deployment that
@@ -728,7 +728,7 @@ export function createTransferGovernanceService(deps: TransferGovernanceServiceD
       //
       // `authorization_artifact` is the reference type the TokenizationMandate,
       // CollateralizationMandate and LicenseMandate also use for exactly this
-      // relationship: a mandate is produced and owned by AOC Enterprise,
+      // relationship: a mandate is produced and owned by Soberanía Enterprise,
       // recording an authorization this enforcement granted. The external
       // movement and anything later reported about it are separate
       // observations, recorded as `execution_record` below.

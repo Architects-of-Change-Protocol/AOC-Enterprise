@@ -1,5 +1,5 @@
 /**
- * AOC Enterprise Evidence Bundle v1 (PR-005) -- portable, disclosure-
+ * Soberanía Enterprise Evidence Bundle v1 (PR-005) -- portable, disclosure-
  * governed projections of Governance Store records. See
  * `docs/enterprise/AOC_EVIDENCE_BUNDLE.md`.
  */

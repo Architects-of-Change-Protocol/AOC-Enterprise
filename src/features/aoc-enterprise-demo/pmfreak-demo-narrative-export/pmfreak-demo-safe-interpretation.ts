@@ -12,8 +12,8 @@ import type { PMFreakDemoNarrativeSection } from './pmfreak-demo-narrative-expor
  */
 const SAFE_INTERPRETATION: Record<PMFreakPassportActionDecision, string> = {
   allow:
-    'In this demo, `allow` means the configured AOC demo governance model allowed the governed demo action to proceed based on the available passport, evidence, approvals and scenario context.',
-  hold: 'In this demo, `hold` means the configured AOC demo governance model held the demo action pending passport reinstatement.',
+    'In this demo, `allow` means the configured Soberanía demo governance model allowed the governed demo action to proceed based on the available passport, evidence, approvals and scenario context.',
+  hold: 'In this demo, `hold` means the configured Soberanía demo governance model held the demo action pending passport reinstatement.',
   deny: '`deny` means the configured demo governance model did not allow the attempted action under the presented passport/scenario context.',
   require_evidence: '`require_evidence` means required demo evidence was missing before governed execution could proceed.',
   require_pm_approval: '`require_pm_approval` means a required PM approval signal was missing before governed execution could proceed.',

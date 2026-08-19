@@ -9,7 +9,7 @@ export interface PilotControlPlaneWalkthroughSection {
 }
 
 /**
- * A read-only script for touring the AOC Control Plane during a pilot demo.
+ * A read-only script for touring the Soberanía Control Plane during a pilot demo.
  * It never mutates Control Plane state -- see
  * `integrations/control-plane-pilot-adapter.ts` and
  * `services/pilot-control-plane-walkthrough-service.ts`.

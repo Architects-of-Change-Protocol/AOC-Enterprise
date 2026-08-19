@@ -11,7 +11,7 @@ import type { PMFreakProjectGovernanceScenarioControlPlaneSummary, PMFreakProjec
  */
 export const PMFREAK_SCENARIO_CONTROL_PLANE_SAFE_LABELS = [
   'PMFreak project governance scenario',
-  'AOC-governed agent',
+  'Soberanía-governed agent',
   'Demo scenario',
   'Passport-gated',
   'Capability-gated',

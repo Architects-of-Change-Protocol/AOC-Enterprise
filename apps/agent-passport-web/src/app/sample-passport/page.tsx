@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { createSampleAgentPassport } from '@/lib/passport-adapter';
 
 export const metadata = {
-  title: 'Sample Governed Agent Passport — AOC Agent Passport',
+  title: 'Sample Governed Agent Passport — Soberanía Agent Passport',
 };
 
 export default async function SamplePassportPage() {
@@ -18,7 +18,7 @@ export default async function SamplePassportPage() {
         <p>
           This is a demonstration passport for <strong>{passport.agentName}</strong> by{' '}
           <strong>{passport.ownerName}</strong>. It shows what a fully governed AI agent
-          passport looks like in the AOC framework.
+          passport looks like in the Soberanía framework.
         </p>
       </div>
 

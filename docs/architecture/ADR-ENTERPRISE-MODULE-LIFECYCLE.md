@@ -1,4 +1,4 @@
-# ADR: AOC Enterprise Module Lifecycle & Registry
+# ADR: Soberanía Enterprise Module Lifecycle & Registry
 
 ## Status
 

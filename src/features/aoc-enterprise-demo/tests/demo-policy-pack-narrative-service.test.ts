@@ -61,7 +61,7 @@ describe('DemoPolicyPackNarrativeService', () => {
     assert.equal(narrative.buyerPain, POLICY_PACK_PAYMENT_APPROVAL_REQUIRED_SCENARIO.buyerPain);
   });
 
-  it('6. includes AOC value', async () => {
+  it('6. includes Soberanía value', async () => {
     const suite = createEnterpriseDemoSuite();
     const run = await suite.policyPackScenarioService.runScenario('policy-pack-payment-approval-required');
     const narrativeService = createDemoPolicyPackNarrativeService();

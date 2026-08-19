@@ -14,7 +14,7 @@ function SignupPageFallback() {
     <div className="container" style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 480 }}>
       <div className="page-header" style={{ marginBottom: 32 }}>
         <div className="section-label">Buyer Account</div>
-        <h1>Create your AOC buyer account</h1>
+        <h1>Create your Soberanía buyer account</h1>
       </div>
       <div className="card">
         <p style={{ color: 'var(--text-muted)' }}>Loading sign up…</p>

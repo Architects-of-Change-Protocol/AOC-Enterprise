@@ -92,7 +92,7 @@ export default function DashboardPage() {
         <div className="section-label">Buyer Account</div>
         <h1>Buyer Dashboard</h1>
         <p style={{ color: 'var(--text-muted)' }}>
-          Access your AOC Agent Registries, team memberships, and governance evidence.
+          Access your Soberanía Agent Registries, team memberships, and governance evidence.
         </p>
       </div>
 

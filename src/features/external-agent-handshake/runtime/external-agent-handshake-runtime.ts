@@ -99,7 +99,7 @@ const PENDING_REQUEST_RESULT_BY_STATUS: Readonly<Partial<Record<HandshakeRequest
  * API a caller (or Recognition Runtime, through the structural
  * ExternalAgentStandingIntegration) needs: submit a handshake, resolve it to
  * a decision, and verify whatever standing that decision produced for a
- * later action. This is the border-control layer for AOC trust domains --
+ * later action. This is the border-control layer for Soberanía trust domains --
  * it never bypasses local governance, and never fakes Recognition Runtime,
  * Authority Graph or Approval Runtime.
  */

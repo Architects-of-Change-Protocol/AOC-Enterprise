@@ -12,10 +12,10 @@ import type { AocPMFreakGovernanceRequestIntakeDescriptor } from './aoc-pmfreak-
 /**
  * Builds the descriptor for `aoc.integration.pmfreak.governance_request_intake.v1`.
  *
- * AOC Enterprise is the governance provider; PMFreak is the governance
+ * Soberanía Enterprise is the governance provider; PMFreak is the governance
  * consumer -- the runtime direction is `pmfreak_consumes_aoc_governance`,
  * never the reverse. This intake receives, validates, and evaluates PMFreak
- * governance requests and returns governed AOC decisions; it never mutates
+ * governance requests and returns governed Soberanía decisions; it never mutates
  * PMFreak data, executes a PMFreak action, or writes a decision back into
  * PMFreak.
  */

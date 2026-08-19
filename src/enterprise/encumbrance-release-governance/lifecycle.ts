@@ -22,7 +22,7 @@ import type { EncumbranceReleaseMandateRecord, EncumbranceReleaseResourceRef } f
  *
  * Called before the executor is reached, never after. That ordering is the
  * whole point: a revoked or lapsed authorization must not produce an external
- * release that AOC then has to decide what to do with.
+ * release that Soberanía then has to decide what to do with.
  */
 export function assertEncumbranceReleaseMandateExecutable(mandate: EncumbranceReleaseMandateRecord, at: string): void {
   if (mandate.status === 'revoked') {
@@ -124,7 +124,7 @@ export function assertEncumbranceActive(encumbrance: GovernedAuthorityEncumbranc
  * Derived from the mandate rather than from the attempt, deliberately. A
  * mandate authorizes exactly one discharge, so every retry after an
  * indeterminate outcome presents the same key and a conforming adapter performs
- * at most one external release however many times AOC asks — which is the whole
+ * at most one external release however many times Soberanía asks — which is the whole
  * of what makes retrying an unknown outcome safe.
  */
 export function deriveEncumbranceReleaseIdempotencyKey(mandate: EncumbranceReleaseMandateRecord): string {

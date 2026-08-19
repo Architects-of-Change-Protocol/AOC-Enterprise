@@ -229,7 +229,7 @@ export interface CollateralizationGovernanceService {
    * Records that an external system reported a previously-created arrangement
    * as released, discharged, satisfied or terminated. Observation only: no
    * authority is evaluated, no decision is produced, the mandate's status and
-   * committed scope are unchanged, and AOC asserts nothing about whether the
+   * committed scope are unchanged, and Soberanía asserts nothing about whether the
    * encumbrance genuinely ended.
    */
   recordRelease(
@@ -476,7 +476,7 @@ export function createCollateralizationGovernanceService(
         // once, however many times this is retried or replayed after a restart.
         sourceExecutionRef: execution.id,
         // The instant the arrangement took effect in the governed world, not
-        // when AOC heard about it.
+        // when Soberanía heard about it.
         effectiveFrom: execution.executedAt,
         // Hand this mandate's commitment over in the same commit section that
         // writes the constraint. The capacity is not "released" — it was spent,
@@ -759,7 +759,7 @@ export function createCollateralizationGovernanceService(
       //
       // `authorization_artifact` is the reference type the TokenizationMandate
       // also uses for exactly this relationship: a mandate is produced and
-      // owned by AOC Enterprise, recording an authorization this enforcement
+      // owned by Soberanía Enterprise, recording an authorization this enforcement
       // granted. The external collateral arrangement and its release are
       // separate observations, recorded as `execution_record` below.
       //
@@ -912,7 +912,7 @@ export function createCollateralizationGovernanceService(
       // already became a persistent constraint is `'encumbered'`, which
       // `releaseReservation` refuses to reopen, and the constraint itself is
       // untouched — because an arrangement an external system already created
-      // does not cease to exist when AOC withdraws permission to create more of
+      // does not cease to exist when Soberanía withdraws permission to create more of
       // them.
       //
       // Ordered after the revocation is durably recorded, deliberately. The

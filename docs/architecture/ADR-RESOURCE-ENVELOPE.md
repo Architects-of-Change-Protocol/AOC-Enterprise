@@ -1,7 +1,7 @@
 # ADR: Provider-Neutral Resource Envelope (R004.D)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: R004.C (ResourceRef canonicality conclusion), `ADR-EVIDENCE-BUNDLE.md`,
   `docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md`,
   `packages/scoped-access/src/enterprise-scoped-access-request.ts` (the
@@ -10,8 +10,8 @@
 
 ## Context
 
-AOC Protocol's `ResourceRef` (`@aoc/protocol`, `contracts` subpath) is the
-sole canonical identity primitive for "a resource" across AOC:
+Soberanía Protocol's `ResourceRef` (`@aoc/protocol`, `contracts` subpath) is the
+sole canonical identity primitive for "a resource" across Soberanía:
 `{ kind, id, tenantId?, attributes? }`. It is already referenced by
 `CapabilityToken.resource`, `ScopedAccessRequest.resource`, and
 `AuditEventEnvelope.subject`.
@@ -20,7 +20,7 @@ Access Governance needs a canonical way to describe a resource that is
 *stored externally* — in S3, Pinata/IPFS, Azure Blob, Google Drive,
 SharePoint, Arweave, or any future provider — well enough to reason about
 governance later (which resource is this, does it still exist, what does its
-content look like), without AOC Enterprise ever holding a credential for
+content look like), without Soberanía Enterprise ever holding a credential for
 that provider or executing any provider-specific code. No such contract
 exists today; `ResourceRef` alone does not carry location or integrity, and
 the closest existing Enterprise concept, `SourceDocument`

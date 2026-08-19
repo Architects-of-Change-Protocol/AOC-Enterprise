@@ -13,7 +13,7 @@ const OPERATOR_DATA_STEWARD_PERSONA_ID = 'persona-operator-data-steward';
 const OPERATOR_SECURITY_ANALYST_PERSONA_ID = 'persona-operator-security-analyst';
 
 /**
- * Healthcare Operations / Sensitive Data / Approval Pilot -- shows how AOC
+ * Healthcare Operations / Sensitive Data / Approval Pilot -- shows how Soberanía
  * governs sensitive operational actions in a healthcare-like setting
  * WITHOUT claiming HIPAA, GDPR or any other healthcare regulatory
  * compliance: low-risk reads are allowed with a policy warning, sensitive
@@ -25,14 +25,14 @@ export const HEALTHCARE_OPERATIONS_SENSITIVE_DATA_PILOT_TEMPLATE: PilotTemplate 
   id: 'healthcare-operations-sensitive-data',
   name: 'Healthcare Operations / Sensitive Data / Approval Pilot',
   description:
-    'A bounded pilot showing how AOC creates enforceable guardrails for sensitive operational agents in a healthcare-like setting: low-risk reads are recognized and policy-warned, sensitive data exports require compliance approval, prohibited exports are denied, and evidence gates operational handoffs -- all without claiming healthcare regulatory compliance.',
+    'A bounded pilot showing how Soberanía creates enforceable guardrails for sensitive operational agents in a healthcare-like setting: low-risk reads are recognized and policy-warned, sensitive data exports require compliance approval, prohibited exports are denied, and evidence gates operational handoffs -- all without claiming healthcare regulatory compliance.',
   status: 'draft',
   industry: 'healthcare',
-  primaryUseCase: 'Sensitive operational actions in a healthcare-like setting governed end-to-end by AOC, without any regulatory compliance claim.',
+  primaryUseCase: 'Sensitive operational actions in a healthcare-like setting governed end-to-end by Soberanía, without any regulatory compliance claim.',
   businessPain:
     'Healthcare operations leadership cannot let an autonomous agent read, export, or hand off sensitive operational data without policy-enforced guardrails, human approval where required, and an auditable evidence trail -- and they cannot accept a vendor claiming regulatory compliance it has not actually earned.',
   aocValueProposition:
-    'AOC can create enforceable guardrails for sensitive operational agents while preserving operator visibility and audit trails -- the Domain Policy Pack Runtime, Evidence / Source / Citation Runtime, Approval Runtime and Action Enforcement jointly decide, and the Control Plane and Verifiable Export Package prove, that every sensitive action was actually gated.',
+    'Soberanía can create enforceable guardrails for sensitive operational agents while preserving operator visibility and audit trails -- the Domain Policy Pack Runtime, Evidence / Source / Citation Runtime, Approval Runtime and Action Enforcement jointly decide, and the Control Plane and Verifiable Export Package prove, that every sensitive action was actually gated.',
   targetBuyerPersonaIds: [BUYER_OPS_DIRECTOR_PERSONA_ID, BUYER_CIO_PERSONA_ID, BUYER_DPO_PERSONA_ID, BUYER_COMPLIANCE_LEAD_PERSONA_ID],
   targetOperatorPersonaIds: [OPERATOR_OPS_COORDINATOR_PERSONA_ID, OPERATOR_COMPLIANCE_REVIEWER_PERSONA_ID, OPERATOR_DATA_STEWARD_PERSONA_ID, OPERATOR_SECURITY_ANALYST_PERSONA_ID],
   trustDomainId: TRUST_DOMAIN_ID,
@@ -223,7 +223,7 @@ export const HEALTHCARE_OPERATIONS_SENSITIVE_DATA_PILOT_TEMPLATE: PilotTemplate 
     { id: 'healthcare-export-handoff-evidence-packet', name: 'Operational handoff evidence packet', packageType: 'evidence_packet', targetType: 'enforcement_decision', targetId: 'healthcare-action-prepare-handoff-support', expectedSections: ['summary', 'evidence', 'enforcement'], expectedVerificationStatus: 'verified_with_warnings', buyerPurpose: 'Shows an auditor which evidence was required, and its current status, before the operational handoff could proceed.' },
   ],
   acceptanceCriteria: [
-    { id: 'healthcare-acceptance-scenarios-pass', title: 'All pilot scenarios run against real AOC runtimes and match expected outcomes', description: 'Every declared pilot scenario binds to a real Enterprise Demo scenario and its runtime outcome matches the pilot expected outcome.', type: 'runtime', required: true, verificationMethod: 'automated_test', expectedResult: 'Every scenario binding reports bound: true.' },
+    { id: 'healthcare-acceptance-scenarios-pass', title: 'All pilot scenarios run against real Soberanía runtimes and match expected outcomes', description: 'Every declared pilot scenario binds to a real Enterprise Demo scenario and its runtime outcome matches the pilot expected outcome.', type: 'runtime', required: true, verificationMethod: 'automated_test', expectedResult: 'Every scenario binding reports bound: true.' },
     { id: 'healthcare-acceptance-export-verified', title: 'Approval/evidence export packets verify successfully', description: 'The sensitive-data-export approval packet and handoff evidence packet bind to real, verified Verifiable Export Package output.', type: 'export_package', required: true, verificationMethod: 'export_package_verification', expectedResult: 'Bound export packages report verification status verified or verified_with_warnings.' },
     { id: 'healthcare-acceptance-no-compliance-overclaim', title: 'No generated artifact claims regulatory compliance', description: 'Every generated pilot artifact carries the healthcare disclaimer and never claims HIPAA/GDPR/EU AI Act or other regulatory compliance.', type: 'security', required: true, verificationMethod: 'automated_test', expectedResult: 'No generated artifact contains a forbidden compliance claim.' },
     { id: 'healthcare-acceptance-customer-signoff', title: 'Healthcare stakeholder signs off on pilot scope and outcomes', description: 'A healthcare buyer persona confirms the pilot demonstrated the value proposition within its stated non-goals.', type: 'buyer', required: false, verificationMethod: 'customer_signoff', expectedResult: 'Signed pilot acceptance record from a healthcare stakeholder.' },
@@ -235,7 +235,7 @@ export const HEALTHCARE_OPERATIONS_SENSITIVE_DATA_PILOT_TEMPLATE: PilotTemplate 
     { id: 'healthcare-metric-execution-safety', label: 'No unauthorized execution occurred', description: 'Share of blocked/approval-required scenarios where the real executor never ran.', category: 'execution_safety', targetValue: '0 executed side effects for blocked/approval-required scenarios', measurementMethod: 'Executor-run count on blocked/approval-required enforcement outcomes.' },
     { id: 'healthcare-metric-policy-enforcement', label: 'Policy-pack-gated actions enforced', description: 'Share of policy-flagged actions actually blocked/approval-gated by Action Enforcement.', category: 'policy_enforcement', targetValue: '100% of policy-flagged actions reflected in the enforcement decision', measurementMethod: 'Cross-check policyDecisionId on enforcement decisions.' },
     { id: 'healthcare-metric-evidence-readiness', label: 'Evidence requirement resolution', description: 'Share of evidence requirements eventually satisfied with accepted evidence.', category: 'evidence_readiness', targetValue: 'Data classification/risk assessment evidence requirements satisfied before dependent actions proceed', measurementMethod: 'Evidence Runtime requirement/satisfaction status check.' },
-    { id: 'healthcare-metric-buyer-confidence', label: 'Buyer confidence in governed sensitive-data actions', description: 'Qualitative buyer confidence after the pilot.', category: 'buyer_confidence', targetValue: 'Buyer persona affirms AOC prevented at least one ungoverned sensitive-data action', measurementMethod: 'Buyer walkthrough sign-off.' },
+    { id: 'healthcare-metric-buyer-confidence', label: 'Buyer confidence in governed sensitive-data actions', description: 'Qualitative buyer confidence after the pilot.', category: 'buyer_confidence', targetValue: 'Buyer persona affirms Soberanía prevented at least one ungoverned sensitive-data action', measurementMethod: 'Buyer walkthrough sign-off.' },
   ],
   risks: [
     { id: 'healthcare-risk-regulatory-overclaim', title: 'Stakeholders mistake this pilot for a regulatory compliance determination', description: 'Buyers may assume passing this pilot proves HIPAA/GDPR/EU AI Act compliance.', severity: 'critical', mitigation: 'Every artifact and walkthrough explicitly states this pilot does not prove healthcare regulatory compliance and requires counsel/customer validation for any compliance claim.', ownerPersonaId: BUYER_COMPLIANCE_LEAD_PERSONA_ID },
@@ -243,7 +243,7 @@ export const HEALTHCARE_OPERATIONS_SENSITIVE_DATA_PILOT_TEMPLATE: PilotTemplate 
   ],
   script: {
     id: 'healthcare-pilot-script',
-    executiveTalkTrack: ['Sensitive operational data is exactly where autonomy needs the clearest guardrails -- and exactly where AOC proves them, without ever claiming to be your compliance program.'],
+    executiveTalkTrack: ['Sensitive operational data is exactly where autonomy needs the clearest guardrails -- and exactly where Soberanía proves them, without ever claiming to be your compliance program.'],
     operatorTalkTrack: ['Watch four real actions: a low-risk read, a compliance-gated export, a denied prohibited export, and an evidence-gated handoff.'],
     technicalTalkTrack: ['Every decision carries policyDecisionId/policyProofId/approvalProofId you can trace in Proofs / Audit.', 'The closing export packet is a hash-chained, independently verifiable artifact.'],
     buyerTalkTrack: ['This is what governed autonomy looks like around sensitive data: agents move on what is allowed, and stop cleanly -- and provably -- on what is not, with no compliance overclaim.'],
@@ -254,7 +254,7 @@ export const HEALTHCARE_OPERATIONS_SENSITIVE_DATA_PILOT_TEMPLATE: PilotTemplate 
       { step: 4, title: 'Handoff blocked pending evidence', instruction: 'Run the invoice-evidence-required scenario (illustrating the handoff-evidence pattern).', expectedObservation: 'Execution blocked pending data classification evidence.' },
       { step: 5, title: 'Control Plane + export', instruction: 'Walk the Control Plane and export a verified decision packet.', expectedObservation: 'Verified export package with matching proof references.' },
     ],
-    closingStatement: 'AOC proves sensitive-data guardrails held, decision by decision -- it never claims, on its own, that your organization is regulatorily compliant.',
+    closingStatement: 'Soberanía proves sensitive-data guardrails held, decision by decision -- it never claims, on its own, that your organization is regulatorily compliant.',
     legalDisclaimer: 'This demo script uses demo-only policy packs and synthetic operational data. It does not claim HIPAA, GDPR, Costa Rica health-data, EU AI Act, or any other healthcare regulatory compliance, and it is not legal advice.',
   },
   nonGoals: [

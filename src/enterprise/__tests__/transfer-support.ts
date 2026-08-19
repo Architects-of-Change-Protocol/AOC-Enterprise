@@ -101,7 +101,7 @@ export const TRANSFER_EXECUTOR_REF = 'provider-transfer-agent-c';
 /** An unauthorized substitute for the executor. */
 export const OTHER_TRANSFER_EXECUTOR_REF = 'provider-transfer-agent-d';
 
-/** Opaque registry labels. AOC never resolves or contacts a registry. */
+/** Opaque registry labels. Soberanía never resolves or contacts a registry. */
 export const PERMITTED_REGISTRY = 'registry-alpha';
 export const OTHER_REGISTRY = 'registry-beta';
 
@@ -232,7 +232,7 @@ export interface TransferWorldOverrides {
   /**
    * Registers `TRANSFEREE_REF` as a recognized actor with its own transfer
    * authority over the asset. Used only to demonstrate what it *would* take
-   * for AOC to recognize a recipient -- an explicit administrative act that no
+   * for Soberanía to recognize a recipient -- an explicit administrative act that no
    * transfer execution performs.
    */
   readonly grantTransfereeAuthority?: boolean;
@@ -344,7 +344,7 @@ export function buildTransferWorld(overrides: TransferWorldOverrides = {}): Tran
   });
 
   // Deliberately opt-in and never performed by any transfer execution path:
-  // this is the explicit administrative act that would be required for AOC to
+  // this is the explicit administrative act that would be required for Soberanía to
   // recognize the recipient of a completed transfer as an authority holder.
   // See `transfer-authority-transition.test.ts`.
   if (overrides.grantTransfereeAuthority === true) {

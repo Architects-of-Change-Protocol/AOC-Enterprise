@@ -1,4 +1,4 @@
-# AOC Agent Passport Disclosure Views (PR-006)
+# Soberanía Agent Passport Disclosure Views (PR-006)
 
 Implementation: `src/enterprise/passport/disclosure.ts`. The full
 Passport must not always be exposed — a view is a derived, pure

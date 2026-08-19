@@ -1,5 +1,5 @@
 /**
- * Why AOC recognizes an authority position — the answer to "where did this
+ * Why Soberanía recognizes an authority position — the answer to "where did this
  * come from?", carried by the transition that created or changed it rather
  * than by the position itself.
  *
@@ -14,7 +14,7 @@
  * actor must not obtain authority by claiming it. Every variant here requires
  * something the claiming party cannot produce alone — a privileged
  * administrative context, evidence this deployment already accepted, or a
- * prior transition AOC itself committed.
+ * prior transition Soberanía itself committed.
  */
 export type GovernedAuthorityBasis =
   /**
@@ -32,7 +32,7 @@ export type GovernedAuthorityBasis =
   /**
    * Authority recognized on the strength of external evidence this deployment
    * already accepted (a registry extract, an executed instrument, a custodian
-   * statement). Also issuance, and also administrative: AOC does not verify
+   * statement). Also issuance, and also administrative: Soberanía does not verify
    * the evidence here, it records which evidence the deployment relied on.
    *
    * `evidenceRefs` is required, because an evidence basis with no evidence is
@@ -40,7 +40,7 @@ export type GovernedAuthorityBasis =
    */
   | { readonly kind: 'recognized-external-evidence'; readonly assertedBy: string; readonly evidenceRefs: readonly string[]; readonly externalSystem?: string }
   /**
-   * Authority that arose from a governed action AOC itself authorized and
+   * Authority that arose from a governed action Soberanía itself authorized and
    * whose external effect it then received evidence of. Conserving: it debits
    * one position and credits another by the same quantity.
    *

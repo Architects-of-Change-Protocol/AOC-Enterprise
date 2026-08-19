@@ -40,7 +40,7 @@ function setUp() {
   return { recognitionClock, approvalClock, recognitionRuntime, authorityRuntime, approvalRuntime, world, fixture };
 }
 
-describe('AOC Approval Runtime demo scenarios', () => {
+describe('Soberanía Approval Runtime demo scenarios', () => {
   it('1. PMFreak send_client_follow_up -> require_human_approval -> Victor approves -> proof -> Recognition re-evaluation allows', () => {
     const { recognitionRuntime, approvalRuntime, world, fixture } = setUp();
     const actionRequestId = 'demo-action-1';

@@ -64,7 +64,7 @@ export function checkControlPlaneSection(readModel: AocControlPlaneReadModel, se
       section,
       backedByControlPlane: false,
       hasRows: false,
-      reason: `The "${section}" focus is not yet wired into the AOC Control Plane read model.`,
+      reason: `The "${section}" focus is not yet wired into the Soberanía Control Plane read model.`,
     };
   }
   const view = sectionViewModel(readModel, section);
@@ -74,8 +74,8 @@ export function checkControlPlaneSection(readModel: AocControlPlaneReadModel, se
     backedByControlPlane: true,
     hasRows,
     reason: hasRows
-      ? `The AOC Control Plane read model has real "${section}" rows.`
-      : `The AOC Control Plane read model has a "${section}" view model but no rows were present.`,
+      ? `The Soberanía Control Plane read model has real "${section}" rows.`
+      : `The Soberanía Control Plane read model has a "${section}" view model but no rows were present.`,
   };
 }
 

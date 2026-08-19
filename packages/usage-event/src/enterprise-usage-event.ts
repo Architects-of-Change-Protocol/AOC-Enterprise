@@ -3,7 +3,7 @@ import { resourceRefIdentityEquals } from '@aoc-enterprise/resource-envelope';
 
 /**
  * Enterprise composition over `EnterpriseAccessGrant` (`@aoc-enterprise/access-grant`,
- * R004.G) and, by identity primitive, over AOC Protocol's `ResourceRef`.
+ * R004.G) and, by identity primitive, over Soberanía Protocol's `ResourceRef`.
  *
  * `EnterpriseAccessGrant` answers *"what authorization was issued?"* -- an
  * immutable record produced once, at issuance, that a principal holds (or
@@ -39,7 +39,7 @@ import { resourceRefIdentityEquals } from '@aoc-enterprise/resource-envelope';
  * status for that access. That interpretation belongs to a future Provider
  * Adapter -- see the package README's "Future integration path".
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/usage-event`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/usage-event`).
  *
  * See the package README for the full design rationale, including the
  * closed `EnterpriseUsageEventType` vocabulary and why no provider, outcome,

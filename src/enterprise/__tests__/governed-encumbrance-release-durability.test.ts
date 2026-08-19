@@ -47,7 +47,7 @@ import {
  * restart      does a discharge survive a restart, and does a non-discharge
  *              equally survive as a non-discharge?
  * crash        if the external release succeeded and the process died before
- *              AOC terminalized, does the state stay safe and become finishable?
+ *              Soberanía terminalized, does the state stay safe and become finishable?
  * concurrency  can a release racing an acquisition, or two releases racing each
  *              other, manufacture capacity that never existed?
  * ```

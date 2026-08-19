@@ -1,7 +1,7 @@
 import { PMFREAK_DEMO_CONTROL_PLANE_PRIMARY_SCENARIO_ID, PMFREAK_DEMO_CONTROL_PLANE_VIEW_ID } from '../pmfreak-demo-control-plane-view/index.js';
 
 /**
- * AOC PMFreak Demo Narrative Export Pack v1 -- shared identifiers.
+ * Soberanía PMFreak Demo Narrative Export Pack v1 -- shared identifiers.
  *
  * This module carries no real PMFreak project, customer, or billing data.
  * Every id below is a deterministic, opaque demo identifier, never a claim
@@ -11,7 +11,7 @@ import { PMFREAK_DEMO_CONTROL_PLANE_PRIMARY_SCENARIO_ID, PMFREAK_DEMO_CONTROL_PL
 
 export const PMFREAK_DEMO_NARRATIVE_EXPORT_PACK_ID = 'aoc.demo.pmfreak.narrative_export.v1' as const;
 
-export const PMFREAK_DEMO_NARRATIVE_EXPORT_PACK_NAME = 'AOC PMFreak Demo Narrative Export Pack v1' as const;
+export const PMFREAK_DEMO_NARRATIVE_EXPORT_PACK_NAME = 'Soberanía PMFreak Demo Narrative Export Pack v1' as const;
 
 export const PMFREAK_DEMO_NARRATIVE_EXPORT_PACK_VERSION = '1.0.0' as const;
 
@@ -51,7 +51,7 @@ export const PMFREAK_DEMO_NARRATIVE_SECTION_IDS = {
  * certification, contractual compliance, or Costa Rica legal compliance.
  */
 export const PMFREAK_DEMO_NARRATIVE_SAFE_LABELS = [
-  'AOC-governed agent',
+  'Soberanía-governed agent',
   'Demo narrative export',
   'Not production integration',
   'Not compliance certification',
@@ -65,7 +65,7 @@ export const PMFREAK_DEMO_NARRATIVE_SAFE_LABELS = [
 
 /** Purpose statement carried by the narrative export descriptor. */
 export const PMFREAK_DEMO_NARRATIVE_EXPORT_PURPOSE =
-  'This export is a deterministic PMFreak demo narrative. It explains AOC Enterprise demo decisions. It does not create new governance decisions.';
+  'This export is a deterministic PMFreak demo narrative. It explains Soberanía Enterprise demo decisions. It does not create new governance decisions.';
 
 /**
  * Canonical, claim-safe narrative export disclaimers. Reused verbatim by the

@@ -225,7 +225,7 @@ One basis, `'administrative'`, requiring `context.system`.
 authority is evaluated, no decision is produced, `reportedBy` is caller-asserted,
 and any tenant-scoped caller can call it. The collateralization module already
 refuses to let such a report decrement its own `committedScope`, on the stated
-grounds that AOC cannot verify an external encumbrance actually ended.
+grounds that Soberanía cannot verify an external encumbrance actually ended.
 
 Letting the same unverified report free authority capacity would be that refusal
 reversed, and would hand any tenant-scoped caller a way to manufacture headroom
@@ -269,7 +269,7 @@ ACID is claimed. The ordering is:
 ```
 1  reservation acquired            (authority store)
 2  mandate issued                  (mandate store)      — compensating release on failure
-3  external execution happens      (outside AOC)
+3  external execution happens      (outside Soberanía)
 4  execution evidence recorded     (mandate store, re-asserted against the mandate)
 5  reservation -> encumbrance      (authority store, one transaction)
 ```
@@ -314,11 +314,11 @@ held 5 000, encumbered 4 000
 
 The distinction this rests on is the whole reason it is acceptable:
 
-- **Business rule** — *"collateralized property cannot be transferred"*. AOC
+- **Business rule** — *"collateralized property cannot be transferred"*. Soberanía
   holds no such rule and does not invent one. A real asset may well be
   transferable subject to a lien, and deciding that is domain and legal policy.
-- **Structural invariant** — *"AOC may not hold a constraint referring to
-  authority its holder no longer possesses"*. That is about AOC's own state
+- **Structural invariant** — *"Soberanía may not hold a constraint referring to
+  authority its holder no longer possesses"*. That is about Soberanía's own state
   being coherent, and it is what is enforced.
 
 The three candidate strategies were: (A) this precondition, (B) deny only
@@ -387,12 +387,12 @@ constraints, and none is backfilled.
 The reason is evidential rather than practical. Creating a constraint from
 historical `committedScope` would require knowing the holder whose authority was
 committed — which the mandate record does not store, because the terms have no
-field for it — and whether the arrangement is *still live*, which AOC cannot
+field for it — and whether the arrangement is *still live*, which Soberanía cannot
 determine, because a reported release is not verifiable. Inventing either would
 fabricate the very state the layer exists to make trustworthy.
 
 Deployments needing it have the privileged bootstrap path, under a system
-context, with the operator supplying the facts AOC cannot infer.
+context, with the operator supplying the facts Soberanía cannot infer.
 
 The schema migration itself is a different matter and is performed: `v1 → v3`
 and `v2 → v3`, both additive. The reservations table is rebuilt to widen its
@@ -472,8 +472,8 @@ Enterprise state, exactly as positions, transitions and reservations are.
 
 ## The legal boundary
 
-An AOC encumbrance is one deployment's record of its own governed state. It is
-not a lien, pledge, mortgage, charge, security interest or registration; AOC
+A Soberanía encumbrance is one deployment's record of its own governed state. It is
+not a lien, pledge, mortgage, charge, security interest or registration; Soberanía
 perfects nothing, files nothing, ranks nothing, and makes no claim that any
 external system or jurisdiction agrees with it. Legal effect, if any, arises
-entirely outside AOC.
+entirely outside Soberanía.

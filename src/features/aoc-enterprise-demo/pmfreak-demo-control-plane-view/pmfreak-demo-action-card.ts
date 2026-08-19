@@ -38,7 +38,7 @@ function humanizeActionId(actionId: string): string {
     .join(' ');
 }
 
-const SAFE_DESCRIPTION = 'The agent attempted a demo project-governance action. AOC evaluated passport, capability, scope, evidence and approvals before returning a decision.';
+const SAFE_DESCRIPTION = 'The agent attempted a demo project-governance action. Soberanía evaluated passport, capability, scope, evidence and approvals before returning a decision.';
 
 /**
  * Builds a claim-safe attempted action card from a scenario run result.

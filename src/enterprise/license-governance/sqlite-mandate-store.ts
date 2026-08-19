@@ -74,7 +74,7 @@ const DEFAULT_BUSY_TIMEOUT_MS = 5_000;
 //    restart-stable append order independent of insertion timing or rowid
 //    reuse.
 //  - `lifecycle_id PRIMARY KEY` + an `execution_id` foreign key -> a reported
-//    expiry/termination always references a license AOC actually has evidence
+//    expiry/termination always references a license Soberanía actually has evidence
 //    of.
 //
 // `terms_json` is the canonical serialization of `EnterpriseLicenseTerms`
@@ -951,7 +951,7 @@ export async function createSqliteLicenseMandateStore(
       if (selectExecutionByIdAndMandate.get(input.executionId, mandate.id) === undefined) {
         throw new LicenseGovernanceError(
           'LICENSE_EXECUTION_NOT_FOUND',
-          `No license execution '${input.executionId}' recorded under mandate '${mandate.id}'; a lifecycle report must reference a license AOC has evidence of.`,
+          `No license execution '${input.executionId}' recorded under mandate '${mandate.id}'; a lifecycle report must reference a license Soberanía has evidence of.`,
           { mandateId: mandate.id, executionId: input.executionId },
         );
       }
@@ -982,7 +982,7 @@ export async function createSqliteLicenseMandateStore(
       try {
         // Deliberately a single INSERT and nothing else: a reported end is an
         // observation about an external license, so there is no mandate row to
-        // update. In particular `execution_count` is untouched -- AOC cannot
+        // update. In particular `execution_count` is untouched -- Soberanía cannot
         // verify the license ended and must not manufacture fresh licensing
         // capacity from an unverified report.
         insertLifecycle.run({

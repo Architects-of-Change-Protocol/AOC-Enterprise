@@ -2,7 +2,7 @@
  * Foundation Runtime Alignment types.
  *
  * These types describe, truthfully, which Foundation capabilities a given
- * AOC Enterprise checkout actually has available versus which are only
+ * Soberanía Enterprise checkout actually has available versus which are only
  * reference-able seams for a capability that is planned, missing, or
  * disabled. Nothing in this file (or the functions built on top of it)
  * calls into a real runtime -- it only records and validates claims about

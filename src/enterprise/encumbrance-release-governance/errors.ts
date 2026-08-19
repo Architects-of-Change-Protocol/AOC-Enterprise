@@ -14,9 +14,9 @@
  * converts an exception into a governance decision.
  *
  * Also deliberately absent, and specific to this action: nothing here asserts
- * anything about the world outside AOC. There is no
+ * anything about the world outside Soberanía. There is no
  * `LIEN_NOT_DISCHARGED`, no `DEBT_OUTSTANDING`, no `PAYOFF_INSUFFICIENT`, no
- * `REGISTRY_NOT_UPDATED`. AOC does not observe those facts and must not imply
+ * `REGISTRY_NOT_UPDATED`. Soberanía does not observe those facts and must not imply
  * that it does. What it can say is what a trusted executor reported, and
  * whether that report matched the constraint it was asked about —
  * `ENCUMBRANCE_RELEASE_EXECUTOR_TARGET_MISMATCH`.

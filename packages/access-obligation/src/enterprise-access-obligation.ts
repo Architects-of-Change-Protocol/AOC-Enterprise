@@ -22,7 +22,7 @@ import type { CanonicalId } from '@aoc/protocol';
  * `EnterpriseAccessObligation` records that a condition must (or may)
  * accompany a decision; it never carries out that condition.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/access-obligation`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/access-obligation`).
  *
  * See the package README for the full design rationale, including why
  * neither `CanonicalObligation` (`@aoc-enterprise/canonical-runtime-contracts`),

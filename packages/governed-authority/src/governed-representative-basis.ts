@@ -1,5 +1,5 @@
 /**
- * Why AOC recognizes a holder-bound representation — the answer to "who says
+ * Why Soberanía recognizes a holder-bound representation — the answer to "who says
  * this representative may act for this holder?".
  *
  * A **closed** union of four, and the closure is the security property, in
@@ -47,7 +47,7 @@ export type GovernedRepresentativeBasis =
    * `evidenceRefs` is required and must be non-empty, for the same reason
    * `recognized-external-evidence` requires it on an authority basis: an
    * evidence basis with no evidence is unverifiable free-text provenance, and
-   * worse than none. AOC does not verify the evidence here; it records which
+   * worse than none. Soberanía does not verify the evidence here; it records which
    * evidence the deployment relied on.
    */
   | { readonly kind: 'recognized-external-representation'; readonly assertedBy: string; readonly evidenceRefs: readonly string[]; readonly externalSystem?: string }

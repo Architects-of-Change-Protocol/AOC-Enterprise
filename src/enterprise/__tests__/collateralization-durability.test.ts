@@ -320,7 +320,7 @@ describe('COLLATERALIZE durability — C. external evidence and lineage survive 
     assert.ok(referencedIds.includes('exec-b'));
 
     // ...and so does their *classification*. Recovering the reference but
-    // losing which of the three is AOC's own authorization would defeat the
+    // losing which of the three is Soberanía's own authorization would defeat the
     // point of keeping them apart.
     const referenceTypesById = new Map((record.references ?? []).map((reference) => [reference.externalId, reference.referenceType]));
     assert.equal(referenceTypesById.get(mandateId), 'authorization_artifact');
@@ -836,10 +836,10 @@ describe('COLLATERALIZE durability — H. reference scenario', () => {
     assert.deepEqual(
       finalLineage.committedScope,
       { kind: 'proportional', basisPoints: 2000 },
-      'even a reported discharge leaves the committed scope alone -- AOC records what it was told, and claims nothing more',
+      'even a reported discharge leaves the committed scope alone -- Soberanía records what it was told, and claims nothing more',
     );
 
-    // Nothing in the whole scenario made AOC a lender, a registry, or a
+    // Nothing in the whole scenario made Soberanía a lender, a registry, or a
     // valuer: the only monetary figure anywhere is the ceiling the requester
     // declared, and the only registry/filing values are the labels an external
     // system reported.

@@ -13,10 +13,10 @@
  * exception, and never converts an exception into a governance decision.
  *
  * Also deliberately absent, and specific to this action: no code here asserts
- * anything about the world outside AOC. There is no
+ * anything about the world outside Soberanía. There is no
  * `LICENSE_NOT_ENFORCEABLE`, no `AGREEMENT_UNSIGNED`, no `ROYALTY_UNPAID`, no
  * `COPYRIGHT_NOT_SUBSISTING`, no `LICENSE_CONFLICTS_WITH_EXCLUSIVE_GRANT`.
- * AOC does not observe those facts and must not imply that it does. What it
+ * Soberanía does not observe those facts and must not imply that it does. What it
  * can say is whether an execution stayed inside what it authorized --
  * `LICENSE_EXECUTION_NOT_AUTHORIZED`.
  */

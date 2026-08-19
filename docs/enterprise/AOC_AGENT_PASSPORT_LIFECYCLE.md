@@ -1,4 +1,4 @@
-# AOC Agent Passport Lifecycle (PR-006)
+# Soberanía Agent Passport Lifecycle (PR-006)
 
 Single source of truth: `src/enterprise/passport/lifecycle.ts`. Both the
 reconstruction fold (`reconstruction.ts`) and the append path

@@ -50,7 +50,7 @@ import type { GovernedAuthorizationArtifact, GovernedAuthorizationStatus } from 
  * - **The end of an external license is a fact about that license, not about
  *   this authorization.** A licensing platform reporting that an agreement
  *   expired, was terminated, cancelled, surrendered or superseded does not
- *   retroactively change what AOC authorized, and AOC must never present an
+ *   retroactively change what Soberanía authorized, and Soberanía must never present an
  *   externally-reported fact as a governance state it determined. External
  *   lifecycle is therefore recorded as separate, append-only,
  *   observation-only evidence (`EnterpriseLicenseLifecycleEvidence`) that
@@ -95,21 +95,21 @@ export type EnterpriseLicenseMandateStatus = GovernedAuthorizationStatus;
  * drafts an agreement, captures a signature, transfers ownership, settles a
  * royalty, meters usage, or contacts any external system. In particular, the
  * existence of a mandate is **not** a claim that a license agreement exists:
- * until execution evidence is recorded, AOC's position is that it authorized
+ * until execution evidence is recorded, Soberanía's position is that it authorized
  * the grant and does not know whether the grant was made.
  *
  * Revoking a mandate withdraws the authority to grant or execute *further*
  * licenses. It makes no claim that an already-granted external license
- * ceased to exist -- AOC cannot erase external legal state it does not
+ * ceased to exist -- Soberanía cannot erase external legal state it does not
  * control (see the package README, "Revocation is not termination").
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/license-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/license-mandate`).
  */
 export interface EnterpriseLicenseMandate extends GovernedAuthorizationArtifact<EnterpriseLicenseTerms> {
   /** Re-declared as this action's own literal so a serialized mandate names its schema on its face and cannot be replayed through a sibling action's contract. */
   readonly schemaVersion: typeof ENTERPRISE_LICENSE_SCHEMA_VERSION;
   readonly status: EnterpriseLicenseMandateStatus;
-  /** When AOC's authority to grant under this mandate ends. **Not** the external license's expiry -- see `EnterpriseLicenseConstraints.maximumLicenseTermEndsAt`, which is a genuinely different duration and is deliberately not folded into the shared skeleton. */
+  /** When Soberanía's authority to grant under this mandate ends. **Not** the external license's expiry -- see `EnterpriseLicenseConstraints.maximumLicenseTermEndsAt`, which is a genuinely different duration and is deliberately not folded into the shared skeleton. */
   readonly expiresAt: UtcDateTime;
 }
 
@@ -289,7 +289,7 @@ export function enterpriseLicenseMandateAuthorizes(
       code: 'RIGHTS_SCOPE_EXCEEDS_MANDATE',
       reason:
         terms.rightsScope === undefined
-          ? 'This license mandate does not express the permission as a portion of the named rights, so an exercise may not assert one; AOC cannot verify a portion it never authorized.'
+          ? 'This license mandate does not express the permission as a portion of the named rights, so an exercise may not assert one; Soberanía cannot verify a portion it never authorized.'
           : 'The proposed exercise is outside the portion of the named rights this license mandate authorizes, or does not express one at all.',
     };
   }
@@ -332,7 +332,7 @@ export function enterpriseLicenseMandateAuthorizes(
       authorized: false,
       code: 'EXTERNAL_AGREEMENT_REFERENCE_REQUIRED',
       reason:
-        'This license mandate requires an external agreement reference to be reported with the license grant; AOC records that reference and never interprets, resolves, or verifies what it names.',
+        'This license mandate requires an external agreement reference to be reported with the license grant; Soberanía records that reference and never interprets, resolves, or verifies what it names.',
     };
   }
 
@@ -475,7 +475,7 @@ export function validateEnterpriseLicenseMandate(candidate: unknown): Enterprise
   if (candidate.expiresAt === undefined) {
     errors.push({
       code: 'MISSING_EXPIRES_AT',
-      message: 'expiresAt is required; an authorization with no recorded expiry is not a state this contract can represent. It bounds AOC authority, not the external license term.',
+      message: 'expiresAt is required; an authorization with no recorded expiry is not a state this contract can represent. It bounds Soberanía authority, not the external license term.',
     });
   } else if (!isLicenseTimestamp(candidate.expiresAt)) {
     errors.push({ code: 'INVALID_EXPIRES_AT', message: 'expiresAt must be an ISO 8601 timestamp string.' });

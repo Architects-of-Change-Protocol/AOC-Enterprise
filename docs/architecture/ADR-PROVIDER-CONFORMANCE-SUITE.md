@@ -1,9 +1,9 @@
 # ADR: Provider Conformance Suite (R005.D)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
-- Sequence: R005.D, AOC Architectural Consolidation Program
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Deciders: Soberanía Enterprise architecture
+- Sequence: R005.D, Soberanía Architectural Consolidation Program
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/provider-conformance-suite-67t084`
 - Related: `ADR-ACCESS-LIFECYCLE.md` (R005.0, frozen input), `ADR-PROVIDER-ADAPTER-CONTRACT.md`
   (R005.A, frozen input), `ADR-PROVIDER-TRANSLATION-MODEL.md` (R005.B, frozen
@@ -307,7 +307,7 @@ smuggled into the suite to make one provider pass.
 | `npm test --workspace @aoc-enterprise/provider-conformance-suite` | Runs `scripts/compute-pinata-reference-boundary-evidence.mjs` (real scan, Phase 14), compiles `__tests__` under `tsconfig.test.json`, and runs `node --test` against the compiled output (**35/35 tests passed, 0 failed**, across 5 suites, including the Phase 10 reference execution against Pinata — see Phase 13/14 for the coverage added over the initial 19), then runs `scripts/check-provider-conformance-boundary.mjs` (passed, including its whitespace-tolerant dynamic-import scan). |
 | `npm run typecheck` (root, `tsc -b --pretty false`) | Passed with no output (clean). |
 | `npm run lint` (root: `check-node16-imports.mjs` + `lint-architecture.mjs` + `lint-public-surface.mjs`) | `Node16 import and boundary checks passed` / `Architecture lint passed` / `Public surface lint passed`. |
-| `node scripts/check-aoc-boundaries.mjs` | `AOC boundary check passed`. |
+| `node scripts/check-aoc-boundaries.mjs` | `Soberanía boundary check passed`. |
 | `node scripts/check-duplicate-semantic-contracts.mjs` | Reports the same three pre-existing violations already documented as pre-existing by `ADR-PROVIDER-TRANSLATION-MODEL.md` Phase 14 and `ADR-PINATA-PROVIDER-ADAPTER.md` Phase 11 (`EnterpriseResourceEnvelope`/`SerializedEnterpriseResourceEnvelope` in `access-decision` vs. `resource-envelope`; `AgentPassport` in `agent-governance` vs. `enterprise-host-sdk`) — none introduced by `packages/provider-conformance-suite`. |
 | `node scripts/validate-publishability.mjs` | `Publishability validation completed successfully` (1413 shipped JS artifacts scanned, none import `@aoc/protocol` at runtime). |
 | `npm test --workspaces --if-present` (every workspace, including the new package) | Exit code 0 across all workspaces; no failures. |

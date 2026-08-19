@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document covers how the AOC Agent Passport web app handles Stripe subscriptions, billing status, and the Customer Portal for organization registries.
+This document covers how the Soberanía Agent Passport web app handles Stripe subscriptions, billing status, and the Customer Portal for organization registries.
 
 ---
 

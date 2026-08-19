@@ -1,9 +1,9 @@
 /**
- * Tenant governance orchestration contracts for AOC Enterprise.
+ * Tenant governance orchestration contracts for Soberanía Enterprise.
  *
  * NOTE: Capability semantics are owned by AOC-Protocol. Verified actor
  * identity claims are Enterprise-owned (see `@aoc-enterprise/identity`) --
- * AOC Protocol governance determined identity claims are not part of its
+ * Soberanía Protocol governance determined identity claims are not part of its
  * public API.
  */
 

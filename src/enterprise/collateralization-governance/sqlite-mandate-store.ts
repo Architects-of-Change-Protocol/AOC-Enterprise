@@ -74,7 +74,7 @@ const DEFAULT_BUSY_TIMEOUT_MS = 5_000;
 //    restart-stable append order independent of insertion timing or rowid
 //    reuse.
 //  - `release_id PRIMARY KEY` + an `execution_id` foreign key -> a reported
-//    release always references an arrangement AOC actually has evidence of.
+//    release always references an arrangement Soberanía actually has evidence of.
 //
 // `terms_json` is the canonical serialization of
 // `EnterpriseCollateralizationTerms`
@@ -951,7 +951,7 @@ export async function createSqliteCollateralizationMandateStore(
       if (selectExecutionByIdAndMandate.get(input.executionId, mandate.id) === undefined) {
         throw new CollateralizationGovernanceError(
           'COLLATERALIZATION_EXECUTION_NOT_FOUND',
-          `No collateralization execution '${input.executionId}' recorded under mandate '${mandate.id}'; a release must reference an arrangement AOC has evidence of.`,
+          `No collateralization execution '${input.executionId}' recorded under mandate '${mandate.id}'; a release must reference an arrangement Soberanía has evidence of.`,
           { mandateId: mandate.id, executionId: input.executionId },
         );
       }
@@ -984,7 +984,7 @@ export async function createSqliteCollateralizationMandateStore(
         // Deliberately a single INSERT and nothing else: a reported release is
         // an observation about an external arrangement, so there is no mandate
         // row to update. In particular `committed_scope_json` is untouched --
-        // AOC cannot verify the encumbrance ended and must not manufacture
+        // Soberanía cannot verify the encumbrance ended and must not manufacture
         // fresh collateralization headroom from an unverified report.
         insertRelease.run({
           releaseId: release.id,

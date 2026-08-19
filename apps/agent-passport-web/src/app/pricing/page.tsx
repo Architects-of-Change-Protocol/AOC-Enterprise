@@ -4,18 +4,18 @@ import { PricingCard } from '@/components/PricingCard';
 import { FAQItem } from '@/components/FAQItem';
 
 export const metadata = {
-  title: 'Pricing — AOC Agent Passport',
+  title: 'Pricing — Soberanía Agent Passport',
   description: 'Agent Passport, Governed Agent, and Organization Registry. Simple, transparent pricing.',
 };
 
 const FAQ = [
   {
     question: 'Is this a security tool?',
-    answer: 'AOC Agent Passport is a governance identity and verification layer. Runtime Guard integration can support action-level enforcement, but this MVP is not a replacement for enterprise security controls.',
+    answer: 'Soberanía Agent Passport is a governance identity and verification layer. Runtime Guard integration can support action-level enforcement, but this MVP is not a replacement for enterprise security controls.',
   },
   {
     question: 'Can someone remove the passport from an agent?',
-    answer: "Outside a governed runtime, removing the passport destroys the agent's AOC-governed verification status. Inside a governed runtime, missing or invalid passports must cause governed execution to fail.",
+    answer: "Outside a governed runtime, removing the passport destroys the agent's Soberanía-governed verification status. Inside a governed runtime, missing or invalid passports must cause governed execution to fail.",
   },
   {
     question: "Does this control the model's reasoning?",

@@ -1,4 +1,4 @@
-# AOC PMFreak Demo Narrative Export Pack v1
+# Soberanía PMFreak Demo Narrative Export Pack v1
 
 Export Pack ID:
 
@@ -8,7 +8,7 @@ aoc.demo.pmfreak.narrative_export.v1
 
 Purpose:
 
-Provides a deterministic narrative export layer for the PMFreak AOC Enterprise demo.
+Provides a deterministic narrative export layer for the PMFreak Soberanía Enterprise demo.
 
 This pack consumes Control Plane view models from the PMFreak Demo Control Plane View and turns them into human-readable narrative exports.
 
@@ -70,7 +70,7 @@ The Narrative Export explains:
 
 - what the agent attempted
 - which passport was used
-- what AOC Enterprise checked
+- what Soberanía Enterprise checked
 - which decision was returned
 - which evidence was missing or satisfied
 - which approvals were missing or satisfied
@@ -79,7 +79,7 @@ The Narrative Export explains:
 - what the decision safely means
 - what it does not mean
 
-In this demo, `allow` means that the configured AOC demo governance model allowed the governed demo action to proceed based on the available passport, evidence, approvals and scenario context.
+In this demo, `allow` means that the configured Soberanía demo governance model allowed the governed demo action to proceed based on the available passport, evidence, approvals and scenario context.
 
 It does not mean:
 
@@ -136,13 +136,13 @@ No real Datasys project codes, customer names, contract numbers, invoice numbers
 ```
 Policy Pack Foundation
   |
-AOC PMFreak Agent Passport Demo Pack v1
+Soberanía PMFreak Agent Passport Demo Pack v1
   |
-AOC PMFreak Project Governance Scenario Pack v1
+Soberanía PMFreak Project Governance Scenario Pack v1
   |
-AOC PMFreak Demo Control Plane View v1
+Soberanía PMFreak Demo Control Plane View v1
   |
-AOC PMFreak Demo Narrative Export Pack v1  (this module)
+Soberanía PMFreak Demo Narrative Export Pack v1  (this module)
 ```
 
 Its claim-safety wrapper (`pmfreak-demo-narrative-claim-safety.ts`) extends the Control Plane View's own wrapper (`assertNoPMFreakDemoControlPlaneOverclaim`) with a small, additive list of narrative-specific unsafe phrases -- never the generic Policy Pack Foundation harness directly, and never a replacement of the layers below it.
@@ -182,7 +182,7 @@ No network calls, no LLM calls, no OCR/PDF parsing, no `Math.random()`, no `Date
 
 ```
 PMFreak demonstrates what autonomous project agents can do.
-AOC Enterprise demonstrates why they can be trusted to do it.
+Soberanía Enterprise demonstrates why they can be trusted to do it.
 The Control Plane shows why a governed decision was made.
 The Narrative Export explains that decision in shareable language.
 ```

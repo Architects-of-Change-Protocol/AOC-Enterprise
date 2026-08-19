@@ -59,7 +59,7 @@ export function ClaimRegistryPageClient() {
         <div className="section-label">Buyer Account</div>
         <h1>Claim an existing registry</h1>
         <p style={{ color: 'var(--text-muted)' }}>
-          Link your AOC buyer account to an existing Organization Agent Registry using your admin access token.
+          Link your Soberanía buyer account to an existing Organization Agent Registry using your admin access token.
         </p>
       </div>
 

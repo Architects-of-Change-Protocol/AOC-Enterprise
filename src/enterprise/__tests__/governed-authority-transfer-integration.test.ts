@@ -237,7 +237,7 @@ describe('TRANSFER integration — replay and cross-store recovery', () => {
 
     // This is the honest consequence of two stores that cannot share a
     // transaction, stated rather than hidden: the external system really did
-    // report a movement, that report is durable, and AOC refused to draw an
+    // report a movement, that report is durable, and Soberanía refused to draw an
     // authority conclusion from it. A caller learns both facts — the evidence
     // is queryable, and the call threw.
     const executions = await world.transfer.listExecutions(TENANT_CONTEXT, mandate.id);
@@ -273,7 +273,7 @@ describe('TRANSFER integration — over-authorization, the risk reservation remo
     // Until Phase 5.4 both of these were authorized against the same 10 000 bp,
     // because issuing a mandate reserved nothing, and the conflict surfaced
     // only when the second movement was refused at execution — by which point
-    // AOC had already told two counterparties they were authorized.
+    // Soberanía had already told two counterparties they were authorized.
     const first = await issueMandate(world, 'transfer-over-1', transferTerms(ALICE, BOB, [ECONOMIC], { kind: 'proportional', basisPoints: 6_000 }));
 
     // Surfaced as the authority layer's own code, exactly as an unconservable

@@ -2,7 +2,7 @@
   "name": "@aoc-enterprise/commercial-demo",
   "version": "0.1.0",
   "private": true,
-  "description": "AOC Architectural Consolidation Program, Sequence R006.A: an executable commercial reference demo for the frozen Access Governance lifecycle (R005.0-R005.D). Wires EnterpriseResourceEnvelope through EnterpriseAccessDecision, EnterpriseAccessObligation, EnterpriseAccessGrant, EnterpriseProviderTranslation, and the Pinata Provider Adapter to EnterpriseUsageEvent and EnterpriseEvidenceCorrelation, using a realistic legal document data-room scenario. Consumes the frozen contracts exactly as shipped; introduces no new architecture.",
+  "description": "Soberanía Architectural Consolidation Program, Sequence R006.A: an executable commercial reference demo for the frozen Access Governance lifecycle (R005.0-R005.D). Wires EnterpriseResourceEnvelope through EnterpriseAccessDecision, EnterpriseAccessObligation, EnterpriseAccessGrant, EnterpriseProviderTranslation, and the Pinata Provider Adapter to EnterpriseUsageEvent and EnterpriseEvidenceCorrelation, using a realistic legal document data-room scenario. Consumes the frozen contracts exactly as shipped; introduces no new architecture.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

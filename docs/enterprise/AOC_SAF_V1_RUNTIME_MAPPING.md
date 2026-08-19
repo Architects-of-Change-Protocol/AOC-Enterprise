@@ -1,4 +1,4 @@
-# AOC SAF v1 — Runtime Mapping (PR-007)
+# Soberanía SAF v1 — Runtime Mapping (PR-007)
 
 How the repository's Sovereignty Assurance Framework concepts became the
 first runtime framework, `aoc.saf` version `1.0.0`

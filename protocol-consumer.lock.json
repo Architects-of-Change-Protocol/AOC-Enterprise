@@ -1,5 +1,5 @@
 {
-  "$comment": "This is NOT an npm lockfile. It is a small, auditable record of which AOC Protocol commit/artifact AOC Enterprise has actually been validated against. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md for the full upgrade/rollback procedure. Validate this file with `node scripts/protocol/check-compatibility-lock.mjs`.",
+  "$comment": "This is NOT an npm lockfile. It is a small, auditable record of which Soberanía Protocol commit/artifact Soberanía Enterprise has actually been validated against. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md for the full upgrade/rollback procedure. Validate this file with `node scripts/protocol/check-compatibility-lock.mjs`.",
   "repository": "Architects-of-Change-Protocol/Architects_of_Change_Protocol",
   "commit": "ab2ac6ef573c871a029a67b13d33ba9738cb5939",
   "package": "@aoc/protocol",

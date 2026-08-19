@@ -5,10 +5,10 @@ import type { PolicyPackRuntime, RegisterPolicyPackParams, RegisterPolicyPackVer
 import { all, any, predicate } from './policy-pack-builders.js';
 
 /**
- * AOC Global Legal Baseline Pack v1 (`aoc.global_legal_baseline.v1`).
+ * Soberanía Global Legal Baseline Pack v1 (`aoc.global_legal_baseline.v1`).
  *
  * This pack is a **baseline legal-awareness layer**, not a legal compliance
- * engine. It gives AOC a reusable, deterministic baseline for jurisdiction
+ * engine. It gives Soberanía a reusable, deterministic baseline for jurisdiction
  * awareness, legal-review triggers, required evidence signals, authority
  * boundary flags, regulated-action warnings, prohibited-action baseline
  * patterns, approval escalation requirements, and customer/counsel
@@ -63,7 +63,7 @@ export const GLOBAL_LEGAL_BASELINE_POLICY_PACK_VERSION_ID = 'aoc.global_legal_ba
 
 export const GLOBAL_LEGAL_BASELINE_POLICY_PACK: RegisterPolicyPackParams = {
   id: GLOBAL_LEGAL_BASELINE_POLICY_PACK_ID,
-  name: 'AOC Global Legal Baseline Pack v1',
+  name: 'Soberanía Global Legal Baseline Pack v1',
   description:
     'Deterministic, non-jurisdiction-specific baseline for legal awareness: jurisdiction-unknown/conflict handling, authority-boundary flags, legal-review triggers, regulated-action-pattern warnings, prohibited-action baseline patterns, and customer/counsel validation gating. Not legal advice. Not a compliance certification. Does not interpret law or replace counsel.',
   kind: 'domain',

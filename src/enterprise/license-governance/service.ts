@@ -72,7 +72,7 @@ export interface SubmitLicenseRequestInput {
   /** Free-form context forwarded to the Kernel unchanged (passport id, capability token id, evidence...). Never interpreted here. */
   readonly context?: Readonly<Record<string, unknown>>;
   readonly idempotencyKey?: string;
-  /** The expiry the issued mandate will carry — AOC's authority window, never the external license's own term. Required: this module never invents an expiry, and `EnterpriseLicenseMandate` cannot represent an authorization without one. */
+  /** The expiry the issued mandate will carry — Soberanía's authority window, never the external license's own term. Required: this module never invents an expiry, and `EnterpriseLicenseMandate` cannot represent an authorization without one. */
   readonly mandateExpiresAt: string;
   readonly issuerRef?: string;
   readonly obligationRefs?: readonly string[];
@@ -159,7 +159,7 @@ export interface LicenseGovernanceService {
    * Records that an external system reported a previously-granted license as
    * expired, terminated, cancelled, surrendered or superseded. Observation
    * only: no authority is evaluated, no decision is produced, the mandate's
-   * status and execution count are unchanged, and AOC asserts nothing about
+   * status and execution count are unchanged, and Soberanía asserts nothing about
    * whether the license genuinely ended.
    */
   recordLifecycleEvent(context: LicenseGovernanceContext, input: RecordLicenseLifecycleRequest): Promise<LicenseLifecycleRecord>;
@@ -238,7 +238,7 @@ export function createLicenseGovernanceService(deps: LicenseGovernanceServiceDep
    * what the existing Domain Policy Pack preflight means by a counterparty,
    * and a deployment's policy may legitimately turn on who the licensee is.
    * `amount`/`currency` are deliberately not populated at all: a license has
-   * no transaction value in this contract, AOC computes no royalty or fee, and
+   * no transaction value in this contract, Soberanía computes no royalty or fee, and
    * inventing one for a transaction-amount policy input would misrepresent the
    * action.
    *
@@ -417,7 +417,7 @@ export function createLicenseGovernanceService(deps: LicenseGovernanceServiceDep
       //
       // `authorization_artifact` is the reference type the TokenizationMandate
       // and CollateralizationMandate also use for exactly this relationship: a
-      // mandate is produced and owned by AOC Enterprise, recording an
+      // mandate is produced and owned by Soberanía Enterprise, recording an
       // authorization this enforcement granted. The external license and its
       // reported end are separate observations, recorded as `execution_record`
       // below.

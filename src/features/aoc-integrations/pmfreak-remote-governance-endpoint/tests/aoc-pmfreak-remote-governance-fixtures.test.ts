@@ -16,7 +16,7 @@ import {
   demoAocPMFreakRemotePayloadTooLargeRequest,
 } from '../aoc-pmfreak-remote-governance-fixtures.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- fixtures', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- fixtures', () => {
   it('every request fixture is a well-formed POST envelope by default', () => {
     for (const fixture of [demoAocPMFreakRemoteBillingMissingEvidenceEndpointRequest, demoAocPMFreakRemoteBillingMissingApprovalEndpointRequest, demoAocPMFreakRemoteBillingAllowedEndpointRequest, demoAocPMFreakRemoteCancelledEndpointRequest]) {
       assert.equal(fixture.method, 'POST');

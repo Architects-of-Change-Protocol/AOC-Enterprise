@@ -14,8 +14,8 @@
  * exception, and never converts an exception into a governance decision.
  *
  * Also deliberately absent, and specific to this action: no code here asserts
- * anything about the world outside AOC. There is no `TRANSFER_TITLE_NOT_PASSED`,
- * no `REGISTRY_NOT_UPDATED` and no `CONSIDERATION_UNPAID` — AOC observes none
+ * anything about the world outside Soberanía. There is no `TRANSFER_TITLE_NOT_PASSED`,
+ * no `REGISTRY_NOT_UPDATED` and no `CONSIDERATION_UNPAID` — Soberanía observes none
  * of those, and a code for one would be a claim it cannot support.
  *
  * There is also no `RECIPIENT_AUTHORITY_NOT_UPDATED`, and there still should

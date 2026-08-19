@@ -28,7 +28,7 @@ import type { EnterpriseLicenseTerms, EnterpriseLicenseTermsValidationCode, Seri
  * Submitting one asserts nothing about who holds the asset's rights, nothing
  * about whether the requester may license them, and nothing about whether the
  * licensee is entitled to receive the permission: authority is evaluated by
- * the primitives AOC already has (Authority Graph reached through Recognition
+ * the primitives Soberanía already has (Authority Graph reached through Recognition
  * Runtime, and the Approval Runtime's own quorum and segregation-of-duties
  * policies), and a request whose requester holds no `LICENSE` authority is
  * denied by that evaluation, not by this record.
@@ -45,7 +45,7 @@ import type { EnterpriseLicenseTerms, EnterpriseLicenseTermsValidationCode, Seri
  * This is a pure data contract: no persistence, no service, no API, no policy
  * engine, no provider SDK, no execution.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/license-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/license-mandate`).
  */
 export interface EnterpriseLicenseRequest {
   readonly schemaVersion: typeof ENTERPRISE_LICENSE_SCHEMA_VERSION;
@@ -60,7 +60,7 @@ export interface EnterpriseLicenseRequest {
   /** The expiry the requester asks the authorization to carry. A request, not a guarantee -- the issued mandate's own `expiresAt` is authoritative, and neither bounds the external license's own term. */
   readonly requestedExpiresAt?: UtcDateTime;
   readonly justification?: string;
-  /** Opaque pointers to evidence records supporting this request -- an external agreement, a payment or royalty arrangement, a diligence record. Mirrors `EnterpriseAccessDecision.evidenceRefs`. AOC never dereferences or interprets them. */
+  /** Opaque pointers to evidence records supporting this request -- an external agreement, a payment or royalty arrangement, a diligence record. Mirrors `EnterpriseAccessDecision.evidenceRefs`. Soberanía never dereferences or interprets them. */
   readonly evidenceRefs?: readonly CanonicalId[];
 }
 

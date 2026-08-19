@@ -58,14 +58,14 @@ export interface GovernedAuthorityTransition {
   /** The party debited. Absent exactly when `basis` is an issuance basis — the two cases agree by construction, and a store rejects any pairing that does not. */
   readonly fromActorRef?: string;
 
-  /** The party credited. Always present: a transition that credits nobody would be a burn, and no governed action in AOC burns authority. */
+  /** The party credited. Always present: a transition that credits nobody would be a burn, and no governed action in Soberanía burns authority. */
   readonly toActorRef: string;
 
   readonly basis: GovernedAuthorityBasis;
 
   /** When the change took effect, in the governed world. Never earlier than the credited position's `effectiveFrom`. */
   readonly occurredAt: string;
-  /** When AOC durably recorded it. Distinct from `occurredAt` on purpose: AOC records what it was told, and when it was told. */
+  /** When Soberanía durably recorded it. Distinct from `occurredAt` on purpose: Soberanía records what it was told, and when it was told. */
   readonly recordedAt: string;
 
   readonly correlationId?: string;

@@ -21,7 +21,7 @@ async function bootEnterprise(): Promise<AocEnterprise> {
   return enterprise;
 }
 
-describe('AOC Enterprise -- Agent Passport Runtime module registration', () => {
+describe('Soberanía Enterprise -- Agent Passport Runtime module registration', () => {
   it('the Passport Runtime module is registered and healthy', async () => {
     const enterprise = await bootEnterprise();
     const modules = enterprise.modules();
@@ -50,7 +50,7 @@ describe('AOC Enterprise -- Agent Passport Runtime module registration', () => {
   });
 });
 
-describe('AOC Enterprise -- full cross-capability scenario (Kernel -> Governance Store -> Evidence Bundle -> Agent Passport)', () => {
+describe('Soberanía Enterprise -- full cross-capability scenario (Kernel -> Governance Store -> Evidence Bundle -> Agent Passport)', () => {
   it('issues a Passport, evaluates a governed action, persists the Governance Record, builds an Evidence Bundle, links both to the Passport, reconstructs, verifies, and builds a CUSTOMER view -- with no duplicated records', async () => {
     const enterprise = await bootEnterprise();
     const context = { organizationId: 'org-1', system: false } as const;

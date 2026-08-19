@@ -26,7 +26,7 @@ import type { EnterpriseTokenizationTerms, EnterpriseTokenizationTermsValidation
  *
  * A request is not an authorization and never becomes one by existing.
  * Submitting one asserts nothing about who owns the asset: authority is
- * evaluated by the primitives AOC already has (Authority Graph reached
+ * evaluated by the primitives Soberanía already has (Authority Graph reached
  * through Recognition Runtime, and the Approval Runtime's own quorum and
  * segregation-of-duties policies), and a request whose requester holds no
  * `TOKENIZE` authority is denied by that evaluation, not by this record.
@@ -41,7 +41,7 @@ import type { EnterpriseTokenizationTerms, EnterpriseTokenizationTermsValidation
  * This is a pure data contract: no persistence, no service, no API, no policy
  * engine, no provider SDK, no execution.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/tokenization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/tokenization-mandate`).
  */
 export interface EnterpriseTokenizationRequest {
   readonly schemaVersion: typeof ENTERPRISE_TOKENIZATION_SCHEMA_VERSION;

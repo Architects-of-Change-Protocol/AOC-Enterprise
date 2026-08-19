@@ -20,7 +20,7 @@ export interface PolicyPacksPanelProps {
 const NOT_LEGAL_ADVICE = 'not_legal_advice';
 
 /**
- * The Policy Packs section of the AOC Control Plane. Every table/detail here
+ * The Policy Packs section of the Soberanía Control Plane. Every table/detail here
  * reads directly from PolicyPackControlPlaneViewModel -- a projection over
  * Domain Policy Pack Runtime's own store/ledger via its control-plane
  * adapter, plus Action Enforcement's policy-referencing decision/proof

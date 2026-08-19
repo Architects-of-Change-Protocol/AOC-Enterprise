@@ -1,4 +1,4 @@
-# AOC PMFreak Project Governance Scenario Pack v1
+# Soberanía PMFreak Project Governance Scenario Pack v1
 
 Pack ID:
 
@@ -8,7 +8,7 @@ aoc.demo.pmfreak.project_governance_scenarios.v1
 
 Purpose:
 
-Demonstrates how AOC Enterprise governs PMFreak agents inside realistic project-governance scenarios.
+Demonstrates how Soberanía Enterprise governs PMFreak agents inside realistic project-governance scenarios.
 
 This pack uses the PMFreak Agent Passport Demo Pack (`aoc.demo.pmfreak.agent_passport.v1`) to evaluate whether project agents can perform attempted actions. It models scenarios such as:
 
@@ -32,7 +32,7 @@ This pack does not certify compliance.
 ## Core rule: this pack orchestrates, it never re-decides
 
 ```
-The previous PR answered: Can PMFreak agents have AOC Enterprise passports?
+The previous PR answered: Can PMFreak agents have Soberanía Enterprise passports?
 This PR answers: What happens when PMFreak agents try to act inside real
 project-governance scenarios?
 ```
@@ -55,7 +55,7 @@ This pack never re-implements passport status handling, authority-scope checks, 
 
 The Billing Readiness Agent attempts to mark a milestone as ready for billing (`pmfreak.action.billing.mark_ready`).
 
-AOC Enterprise checks:
+Soberanía Enterprise checks:
 
 - passport status
 - role authority
@@ -71,7 +71,7 @@ AOC Enterprise checks:
 - policy pack references
 - audit/export trace
 
-In this demo, `allow` means that AOC Enterprise allows the governed demo action to proceed based on the configured passport, evidence, and approvals. It does not mean:
+In this demo, `allow` means that Soberanía Enterprise allows the governed demo action to proceed based on the configured passport, evidence, and approvals. It does not mean:
 
 - invoice validity is certified
 - customer acceptance is certified
@@ -130,9 +130,9 @@ No real Datasys project codes, customer names, contract numbers, invoice numbers
 ```
 Policy Pack Foundation
   |
-AOC PMFreak Agent Passport Demo Pack v1
+Soberanía PMFreak Agent Passport Demo Pack v1
   |
-AOC PMFreak Project Governance Scenario Pack v1  (this module)
+Soberanía PMFreak Project Governance Scenario Pack v1  (this module)
 ```
 
 This pack's manifest is a real `PolicyPackManifest`, built with the Policy Pack Foundation's `createPolicyPackManifest`, and declares the PMFreak Agent Passport Demo Pack's id as a `requiredPackIds` dependency. Its claim-safety wrapper (`pmfreak-scenario-claim-safety.ts`) extends the PMFreak Agent Passport Demo Pack's own wrapper (`assertNoPMFreakAgentPassportOverclaim`) with a small, additive list of scenario-specific unsafe phrases -- never the generic Policy Pack Foundation harness directly, and never a replacement of the layers below it.
@@ -163,5 +163,5 @@ No network calls, no LLM calls, no OCR/PDF parsing, no `Math.random()`, no `Date
 
 ```
 PMFreak demonstrates what autonomous project agents can do.
-AOC Enterprise demonstrates why they can be trusted to do it.
+Soberanía Enterprise demonstrates why they can be trusted to do it.
 ```

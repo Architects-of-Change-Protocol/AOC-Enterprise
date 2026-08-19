@@ -25,7 +25,7 @@ import { PinataProviderClientError } from './pinata-provider-client.js';
  * implemented for a real provider without changing it -- see the package
  * README's "Architecture validation" section.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/pinata-adapter`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/pinata-adapter`).
  */
 export const PINATA_PROVIDER_SYSTEM = 'pinata';
 

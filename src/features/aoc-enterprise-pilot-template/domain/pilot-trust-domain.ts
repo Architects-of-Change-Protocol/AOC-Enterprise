@@ -3,7 +3,7 @@ export type PilotTrustDomainKind = 'internal' | 'customer' | 'external_partner' 
 /**
  * Describes the trust domain a pilot template operates in. This is a
  * reference/label only -- the actual trust-domain-scoped decisions still
- * come from Recognition Runtime, Authority Graph and the other AOC runtimes.
+ * come from Recognition Runtime, Authority Graph and the other Soberanía runtimes.
  */
 export interface PilotTrustDomain {
   readonly id: string;

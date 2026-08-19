@@ -33,7 +33,7 @@ export function createPMFreakDemoAgentActionSection(viewModel: PMFreakDemoContro
     title: 'Agent / Action',
     summary: SAFE_SUMMARY,
     bullets,
-    safeLabels: ['AOC-governed agent'],
+    safeLabels: ['Soberanía-governed agent'],
     warnings: [],
   };
 

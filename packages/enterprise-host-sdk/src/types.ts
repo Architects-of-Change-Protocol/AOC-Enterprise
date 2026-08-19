@@ -1,5 +1,5 @@
 /**
- * Wire types for the AOC Enterprise Host HTTP API (v1, frozen surface).
+ * Wire types for the Soberanía Enterprise Host HTTP API (v1, frozen surface).
  *
  * These are structural mirrors of the Host's request/response contracts
  * (see docs/enterprise/API_STABILITY_V1.md). The SDK owns no business

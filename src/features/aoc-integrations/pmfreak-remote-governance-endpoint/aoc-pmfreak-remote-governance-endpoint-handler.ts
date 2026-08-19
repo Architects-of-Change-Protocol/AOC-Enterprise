@@ -23,7 +23,7 @@ export interface HandleAocPMFreakRemoteGovernanceRequestInput {
  *
  * Flow: build a safe config -> reject an unsafe production config -> guard
  * method/content-type/payload-size/auth -> parse the body -> redact it ->
- * delegate to the already-merged AOC PMFreak Governance Request Intake for
+ * delegate to the already-merged Soberanía PMFreak Governance Request Intake for
  * evaluation -> claim-safety scan the response -> serialize.
  *
  * Never mutates `input.request`. Never mutates PMFreak data, never executes

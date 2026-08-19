@@ -1,4 +1,4 @@
-# AOC Jurisdiction Costa Rica Base Pack v1
+# Soberanía Jurisdiction Costa Rica Base Pack v1
 
 Pack ID:
 
@@ -8,7 +8,7 @@ aoc.jurisdiction.costa_rica.base.v1
 
 Purpose:
 
-Provides a Costa Rica jurisdiction context baseline for AOC policy-pack evaluation.
+Provides a Costa Rica jurisdiction context baseline for Soberanía policy-pack evaluation.
 
 This pack identifies jurisdiction-aware review triggers, evidence requirements, approval requirements, export metadata and Control Plane-safe labels for Costa Rica-related actions.
 
@@ -28,7 +28,7 @@ Default sourceStatus: system_authored
 
 ## Safety gate
 
-This pack does not satisfy `counsel_reviewed` requirements unless explicitly created with `counsel_reviewed` or `counsel_attested` status and appropriate evidence in a future customer/counsel-reviewed context. A `demo_baseline` or `customer_validated` Costa Rica pack can never be treated as counsel-reviewed -- `satisfiesPolicyPackValidationStatus` (the same shared trust lattice every AOC policy pack uses) enforces this uniformly, so this pack cannot opt out of it.
+This pack does not satisfy `counsel_reviewed` requirements unless explicitly created with `counsel_reviewed` or `counsel_attested` status and appropriate evidence in a future customer/counsel-reviewed context. A `demo_baseline` or `customer_validated` Costa Rica pack can never be treated as counsel-reviewed -- `satisfiesPolicyPackValidationStatus` (the same shared trust lattice every Soberanía policy pack uses) enforces this uniformly, so this pack cannot opt out of it.
 
 If an action requires counsel-reviewed jurisdictional handling, resolving it through this pack produces `require_counsel_review`, never `allow`, unless the registered pack's own status actually satisfies `counsel_reviewed` (see `resolveCostaRicaJurisdictionAction` in `costa-rica-resolution.ts` and its tests).
 

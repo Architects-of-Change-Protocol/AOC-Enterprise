@@ -169,7 +169,7 @@ export interface RevokeEncumbranceReleaseMandateRequest {
  *
  * Collapsing any two of those is the failure this module exists to prevent, and
  * the most tempting collapse is the last but one: *"someone said the collateral
- * was released"* becoming *"capacity is free"*. AOC never makes that inference.
+ * was released"* becoming *"capacity is free"*. Soberanía never makes that inference.
  * A mandate is an authorization, not an effect; an executor's confirmation is
  * an observation this deployment trusts because it made the call itself, not
  * because a caller supplied it.
@@ -620,7 +620,7 @@ export function createEncumbranceReleaseGovernanceService(
 
       // Revoked, spent-without-evidence, not yet effective, or expired: the
       // executor is never called. An authorization that is not live must not
-      // produce an external release that AOC then has to decide what to do
+      // produce an external release that Soberanía then has to decide what to do
       // with, and expiry is emphatically not discharge.
       assertEncumbranceReleaseMandateExecutable(mandate, attemptedAt);
 
@@ -771,7 +771,7 @@ export function createEncumbranceReleaseGovernanceService(
       const mandate = await store.getMandate(context, input.mandateId);
       // Revocation withdraws the authorization and touches nothing else. The
       // constraint is not released, not weakened and not re-dated: an
-      // authorization AOC withdraws says nothing about an arrangement that
+      // authorization Soberanía withdraws says nothing about an arrangement that
       // still exists externally.
       return store.revokeMandate(context, {
         revocationId: nextId('encumbrance-release-revocation'),

@@ -1,7 +1,7 @@
 import { AOC_ENTERPRISE_HOST_VERSION } from '../version.js';
 
 /**
- * Centralizes every environment-derived knob the AOC Enterprise Host needs.
+ * Centralizes every environment-derived knob the Soberanía Enterprise Host needs.
  * The Kernel itself takes none of this -- `AocKernel` is constructed once by
  * the composition root (`composition/composition-root.ts`) and never reads
  * configuration directly, per the mission's "Kernel remains

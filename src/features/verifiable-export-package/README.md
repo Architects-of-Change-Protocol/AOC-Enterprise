@@ -1,4 +1,4 @@
-# AOC Verifiable Export Package
+# Soberanía Verifiable Export Package
 
 Recognition Runtime, Authority Graph, Approval Runtime, External Agent
 Handshake, Action Enforcement, Domain Policy Pack Runtime, and the Evidence /
@@ -6,25 +6,25 @@ Source / Citation Runtime each answer their own question about an autonomous
 action. None of them answer the question a buyer, auditor, or counsel asks
 once every one of those decisions has already been made:
 
-**Can AOC produce a portable, deterministic, tamper-evident package that
+**Ca Soberanía produce a portable, deterministic, tamper-evident package that
 explains and proves why an autonomous action was allowed, blocked, required
 approval, required evidence, or executed?**
 
 That is the Verifiable Export Package's job.
 
-## Why AOC needs verifiable export after the Evidence / Source / Citation Runtime
+## Why Soberanía needs verifiable export after the Evidence / Source / Citation Runtime
 
-AOC already has every runtime fact it needs: a recognition decision, an
+Soberanía already has every runtime fact it needs: a recognition decision, an
 authority proof, an approval decision and proof, an external standing proof,
 a policy pack decision and proof, evidence artifacts and citations, an
-enforcement decision and proof, an execution result. What AOC has not had
+enforcement decision and proof, an execution result. What Soberanía has not had
 until now is a way to **package** those facts into one portable,
 self-verifying artifact a customer, auditor, or investor can inspect without
-trusting AOC's live UI or database.
+trusting Soberanía's live UI or database.
 
 ## Core thesis
 
-**AOC already has the runtime facts. Now AOC must package those facts into a
+**Soberanía already has the runtime facts. Now Soberanía must package those facts into a
 portable, verifiable decision packet.**
 
 The export package must not create truth. The export package must package
@@ -378,7 +378,7 @@ npm run build && node --test --test-reporter=spec dist/src/features/verifiable-e
 or simply `npm test` from the repo root to run the whole suite (this module
 follows the same `node --test` convention as every other feature).
 
-## AOC Enterprise Pilot Template
+## Soberanía Enterprise Pilot Template
 
 Verifiable Export Packages can now be bound into Enterprise Pilot Kits via
 `src/features/aoc-enterprise-pilot-template/services/pilot-export-package-binding-service.ts`,

@@ -14,7 +14,7 @@
 
 ## Context
 
-AOC Enterprise governed three exercises of authority over a governed asset:
+Soberanía Enterprise governed three exercises of authority over a governed asset:
 representing rights externally, encumbering them, and permitting their
 exercise. All three leave the question "who holds this right?" untouched.
 
@@ -31,7 +31,7 @@ generalization questions three enforcements had left open.
 > a specified current holder to a specified recipient, under defined governance
 > conditions.
 
-AOC governs the authority to transfer. It does not transfer, does not update
+Soberanía governs the authority to transfer. It does not transfer, does not update
 any register, and does not learn that anything moved except by being told.
 
 ## The decisions that were not forced by symmetry
@@ -127,16 +127,16 @@ execution against a reported acceptance reference, exactly as
 `externalAgreementReferenceRequired` works for licences. A deployment that
 wants acceptance to be a governed prerequisite rather than an evidenced fact
 expresses it through the Approval Runtime, which already models exactly that.
-AOC runs no acceptance workflow.
+Soberanía runs no acceptance workflow.
 
 ### Consideration is a reference, never an amount
 
 Transfers frequently have a price, and this is the point at which it would be
-easy to start modelling one. AOC does not. `considerationEvidenceRequired`
+easy to start modelling one. Soberanía does not. `considerationEvidenceRequired`
 requires that a *reference* be reported; the reference is opaque; **there is no
 amount field anywhere in this action**, `amount`/`currency` are deliberately
 not populated on the Kernel request, and no arithmetic is performed on
-consideration anywhere. AOC computes no price, holds no funds, escrows nothing
+consideration anywhere. Soberanía computes no price, holds no funds, escrows nothing
 and settles nothing.
 
 ### Lifecycle evidence is observation, and restores nothing
@@ -145,7 +145,7 @@ and settles nothing.
 append-only against a specific movement, never as a mandate status.
 
 The strictest rule this action has: **a reported reversal does not decrement
-the transferred scope or the execution count.** AOC cannot verify that an
+the transferred scope or the execution count.** Soberanía cannot verify that an
 external movement was undone, and decrementing would manufacture fresh transfer
 capacity over a right already recorded as having left. The temptation to break
 this rule is greater here than for any sibling, and it is refused in both store
@@ -179,9 +179,9 @@ restart:
   so a second `TRANSFER` request for the same 25% is still `allowed` at the
   governance layer. Only the per-mandate conservation rule stops the same
   portion moving twice, and that rule is scoped to one mandate: **nothing in
-  AOC knows that Party A now holds 25% less.**
+  Soberanía knows that Party A now holds 25% less.**
 - **No surface exposes a current holder**, and the evidence lineage
-  deliberately declines to derive one. AOC never verified the movement and
+  deliberately declines to derive one. Soberanía never verified the movement and
   holds no ownership state to update.
 
 The only thing that changes any of this is an explicit administrative act —
@@ -197,7 +197,7 @@ Three options were considered.
 **B. Enterprise maintains a derived current-holder state.** — rejected.
 **C. A Protocol-level transition.** — rejected as not yet required.
 
-Option B fails on the same principle the whole action is built on: AOC never
+Option B fails on the same principle the whole action is built on: Soberanía never
 verified that the movement happened. A derived holder state would present an
 unverified external report as a governance fact, and every subsequent
 authorization would silently rest on it. It is the highest-consequence version
@@ -249,7 +249,7 @@ What changed, precisely:
 
 What did **not** change, and why the reasoning above still holds:
 
-- **Option B is still rejected.** Authority does not move because AOC believes
+- **Option B is still rejected.** Authority does not move because Soberanía believes
   a movement occurred; it moves because this deployment *accepted evidence* of
   one, and the resulting state says exactly that and no more. The position
   asserts recognized governed authority, never legal title. That is a different
@@ -258,7 +258,7 @@ What did **not** change, and why the reasoning above still holds:
 - **Mandate issuance still moves nothing.** Permission that is never exercised
   changes no authority.
 - **Lifecycle evidence still moves nothing.** A reported reversal produces no
-  inverse transition; that would let an external system rewrite AOC's authority
+  inverse transition; that would let an external system rewrite Soberanía's authority
   state by reporting.
 - **No transfer-specific write into the Authority Graph exists.**
   `AuthorityGrant` is unmodified. The transition is a separate, generic
@@ -361,7 +361,7 @@ Answered separately, per the six questions:
 - **E. Does the updated relationship need to cross Enterprise deployments?**
   **Not demonstrated.** Every identity in this action is opaque and
   deployment-local. A cross-deployment transfer — where the recipient is
-  governed by a *different* AOC Enterprise instance — would be a genuine
+  governed by a *different* Soberanía Enterprise instance — would be a genuine
   cross-sovereignty requirement, and this implementation produced no such case.
 - **F. Does Protocol therefore need a new primitive?** **Not yet.**
 
@@ -385,7 +385,7 @@ fact. The foundation answers it **yes**, by narrowing the claim rather than by
 acquiring verification. A position asserts recognized governed authority within
 this deployment, explicitly not legal title, and every position can name the
 basis it rests on. That is a proposition Enterprise can own honestly and one
-that is sufficient for AOC's own subsequent enforcement.
+that is sufficient for Soberanía's own subsequent enforcement.
 
 The thresholds that would make this a Protocol question are unchanged and still
 unmet: an authority position having to cross Enterprise boundaries, two
@@ -400,7 +400,7 @@ installation.
   "Post-transfer authority".)*
 - **No right-scoped authority.** The finding above. *(Resolved — see
   "Resolution status" under "Authority-source right vs action-target right".)*
-- **Transferor holdings are not tracked.** AOC knows how much each *mandate*
+- **Transferor holdings are not tracked.** Soberanía knows how much each *mandate*
   authorized and how much moved under it. It does not know how much a party
   holds, so two mandates can each authorize 25% of the same interest.
   *(Partially resolved.* Holdings are now tracked, and a transferor's remaining

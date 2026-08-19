@@ -131,7 +131,7 @@ export const PMFREAK_ACTIONS: readonly PMFreakAgentAction[] = [
     actionId: 'pmfreak.action.billing.mark_ready',
     capabilityId: 'pmfreak.capability.billing.mark_ready',
     title: 'Mark milestone billing-ready',
-    description: 'Mark a milestone as ready for billing within AOC Enterprise. This does not create an invoice, send an invoice, or release payment, and does not certify customer acceptance.',
+    description: 'Mark a milestone as ready for billing within Soberanía Enterprise. This does not create an invoice, send an invoice, or release payment, and does not certify customer acceptance.',
     category: 'billing',
     sensitivity: 'critical',
     requiresEvidenceIds: ['pmfreak.evidence.deliverable_evidence', 'pmfreak.evidence.customer_acceptance_record'],

@@ -1,4 +1,4 @@
-# AOC Enterprise Host — Operational Runbooks (v1.0.0)
+# Soberanía Enterprise Host — Operational Runbooks (v1.0.0)
 
 One runbook per operational situation. Prerequisite reading:
 `docs/operations/DEPLOYMENT_GUIDE_V1.md` (configuration, architecture),

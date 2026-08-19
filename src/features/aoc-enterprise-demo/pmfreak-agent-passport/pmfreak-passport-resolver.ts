@@ -76,7 +76,7 @@ function dedupe(values: readonly string[]): string[] {
 }
 
 const SAFE_FRAMING_WARNING =
-  'This decision reflects AOC Enterprise passport, authority-scope, capability, evidence, and approval gating only. It is not legal advice, not a compliance certification, and not a guarantee of contractual, billing, or invoice validity.';
+  'This decision reflects Soberanía Enterprise passport, authority-scope, capability, evidence, and approval gating only. It is not legal advice, not a compliance certification, and not a guarantee of contractual, billing, or invoice validity.';
 
 export function resolvePMFreakAgentPassportAction(input: ResolvePMFreakAgentPassportActionInput, registry: PMFreakAgentPassportRegistry): PMFreakAgentPassportResolution {
   const warnings: string[] = [SAFE_FRAMING_WARNING];

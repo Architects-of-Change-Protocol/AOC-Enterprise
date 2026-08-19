@@ -1,4 +1,4 @@
-# AOC Agent Passport Model (PR-006)
+# Soberanía Agent Passport Model (PR-006)
 
 Canonical contracts live in `src/enterprise/passport/contracts.ts`. This
 document is the field-level reference; the source file is authoritative.

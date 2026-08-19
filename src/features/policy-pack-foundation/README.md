@@ -1,10 +1,10 @@
-# AOC Policy Pack Foundation Alignment & Manifest Standard v1
+# Soberanía Policy Pack Foundation Alignment & Manifest Standard v1
 
 The Domain Policy Pack Runtime answers "what does this domain, jurisdiction,
 or customer require?" The Evidence / Source / Citation Runtime, Approval
 Runtime, and Verifiable Export Package each answer a piece of "how is that
 requirement backed and audited?" None of them answer the question that shows
-up the moment AOC needs more than one kind of pack talking to each other:
+up the moment Soberanía needs more than one kind of pack talking to each other:
 
 **What is a policy pack, structurally -- regardless of whether it is a
 global baseline, a legal baseline, a jurisdiction pack, a domain pack, a
@@ -66,7 +66,7 @@ is always `reference_only` (or `not_available` if the underlying capability
 is missing/disabled) -- because this module never actually invokes those
 runtimes. Deep integration wiring is out of scope for this PR by design.
 
-`Jurisdiction Pack Runtime` is marked `available`: `AOC Rebase / Align
+`Jurisdiction Pack Runtime` is marked `available`: `Soberanía Rebase / Align
 Jurisdiction Pack Runtime with Policy Pack Foundation v1` added a real module
 at `src/features/domain-policy-pack-runtime/jurisdiction` that specializes
 this Foundation's manifest, validation-status, safe-framing, no-overclaim,
@@ -86,7 +86,7 @@ single deterministic snapshot (`aligned` / `aligned_with_reference_only_integrat
 
 ### Policy Pack Manifest Standard (`manifest/`)
 
-`PolicyPackManifest` is the universal shape every AOC policy pack carries --
+`PolicyPackManifest` is the universal shape every Soberanía policy pack carries --
 identity (`id`/`name`/`version`), classification (`kind`, `domain`, `scope`),
 trust (`status: PolicyPackValidationStatus`, `sourceStatus`), safe framing
 (`safeFraming`), dependencies (`extendsPackIds`/`requiredPackIds`/`optionalPackIds`),
@@ -156,19 +156,19 @@ inadvertently claiming `"HIPAA compliant"`, `"fully secure"`, or `"unbiased
 AI"` -- applies to security packs, privacy packs, healthcare packs, finance
 packs, and AI-governance packs, not just legal packs.
 
-**Source-provided claims are labeled, never adopted as AOC's own
+**Source-provided claims are labeled, never adopted as Soberanía's own
 conclusion.** `evaluatePolicyPackClaimSafety(value, { allowedSourceProvidedClaims })`
 lets a specific, explicitly-allowed phrase through, but always emits a
-warning noting it is present as a source-provided claim -- AOC itself never
+warning noting it is present as a source-provided claim -- Soberanía itself never
 asserts compliance, security, or safety outcomes; at most it can pass through
 a claim that a customer, counsel, or domain expert has explicitly and
 narrowly provided, labeled as theirs.
 
 ## Key safety rule
 
-> AOC must not emit compliance, legal, security, privacy, healthcare,
+> Soberanía must not emit compliance, legal, security, privacy, healthcare,
 > finance, or AI-safety overclaims unless explicitly sourced and validated.
-> Even then, AOC should label such claims as source-provided, not as AOC's
+> Even then, Soberanía should label such claims as source-provided, not as Soberanía's
 > own conclusion.
 
 ## Relationship to other modules

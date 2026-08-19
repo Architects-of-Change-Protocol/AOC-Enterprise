@@ -68,7 +68,7 @@ describe('GovernedRightsScope', () => {
 
     assert.equal(governedRightsScopeEquals(proportional, unitized), false);
     assert.equal(governedRightsScopeWithin(unitized, proportional), false, 'a unit count is never inside a proportional share');
-    assert.equal(governedRightsScopeWithin(unitized, otherUnit), false, 'AOC holds no conversion between two opaque denominations');
+    assert.equal(governedRightsScopeWithin(unitized, otherUnit), false, 'Soberanía holds no conversion between two opaque denominations');
     assert.equal(governedRightsScopeSum(proportional, unitized), null);
     assert.equal(governedRightsScopeSum(unitized, otherUnit), null);
   });

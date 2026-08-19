@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { createAocPMFreakGovernanceIntakeError } from '../aoc-pmfreak-governance-intake-errors.js';
 
-describe('AOC PMFreak Governance Request Intake -- error model', () => {
+describe('Soberanía PMFreak Governance Request Intake -- error model', () => {
   it('builds a safe, structured error', () => {
     const error = createAocPMFreakGovernanceIntakeError('invalid_request', 'The request was missing a requestId.');
     assert.equal(error.code, 'invalid_request');

@@ -2,7 +2,7 @@
   "name": "@aoc-enterprise/governed-authority",
   "version": "0.1.0",
   "private": true,
-  "description": "Enterprise-owned, action-neutral vocabulary for governed authority state: the right-scoped authority position AOC recognizes an actor as holding, the basis by which it arose, the append-only transition that moves it, the holder-bound representative authority by which one party may exercise another's position, the pre-execution reservation and post-execution encumbrance that account for how much of it stands committed, and the two coverage questions a governed action's authority check asks. Pure data only: no store, no resolver implementation, no persistence, no policy engine, no orchestration, no claim of legal ownership, and no claim of legal agency.",
+  "description": "Enterprise-owned, action-neutral vocabulary for governed authority state: the right-scoped authority position Soberanía recognizes an actor as holding, the basis by which it arose, the append-only transition that moves it, the holder-bound representative authority by which one party may exercise another's position, the pre-execution reservation and post-execution encumbrance that account for how much of it stands committed, and the two coverage questions a governed action's authority check asks. Pure data only: no store, no resolver implementation, no persistence, no policy engine, no orchestration, no claim of legal ownership, and no claim of legal agency.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { enrollAgentAction } from './actions';
 
 export const metadata = {
-  title: 'Enroll Agent — AOC Agent Passport',
+  title: 'Enroll Agent — Soberanía Agent Passport',
 };
 
 interface Props {

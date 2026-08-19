@@ -76,7 +76,7 @@ provider's own operation resolved.
   `status`, `issuedAt`, `expiresAt`, `decisionRef`, `obligationRefs`, ...).
 - **Everything on `EnterpriseUsageEvent`** -- `id`, `eventType`, `resource`,
   `principalId`, `occurredAt`, `correlationId`, `metadata?`,
-  `evidenceRefs?`, `description?` -- is owned by AOC Enterprise
+  `evidenceRefs?`, `description?` -- is owned by Soberanía Enterprise
   (`@aoc-enterprise/usage-event`).
 
 ## Why composition by reference, not embedding
@@ -402,7 +402,7 @@ exist -- listed for future sequences, **not migrated by this change**:
 
 ## Install / build
 
-Part of the AOC Enterprise workspace:
+Part of the Soberanía Enterprise workspace:
 
 ```bash
 npm run build --workspace @aoc-enterprise/usage-event

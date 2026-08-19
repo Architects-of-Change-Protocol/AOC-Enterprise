@@ -2,7 +2,7 @@
 
 > STATUS: DRAFT — PENDING PROFESSIONAL LEGAL REVIEW.
 
-**Product:** AOC Enterprise
+**Product:** Soberanía Enterprise
 
 **Owner:** Onchainfest LLC
 
@@ -10,34 +10,34 @@
 
 ## Nature of this software
 
-AOC Enterprise is proprietary software owned by Onchainfest LLC. It is
+Soberanía Enterprise is proprietary software owned by Onchainfest LLC. It is
 not open source software. Its use, copying, modification, and
 distribution are governed by the terms in `LICENSE`, or by a separate
 written commercial agreement where one exists.
 
-## Relationship to AOC Protocol
+## Relationship to Soberanía Protocol
 
-AOC Enterprise is the commercial, operational, and deployable
-implementation layer that consumes AOC Protocol — a separate,
+Soberanía Enterprise is the commercial, operational, and deployable
+implementation layer that consumes Soberanía Protocol — a separate,
 independently maintained project defining public specifications,
 primitives, and standards for programmable consent, capability tokens,
 scoped access, identity, and audit event contracts.
 
-AOC Protocol is a distinct repository
+Soberanía Protocol is a distinct repository
 (`Architects-of-Change-Protocol/Architects_of_Change_Protocol`) with its
 own governance and licensing terms, which this document does not modify,
-restate, or supersede. AOC Enterprise consumes AOC Protocol's published
+restate, or supersede. Soberanía Enterprise consumes Soberanía Protocol's published
 contracts as a peer dependency (`@aoc/protocol`); it does not own,
-redefine, or claim AOC Protocol's specifications.
+redefine, or claim Soberanía Protocol's specifications.
 
-The specification layer (AOC Protocol) and the commercial implementation
-layer (AOC Enterprise) are kept intentionally separate. For a detailed
+The specification layer (Soberanía Protocol) and the commercial implementation
+layer (Soberanía Enterprise) are kept intentionally separate. For a detailed
 technical and legal breakdown of what belongs to each layer, see
 `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md`.
 
 ## Third-party components
 
-AOC Enterprise incorporates third-party open source dependencies, each
+Soberanía Enterprise incorporates third-party open source dependencies, each
 of which remains subject to its own license. Onchainfest LLC claims no
 ownership over these components. See:
 

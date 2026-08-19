@@ -6,7 +6,7 @@ import type {
 
 /**
  * PMFreak's six conversational-brain agent roles. This foundation package
- * issues one real AOC `AgentPassport` per enrolled instance of one of these
+ * issues one real Soberanía `AgentPassport` per enrolled instance of one of these
  * roles -- see `services/pmfreak-agent-enrollment-builder.ts`.
  */
 export type PMFreakAgentRole =
@@ -18,7 +18,7 @@ export type PMFreakAgentRole =
   | 'change_control';
 
 /**
- * Per-role governance metadata used to derive a real AOC `AgentEnrollmentInput`
+ * Per-role governance metadata used to derive a real Soberanía `AgentEnrollmentInput`
  * (see `packages/agent-governance/src/enrollment/enrollment-contracts.ts`) for
  * a PMFreak agent of this role. `riskTier`, `autonomyLevel`, and
  * `humanOversightRequirement` reuse `@aoc-enterprise/agent-governance`'s real,

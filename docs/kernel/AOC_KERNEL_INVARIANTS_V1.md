@@ -1,4 +1,4 @@
-# AOC Kernel Invariants v1
+# Soberanía Kernel Invariants v1
 
 These invariants are documented only where the current implementation (as reconstructed in
 `AOC_KERNEL_CURRENT_EXECUTION_MODEL.md`) actually enforces them. Where the runtime is ambiguous or only partially
@@ -42,7 +42,7 @@ test suite instead.
    first-failure-wins over a fixed, ordered chain — there is no "any policy allows -> allow" logic anywhere. The
    one explicit precedence rule that does exist is documented in code
    (`action-enforcement/policies/index.ts:14-24`): a policy pack `allow` can only ever *preserve* an outcome every
-   core AOC layer already reached independently; it can never *create* an allow a core layer denied.
+   core Soberanía layer already reached independently; it can never *create* an allow a core layer denied.
 
 7. **Required evidence must be present before a final allowed decision.**
    `EvidencePolicy` (recognition-runtime) and `EvidenceRequiredPolicy` (action-enforcement) both independently gate
@@ -80,6 +80,6 @@ test suite instead.
 - **Two separate audit trails, not one.** Recognition-runtime's `EvidenceLedger` and action-enforcement's
   `EnforcementLedger` are independent today. The kernel trace (`KernelTrace`) is a *new*, unified, read-only view
   built by reading both decisions' already-produced data — it does not merge or persist a new combined ledger.
-- **The `EnforcementProof` hash chain is not the AOC Evidence Bundle.** It is a real, working hash-chained proof of
+- **The `EnforcementProof` hash chain is not the Soberanía Evidence Bundle.** It is a real, working hash-chained proof of
   each terminal decision, but has no export format, cross-runtime attestation, or durable persistence. The kernel
   does not claim otherwise.

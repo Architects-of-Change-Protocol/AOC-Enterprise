@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakGovernanceRequestIntakeConfig } from '../aoc-pmfreak-governance-intake-config.js';
 import { AOC_PMFREAK_GOVERNANCE_REQUEST_INTAKE_ID } from '../aoc-pmfreak-governance-intake-constants.js';
 
-describe('AOC PMFreak Governance Request Intake -- config defaults', () => {
+describe('Soberanía PMFreak Governance Request Intake -- config defaults', () => {
   it('defaults to a safe-by-default configuration', () => {
     const config = createAocPMFreakGovernanceRequestIntakeConfig();
 
@@ -32,7 +32,7 @@ describe('AOC PMFreak Governance Request Intake -- config defaults', () => {
   });
 });
 
-describe('AOC PMFreak Governance Request Intake -- config cannot enable mutation/execution/writeback', () => {
+describe('Soberanía PMFreak Governance Request Intake -- config cannot enable mutation/execution/writeback', () => {
   it('forces allowPMFreakMutations to false and warns when a caller requests true', () => {
     const config = createAocPMFreakGovernanceRequestIntakeConfig({ allowPMFreakMutations: true });
 

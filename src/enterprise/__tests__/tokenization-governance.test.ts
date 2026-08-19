@@ -320,7 +320,7 @@ describe('TOKENIZE — revocation and expiration', () => {
     assert.equal(revoked.revocation.executionsAtRevocation, 1);
 
     // Already-recorded external issuance evidence survives revocation intact:
-    // AOC withdrew authority, it did not reach into an external system.
+    // Soberanía withdrew authority, it did not reach into an external system.
     const executions = await world.service.listExecutions(TENANT_A_CONTEXT, mandateId);
     assert.equal(executions.length, 1);
     assert.equal(executions[0]?.externalTransactionReference, 'external-tx-before-revocation');
@@ -582,9 +582,9 @@ describe('TOKENIZE — request validation', () => {
 });
 
 /**
- * Evidence classification: what AOC authorized, versus what an external
+ * Evidence classification: what Soberanía authorized, versus what an external
  * system later did about it. The `TokenizationMandate` is produced and owned
- * by AOC Enterprise, so it is an `authorization_artifact`; the token issuance
+ * by Soberanía Enterprise, so it is an `authorization_artifact`; the token issuance
  * report describes someone else's action and stays an `execution_record`.
  *
  * These tests are about classification only — every enforcement semantic
@@ -624,7 +624,7 @@ describe('TOKENIZE — governance evidence classification', () => {
     assert.equal(executionReference.referenceType, 'execution_record');
     assert.notEqual(executionReference.referenceType, 'authorization_artifact');
 
-    // One aggregate, both categories, distinguishable: decision -> what AOC
+    // One aggregate, both categories, distinguishable: decision -> what Soberanía
     // authorized -> what an external system reported doing.
     const byType = (record?.references ?? []).reduce<Record<string, string[]>>((acc, reference) => {
       (acc[reference.referenceType] ??= []).push(reference.externalId);

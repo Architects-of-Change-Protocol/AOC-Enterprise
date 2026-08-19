@@ -12,7 +12,7 @@ import type { AocPMFreakRemoteGovernanceEndpointRequest } from './aoc-pmfreak-re
 
 /**
  * Deterministic demo request/response fixtures, layered on top of the
- * already-merged AOC PMFreak Governance Request Intake's own fixtures so
+ * already-merged Soberanía PMFreak Governance Request Intake's own fixtures so
  * request and response fixtures can never drift out of sync with each
  * other. Every id below is a fake, opaque literal -- never a real customer
  * name, Datasys project id, email, contract number, or invoice number.

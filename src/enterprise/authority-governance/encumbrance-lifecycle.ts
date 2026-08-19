@@ -114,7 +114,7 @@ export function governedActionEncumbersAuthority(action: string): boolean {
 //
 // Exactly one entry, and the narrowness is the point. `'release-encumbrance'`
 // is the fifth governed action, introduced by this phase, and it is the only
-// action whose successful execution AOC will accept as grounds for a
+// action whose successful execution Soberanía will accept as grounds for a
 // `'governed-execution'` release basis. `'collateralize'` is emphatically not
 // here: an arrangement's own mandate cannot discharge the constraint that
 // arrangement created, or the constraint would be worth nothing.
@@ -146,7 +146,7 @@ export function governedActionReleasesEncumbrance(action: string): boolean {
  *
  * Shared by both store backends so neither can drift into a laxer reading, and
  * expressed over the stored constraint rather than over anything the caller
- * restated: everything checkable here is checked against the record AOC
+ * restated: everything checkable here is checked against the record Soberanía
  * already holds.
  *
  * What it enforces, and why each one is load-bearing:
@@ -305,7 +305,7 @@ export function sumActiveEncumbrances(
  * Summing the reservation gross would subtract the encumbered instalment twice
  * and understate capacity. Dropping the reservation entirely on the first
  * instalment would free the 3 000 the mandate may still legitimately execute,
- * let a competitor take it, and leave AOC unable to record the constraint when
+ * let a competitor take it, and leave Soberanía unable to record the constraint when
  * that execution arrives — a persistent arrangement existing externally with no
  * governed state behind it. Netting is the only reading that is right at every
  * point of the lifecycle.
@@ -463,7 +463,7 @@ export function computeCapacity(
  * The structural invariant, and it is worth being exact about what it is not.
  * It is **not** the business rule "collateralized authority cannot be
  * transferred": a holder with 5 000 bp and a 4 000 bp constraint may still
- * transfer 1 000. It is the narrower, structural claim that AOC may not end up
+ * transfer 1 000. It is the narrower, structural claim that Soberanía may not end up
  * holding a persistent constraint over authority the holder no longer
  * possesses — because such a record refers to nothing, and every capacity
  * question asked afterwards reports `overencumbered`.
@@ -492,7 +492,7 @@ export function assertRemainingScopeCoversEncumbrances(
   if (!governedRightsScopeWithin(constrained, remaining)) {
     throw new AuthorityGovernanceError(
       'GOVERNED_AUTHORITY_ENCUMBRANCE_UNCOVERED',
-      'This transition would leave the holder with less governed authority than the persistent constraints already standing over it; AOC does not hold a constraint over authority a holder no longer possesses, and does not silently move one to a recipient.',
+      'This transition would leave the holder with less governed authority than the persistent constraints already standing over it; Soberanía does not hold a constraint over authority a holder no longer possesses, and does not silently move one to a recipient.',
       { ...context, remaining: serializeGovernedRightsScope(remaining), encumbered: serializeGovernedRightsScope(constrained) },
     );
   }

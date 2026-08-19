@@ -8,7 +8,7 @@ function byId<T extends { readonly id: string }>(a: T, b: T): number {
 
 /**
  * Single source of truth for pilot-template-runtime records. Mirrors the
- * store pattern used across the other AOC feature runtimes (e.g.
+ * store pattern used across the other Soberanía feature runtimes (e.g.
  * `evidence-source-runtime/services/evidence-store.ts`): higher-level
  * services read/write through this store, and it never computes business
  * rules itself.

@@ -1,4 +1,4 @@
-# AOC Enterprise Agent Passport Runtime v1 (PR-006)
+# Soberanía Enterprise Agent Passport Runtime v1 (PR-006)
 
 `src/enterprise/passport/` — the governed identity, authority, status,
 provenance, and evidence-reference record of an agent operating within an
@@ -30,7 +30,7 @@ Identify   <-- PR-006
 ## Architecture
 
 ```
-AOC Enterprise
+Soberanía Enterprise
     │
     ├── Kernel
     ├── Governance Store
@@ -89,9 +89,9 @@ trust scoring, no reputation, no Assurance certification.
 
 ## How it differs from `packages/agent-governance` (the commercial SaaS Passport)
 
-| | `packages/agent-governance` | AOC Enterprise Agent Passport Runtime |
+| | `packages/agent-governance` | Soberanía Enterprise Agent Passport Runtime |
 |---|---|---|
-| Purpose | Commercial, signed, QR-verifiable credential | Governed identity/history aggregate for AOC Enterprise |
+| Purpose | Commercial, signed, QR-verifiable credential | Governed identity/history aggregate for Soberanía Enterprise |
 | Storage | Direct-mutation row (SaaS SQLite) | Append-only events, reconstructed state |
 | Governance/Evidence integration | None | References Governance Records and Evidence Bundles by id+digest |
 | Tenant model | Registry/purchase-scoped | `PassportAccessContext` (system / organizationId), same shape as the Governance Store's |

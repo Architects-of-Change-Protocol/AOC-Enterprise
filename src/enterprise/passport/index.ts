@@ -1,5 +1,5 @@
 /**
- * AOC Enterprise Agent Passport Runtime v1 (PR-006) -- the governed
+ * Soberanía Enterprise Agent Passport Runtime v1 (PR-006) -- the governed
  * identity, authority, status, provenance, and evidence-reference record of
  * an agent operating within an organization. See
  * `docs/enterprise/AOC_AGENT_PASSPORT_RUNTIME.md`.

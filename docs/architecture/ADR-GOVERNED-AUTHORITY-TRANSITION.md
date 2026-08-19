@@ -35,7 +35,7 @@ scoping was achievable only as an untyped string convention over
 while naming its own scope, because nothing connected the scope string to the
 right the action was actually moving.
 
-Together these say AOC could answer "is Actor A authorized to perform Action X
+Together these say Soberanía could answer "is Actor A authorized to perform Action X
 on Resource R?" and could not answer "which governed right does Actor A
 control, how much of it, how did that arise, and how does completed execution
 change it?"
@@ -56,7 +56,7 @@ src/kernel/                            one optional provider port,
 
 ## What a position asserts, and what it does not
 
-> **ASSERTS:** According to the governance state and evidence this AOC
+> **ASSERTS:** According to the governance state and evidence this Soberanía
 > Enterprise deployment recognizes, Actor A has authority to exercise Scope S
 > of Right R over Resource X, within a stated effective window.
 
@@ -64,7 +64,7 @@ src/kernel/                            one optional provider port,
 > registry truth, or recognition by any authority outside this deployment.
 
 There is deliberately no `OwnershipLedger`, `OwnershipRecord`, `LegalOwner` or
-`TitleRegistry`. The bounded proposition is strong enough for AOC's own
+`TitleRegistry`. The bounded proposition is strong enough for Soberanía's own
 subsequent enforcement and weak enough to be true. A deployment whose evidence
 is wrong holds a position that is wrong in exactly the way its
 `AuthorityGrant`s already could be — this changes the *subject* of the claim,
@@ -408,7 +408,7 @@ Not implemented, and the omission is the decision. Lifecycle evidence reporting
 a movement as `reversed` or `corrected` does **not** produce an inverse
 transition. Reversing recognized authority is a governance act requiring its
 own authority basis, and inferring it from an observation would let an external
-system rewrite AOC's authority state by reporting. Deferred with the semantics
+system rewrite Soberanía's authority state by reporting. Deferred with the semantics
 stated rather than left ambiguous.
 
 Likewise there is no authority-revocation API: withdrawing an actor's
@@ -505,7 +505,7 @@ legitimately represents a holder. Also not reached. See
 
 ## Consequences
 
-AOC Enterprise no longer merely governs isolated actions. It maintains governed
+Soberanía Enterprise no longer merely governs isolated actions. It maintains governed
 continuity of authority across them:
 
 ```

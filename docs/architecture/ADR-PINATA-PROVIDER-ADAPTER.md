@@ -1,9 +1,9 @@
 # ADR: Pinata Provider Adapter (R005.C)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
-- Sequence: R005.C, AOC Architectural Consolidation Program
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Deciders: Soberanía Enterprise architecture
+- Sequence: R005.C, Soberanía Architectural Consolidation Program
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/pinata-provider-adapter-oxtgdr`
 - Related: `ADR-ACCESS-LIFECYCLE.md` (R005.0, frozen input), `ADR-PROVIDER-ADAPTER-CONTRACT.md`
   (R005.A, frozen input), `ADR-PROVIDER-TRANSLATION-MODEL.md` (R005.B, frozen
@@ -258,7 +258,7 @@ output.
 | `npm test --workspace @aoc-enterprise/pinata-adapter` | Compiled `__tests__` under `tsconfig.test.json`, ran `node --test` against the compiled output (**20/20 tests passed, 0 failed**, across 8 suites), then ran `scripts/check-pinata-boundary.mjs` (passed: `pinata` imported only by `pinata-provider-client.ts`). |
 | `npm run typecheck` (root, `tsc -b --pretty false`) | Passed with no output (clean). |
 | `npm run lint` (root: `check-node16-imports.mjs` + `lint-architecture.mjs` + `lint-public-surface.mjs`) | `Node16 import and boundary checks passed` / `Architecture lint passed` / `Public surface lint passed`. |
-| `node scripts/check-aoc-boundaries.mjs` | `AOC boundary check passed`. |
+| `node scripts/check-aoc-boundaries.mjs` | `Soberanía boundary check passed`. |
 | `node scripts/check-duplicate-semantic-contracts.mjs` | Reports the same three pre-existing violations already documented as pre-existing by `ADR-PROVIDER-TRANSLATION-MODEL.md` Phase 14 (`EnterpriseResourceEnvelope`/`SerializedEnterpriseResourceEnvelope` in `access-decision` vs. `resource-envelope`; `AgentPassport` in `agent-governance` vs. `enterprise-host-sdk`) -- none introduced by `packages/pinata-adapter`. |
 | `node scripts/validate-publishability.mjs` | `Publishability validation completed successfully` (1413 shipped JS artifacts scanned, none import `@aoc/protocol` at runtime). |
 | `npm test --workspaces --if-present` (every workspace, including the new package) | Exit code 0 across all workspaces; no failures. |

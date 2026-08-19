@@ -54,7 +54,7 @@ import {
  * governance, no authorization. See the package README for the full design
  * rationale.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/provider-conformance-suite`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/provider-conformance-suite`).
  */
 export const ENTERPRISE_PROVIDER_CONFORMANCE_SUITE_SCHEMA_VERSION = '1.0.0' as const;
 

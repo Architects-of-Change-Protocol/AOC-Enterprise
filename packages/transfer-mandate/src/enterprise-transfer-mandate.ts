@@ -48,13 +48,13 @@ import type { SerializedEnterpriseTransferRequest } from './enterprise-transfer-
  *   between two mandates, not a property of either.
  * - **A completed transfer is a fact about the world, not about this
  *   authorization.** A registry reporting that a movement settled does not
- *   change what AOC authorized, and a `'completed'` status would quietly turn
+ *   change what Soberanía authorized, and a `'completed'` status would quietly turn
  *   an unverified external report into a governance conclusion. The strongest
  *   temptation this action creates is to let external completion write back
  *   into governance state, and it is refused throughout.
  * - **A reported reversal is likewise not a status, and it restores nothing.**
  *   Recording that an external system reversed a transfer does not decrement
- *   the transferred scope, because AOC cannot verify the reversal and must not
+ *   the transferred scope, because Soberanía cannot verify the reversal and must not
  *   manufacture fresh transfer capacity from an unverified report. See
  *   `EnterpriseTransferLifecycleEvidence`.
  */
@@ -97,22 +97,22 @@ export type EnterpriseTransferMandateStatus = GovernedAuthorizationStatus;
  * A mandate authorizes; it never executes and never concludes. Nothing here
  * moves a right, updates a registry, passes title, settles consideration, or
  * contacts any external system. **The existence of a mandate is not a claim
- * that anything was transferred**: until execution evidence is recorded, AOC's
+ * that anything was transferred**: until execution evidence is recorded, Soberanía's
  * position is that it authorized the movement and does not know whether the
  * movement happened.
  *
  * And even after execution evidence exists, this record makes no claim that
- * the recipient may now do anything inside AOC. Authority to act is held by
+ * the recipient may now do anything inside Soberanía. Authority to act is held by
  * the Authority Graph, and nothing in this contract or the runtime that
  * persists it writes to it. That is a deliberate, documented architectural
  * finding rather than an omission -- see
  * `docs/architecture/ADR-TRANSFER-ACTION.md`, "Post-transfer authority".
  *
  * Revoking a mandate withdraws the authority to move *further* rights under
- * it. It makes no claim that an already-executed movement was undone -- AOC
+ * it. It makes no claim that an already-executed movement was undone -- Soberanía
  * cannot reverse external state it does not control.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/transfer-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/transfer-mandate`).
  */
 export interface EnterpriseTransferMandate extends GovernedAuthorizationArtifact<EnterpriseTransferTerms> {
   /** Re-declared as this action's own literal so a serialized mandate names its schema on its face and cannot be replayed through a sibling action's contract. */
@@ -142,7 +142,7 @@ export interface EnterpriseTransferExerciseAttempt {
   readonly registry?: string;
   /** Whether the external system reported the recipient's acceptance. Measured against `terms.constraints.recipientAcceptanceRequired`. */
   readonly hasRecipientAcceptance?: boolean;
-  /** Whether the external system reported evidence of consideration. Measured against `terms.constraints.considerationEvidenceRequired`. AOC never learns an amount. */
+  /** Whether the external system reported evidence of consideration. Measured against `terms.constraints.considerationEvidenceRequired`. Soberanía never learns an amount. */
   readonly hasConsiderationEvidence?: boolean;
   /** Whether the external system reported an agreement reference. Measured against `terms.constraints.externalAgreementReferenceRequired`. */
   readonly hasExternalAgreementReference?: boolean;
@@ -339,7 +339,7 @@ export function enterpriseTransferMandateAuthorizes(
       authorized: false,
       code: 'RECIPIENT_ACCEPTANCE_REQUIRED',
       reason:
-        "This transfer mandate requires the recipient's acceptance to be evidenced with the movement; AOC records that reference and never interprets, resolves, or verifies what it names.",
+        "This transfer mandate requires the recipient's acceptance to be evidenced with the movement; Soberanía records that reference and never interprets, resolves, or verifies what it names.",
     };
   }
 
@@ -348,7 +348,7 @@ export function enterpriseTransferMandateAuthorizes(
       authorized: false,
       code: 'CONSIDERATION_EVIDENCE_REQUIRED',
       reason:
-        'This transfer mandate requires evidence of consideration to be reported with the movement. AOC records that a reference was produced; it computes no price, holds no funds, and settles nothing.',
+        'This transfer mandate requires evidence of consideration to be reported with the movement. Soberanía records that a reference was produced; it computes no price, holds no funds, and settles nothing.',
     };
   }
 
@@ -487,7 +487,7 @@ export function validateEnterpriseTransferMandate(candidate: unknown): Enterpris
   if (candidate.expiresAt === undefined) {
     errors.push({
       code: 'MISSING_EXPIRES_AT',
-      message: 'expiresAt is required; an authorization with no recorded expiry is not a state this contract can represent. It bounds AOC authority to move rights, and says nothing about rights already moved.',
+      message: 'expiresAt is required; an authorization with no recorded expiry is not a state this contract can represent. It bounds Soberanía authority to move rights, and says nothing about rights already moved.',
     });
   } else if (!isTransferTimestamp(candidate.expiresAt)) {
     errors.push({ code: 'INVALID_EXPIRES_AT', message: 'expiresAt must be an ISO 8601 timestamp string.' });

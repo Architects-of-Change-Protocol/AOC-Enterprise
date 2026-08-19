@@ -1,4 +1,4 @@
-# AOC Kernel Extraction — Implementation Note
+# Soberanía Kernel Extraction — Implementation Note
 
 Pre-coding analysis required before any extraction work. Written from direct
 reading of the current implementation, not from assumption.
@@ -110,7 +110,7 @@ Three decision-shaped objects exist at different layers, and the kernel must not
   `enforcement_proof_created`, ...).
 - `EnforcementProofService` creates a SHA-256, previous-hash-chained `EnforcementProof` for every terminal outcome
   (allowed or not) — this is the closest existing analog to an "evidence bundle", but it is not the full
-  AOC Evidence Bundle referenced in the mission brief.
+  Soberanía Evidence Bundle referenced in the mission brief.
 - `IdempotencyService` records success/failure against the caller-supplied idempotency key.
 - Recognition Runtime's own `EvidenceLedger` records a parallel `recognition_decision` audit event.
 

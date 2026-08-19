@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakRemoteGovernanceHttpAdapterPlaceholder } from '../aoc-pmfreak-remote-governance-http-adapter.js';
 import { AOC_PMFREAK_REMOTE_GOVERNANCE_DEFAULT_PATH } from '../aoc-pmfreak-remote-governance-endpoint-constants.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- HTTP adapter placeholder', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- HTTP adapter placeholder', () => {
   it('declares itself unimplemented, with a recommended path and delegate', () => {
     const placeholder = createAocPMFreakRemoteGovernanceHttpAdapterPlaceholder();
     assert.equal(placeholder.implemented, false);

@@ -31,7 +31,7 @@ describe('PMFreak Agent Passport Control Plane summary', () => {
 
     for (const label of PMFREAK_CONTROL_PLANE_SAFE_LABELS) assert.ok(summary.safeDisplayLabels.includes(label), `expected safe label "${label}"`);
     assert.ok(summary.safeDisplayLabels.includes('PMFreak agent passport'));
-    assert.ok(summary.safeDisplayLabels.includes('AOC-governed agent'));
+    assert.ok(summary.safeDisplayLabels.includes('Soberanía-governed agent'));
     assert.ok(summary.safeDisplayLabels.includes('Not production integration'));
 
     for (const label of UNSAFE_LABELS) assert.ok(!summary.safeDisplayLabels.includes(label), `must not include "${label}"`);

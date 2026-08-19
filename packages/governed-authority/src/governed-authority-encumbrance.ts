@@ -46,7 +46,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  *   stays exactly where it was: Alice with 5 000 bp and a 4 000 bp encumbrance
  *   still *holds* 5 000 bp, and her `GovernedAuthorityPosition` is not
  *   rewritten. Nobody — not the requester, not the representative, not the
- *   secured party, not AOC — acquires the encumbered scope. There is
+ *   secured party, not Soberanía — acquires the encumbered scope. There is
  *   deliberately no `beneficiaryRef`, no `securedPartyRef` and no `ownerRef` on
  *   this record: naming a party would invite exactly the reading it exists to
  *   prevent.
@@ -57,7 +57,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  *   capability, and it cannot rescue a request that was going to be denied —
  *   it can only ever narrow.
  * - **Not a legal lien, pledge, mortgage, security interest or registration.**
- *   This is one deployment's record of its own governed state. AOC creates no
+ *   This is one deployment's record of its own governed state. Soberanía creates no
  *   legal encumbrance, perfects nothing, files nothing, ranks nothing, and
  *   makes no claim that any external system agrees with it. There is
  *   deliberately no priority, seniority or ranking field for the same reason.
@@ -194,7 +194,7 @@ export type GovernedAuthorityEncumbranceStatus = 'active' | 'released';
  * governed-execution   a governed release action was authorized and its execution
  *                      was confirmed successful by a trusted executor
  * administrative       a privileged operator withdrew it — migration, recovery, or
- *                      an operator acting on evidence AOC itself cannot verify
+ *                      an operator acting on evidence Soberanía itself cannot verify
  * ```
  *
  * Deliberately two, and deliberately not three. There is **no**
@@ -202,7 +202,7 @@ export type GovernedAuthorityEncumbranceStatus = 'active' | 'released';
  * *observation* an external system reported, taken on trust from a
  * caller-asserted `reportedBy`, and the collateralization module already
  * refuses to let such a report decrement `committedScope` on the stated
- * grounds that AOC cannot verify an external encumbrance actually ended.
+ * grounds that Soberanía cannot verify an external encumbrance actually ended.
  * Letting the same unverified report free authority capacity would be that
  * refusal reversed, and would hand any tenant-scoped caller a way to
  * manufacture headroom by reporting a release.
@@ -248,7 +248,7 @@ export type GovernedAuthorityEncumbranceReleaseBasis =
     }
   /**
    * A privileged administrative withdrawal — migration, recovery, or an
-   * operator acting on evidence AOC itself cannot verify.
+   * operator acting on evidence Soberanía itself cannot verify.
    *
    * Requires a system context, and requires both an actor and a reason code:
    * an override nobody is named for, for no recorded reason, is an override

@@ -1,14 +1,14 @@
 import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
 
 /**
- * What AOC Enterprise currently recognizes one actor as being able to exercise
+ * What Soberanía Enterprise currently recognizes one actor as being able to exercise
  * over one governed right of one governed resource.
  *
  * ## What a position asserts, and what it emphatically does not
  *
  * A `GovernedAuthorityPosition` asserts exactly this, and nothing wider:
  *
- * > According to the governance state and evidence this AOC Enterprise
+ * > According to the governance state and evidence this Soberanía Enterprise
  * > deployment recognizes, `actorRef` has authority to exercise `scope` of
  * > `governedRight` over the resource, from `effectiveFrom` until
  * > `expiresAt`.
@@ -16,11 +16,11 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * It does **not** assert legal title, statutory ownership, registry truth,
  * beneficial interest, or recognition by any authority outside this
  * deployment. There is deliberately no `OwnershipRecord`, `LegalOwner`,
- * `TitleRegistry` or `currentHolder` anywhere in this package: AOC evaluates
+ * `TitleRegistry` or `currentHolder` anywhere in this package: Soberanía evaluates
  * configured authority and accepted evidence, and a deployment whose evidence
  * is wrong holds a position that is wrong in exactly the same way its
  * `AuthorityGrant`s already could be. The proposition is bounded on purpose —
- * it is strong enough for AOC's own subsequent enforcement and weak enough to
+ * it is strong enough for Soberanía's own subsequent enforcement and weak enough to
  * be true.
  *
  * A position is also **not** a mandate and **not** an `AuthorityGrant`:
@@ -69,7 +69,7 @@ export interface GovernedAuthorityPosition {
   readonly tenantId: string;
 
   /**
-   * The party AOC recognizes as controlling this right. A party reference of
+   * The party Soberanía recognizes as controlling this right. A party reference of
    * the same kind the action terms use (`transferorRef`, `licenseeRef`, ...),
    * not necessarily a Recognition Runtime actor: the holder of an economic
    * interest need not be an actor that can call anything, and the actor that

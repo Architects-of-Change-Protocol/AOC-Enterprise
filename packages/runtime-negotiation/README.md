@@ -1,10 +1,10 @@
-# Runtime Sovereignty Negotiation Layer (AOC Core)
+# Runtime Sovereignty Negotiation Layer (Soberanía Core)
 
-This module introduces governance-native runtime-to-runtime negotiation for AOC Core sovereign runtimes.
+This module introduces governance-native runtime-to-runtime negotiation for Soberanía Core sovereign runtimes.
 
 ## Why runtime negotiation exists
 
-AOC federation was previously static. This layer adds dynamic but bounded negotiation semantics so runtimes can establish temporary governance agreements without implicit trust transfer.
+Soberanía federation was previously static. This layer adds dynamic but bounded negotiation semantics so runtimes can establish temporary governance agreements without implicit trust transfer.
 
 ## Sovereignty negotiation philosophy
 

@@ -17,7 +17,7 @@ export const POLICY_PACK_SENSITIVE_DATA_EXPORT_REQUIRES_COMPLIANCE_SCENARIO: Dem
   shortTitle: 'Policy: Sensitive Export Needs Compliance',
   category: 'policy_packs',
   summary: 'Victor attempts export_client_data touching a sensitive data domain (pii); the data-boundary-basic policy pack requires a compliance review approval before the export may proceed.',
-  enterpriseMessage: 'AOC can protect sensitive data exports through policy-pack-driven compliance approval requirements, independent of Recognition/Authority already allowing the export.',
+  enterpriseMessage: 'Soberanía can protect sensitive data exports through policy-pack-driven compliance approval requirements, independent of Recognition/Authority already allowing the export.',
   buyerPain: 'Enterprises cannot let any recognized actor export PII or other sensitive client data without a compliance reviewer in the loop.',
   aocValue:
     'The data-boundary-basic policy pack requires compliance_review approval for exports touching sensitive data domains; Action Enforcement blocks the export until that approval exists.',

@@ -33,7 +33,7 @@ Accepted.
   rewritten, routed through the Kernel, deprecated, or altered in its
   exports.
 - Rename `src/kernel-host/` to `src/enterprise/`.
-- Adopt **AOC Enterprise Host** as the public architectural term for this
+- Adopt **Soberanía Enterprise Host** as the public architectural term for this
   module, and `AocEnterprise` / `createEnterprise()` as its primary
   TypeScript symbols.
 - Make the Enterprise Host layer's `createEnterprise()` the one formal

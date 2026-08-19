@@ -109,7 +109,7 @@ function extractEnvelope(body: unknown): { code: string; message: string; detail
 }
 
 /**
- * Creates a typed HTTP client for the AOC Enterprise Host v1 API.
+ * Creates a typed HTTP client for the Soberanía Enterprise Host v1 API.
  *
  * The client performs no retries: retry policy belongs to the caller (see
  * README "Retries" for which operations are safe to retry and how to use

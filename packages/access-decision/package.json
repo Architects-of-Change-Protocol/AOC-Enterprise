@@ -2,7 +2,7 @@
   "name": "@aoc-enterprise/access-decision",
   "version": "0.1.0",
   "private": true,
-  "description": "Enterprise-owned, provider-neutral record of a completed access evaluation. Composes AOC Protocol's PolicyDecision and Enterprise's ScopedAccessRequest/ResourceEnvelope; contains no grant, credential, or runtime execution logic.",
+  "description": "Enterprise-owned, provider-neutral record of a completed access evaluation. Composes Soberanía Protocol's PolicyDecision and Enterprise's ScopedAccessRequest/ResourceEnvelope; contains no grant, credential, or runtime execution logic.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

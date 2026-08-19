@@ -361,7 +361,7 @@ export function createTokenizationGovernanceService(deps: TokenizationGovernance
       // tokenization-specific side table.
       //
       // `authorization_artifact`, not `external_artifact`: the
-      // TokenizationMandate is produced and owned by AOC Enterprise as the
+      // TokenizationMandate is produced and owned by Soberanía Enterprise as the
       // durable record of an authorization this enforcement just granted.
       // External token issuance is a different thing entirely and is recorded
       // separately as `execution_record` in `recordExecution` below.

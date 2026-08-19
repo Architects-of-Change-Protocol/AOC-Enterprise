@@ -595,7 +595,7 @@ describe('LICENSE — external evidence', () => {
 
     const mandate = await world.service.getMandate(TENANT_A_CONTEXT, mandateId);
     assert.equal(mandate.status, 'active', 'a reported end is an observation, never a governance state transition');
-    assert.equal(mandate.executionCount, 1, 'a reported end must not restore licensing capacity AOC cannot verify was freed');
+    assert.equal(mandate.executionCount, 1, 'a reported end must not restore licensing capacity Soberanía cannot verify was freed');
 
     // And the exhaustion constraint still holds: the mandate permitted one
     // license, that license was granted, and the report of its end does not

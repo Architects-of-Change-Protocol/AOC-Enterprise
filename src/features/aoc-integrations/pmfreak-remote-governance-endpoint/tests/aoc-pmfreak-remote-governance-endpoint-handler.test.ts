@@ -25,7 +25,7 @@ interface ErrorBodyShape {
   readonly error: { readonly code: string };
 }
 
-describe('AOC PMFreak Remote Governance Endpoint -- pure handler', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- pure handler', () => {
   it('evaluates a billing-missing-evidence request and returns HTTP 200 with decision require_evidence', async () => {
     const result = await handleAocPMFreakRemoteGovernanceRequest({ request: demoAocPMFreakRemoteBillingMissingEvidenceEndpointRequest });
     assert.equal(result.status, 200);

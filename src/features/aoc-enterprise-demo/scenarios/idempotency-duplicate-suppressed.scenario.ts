@@ -20,7 +20,7 @@ export const IDEMPOTENCY_DUPLICATE_SUPPRESSED_SCENARIO: DemoScenario = {
   category: 'enforcement',
   summary:
     'The approved client follow-up is executed once with an idempotency key. The identical request and key are submitted again, and the duplicate is suppressed.',
-  enterpriseMessage: 'AOC prevents duplicate side effects from retries, agent loops or webhook duplication.',
+  enterpriseMessage: 'Soberanía prevents duplicate side effects from retries, agent loops or webhook duplication.',
   buyerPain: 'Enterprises fear a retried webhook or a looping agent sending the same client email twice.',
   aocValue: 'A presented idempotency key ties repeated submissions to the same prior result -- the real executor never runs twice.',
   personas: [PMFREAK_PERSONA_ID, VICTOR_PERSONA_ID],

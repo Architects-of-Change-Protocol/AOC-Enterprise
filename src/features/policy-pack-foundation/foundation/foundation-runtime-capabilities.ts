@@ -2,12 +2,12 @@ import type { FoundationRuntimeCapability, FoundationRuntimeIntegrationStatus } 
 
 /**
  * Deterministic, static description of which Foundation modules this
- * checkout of AOC Enterprise actually ships. This is hand-maintained, not
+ * checkout of Soberanía Enterprise actually ships. This is hand-maintained, not
  * derived from a filesystem scan or a network call -- the modules listed as
  * `available` are real, working runtimes that already exist under
  * `src/features/*` (see each capability's `notes` for the exact path).
  *
- * `jurisdiction_pack_runtime` is `available`: `AOC Rebase / Align Jurisdiction
+ * `jurisdiction_pack_runtime` is `available`: `Soberanía Rebase / Align Jurisdiction
  * Pack Runtime with Policy Pack Foundation v1` added a real jurisdiction-pack
  * runtime module at `domain-policy-pack-runtime/jurisdiction` that specializes
  * this Foundation's `PolicyPackManifest`/`PolicyPackValidationStatus`/
@@ -83,7 +83,7 @@ const FOUNDATION_RUNTIME_CAPABILITY_STATUSES: readonly FoundationRuntimeIntegrat
     availability: 'available',
     modulePath: 'src/features/aoc-control-plane',
     notes: [
-      'AOC Control Plane UI is a real, working module in this checkout.',
+      'Soberanía Control Plane UI is a real, working module in this checkout.',
       'This Foundation layer only produces ControlPlaneReference records with safe display labels; it does not render UI.',
     ],
   },
@@ -110,7 +110,7 @@ const FOUNDATION_RUNTIME_CAPABILITY_STATUSES: readonly FoundationRuntimeIntegrat
     capability: 'policy_pack_manifest_standard',
     availability: 'available',
     modulePath: 'src/features/policy-pack-foundation/manifest',
-    notes: ['Introduced by this PR: AOC Policy Pack Foundation Alignment & Manifest Standard v1.'],
+    notes: ['Introduced by this PR: Soberanía Policy Pack Foundation Alignment & Manifest Standard v1.'],
   },
   {
     capability: 'policy_pack_composition_runtime',

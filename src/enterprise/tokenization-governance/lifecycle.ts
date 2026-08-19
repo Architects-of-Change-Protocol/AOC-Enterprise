@@ -33,7 +33,7 @@ import type { TokenizationMandateRecord, TokenizationMandateStatus } from './con
  * Revocation semantics (important, and deliberately narrow): revoking a
  * mandate withdraws the authority to perform *additional* external issuance.
  * It makes no claim whatsoever about tokens an external system has already
- * issued — AOC governs authority and does not pretend to hold technical
+ * issued — Soberanía governs authority and does not pretend to hold technical
  * powers an external tokenization system does not grant it. Execution
  * evidence recorded before revocation is preserved immutably, and the
  * revocation record itself preserves the execution count at the moment

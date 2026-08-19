@@ -14,7 +14,7 @@ const OPERATOR_SECURITY_ANALYST_PERSONA_ID = 'persona-operator-security-analyst'
 const OPERATOR_PROCESS_OWNER_PERSONA_ID = 'persona-operator-process-owner';
 
 /**
- * Bank Payments / Procurement / Data Boundary Pilot -- shows how AOC governs
+ * Bank Payments / Procurement / Data Boundary Pilot -- shows how Soberanía governs
  * financial, procurement and data-sensitive autonomous actions: payments and
  * bank-account changes gated on approval, invoice support gated on evidence,
  * and client data exports gated on compliance approval or denied outright
@@ -24,14 +24,14 @@ export const BANK_PAYMENTS_PROCUREMENT_DATA_PILOT_TEMPLATE: PilotTemplate = {
   id: 'bank-payments-procurement-data',
   name: 'Bank Payments / Procurement / Data Boundary Pilot',
   description:
-    'A bounded pilot showing how AOC governs financial, procurement and data-sensitive autonomous actions: approve_payment and change_bank_account gated on approval/denial, prepare_invoice_support gated on evidence, and export_client_data gated on compliance approval or denied when prohibited.',
+    'A bounded pilot showing how Soberanía governs financial, procurement and data-sensitive autonomous actions: approve_payment and change_bank_account gated on approval/denial, prepare_invoice_support gated on evidence, and export_client_data gated on compliance approval or denied when prohibited.',
   status: 'draft',
   industry: 'banking',
-  primaryUseCase: 'Autonomous payments, procurement and client-data-export actions governed end-to-end by AOC.',
+  primaryUseCase: 'Autonomous payments, procurement and client-data-export actions governed end-to-end by Soberanía.',
   businessPain:
     'Banks cannot let an autonomous agent approve a payment, change a bank account, or export client data without a policy-enforced, approval-gated, auditable trail -- a trust exercise is not a control.',
   aocValueProposition:
-    'AOC can prevent autonomous financial or data actions from executing unless authority, policy, evidence and approval gates are satisfied -- Action Enforcement, the Domain Policy Pack Runtime, Approval Runtime and Evidence / Source / Citation Runtime jointly decide, and the Control Plane and Verifiable Export Package prove, that every gate was actually checked.',
+    'Soberanía can prevent autonomous financial or data actions from executing unless authority, policy, evidence and approval gates are satisfied -- Action Enforcement, the Domain Policy Pack Runtime, Approval Runtime and Evidence / Source / Citation Runtime jointly decide, and the Control Plane and Verifiable Export Package prove, that every gate was actually checked.',
   targetBuyerPersonaIds: [BUYER_CIO_PERSONA_ID, BUYER_CISO_PERSONA_ID, BUYER_COMPLIANCE_OFFICER_PERSONA_ID, BUYER_RISK_DIRECTOR_PERSONA_ID, BUYER_TRANSFORMATION_DIRECTOR_PERSONA_ID],
   targetOperatorPersonaIds: [OPERATOR_FINANCE_PERSONA_ID, OPERATOR_COMPLIANCE_REVIEWER_PERSONA_ID, OPERATOR_SECURITY_ANALYST_PERSONA_ID, OPERATOR_PROCESS_OWNER_PERSONA_ID],
   trustDomainId: TRUST_DOMAIN_ID,
@@ -155,7 +155,7 @@ export const BANK_PAYMENTS_PROCUREMENT_DATA_PILOT_TEMPLATE: PilotTemplate = {
       expectedOutcome: 'blocked',
       controlPlaneFocus: 'policy_packs',
       exportPackageType: 'policy_decision_packet',
-      buyerMessage: 'Changing a payee bank account is exactly the kind of action AOC refuses to let an agent execute unattended.',
+      buyerMessage: 'Changing a payee bank account is exactly the kind of action Soberanía refuses to let an agent execute unattended.',
       operatorMessage: 'Open Policy Packs to see the deny rule, then Enforcement to see the blocked decision.',
       technicalMessage: 'payments-basic returns a deny effect; Action Enforcement returns execution_blocked.',
       acceptanceCriterionIds: ['bank-acceptance-scenarios-pass'],
@@ -244,7 +244,7 @@ export const BANK_PAYMENTS_PROCUREMENT_DATA_PILOT_TEMPLATE: PilotTemplate = {
     { id: 'bank-export-data-boundary-audit-bundle', name: 'Data boundary and payments audit bundle', packageType: 'audit_bundle', targetType: 'audit_scope', targetId: 'bank-pilot-audit-scope', expectedSections: ['summary'], expectedVerificationStatus: 'verified_with_warnings', buyerPurpose: 'Rolls every payments/data-boundary decision in this pilot into a single audit-ready bundle.' },
   ],
   acceptanceCriteria: [
-    { id: 'bank-acceptance-scenarios-pass', title: 'All pilot scenarios run against real AOC runtimes and match expected outcomes', description: 'Every declared pilot scenario binds to a real Enterprise Demo scenario and its runtime outcome matches the pilot expected outcome.', type: 'runtime', required: true, verificationMethod: 'automated_test', expectedResult: 'Every scenario binding reports bound: true.' },
+    { id: 'bank-acceptance-scenarios-pass', title: 'All pilot scenarios run against real Soberanía runtimes and match expected outcomes', description: 'Every declared pilot scenario binds to a real Enterprise Demo scenario and its runtime outcome matches the pilot expected outcome.', type: 'runtime', required: true, verificationMethod: 'automated_test', expectedResult: 'Every scenario binding reports bound: true.' },
     { id: 'bank-acceptance-export-verified', title: 'Approval and audit export packets verify successfully', description: 'The payment-approval decision packet and audit bundle bind to real, verified Verifiable Export Package output.', type: 'export_package', required: true, verificationMethod: 'export_package_verification', expectedResult: 'Bound export packages report verification status verified or verified_with_warnings.' },
     { id: 'bank-acceptance-compliance-review', title: 'Compliance reviewer confirms data-boundary behavior', description: 'A compliance reviewer confirms export_client_data behaves as expected for both the compliance-approval and prohibited-category paths.', type: 'policy', required: true, verificationMethod: 'operator_review', expectedResult: 'Compliance reviewer signs off that both data-export paths matched expectations.' },
     { id: 'bank-acceptance-customer-signoff', title: 'Bank stakeholder signs off on pilot scope and outcomes', description: 'A bank buyer persona confirms the pilot demonstrated the value proposition within its stated non-goals.', type: 'buyer', required: false, verificationMethod: 'customer_signoff', expectedResult: 'Signed pilot acceptance record from a bank stakeholder.' },
@@ -256,7 +256,7 @@ export const BANK_PAYMENTS_PROCUREMENT_DATA_PILOT_TEMPLATE: PilotTemplate = {
     { id: 'bank-metric-execution-safety', label: 'No unauthorized execution occurred', description: 'Share of blocked/approval-required scenarios where the real executor never ran.', category: 'execution_safety', targetValue: '0 executed side effects for blocked/approval-required scenarios', measurementMethod: 'Executor-run count on blocked/approval-required enforcement outcomes.' },
     { id: 'bank-metric-policy-enforcement', label: 'Policy-pack-gated actions enforced', description: 'Share of policy-flagged actions actually blocked/approval-gated by Action Enforcement.', category: 'policy_enforcement', targetValue: '100% of policy-flagged actions reflected in the enforcement decision', measurementMethod: 'Cross-check policyDecisionId on enforcement decisions.' },
     { id: 'bank-metric-evidence-readiness', label: 'Evidence requirement resolution', description: 'Share of evidence requirements eventually satisfied with accepted evidence.', category: 'evidence_readiness', targetValue: 'Invoice/PO and data-classification evidence requirements satisfied before dependent actions proceed', measurementMethod: 'Evidence Runtime requirement/satisfaction status check.' },
-    { id: 'bank-metric-buyer-confidence', label: 'Buyer confidence in governed autonomous finance actions', description: 'Qualitative buyer confidence after the pilot.', category: 'buyer_confidence', targetValue: 'Buyer persona affirms AOC prevented at least one ungoverned financial/data action', measurementMethod: 'Buyer walkthrough sign-off.' },
+    { id: 'bank-metric-buyer-confidence', label: 'Buyer confidence in governed autonomous finance actions', description: 'Qualitative buyer confidence after the pilot.', category: 'buyer_confidence', targetValue: 'Buyer persona affirms Soberanía prevented at least one ungoverned financial/data action', measurementMethod: 'Buyer walkthrough sign-off.' },
   ],
   risks: [
     { id: 'bank-risk-demo-only-confusion', title: 'Demo-only policy packs mistaken for real banking compliance', description: 'Stakeholders might assume payments-basic/data-boundary-basic reflect actual regulatory requirements.', severity: 'high', mitigation: 'Every artifact and walkthrough explicitly labels the policy packs demo-only and states this pilot does not prove banking regulatory compliance.', ownerPersonaId: BUYER_COMPLIANCE_OFFICER_PERSONA_ID },
@@ -264,7 +264,7 @@ export const BANK_PAYMENTS_PROCUREMENT_DATA_PILOT_TEMPLATE: PilotTemplate = {
   ],
   script: {
     id: 'bank-pilot-script',
-    executiveTalkTrack: ['Money movement and client data export are exactly where autonomy is riskiest -- and exactly where AOC draws its hardest lines.'],
+    executiveTalkTrack: ['Money movement and client data export are exactly where autonomy is riskiest -- and exactly where Soberanía draws its hardest lines.'],
     operatorTalkTrack: ['Watch five real actions: a gated payment, a denied account change, gated invoice support, a compliance-gated export, and a denied prohibited export.'],
     technicalTalkTrack: ['Every decision carries policyDecisionId/policyProofId/approvalProofId you can trace in Proofs / Audit.', 'The closing audit bundle is a hash-chained, independently verifiable artifact.'],
     buyerTalkTrack: ['This is what governed autonomy looks like in a bank: agents move on what is allowed, and stop cleanly -- and provably -- on what is not.'],
@@ -276,7 +276,7 @@ export const BANK_PAYMENTS_PROCUREMENT_DATA_PILOT_TEMPLATE: PilotTemplate = {
       { step: 5, title: 'Prohibited export denied', instruction: 'Run the prohibited-data-export-denied scenario.', expectedObservation: 'Execution denied outright.' },
       { step: 6, title: 'Control Plane + export', instruction: 'Walk the Control Plane and export a verified audit bundle.', expectedObservation: 'Verified audit bundle referencing every scenario.' },
     ],
-    closingStatement: 'AOC does not ask a bank to trust an agent with money or data -- it proves, decision by decision, exactly where the line was held.',
+    closingStatement: 'Soberanía does not ask a bank to trust an agent with money or data -- it proves, decision by decision, exactly where the line was held.',
     legalDisclaimer: 'This demo script uses demo-only policy packs and synthetic account/data records. It is not legal advice and does not prove banking regulatory compliance.',
   },
   nonGoals: [

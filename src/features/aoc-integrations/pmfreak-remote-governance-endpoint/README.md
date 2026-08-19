@@ -1,4 +1,4 @@
-# AOC PMFreak Remote Governance Endpoint v1
+# Soberanía PMFreak Remote Governance Endpoint v1
 
 Endpoint ID:
 
@@ -9,19 +9,19 @@ aoc.integration.pmfreak.remote_governance_endpoint.v1
 Repo:
 
 ```
-AOC Enterprise
+Soberanía Enterprise
 ```
 
 Purpose:
 
 ```
-Expose AOC PMFreak Governance Request Intake through a safe remote endpoint/handler boundary.
+Expose Soberanía PMFreak Governance Request Intake through a safe remote endpoint/handler boundary.
 ```
 
 Runtime direction:
 
 ```
-PMFreak consumes AOC Governance.
+PMFreak consumes Soberanía Governance.
 ```
 
 This module does not mutate PMFreak data.
@@ -38,23 +38,23 @@ This module does not provide legal advice.
 
 ```
 PMFreak builds a governance request.
-PMFreak sends the request to the AOC endpoint.
-AOC validates the request.
-AOC evaluates the request through the existing intake.
-AOC returns a governed decision.
+PMFreak sends the request to the Soberanía endpoint.
+Soberanía validates the request.
+Soberanía evaluates the request through the existing intake.
+Soberanía returns a governed decision.
 PMFreak receives the decision.
 ```
 
-This PR builds on the already-merged `AOC PMFreak Governance Request Intake v1` (`aoc.integration.pmfreak.governance_request_intake.v1`, `src/features/aoc-integrations/pmfreak-governance-request-intake`). That module already receives, validates, normalizes, and deterministically evaluates PMFreak governance requests; this module never duplicates that logic -- it only adds a request/response envelope, safety guards, and a pure handler in front of it, then delegates to `createAocPMFreakGovernanceRequestIntakeClient().receiveAndEvaluate(...)` for the actual evaluation.
+This PR builds on the already-merged `Soberanía PMFreak Governance Request Intake v1` (`aoc.integration.pmfreak.governance_request_intake.v1`, `src/features/aoc-integrations/pmfreak-governance-request-intake`). That module already receives, validates, normalizes, and deterministically evaluates PMFreak governance requests; this module never duplicates that logic -- it only adds a request/response envelope, safety guards, and a pure handler in front of it, then delegates to `createAocPMFreakGovernanceRequestIntakeClient().receiveAndEvaluate(...)` for the actual evaluation.
 
 Incorrect (not what this module does):
 
 ```
-AOC crawls PMFreak data.
-AOC mutates PMFreak state.
-AOC sends emails/invoices/client communications from this endpoint.
-AOC certifies invoice validity, customer acceptance, compliance, or legal status.
-AOC re-implements governance evaluation instead of delegating to the existing intake.
+Soberanía crawls PMFreak data.
+Soberanía mutates PMFreak state.
+Soberanía sends emails/invoices/client communications from this endpoint.
+Soberanía certifies invoice validity, customer acceptance, compliance, or legal status.
+Soberanía re-implements governance evaluation instead of delegating to the existing intake.
 ```
 
 ## Default path
@@ -78,7 +78,7 @@ handleAocPMFreakRemoteGovernanceRequest        (this module's pure handler)
   |  4. parse body into AocPMFreakGovernanceRequest (envelope shape check only)
   |  5. redact request
   v
-AOC PMFreak Governance Request Intake          (already-merged, unchanged)
+Soberanía PMFreak Governance Request Intake    (already-merged, unchanged)
   |  validates / evaluates the request
   v
 handleAocPMFreakRemoteGovernanceRequest
@@ -160,7 +160,7 @@ No network calls, no LLM calls, no OCR/PDF parsing, no `Math.random()`, no `Date
 ## Next possible PR
 
 ```
-PMFreak AOC Remote Governance Transport v1
+PMFreak Soberanía Remote Governance Transport v1
 ```
 
 The PMFreak-repo counterpart that actually calls this endpoint over the network, once a stable route exists for it to call.

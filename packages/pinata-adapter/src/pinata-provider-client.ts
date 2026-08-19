@@ -64,7 +64,7 @@ export interface PinataInvalidateResult {
 }
 
 /**
- * A ciphertext upload request (AOC Enterprise Slice 2, Content Protection).
+ * A ciphertext upload request (Soberanía Enterprise Slice 2, Content Protection).
  * `bytes` is documented here, deliberately, as ciphertext -- this client has
  * no way to enforce that at the type level, but every caller in this
  * repository (`../../../src/enterprise/content-protection/pinata-storage-adapter.ts`)

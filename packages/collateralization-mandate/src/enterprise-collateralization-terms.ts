@@ -30,14 +30,14 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * - `COLLATERALIZE != PROTOCOLIZE`. Protocolization establishes the governed
  *   identity/authority/evidence context; collateralization presupposes it.
  *
- * AOC Enterprise authorizes collateralization. It is not the lender, the
+ * Soberanía Enterprise authorizes collateralization. It is not the lender, the
  * collateral agent, the registry, or the platform: nothing in this package
  * originates a loan, computes interest or loan-to-value, prices or values an
  * asset, creates or perfects a security interest, determines priority against
  * any real registry, liquidates or seizes anything, or contacts any external
  * system. `constraints` and the `external*` evidence fields carry
  * provider-neutral, opaque labels (a registry name, a jurisdiction code, an
- * agreement reference) that AOC records and compares as strings and never
+ * agreement reference) that Soberanía records and compares as strings and never
  * interprets, resolves, or executes against.
  *
  * This is a pure data contract: no persistence, no service, no API, no
@@ -50,7 +50,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * serialization, and references to records owned elsewhere rather than
  * embeddings of them.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/collateralization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/collateralization-mandate`).
  */
 export const ENTERPRISE_COLLATERALIZATION_SCHEMA_VERSION = '1.0.0' as const;
 
@@ -108,8 +108,8 @@ export function isEnterpriseCollateralizeCapability(capability: unknown): capabi
  * that the authorized rights include an ownership interest, it does not
  * assert that anyone owns anything and it does not assert that the interest
  * is capable of being encumbered under any legal system. Ownership and
- * authority must already be established upstream by the primitives AOC
- * evaluates (Authority Graph), and AOC never infers either from the fact
+ * authority must already be established upstream by the primitives Soberanía
+ * evaluates (Authority Graph), and Soberanía never infers either from the fact
  * that a request was submitted.
  *
  * Deliberately a closed union, consistent with every other governance
@@ -153,10 +153,10 @@ export const ENTERPRISE_COLLATERALIZATION_FULL_BASIS_POINTS = GOVERNED_RIGHTS_SC
  * minor units alongside an opaque currency label.
  *
  * This is deliberately *not* a money type, an accounting subsystem, or a
- * valuation: AOC performs no arithmetic on it beyond comparing two amounts of
+ * valuation: Soberanía performs no arithmetic on it beyond comparing two amounts of
  * the *same* currency label, never converts between currencies, never
  * discovers a rate, and never prices an asset. `currency` is an opaque string
- * AOC stores and compares -- amounts whose labels differ are simply not
+ * Soberanía stores and compares -- amounts whose labels differ are simply not
  * comparable, and a comparison between them fails closed rather than being
  * coerced.
  *
@@ -170,8 +170,8 @@ export interface EnterpriseSecuredAmount {
 
 /**
  * Declared, provider-neutral limits a collateralization authorization
- * carries. Every field is a description AOC records and can compare; none is
- * an instruction AOC carries out, and none is interpreted against any real
+ * carries. Every field is a description Soberanía records and can compare; none is
+ * an instruction Soberanía carries out, and none is interpreted against any real
  * registry, lender, or legal system.
  *
  * - `maximumSecuredAmount?` -- the declared ceiling on the obligation amount
@@ -180,23 +180,23 @@ export interface EnterpriseSecuredAmount {
  *   secured obligation, not a running total. Absent means no declared ceiling.
  * - `permittedJurisdictions?` / `permittedRegistries?` -- opaque allow-lists
  *   of labels. Absent means "not restricted by this authorization", never
- *   "any value is endorsed". AOC does not resolve a registry, contact one, or
+ *   "any value is endorsed". Soberanía does not resolve a registry, contact one, or
  *   assume one exists.
  * - `requiredPriorityRank?` -- the least senior ranking this authorization
  *   permits the external arrangement to take, as a positive integer where `1`
  *   is most senior. This records a *requirement placed on an external
  *   system* and is compared against what that system reports. It is not a
- *   claim that AOC determined, perfected, or can enforce priority anywhere.
+ *   claim that Soberanía determined, perfected, or can enforce priority anywhere.
  * - `exclusive?` -- records that the authorization declares the external
  *   arrangement must be an exclusive security interest. A declaration only:
- *   AOC cannot observe, and does not assume, what other interests exist over
+ *   Soberanía cannot observe, and does not assume, what other interests exist over
  *   the asset. It never follows from this contract that an asset may carry
  *   only one collateral interest (see the package README, "Multiple interests
  *   are not prohibited").
  * - `releaseEvidenceRequired?` -- records that the authorization requires
  *   external release/discharge evidence to be reported back when the
- *   arrangement ends. A declaration AOC records and can audit against; it
- *   does not cause AOC to release anything.
+ *   arrangement ends. A declaration Soberanía records and can audit against; it
+ *   does not cause Soberanía to release anything.
  * - `additionalCollateralizationAllowed` -- required, because "may this be
  *   exercised more than once?" has no safe default. `false` means the
  *   authorization permits a single external collateralization.
@@ -234,14 +234,14 @@ export interface EnterpriseCollateralizationConstraints {
  *
  * `securedObligationRef` is an opaque canonical pointer to an obligation
  * established elsewhere -- an external loan, a credit facility, a contractual
- * obligation, or another governed obligation. AOC does not originate that
+ * obligation, or another governed obligation. Soberanía does not originate that
  * obligation, does not evaluate whether it is legally valid or enforceable,
  * and does not resolve the reference. It preserves it because it is the
  * answer to "what is this collateral authorization securing?", and because an
  * execution that names a *different* obligation must be refused.
  *
  * `securedObligationKind?` is an optional opaque label describing that
- * obligation in the requester's own vocabulary. AOC never interprets it and
+ * obligation in the requester's own vocabulary. Soberanía never interprets it and
  * never derives anything from it; it exists so the reference is legible to a
  * reviewer without dereferencing it.
  *
@@ -325,7 +325,7 @@ export function enterpriseSecuredAmountEquals(a: EnterpriseSecuredAmount | undef
 
 /**
  * Whether `inner` does not exceed `outer`. Amounts in different currencies
- * are never comparable -- AOC holds no rate, and silently coercing between
+ * are never comparable -- Soberanía holds no rate, and silently coercing between
  * currency labels is exactly the escalation this refusal prevents -- so a
  * currency mismatch is `false`, never a conversion.
  */
@@ -541,7 +541,7 @@ function collectConstraintIssues(candidate: unknown, path: string): EnterpriseCo
   if (candidate.maximumSecuredAmount !== undefined && !isEnterpriseSecuredAmount(candidate.maximumSecuredAmount)) {
     issues.push({
       code: 'INVALID_MAXIMUM_SECURED_AMOUNT',
-      message: `${path}.maximumSecuredAmount must be { minorUnits: a non-negative integer, currency: a non-empty opaque label } when present; AOC records and compares it and never converts between currencies.`,
+      message: `${path}.maximumSecuredAmount must be { minorUnits: a non-negative integer, currency: a non-empty opaque label } when present; Soberanía records and compares it and never converts between currencies.`,
     });
   }
   const labelLists: readonly (readonly [string, EnterpriseCollateralizationTermsValidationCode])[] = [
@@ -558,7 +558,7 @@ function collectConstraintIssues(candidate: unknown, path: string): EnterpriseCo
   if (candidate.requiredPriorityRank !== undefined && !isCollateralizationPositiveInteger(candidate.requiredPriorityRank)) {
     issues.push({
       code: 'INVALID_REQUIRED_PRIORITY_RANK',
-      message: `${path}.requiredPriorityRank must be a positive integer when present (1 is the most senior ranking); it records a requirement placed on an external system, not a priority AOC determined.`,
+      message: `${path}.requiredPriorityRank must be a positive integer when present (1 is the most senior ranking); it records a requirement placed on an external system, not a priority Soberanía determined.`,
     });
   }
   if (candidate.exclusive !== undefined && typeof candidate.exclusive !== 'boolean') {

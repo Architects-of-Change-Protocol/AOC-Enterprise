@@ -1,6 +1,6 @@
 # @aoc-enterprise/commercial-demo
 
-**AOC Architectural Consolidation Program, Sequence R006.A — Commercial Reference Demo.**
+**Soberanía Architectural Consolidation Program, Sequence R006.A — Commercial Reference Demo.**
 
 An executable proof that the frozen Access Governance lifecycle
 (`docs/architecture/ADR-ACCESS-LIFECYCLE.md`, R005.0) — `EnterpriseResourceEnvelope`
