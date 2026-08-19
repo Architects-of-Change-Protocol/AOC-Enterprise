@@ -114,7 +114,12 @@ three different situations with three different remedies.
   rescued here.
 - **Not a legal lien, pledge, mortgage, security interest or registration.** See
   "The legal boundary".
-- **Not an inter-action conflict policy.** See "What this layer does not decide".
+- **Not an inter-action conflict policy.** This record states *that* a portion
+  of the holder's authority is constrained. Which future actions that bears on,
+  and how, is decided separately and later, by the applicability layer — see
+  `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`. The two stay apart deliberately: a
+  constraint that carried its own conflict rules could not be reinterpreted by a
+  deployment that reads them differently.
 
 ## Which actions this applies to
 
@@ -489,7 +494,13 @@ portability problem this phase does not open.
 ## Limitations, deliberately
 
 - **No production discharge.** Only privileged release exists. See above.
-- **No inter-action conflict policy.** Still deferred.
+- **No inter-action conflict policy *in this record*.** Closed since, but
+  elsewhere: `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md` decides which governed
+  actions a constraint bears on and on what grounds — capacity, structural, or
+  neither — and hands deployment policy the typed facts for the business
+  question. Nothing about the record below changed: no field was added, no digest
+  altered, and the constraint class is derived from `sourceAction` rather than
+  stored. The findings above stand as measured.
 - **No constraint migration on transfer.** A transfer that would strand a
   constraint is refused rather than moved.
 - **No priority or ranking.** No senior, junior, first, second or pari passu.

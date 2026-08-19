@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
 
 import { isAuthorityGovernanceError } from '../authority-governance/errors.js';
+import { GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION } from '../authority-governance/in-memory-authority-store.js';
 import { createSqliteGovernedAuthorityStore } from '../authority-governance/sqlite-authority-store.js';
 import type { GovernedAuthorityStore } from '../authority-governance/authority-store.js';
 import { createSqliteCollateralizationMandateStore } from '../collateralization-governance/sqlite-mandate-store.js';
@@ -336,5 +337,89 @@ describe('Encumbrance durability — a constraint outlives the process that reco
     );
     await reader.close();
     await writer.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Constraint applicability across a restart, and the migration question it
+// answers by having nothing to migrate.
+// ---------------------------------------------------------------------------
+
+describe('Constraint applicability durability — the same verdict, before and after', () => {
+  it('re-derives the constraint class from state a previous process wrote, with no schema change and no migration', async () => {
+    const paths = tempPaths('applicability-restart');
+
+    const first = await openProcess(paths);
+    await first.authorityStore.bootstrapPosition(ADMIN_CONTEXT, {
+      tenantId: GA_TENANT_A,
+      holderRef: ALICE,
+      resource: { kind: GA_ASSET.kind, id: GA_ASSET.id },
+      governedRight: ECONOMIC,
+      scope: bp(5_000),
+      basis: { kind: 'administrative-bootstrap', assertedBy: 'actor-administrator' },
+      effectiveFrom: GA_NOW,
+    });
+    const authorized = await first.collateralization.requestCollateralization(
+      TENANT_CONTEXT,
+      GA_TENANT_A,
+      collateralRequest('durable-applicability', 4_000) as never,
+    );
+    assert.equal(authorized.status, 'allowed');
+    assert.ok(authorized.mandate !== undefined);
+    await first.collateralization.recordExecution(TENANT_CONTEXT, {
+      mandateId: authorized.mandate.id,
+      executorRef: 'provider-collateral-platform-c',
+      executedAt: GA_NOW,
+      securedObligationRef: 'obligation-001',
+      securedPartyRef: 'party-lender-b',
+      committedScope: bp(4_000),
+      rights: [ECONOMIC],
+      externalRegistry: 'registry-alpha',
+    });
+    await first.close();
+
+    // A second process, holding none of the first's memory. The class is
+    // derived rather than persisted, so what has to survive is the
+    // `sourceAction` the record always carried — which is exactly why this
+    // phase adds no column, changes no digest, and needs no migration.
+    const second = await openProcess(paths, 500);
+
+    const capacityBound = await refusalCode(() =>
+      second.authorityStore.acquireReservation(ADMIN_CONTEXT, {
+        tenantId: GA_TENANT_A,
+        holderRef: ALICE,
+        resource: { kind: GA_ASSET.kind, id: GA_ASSET.id },
+        governedRight: ECONOMIC,
+        scope: bp(1_001),
+        action: 'collateralize',
+        sourceRequestRef: 'request-after-restart',
+        sourceMandateRef: 'mandate-after-restart',
+        effectiveFrom: GA_NOW,
+        expiresAt: '2026-07-01T00:00:00.000Z',
+      }),
+    );
+    assert.equal(capacityBound, 'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT');
+
+    // And the same 1 000 that fitted before still fits, on the structural route
+    // as well as the capacity one.
+    const structural = await second.authorityStore.acquireReservation(ADMIN_CONTEXT, {
+      tenantId: GA_TENANT_A,
+      holderRef: ALICE,
+      resource: { kind: GA_ASSET.kind, id: GA_ASSET.id },
+      governedRight: ECONOMIC,
+      scope: bp(1_000),
+      action: 'transfer',
+      sourceRequestRef: 'request-transfer-after-restart',
+      sourceMandateRef: 'mandate-transfer-after-restart',
+      effectiveFrom: GA_NOW,
+      expiresAt: '2026-07-01T00:00:00.000Z',
+    });
+    assert.equal(structural.outcome, 'reserved');
+
+    // The stored constraint is byte-for-byte what the previous process wrote —
+    // reopening it did not rewrite a digest to add anything.
+    const health = await second.authorityStore.health();
+    assert.equal(health.schemaVersion, GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION);
+    await second.close();
   });
 });

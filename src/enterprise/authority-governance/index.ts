@@ -71,6 +71,7 @@ export {
   assertEncumbranceIntegrity,
   assertEncumbranceReleaseBasisAcceptable,
   assertRemainingScopeCoversEncumbrances,
+  computeActionCapacity,
   computeCapacity,
   computeEncumbranceDigest,
   encumbranceReleaseReplayMatches,
@@ -81,6 +82,18 @@ export {
   GOVERNED_AUTHORITY_RELEASING_ACTIONS,
 } from './encumbrance-lifecycle.js';
 
+export {
+  applicableGovernedConstraintsFor,
+  assertGovernedActionProfilesComplete,
+  governedActionConstraintProfile,
+  governedConstraintClassOf,
+  governedConstraintEvidence,
+  requireGovernedActionConstraintProfile,
+  resolveGovernedConstraintApplicability,
+  COLLATERAL_COMMITMENT_CAPACITY,
+  GOVERNED_ACTION_CONSTRAINT_PROFILES,
+} from './constraint-applicability.js';
+
 export { createInMemoryGovernedAuthorityStore, GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION } from './in-memory-authority-store.js';
 export type { CreateInMemoryGovernedAuthorityStoreOptions } from './in-memory-authority-store.js';
 
@@ -89,6 +102,9 @@ export type { CreateSqliteGovernedAuthorityStoreOptions } from './sqlite-authori
 
 export { createGovernedAuthorityResolver } from './resolver.js';
 export type { CreateGovernedAuthorityResolverOptions, UnenrolledResourcePolicy } from './resolver.js';
+
+export { createGovernedConstraintResolver } from './constraint-resolver.js';
+export type { CreateGovernedConstraintResolverOptions } from './constraint-resolver.js';
 
 // ---------------------------------------------------------------------------
 // Holder-bound representative authority.

@@ -1,4 +1,8 @@
-import type { GovernedAuthorityProviderPort, GovernedRepresentationProviderPort } from '@aoc-enterprise/governed-authority';
+import type {
+  GovernedAuthorityProviderPort,
+  GovernedConstraintProviderPort,
+  GovernedRepresentationProviderPort,
+} from '@aoc-enterprise/governed-authority';
 
 import type {
   EnforcementRecognitionIntegration,
@@ -80,3 +84,32 @@ export type GovernedAuthorityProvider = GovernedAuthorityProviderPort;
  * narrow -- it never rescues a denial and never grants anything.
  */
 export type GovernedRepresentationProvider = GovernedRepresentationProviderPort;
+
+/**
+ * Optional persistent-constraint fact provider: answers "what persistent
+ * constraints stand over the authority this request engages, and which of them
+ * bear on this action?" and nothing else.
+ *
+ * A *third* narrow port rather than a widening of either sibling, for the same
+ * reason those two are separate from each other: it answers a different
+ * question and fails for disjoint reasons. Its result is pure data from
+ * `@aoc-enterprise/governed-authority`, so no store, table, tenancy guard or
+ * digest concept crosses into the kernel's contracts.
+ * `createGovernedConstraintResolver`
+ * (`src/enterprise/authority-governance/constraint-resolver.ts`) satisfies it
+ * structurally.
+ *
+ * Unlike its two siblings this port produces **no verdict at all**. It cannot
+ * deny, cannot narrow and cannot rescue: its whole effect is that the typed
+ * constraint facts reach the optional Domain Policy Pack preflight, so a
+ * deployment that wants a cross-action compatibility rule can express one.
+ * Omitted, or with no policy pack configured, kernel behaviour is byte-identical
+ * to this layer not existing.
+ *
+ * The hard invariants do not depend on it. Capacity conservation and the
+ * structural holder/constraint coverage rule are enforced afterwards, inside the
+ * Governed Authority Store's own consistency boundary, against the state
+ * committed there — so a policy that saw nothing, or a provider that failed, can
+ * never widen what the authority layer allows.
+ */
+export type GovernedConstraintProvider = GovernedConstraintProviderPort;

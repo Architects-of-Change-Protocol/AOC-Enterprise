@@ -437,6 +437,13 @@ principal — never automatically about the encumbered holder. See
   encumbers anything, and revoking one neither releases nor discharges anything.
   Those quantities live in `GovernedAuthorityReservation` and
   `GovernedAuthorityEncumbrance`, against the holder.
+- **No separate constraint pool.** Persistent constraints are holder-bound, and
+  applicability follows the *holder's* authority state rather than the
+  requester's identity. A representative — however impeccable its
+  representation, and however high its ceiling — draws on exactly the pool the
+  holder has, and two representatives of the same holder compete for it. Acting
+  for someone buys no capacity. See
+  `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`, "Binding".
 - **No revocation cascade onto issued mandates.** See the temporal boundary
   above.
 - **No representation on the position record.** A holder's authority state must

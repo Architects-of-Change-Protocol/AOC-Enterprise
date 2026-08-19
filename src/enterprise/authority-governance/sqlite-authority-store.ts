@@ -16,6 +16,7 @@ import {
 } from '@aoc-enterprise/governed-authority';
 import { governedRightsScopeWithin, isGovernedRightType, serializeGovernedRightsScope, type GovernedRightType, type GovernedRightsScope } from '@aoc-enterprise/governed-authorization';
 
+import { applicableGovernedConstraintsFor, governedConstraintEvidence } from './constraint-applicability.js';
 import { AuthorityGovernanceError } from './errors.js';
 import { GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION, assertReplayMatches } from './in-memory-authority-store.js';
 import {
@@ -44,6 +45,7 @@ import {
   assertEncumbranceIntegrity,
   assertEncumbranceReleaseBasisAcceptable,
   assertRemainingScopeCoversEncumbrances,
+  computeActionCapacity,
   computeCapacity,
   computeEncumbranceDigest,
   deriveEncumbranceId,
@@ -1414,12 +1416,23 @@ export async function createSqliteGovernedAuthorityStore(
       // commitment this layer closes: the reservations behind an executed
       // collateralization are terminal, so only its encumbrance still says that
       // authority is spoken for.
-      const availability = computeCapacity(
-        position,
-        readReservationsFor(input.tenantId, input.holderRef, input.resource, input.governedRight),
-        readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight),
-        recordedAt,
-      );
+      const standingReservations = readReservationsFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+      const standingConstraints = readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
+      // Which of them bear on *this* action, decided here rather than assumed.
+      // Resolved inside the transaction against the rows read inside it, so the
+      // constraints the commitment respects are the ones committed at the
+      // instant it commits — never a verdict a caller measured earlier and
+      // carried in.
+      const { applicability, applicable } = applicableGovernedConstraintsFor({
+        action: input.action,
+        tenantId: input.tenantId,
+        holderRef: input.holderRef,
+        resource: input.resource,
+        governedRight: input.governedRight,
+        constraints: standingConstraints,
+        at: recordedAt,
+      });
+      const availability = computeActionCapacity(position, standingReservations, standingConstraints, applicable, recordedAt);
 
       if (availability.outcome === 'no_authority') {
         // Enrolment is consulted only once the holder turns out to have no
@@ -1481,6 +1494,13 @@ export async function createSqliteGovernedAuthorityStore(
             ...(availability.encumbered !== undefined ? { encumbered: availability.encumbered } : {}),
             available: availability.available,
             requested: serializeGovernedRightsScope(input.scope),
+            // Which constraints reduced it, and on which of the two grounds.
+            // References and classes only — never a stored row, and never the
+            // constraints that were considered and found not to bear on this
+            // action.
+            action: input.action,
+            constraintApplicability: applicability.status,
+            applicableConstraints: governedConstraintEvidence(applicability),
           },
         );
       }
@@ -1622,10 +1642,24 @@ export async function createSqliteGovernedAuthorityStore(
                 .filter((reservation) => reservation.sourceMandateRef === input.consumesReservationsForMandateRef && reservation.status === 'active')
                 .map((reservation) => reservation.id),
             );
-      const capacity = computeCapacity(
+      // The producing action's own applicability, resolved here for the same
+      // reason `acquireReservation` resolves it inside its transaction: the
+      // constraint being created must fit the capacity available to the action
+      // creating it, measured against the constraints committed now.
+      const { applicable } = applicableGovernedConstraintsFor({
+        action: input.sourceAction,
+        tenantId: input.tenantId,
+        holderRef: input.holderRef,
+        resource: input.resource,
+        governedRight: input.governedRight,
+        constraints,
+        at: recordedAt,
+      });
+      const capacity = computeActionCapacity(
         position,
         standing.filter((reservation) => !surrendered.has(reservation.id)),
         constraints,
+        applicable,
         recordedAt,
       );
 

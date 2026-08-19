@@ -284,6 +284,14 @@ on that holder's single pool: a flawless delegation chain confers no capacity of
 its own, and reaching a holder by a different route never opens a second
 allocation. See `AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`, "One pool per holder".
 
+The same holds for constraints, and it is a separate dimension again. Derived
+authority decides *who may invoke an action*; constraint applicability decides
+*whether the holder's current state can support it*. Neither substitutes: a
+delegated agent with a flawless lineage and a valid representation is bounded by
+exactly the constraints standing over the holder it reaches, and reaching that
+holder through a longer chain neither adds nor removes one. See
+`AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.
+
 The bounded claim is exactly:
 
 > Soberanía Enterprise can recognize and enforce authority derived through a typed,

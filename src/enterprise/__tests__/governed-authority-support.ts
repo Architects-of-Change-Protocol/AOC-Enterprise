@@ -17,9 +17,11 @@ import { createAuthorityGraphRuntime, type AuthorityGraphRuntime } from '../../f
 import { createAuthorityRuntimeContext } from '../../features/authority-graph/runtime/authority-runtime-context.js';
 import { createAocRecognitionRuntime, type AocRecognitionRuntime } from '../../features/recognition-runtime/runtime/aoc-recognition-runtime.js';
 import { createManualClock, createSequentialIdGenerator, type RuntimeContext } from '../../features/recognition-runtime/runtime/runtime-context.js';
+import type { PolicyPackProvider } from '../../kernel/index.js';
 import { createAocKernel, type AocKernel } from '../../kernel/index.js';
 import {
   createGovernedAuthorityResolver,
+  createGovernedConstraintResolver,
   createGovernedRepresentationResolver,
   createInMemoryGovernedAuthorityStore,
   createInMemoryGovernedRepresentationStore,
@@ -327,6 +329,28 @@ export interface GovernedAuthorityWorldOverrides {
    * other governed action.
    */
   readonly releaseRequiresApprovalBy?: string;
+  /**
+   * Configures the Kernel's persistent-constraint fact provider, so the typed
+   * constraint context reaches the policy pack preflight.
+   *
+   * Deliberately **off by default**, exactly as `withRepresentation` is, and
+   * for the same reason: every existing test in this directory builds a world
+   * without it and keeps observing the behaviour it always observed, so the
+   * constraint suite's findings are a difference rather than a rewrite of the
+   * prior phases'. Turning it on changes what *policy is told*; it never
+   * changes what the authority layer enforces.
+   */
+  readonly withConstraintPolicyContext?: boolean;
+  /**
+   * A deployment policy pack, for proving that a deployment can express a
+   * cross-action compatibility rule of its own.
+   *
+   * There is no default and there must not be one. Every rule a test installs
+   * here is that test's deployment policy, never an Soberanía rule: the whole claim
+   * of this phase is that Soberanía ships no cross-action business rule, and a
+   * fixture that shipped one would falsify it.
+   */
+  readonly policyPackProvider?: PolicyPackProvider;
 }
 
 export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOverrides = {}): GovernedAuthorityWorld {
@@ -643,6 +667,8 @@ export function buildGovernedAuthorityWorld(overrides: GovernedAuthorityWorldOve
             ...(overrides.delegations !== undefined ? { delegations: overrides.delegations } : {}),
           }),
         }),
+    ...(overrides.withConstraintPolicyContext === true ? { governedConstraintProvider: createGovernedConstraintResolver(authorityStore) } : {}),
+    ...(overrides.policyPackProvider !== undefined ? { policyPackProvider: overrides.policyPackProvider } : {}),
   });
 
   const governanceStore = overrides.governanceStore ?? createInMemoryGovernanceStore();

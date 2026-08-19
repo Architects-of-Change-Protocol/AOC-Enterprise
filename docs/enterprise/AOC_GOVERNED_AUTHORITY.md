@@ -348,14 +348,24 @@ See `AOC_GOVERNED_AUTHORITY_RESERVATION.md`,
   mirror.
 - **Protocolization, asset registration, title proof, notarization.** These may
   later become sources of positions. They are not here.
-- **Inter-action conflict policy.** A committed collateralization still does not
-  reduce the underlying authority *position* — it reduces the capacity available
-  for a further commitment, which is a different quantity. Whether encumbering a
-  right should also make it unlicensable or untokenizable depends on what those
-  actions mean to each other, and is still not answered here. The one
-  cross-action rule that does exist is structural rather than commercial: Soberanía
-  refuses a transition that would leave a persistent constraint referring to
-  authority its holder no longer possesses.
+- **Inter-action conflict policy.** Answered since, in its own layer, and worth
+  restating as five distinct quantities rather than one:
+
+  ```
+  held authority          what the holder possesses. A commitment never reduces it.
+  reserved                what is promised to a live authorization not yet executed.
+  persistently constrained what an executed action left constrained.
+  action applicability    which of those constraints bear on a REQUESTED action,
+                          and whether by capacity or by structural coverage.
+  action-available        what that particular action may still commit.
+  ```
+
+  There is no universal "available": the answer depends on which action is
+  asking. Soberanía still asserts **no** commercial rule — whether encumbering a right
+  should make it unlicensable or untokenizable remains a deployment's decision,
+  expressible as deployment policy and defaulted to nothing. The cross-action
+  rules Soberanía does enforce are conservation and structure, never commerce. See
+  `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.
 - **A fifth governed action.** This document's own foundation work added none.
   One was added later, by the phase that closed the encumbrance-release gap:
   `RELEASE_ENCUMBRANCE`. It uses the authority machinery described here

@@ -9,6 +9,7 @@ import {
 } from '@aoc-enterprise/governed-authority';
 import { governedRightsScopeWithin, serializeGovernedRightsScope, type GovernedRightType } from '@aoc-enterprise/governed-authorization';
 
+import { applicableGovernedConstraintsFor, governedConstraintEvidence } from './constraint-applicability.js';
 import { AuthorityGovernanceError } from './errors.js';
 import {
   addAuthorityScopes,
@@ -37,6 +38,7 @@ import {
   assertEncumbranceIntegrity,
   assertEncumbranceReleaseBasisAcceptable,
   assertRemainingScopeCoversEncumbrances,
+  computeActionCapacity,
   computeCapacity,
   computeEncumbranceDigest,
   deriveEncumbranceId,
@@ -618,7 +620,21 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       // executed collateralization are terminal, so only its encumbrance still
       // says that authority is spoken for.
       const constraints = readEncumbrancesFor(input.tenantId, input.holderRef, input.resource, input.governedRight);
-      const availability = computeCapacity(position, standing, constraints, recordedAt);
+      // Which of them bear on *this* action, decided here rather than assumed.
+      // Resolved inside the critical section against the records read inside
+      // it, so the constraints the commitment respects are the ones committed
+      // at the instant it commits — never a verdict a caller measured earlier
+      // and carried in.
+      const { applicability, applicable } = applicableGovernedConstraintsFor({
+        action: input.action,
+        tenantId: input.tenantId,
+        holderRef: input.holderRef,
+        resource: input.resource,
+        governedRight: input.governedRight,
+        constraints,
+        at: recordedAt,
+      });
+      const availability = computeActionCapacity(position, standing, constraints, applicable, recordedAt);
 
       if (availability.outcome === 'no_authority') {
         // Enrolment is consulted only once the holder turns out to have no
@@ -684,6 +700,13 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
             ...(availability.encumbered !== undefined ? { encumbered: availability.encumbered } : {}),
             available: availability.available,
             requested: serializeGovernedRightsScope(input.scope),
+            // Which constraints reduced it, and on which of the two grounds.
+            // References and classes only — never a stored row, and never the
+            // constraints that were considered and found not to bear on this
+            // action.
+            action: input.action,
+            constraintApplicability: applicability.status,
+            applicableConstraints: governedConstraintEvidence(applicability),
           },
         );
       }
@@ -897,10 +920,24 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
                 .filter((reservation) => reservation.sourceMandateRef === input.consumesReservationsForMandateRef && reservation.status === 'active')
                 .map((reservation) => reservation.id),
             );
-      const capacity = computeCapacity(
+      // The producing action's own applicability, resolved here for the same
+      // reason `acquireReservation` resolves it inside its critical section:
+      // the constraint being created must fit the capacity available to the
+      // action creating it, measured against the constraints committed now.
+      const { applicable } = applicableGovernedConstraintsFor({
+        action: input.sourceAction,
+        tenantId: input.tenantId,
+        holderRef: input.holderRef,
+        resource: input.resource,
+        governedRight: input.governedRight,
+        constraints,
+        at: recordedAt,
+      });
+      const capacity = computeActionCapacity(
         position,
         standing.filter((reservation) => !surrendered.has(reservation.id)),
         constraints,
+        applicable,
         recordedAt,
       );
 

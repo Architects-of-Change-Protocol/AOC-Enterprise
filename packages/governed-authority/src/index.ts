@@ -50,3 +50,27 @@ export type {
   GovernedRepresentationProviderPort,
   GovernedRepresentationQuery,
 } from './governed-representation-coverage.js';
+
+export {
+  GOVERNED_CONSTRAINT_POLICY_METADATA_KEY,
+  UNRESOLVED_GOVERNED_CONSTRAINT_POLICY_CONTEXT,
+  evaluateGovernedConstraintApplicability,
+  toGovernedConstraintPolicyContext,
+} from './governed-constraint-applicability.js';
+export type {
+  AppliedGovernedConstraint,
+  EvaluateGovernedConstraintApplicabilityInput,
+  GovernedActionConstraintProfile,
+  GovernedAuthorityConstraintClass,
+  GovernedConstraintApplicability,
+  GovernedConstraintApplicabilityKind,
+  GovernedConstraintApplicabilityStatus,
+  GovernedConstraintClassifier,
+  GovernedConstraintNonApplicabilityReason,
+  GovernedConstraintPolicyContext,
+  GovernedConstraintPolicyFact,
+  GovernedConstraintProviderPort,
+  GovernedConstraintQuery,
+  InvalidGovernedConstraint,
+  UnappliedGovernedConstraint,
+} from './governed-constraint-applicability.js';

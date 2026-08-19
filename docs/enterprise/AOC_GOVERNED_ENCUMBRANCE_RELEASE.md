@@ -380,7 +380,22 @@ provider's reference and interprets none of it.
 - **Whether a future action may now proceed.** Release restores availability and
   authorizes nothing. A subsequent `TRANSFER`, `COLLATERALIZE`, `TOKENIZE` or
   `LICENSE` needs its own governance, in full.
-- **Whether a constraint conflicts with a different action.** Still deferred, as
-  the encumbrance layer left it.
+- **Whether a constraint conflicts with a different action.** Decided since, in
+  its own layer: `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`. Two things about
+  release follow from it and are worth stating plainly.
+
+  First, `RELEASE_ENCUMBRANCE` **terminalizes the constraint its mandate names,
+  regardless of ordinary cross-action applicability** — and not through any
+  exemption. A releasing action consumes no constraint class and moves no
+  authority, so nothing applies to it, which is why an active constraint cannot
+  prevent its own governed release. There is no circularity and no general
+  bypass: release gets no relief from action authority, representation,
+  delegation, approval or policy, and discharges nothing it did not name.
+
+  Second, release is **not** a conflict-resolution mechanism. An action that a
+  constraint blocks never triggers a release, and nothing releases a constraint to
+  make room. The action is denied, or referred to approval, and a discharge
+  remains a separate governed lifecycle with its own request, authority and
+  evidence.
 - **Whether constraints follow authority on transfer.** Still deferred; the
   structural refusal that keeps a constraint from being stranded is unchanged.

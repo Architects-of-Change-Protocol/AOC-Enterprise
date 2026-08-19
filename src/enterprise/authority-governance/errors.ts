@@ -103,6 +103,36 @@ export type AuthorityGovernanceErrorCode =
   /** A privileged administrative withdrawal was attempted without a system context. Ordinary discharge goes through the governed release lifecycle; an operator override is not reachable from a request path. */
   | 'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_NOT_PERMITTED'
   // -------------------------------------------------------------------------
+  // Governed constraint applicability. Two codes, and both are about a question
+  // Soberanía could not *answer*, never about a holder who turned out to lack
+  // something. Neither is a denial of authority and neither may be reported as
+  // one: an operator whose deployment cannot classify its own constraint state
+  // must not go looking for a scope shortfall that does not exist.
+  // -------------------------------------------------------------------------
+  /**
+   * An action reached the governed authority accounting layer without a
+   * declared constraint applicability profile.
+   *
+   * The enrolment rule failing closed. A resource this deployment holds no
+   * governed authority for never gets here at all; an action that *does* draw on
+   * governed-right capacity has claimed to participate, and one that has not
+   * stated its relationship to persistent constraints is refused rather than
+   * assumed unrelated. Assuming is how a future action quietly commits
+   * authority a constraint already accounts for.
+   */
+  | 'GOVERNED_AUTHORITY_CONSTRAINT_APPLICABILITY_UNDECLARED'
+  /**
+   * An active persistent constraint could not be classified, so Soberanía cannot
+   * prove a requested action respects it.
+   *
+   * Fails closed, and deliberately not as `AVAILABILITY_INSUFFICIENT`: the
+   * holder's capacity is not what is wrong. A constraint whose class is unknown
+   * — from a migration, a restore, or a writer of a version this deployment
+   * does not understand — is a constraint that must stop the question rather
+   * than be quietly dropped from it.
+   */
+  | 'GOVERNED_AUTHORITY_CONSTRAINT_STATE_INVALID'
+  // -------------------------------------------------------------------------
   // Holder-bound representation. Same taxonomy, same discipline, and the same
   // deliberate absence: there is **no code for "this representative may not
   // act for that holder"**. That is a governance denial, produced by the
