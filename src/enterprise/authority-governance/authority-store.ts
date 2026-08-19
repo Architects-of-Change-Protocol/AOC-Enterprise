@@ -294,19 +294,47 @@ export interface GovernedAuthorityStore {
    * and a holder who kept 5 000 bp throughout still has exactly 5 000 bp
    * afterwards.
    *
-   * Requires `context.system`. The only basis is `'administrative'`, and that
-   * narrowness is deliberate rather than provisional: `COLLATERALIZE`'s
-   * `recordRelease` is an unverified external *observation*, which the
-   * collateralization module already refuses to let decrement its own
-   * `committedScope`, and letting it free authority capacity here would hand
-   * any tenant-scoped caller a way to manufacture headroom by reporting a
-   * release. An authorized discharge is a governed action that does not exist
-   * yet; until it does, releasing a constraint is an operator act.
+   * ## The two bases, and why neither is a caller assertion
    *
-   * Idempotent and non-accumulating. Releasing an already-released constraint
-   * returns it unchanged rather than freeing capacity twice — which is safe by
-   * construction anyway, because capacity is derived from the constraints still
-   * active rather than from a counter that could be decremented twice.
+   * ```
+   * governed-execution   a governed release action was authorized and its execution
+   *                      was confirmed successful by a trusted executor
+   * administrative       a privileged operator withdrew it; requires context.system
+   * ```
+   *
+   * `'governed-execution'` is what makes production discharge possible without
+   * making it self-assertable. The action it names must be classified as
+   * releasing (`GOVERNED_AUTHORITY_RELEASING_ACTIONS`), and the execution
+   * reference it carries is one no requester can fabricate: only
+   * `../encumbrance-release-governance/`'s service mints one, and only by
+   * calling a trusted `EncumbranceReleaseExecutorPort` itself and durably
+   * recording what that port confirmed. What is emphatically *not* accepted is
+   * `COLLATERALIZE`'s `recordRelease` — an unverified external observation the
+   * collateralization module already refuses to let decrement its own
+   * `committedScope`, and which would hand any tenant-scoped caller a way to
+   * manufacture headroom by reporting a release.
+   *
+   * This is a store API, not a request surface, in exactly the sense
+   * `recordEncumbrance` is: the layering, not a context flag, is what stops an
+   * ordinary requester constructing a basis. A caller holding a store handle
+   * still cannot terminalize arbitrarily — `assertReleaseExecutionUnclaimed`
+   * binds one release execution to at most one constraint, so a confirmed
+   * release can never be re-pointed at a sibling it did not discharge.
+   *
+   * ## Idempotency, and what is refused instead
+   *
+   * Idempotent and non-accumulating. Replaying the *same* terminalization
+   * returns the constraint unchanged rather than freeing capacity twice — which
+   * is safe by construction anyway, because capacity is derived from the
+   * constraints still active rather than from a counter that could be
+   * decremented twice. Presenting *different* grounds for an
+   * already-released constraint is refused with
+   * `GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT`, because two release
+   * lifecycles both believing they discharged one record is a fact a caller has
+   * to see.
+   *
+   * There is deliberately no un-release. `'active' -> 'released'` is the whole
+   * of the lifecycle; re-encumbering requires a new governed `COLLATERALIZE`.
    */
   releaseEncumbrance(
     context: AuthorityGovernanceContext,
@@ -315,6 +343,27 @@ export interface GovernedAuthorityStore {
 
   /** Tenant-scoped lookup of one encumbrance, or `null`. A cross-tenant id reads as absent rather than as a refusal, so identifiers cannot be probed. */
   getEncumbrance(context: AuthorityGovernanceContext, tenantId: string, encumbranceId: string): Promise<GovernedAuthorityEncumbrance | null>;
+
+  /**
+   * The (at most one) constraint a release execution reference terminalized, or
+   * `null`.
+   *
+   * What makes crash recovery decidable rather than guessed. A release service
+   * that confirmed an execution and then died before terminalizing sees `null`
+   * here and can finish the job; one that died *after* sees the released
+   * constraint and stops. Neither has to compare timestamps or re-ask an
+   * external system, and neither can terminalize twice — the same role
+   * `listTransitionsByExecutionRef` plays for a movement between two stores.
+   *
+   * At most one by construction: an in-memory scan and a partial UNIQUE index
+   * respectively refuse a second constraint claiming the same release
+   * execution.
+   */
+  getEncumbranceByReleaseExecutionRef(
+    context: AuthorityGovernanceContext,
+    tenantId: string,
+    releaseExecutionRef: string,
+  ): Promise<GovernedAuthorityEncumbrance | null>;
 
   /** Tenant-scoped, stably-ordered constraints recorded against one authorization artifact — the audit link from a mandate to what its execution left behind. */
   listEncumbrancesByMandateRef(

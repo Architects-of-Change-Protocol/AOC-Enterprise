@@ -72,7 +72,7 @@ outlives it.
 | **Encumbered authority** | The sum of the encumbrances still constraining this holder, resource and right. Post-execution. |
 | **Unencumbered / action-available authority** | What can still be committed now: `held − committed − encumbered`. |
 | **Source execution** | The execution evidence a constraint is rooted in. The whole of its trusted basis, and its idempotency key. |
-| **Release / discharge** | The privileged act that ends a constraint. Not the same thing as `COLLATERALIZE`'s `recordRelease`, which is an unverified external observation — see "Production discharge remains a gap". |
+| **Release / discharge** | The governed act that ends a constraint — `RELEASE_ENCUMBRANCE`, authorized, executed by a trusted executor and evidenced (see `AOC_GOVERNED_ENCUMBRANCE_RELEASE.md`) — or the privileged administrative override that remains available for repair. Neither is `COLLATERALIZE`'s `recordRelease`, which is an unverified external observation and frees nothing. |
 
 Deliberately four words rather than one ambiguous *available*. A holder who
 possesses 5 000 bp, a holder with 4 000 of it promised to a live mandate, and a
@@ -257,10 +257,37 @@ Letting the same unverified report free authority capacity would be that refusal
 reversed, and would hand any tenant-scoped caller a way to manufacture headroom
 by reporting a release. So it does not.
 
-**Status: `NOT PRESENT`.** An authorized discharge — with its own request,
-decision, authority check and evidence — is a separate governed action this
-phase deliberately does not invent. Until it exists, ending a constraint is an
-operator act.
+**Status when this layer shipped: `NOT PRESENT`.** An authorized discharge —
+with its own request, decision, authority check and evidence — was a separate
+governed action that phase deliberately did not invent. Until it existed, ending
+a constraint was an operator act.
+
+### Update: governed release now exists
+
+The finding above is preserved as it was measured, and the gap it names is
+closed. `RELEASE_ENCUMBRANCE` (capability `release-encumbrance`) is the fifth
+governed action, and it is now the production path:
+
+```
+ACTIVE persistent constraint
+    -> authorized release request      action authority, policy, approvals, obligations
+    -> release mandate                 constraint still ACTIVE; capacity unchanged
+    -> trusted executor confirmation   EncumbranceReleaseExecutorPort
+    -> encumbrance RELEASED
+    -> capacity restored
+```
+
+An ACTIVE constraint may now terminalize **only** through a verified governed
+release execution, or through an explicit privileged administrative recovery
+that records who overrode it and why. Both remain distinguishable forever in the
+stored basis.
+
+Nothing above about `recordRelease` has changed. It is still an unverified
+external observation, it still touches no authority state, and it still cannot
+free capacity — its classification is `OBSERVATION_ONLY`, and it was
+deliberately not migrated into the governed lifecycle. See
+`AOC_GOVERNED_ENCUMBRANCE_RELEASE.md` and
+`docs/architecture/ADR-GOVERNED-ENCUMBRANCE-RELEASE.md`.
 
 ## Structural consistency with authority-changing actions
 

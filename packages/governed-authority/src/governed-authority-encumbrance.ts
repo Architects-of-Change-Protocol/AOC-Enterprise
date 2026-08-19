@@ -119,9 +119,35 @@ export interface GovernedAuthorityEncumbrance {
 
   readonly status: GovernedAuthorityEncumbranceStatus;
 
-  /** When a legitimate release ended it, and on what basis. Both absent while `'active'`, both present once `'released'`. */
+  /** When a legitimate release ended it, and on what kind of basis. Both absent while `'active'`, both present once `'released'`. */
   readonly releasedAt?: string;
-  readonly releaseBasis?: GovernedAuthorityEncumbranceReleaseBasis;
+  readonly releaseBasis?: GovernedAuthorityEncumbranceReleaseBasisKind;
+
+  // -------------------------------------------------------------------------
+  // Release lineage. Present exactly when the matching basis kind is, absent
+  // otherwise, and every field is a *reference* rather than a copied payload:
+  // what makes a terminalization checkable is that it points at artifacts
+  // somebody else recorded, not that it restates them.
+  // -------------------------------------------------------------------------
+
+  /** The governed release action whose execution terminalized this constraint. `'governed-execution'` basis only. */
+  readonly releaseAction?: string;
+  /** The release authorization the execution ran under. `'governed-execution'` basis only. */
+  readonly releaseMandateRef?: string;
+  /**
+   * The confirmed release execution evidence — the whole of the trusted basis,
+   * and the idempotency key for terminalization.
+   *
+   * One execution reference terminalizes at most one constraint. A second
+   * constraint naming the same reference is refused rather than released, so a
+   * single confirmed release can never be spread across siblings it did not
+   * discharge. `'governed-execution'` basis only.
+   */
+  readonly releaseExecutionRef?: string;
+  /** The operator a privileged withdrawal was performed by. `'administrative'` basis only, and required there: an override nobody is named for is an override nobody can be asked about. */
+  readonly releasedBy?: string;
+  /** Why the privileged withdrawal was performed, in the deployment's own closed vocabulary. `'administrative'` basis only. */
+  readonly releaseReasonCode?: string;
 
   /** The key creation is idempotent on. Derived from the source execution and right, so a replayed execution restates one constraint rather than adding a second. */
   readonly idempotencyKey: string;
@@ -162,11 +188,18 @@ export interface GovernedAuthorityEncumbrance {
 export type GovernedAuthorityEncumbranceStatus = 'active' | 'released';
 
 /**
- * Why a persistent constraint stopped constraining.
+ * Why a persistent constraint stopped constraining, as a stored discriminant.
  *
- * Exactly one basis today, and the narrowness is the finding rather than an
- * omission. `COLLATERALIZE` has no authorized release: its `recordRelease` is
- * an *observation* an external system reported, taken on trust from a
+ * ```
+ * governed-execution   a governed release action was authorized and its execution
+ *                      was confirmed successful by a trusted executor
+ * administrative       a privileged operator withdrew it — migration, recovery, or
+ *                      an operator acting on evidence AOC itself cannot verify
+ * ```
+ *
+ * Deliberately two, and deliberately not three. There is **no**
+ * `'source_release_evidence'`: `COLLATERALIZE`'s `recordRelease` is an
+ * *observation* an external system reported, taken on trust from a
  * caller-asserted `reportedBy`, and the collateralization module already
  * refuses to let such a report decrement `committedScope` on the stated
  * grounds that AOC cannot verify an external encumbrance actually ended.
@@ -174,15 +207,61 @@ export type GovernedAuthorityEncumbranceStatus = 'active' | 'released';
  * refusal reversed, and would hand any tenant-scoped caller a way to
  * manufacture headroom by reporting a release.
  *
- * So there is no `'source_release_evidence'` basis here. Authorizing a
- * discharge — with its own request, decision, authority check and evidence —
- * is a separate governed action this phase deliberately does not invent. See
- * `docs/enterprise/AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`, "Production
- * discharge remains a gap".
+ * The two that exist are kept apart because they are different governance
+ * facts and must stay distinguishable forever in the audit record: one says
+ * "this deployment completed its configured governed release process", the
+ * other says "an operator overrode the state". Collapsing them would make an
+ * override indistinguishable from a discharge.
+ *
+ * See `docs/enterprise/AOC_GOVERNED_ENCUMBRANCE_RELEASE.md`.
+ */
+export type GovernedAuthorityEncumbranceReleaseBasisKind = 'governed-execution' | 'administrative';
+
+/**
+ * The typed grounds a terminalization is asked for on.
+ *
+ * A *union*, never a free-text reason, for the same reason
+ * `GovernedAuthorityBasis` is one: a constraint that could be ended by a
+ * string a caller chose would be a constraint a caller could end. Each variant
+ * carries exactly the references that make its own claim checkable, and
+ * nothing else — no payload, no provider response, no prose.
+ *
+ * Neither variant is reachable from a request path. `'governed-execution'` is
+ * constructed only by the release service, from an execution it performed
+ * itself against a trusted executor port; `'administrative'` requires a
+ * privileged system context.
  */
 export type GovernedAuthorityEncumbranceReleaseBasis =
-  /** A privileged administrative withdrawal — migration, recovery, or an operator acting on evidence AOC itself cannot verify. Requires a system context, and is never reachable from a request path. */
-  'administrative';
+  /**
+   * A confirmed successful execution of a governed release mandate.
+   *
+   * `executionRef` is the trusted basis and the idempotency key. The store
+   * re-checks that the named action is classified as releasing and that no
+   * other constraint has already been terminalized under the same execution,
+   * so one confirmed release can never discharge a sibling it did not cover.
+   */
+  | {
+      readonly kind: 'governed-execution';
+      readonly action: string;
+      readonly mandateRef: string;
+      readonly executionRef: string;
+    }
+  /**
+   * A privileged administrative withdrawal — migration, recovery, or an
+   * operator acting on evidence AOC itself cannot verify.
+   *
+   * Requires a system context, and requires both an actor and a reason code:
+   * an override nobody is named for, for no recorded reason, is an override
+   * nobody can be asked about afterwards. It is deliberately *not* a way to
+   * perform an ordinary discharge without governance — a deployment that
+   * routinely reaches for it has disabled its own release lifecycle, and the
+   * distinct stored basis kind is what makes that visible in the audit record.
+   */
+  | {
+      readonly kind: 'administrative';
+      readonly assertedBy: string;
+      readonly reasonCode: string;
+    };
 
 /**
  * Whether an encumbrance counts against the authority still free for a further

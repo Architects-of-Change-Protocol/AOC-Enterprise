@@ -3,6 +3,8 @@ import {
   governedAuthorityReservationReducesAvailability,
   type GovernedAuthorityAvailability,
   type GovernedAuthorityEncumbrance,
+  type GovernedAuthorityEncumbranceReleaseBasis,
+  type GovernedAuthorityEncumbranceReleaseBasisKind,
   type GovernedAuthorityPosition,
   type GovernedAuthorityReservation,
 } from '@aoc-enterprise/governed-authority';
@@ -90,6 +92,162 @@ export const GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS: readonly string[] = ['colla
  */
 export function governedActionEncumbersAuthority(action: string): boolean {
   return GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS.includes(action);
+}
+
+// ---------------------------------------------------------------------------
+// Which governed actions may terminalize a persistent constraint.
+//
+// The third classification in this file, and deliberately a *third* list
+// rather than a reading of either of the other two. The three answer different
+// questions:
+//
+//   conserving   does executing this action debit a GovernedAuthorityPosition?
+//   encumbering  does executing this action leave the holder's authority
+//                persistently constrained without debiting it?
+//   releasing    does executing this action end such a constraint, so the
+//                authority it held becomes committable again?
+//
+// Nothing is on more than one of them, and nothing should be. An action that
+// both created and ended constraints would be able to launder one into the
+// other; an action that conserved *and* released would be moving authority and
+// freeing it in the same step.
+//
+// Exactly one entry, and the narrowness is the point. `'release-encumbrance'`
+// is the fifth governed action, introduced by this phase, and it is the only
+// action whose successful execution AOC will accept as grounds for a
+// `'governed-execution'` release basis. `'collateralize'` is emphatically not
+// here: an arrangement's own mandate cannot discharge the constraint that
+// arrangement created, or the constraint would be worth nothing.
+//
+// Kept as a literal for the same reason `GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS`
+// keeps `'collateralize'` as one: this module is the generic authority
+// accounting layer and must not depend on any action module. The canonical
+// constant is `ENTERPRISE_RELEASE_ENCUMBRANCE_CAPABILITY` in
+// `../encumbrance-release-governance/contracts.ts`, and the two are held
+// together by `src/enterprise/__tests__/governed-encumbrance-release-scenario.test.ts`.
+// ---------------------------------------------------------------------------
+
+/** The capability vocabulary `GovernedAuthorityBasis`'s `governed-execution` variant already uses. */
+export const GOVERNED_AUTHORITY_RELEASING_ACTIONS: readonly string[] = ['release-encumbrance'];
+
+/**
+ * Whether a successful execution of this governed action may terminalize a
+ * persistent constraint. Anything else naming itself in a
+ * `'governed-execution'` release basis is refused, so "some action executed"
+ * can never become "the constraint is over".
+ */
+export function governedActionReleasesEncumbrance(action: string): boolean {
+  return GOVERNED_AUTHORITY_RELEASING_ACTIONS.includes(action);
+}
+
+/**
+ * Refuses a release basis that is not grounds for ending *this* constraint,
+ * before any status is written.
+ *
+ * Shared by both store backends so neither can drift into a laxer reading, and
+ * expressed over the stored constraint rather than over anything the caller
+ * restated: everything checkable here is checked against the record AOC
+ * already holds.
+ *
+ * What it enforces, and why each one is load-bearing:
+ *
+ * - **A `'governed-execution'` basis must name a releasing action.** Otherwise
+ *   any executed mandate of any action would be grounds for a discharge.
+ * - **An `'administrative'` basis must name an actor and a reason code.** An
+ *   override nobody is named for cannot be reviewed afterwards.
+ * - **Neither may be empty-stringed into existence.** A blank reference is not
+ *   a reference.
+ *
+ * What it deliberately does *not* enforce here is that the named mandate and
+ * execution exist and target this constraint: this module holds no mandates,
+ * and asserting it from here would mean the generic accounting layer taking a
+ * dependency on one action's store. That check is the release service's, made
+ * against the artifacts themselves before it ever calls the store, and the
+ * store's own defence is narrower and structural — one execution reference
+ * terminalizes at most one constraint (`assertReleaseExecutionUnclaimed`).
+ */
+export function assertEncumbranceReleaseBasisAcceptable(
+  basis: GovernedAuthorityEncumbranceReleaseBasis,
+  context: Readonly<Record<string, unknown>>,
+): void {
+  if (basis.kind === 'governed-execution') {
+    if (!governedActionReleasesEncumbrance(basis.action)) {
+      throw new AuthorityGovernanceError(
+        'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+        `'${basis.action}' is not classified as releasing a persistent governed authority constraint; only ${GOVERNED_AUTHORITY_RELEASING_ACTIONS.join(', ')} may terminalize one.`,
+        { ...context, action: basis.action },
+      );
+    }
+    if (!isNonEmpty(basis.mandateRef) || !isNonEmpty(basis.executionRef)) {
+      throw new AuthorityGovernanceError(
+        'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+        'A governed-execution release basis must name both the release mandate it ran under and the confirmed execution it is rooted in.',
+        context,
+      );
+    }
+    return;
+  }
+
+  if (!isNonEmpty(basis.assertedBy) || !isNonEmpty(basis.reasonCode)) {
+    throw new AuthorityGovernanceError(
+      'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+      'An administrative release basis must name the operator asserting it and a reason code; a privileged override that records neither cannot be reviewed afterwards.',
+      context,
+    );
+  }
+}
+
+function isNonEmpty(value: string): boolean {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
+ * The release lineage fields a basis projects onto the stored record.
+ *
+ * One place, so the two backends cannot disagree about which fields a basis
+ * writes, and so an added variant cannot be persisted half-way by one of them.
+ */
+export function projectReleaseBasis(basis: GovernedAuthorityEncumbranceReleaseBasis): {
+  readonly releaseBasis: GovernedAuthorityEncumbranceReleaseBasisKind;
+  readonly releaseAction?: string;
+  readonly releaseMandateRef?: string;
+  readonly releaseExecutionRef?: string;
+  readonly releasedBy?: string;
+  readonly releaseReasonCode?: string;
+} {
+  return basis.kind === 'governed-execution'
+    ? {
+        releaseBasis: 'governed-execution',
+        releaseAction: basis.action,
+        releaseMandateRef: basis.mandateRef,
+        releaseExecutionRef: basis.executionRef,
+      }
+    : { releaseBasis: 'administrative', releasedBy: basis.assertedBy, releaseReasonCode: basis.reasonCode };
+}
+
+/**
+ * Whether a replayed terminalization is the same one already recorded.
+ *
+ * A constraint that is already `'released'` is returned unchanged when the
+ * basis matches — the idempotency every store operation here offers — and
+ * refused when it does not. Refusing matters: a second, *different* discharge
+ * arriving for a constraint that is already terminal is a conflict a caller
+ * needs to see, not a no-op to swallow, because it means two release
+ * lifecycles both believe they discharged the same thing.
+ */
+export function encumbranceReleaseReplayMatches(
+  existing: GovernedAuthorityEncumbrance,
+  basis: GovernedAuthorityEncumbranceReleaseBasis,
+): boolean {
+  const projected = projectReleaseBasis(basis);
+  return (
+    existing.releaseBasis === projected.releaseBasis &&
+    existing.releaseAction === projected.releaseAction &&
+    existing.releaseMandateRef === projected.releaseMandateRef &&
+    existing.releaseExecutionRef === projected.releaseExecutionRef &&
+    existing.releasedBy === projected.releasedBy &&
+    existing.releaseReasonCode === projected.releaseReasonCode
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -345,7 +503,7 @@ export function assertRemainingScopeCoversEncumbrances(
 // reservations use.
 // ---------------------------------------------------------------------------
 
-/** The exact bytes an encumbrance's digest covers. Every field that could be tampered with to free constrained capacity, move a constraint onto another holder, right or resource, or forge its basis is in here; the digest itself obviously is not. */
+/** The exact bytes an encumbrance's digest covers. Every field that could be tampered with to free constrained capacity, move a constraint onto another holder, right or resource, or forge either its creation basis or its release basis is in here; the digest itself obviously is not. The release lineage fields are all conditional, so a row that never carried them projects byte-identically to how it did before they existed — which is what makes them a purely additive schema change rather than a rewrite of history. */
 export function projectEncumbranceForDigest(encumbrance: Omit<GovernedAuthorityEncumbrance, 'digest'>): Readonly<Record<string, unknown>> {
   return {
     id: encumbrance.id,
@@ -363,6 +521,11 @@ export function projectEncumbranceForDigest(encumbrance: Omit<GovernedAuthorityE
     status: encumbrance.status,
     ...(encumbrance.releasedAt !== undefined ? { releasedAt: encumbrance.releasedAt } : {}),
     ...(encumbrance.releaseBasis !== undefined ? { releaseBasis: encumbrance.releaseBasis } : {}),
+    ...(encumbrance.releaseAction !== undefined ? { releaseAction: encumbrance.releaseAction } : {}),
+    ...(encumbrance.releaseMandateRef !== undefined ? { releaseMandateRef: encumbrance.releaseMandateRef } : {}),
+    ...(encumbrance.releaseExecutionRef !== undefined ? { releaseExecutionRef: encumbrance.releaseExecutionRef } : {}),
+    ...(encumbrance.releasedBy !== undefined ? { releasedBy: encumbrance.releasedBy } : {}),
+    ...(encumbrance.releaseReasonCode !== undefined ? { releaseReasonCode: encumbrance.releaseReasonCode } : {}),
     idempotencyKey: encumbrance.idempotencyKey,
     ...(encumbrance.correlationId !== undefined ? { correlationId: encumbrance.correlationId } : {}),
     createdAt: encumbrance.createdAt,

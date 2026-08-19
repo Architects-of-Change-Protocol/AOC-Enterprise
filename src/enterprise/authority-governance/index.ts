@@ -69,11 +69,16 @@ export {
 
 export {
   assertEncumbranceIntegrity,
+  assertEncumbranceReleaseBasisAcceptable,
   assertRemainingScopeCoversEncumbrances,
   computeCapacity,
   computeEncumbranceDigest,
+  encumbranceReleaseReplayMatches,
   governedActionEncumbersAuthority,
+  governedActionReleasesEncumbrance,
+  projectReleaseBasis,
   GOVERNED_AUTHORITY_ENCUMBERING_ACTIONS,
+  GOVERNED_AUTHORITY_RELEASING_ACTIONS,
 } from './encumbrance-lifecycle.js';
 
 export { createInMemoryGovernedAuthorityStore, GOVERNED_AUTHORITY_STORE_SCHEMA_VERSION } from './in-memory-authority-store.js';

@@ -639,3 +639,47 @@ were deliberately **not** renamed to match the `occurredAt` / `lifecycleType`
 spelling `LICENSE` and `TRANSFER` share — the audit records that divergence as
 naming rather than meaning, and does not rename a frozen field to tidy it. See
 `docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md`.
+
+## Update — governed release exists, and `recordRelease` is unchanged
+
+The prediction in "Release and discharge evidence" above has come true exactly
+as it was written:
+
+> If releasing collateral ever needs to be *authorized* by AOC rather than
+> merely *observed*, that is a separate governed action with its own request,
+> decision and mandate.
+
+That action now exists. It is **`RELEASE_ENCUMBRANCE`** (capability
+`release-encumbrance`), and — note the name — it does not govern collateral. It
+governs the `GovernedAuthorityEncumbrance` a completed collateralization leaves
+behind: the persistent constraint on the holder's authority, not the external
+arrangement itself. AOC still releases nothing in the world, and still asserts
+nothing about whether an external encumbrance ended.
+
+**Nothing in this document changes.** `recordRelease` remains exactly what it is
+described as above — an unverified external observation, not a governed action,
+not a mandate status, and not a restoration of headroom. It is classified
+`OBSERVATION_ONLY`, it was deliberately **not** migrated into the governed
+lifecycle, and it still cannot free authority capacity. Turning an observational
+API into an authoritative one silently would have been strictly worse than
+leaving the gap open.
+
+What a deployment does when it wants a reported release to *matter* is submit a
+`RELEASE_ENCUMBRANCE` request, citing the observation as evidence on it, where a
+decision can weigh it. The persistent constraint then ends only if that request
+is authorized, a release mandate is issued, and a trusted executor confirms the
+release — never because the report exists.
+
+Two things this deliberately does **not** change here:
+
+- **`securedPartyRef` is still "who benefits".** Being the secured party confers
+  no authority to release the constraint. Release authority is explicit,
+  recognized Action Authority over the resource, and a deployment that wants the
+  secured party to hold it grants it in the Authority Graph like any other.
+- **The committed-scope rule is untouched.** `committedScope` is still
+  mandate-local bookkeeping and still never decremented by a report. The
+  canonical cross-mandate constraint is the `GovernedAuthorityEncumbrance`, and
+  that is what a governed release terminalizes.
+
+See `docs/enterprise/AOC_GOVERNED_ENCUMBRANCE_RELEASE.md` and
+`docs/architecture/ADR-GOVERNED-ENCUMBRANCE-RELEASE.md`.

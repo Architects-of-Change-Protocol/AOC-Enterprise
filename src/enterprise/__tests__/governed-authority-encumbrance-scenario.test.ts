@@ -273,7 +273,7 @@ describe('Encumbrance — the mandatory 5000 / 4000 / 4000 scenario', () => {
     await world.authorityStore.releaseEncumbrance(ADMIN_CONTEXT, {
       tenantId: GA_TENANT_A,
       encumbranceId: constraint.id,
-      basis: 'administrative',
+      basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const,
     });
     const t3 = await capacity(world);
     assert.ok(t3.outcome === 'available');

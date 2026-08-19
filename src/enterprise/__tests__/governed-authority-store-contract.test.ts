@@ -1251,15 +1251,16 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
         const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
         assert.ok(created.outcome === 'encumbered');
 
-        // A tenant caller may read its own state and may not free it. There is
-        // no basis a request path could supply, so there is no context a
-        // request path could reach this from.
+        // A tenant caller may read its own state and may not free it by
+        // asserting an operator override. Ordinary discharge goes through the
+        // governed release lifecycle, which produces a `'governed-execution'`
+        // basis nobody can construct by hand.
         assert.equal(
-          await errorCode(() => store.releaseEncumbrance(TENANT_A_CONTEXT, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative' })),
-          'GOVERNED_AUTHORITY_BOOTSTRAP_NOT_PERMITTED',
+          await errorCode(() => store.releaseEncumbrance(TENANT_A_CONTEXT, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const })),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_NOT_PERMITTED',
         );
 
-        const released = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+        const released = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const, releasedAt: LATER });
         assert.equal(released.status, 'released');
         assert.equal(released.releaseBasis, 'administrative');
         assert.equal(released.releasedAt, LATER);
@@ -1281,8 +1282,8 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
         const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
         assert.ok(created.outcome === 'encumbered');
 
-        const first = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
-        const second = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: MUCH_LATER });
+        const first = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const, releasedAt: LATER });
+        const second = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const, releasedAt: MUCH_LATER });
         assert.equal(second.releasedAt, first.releasedAt, 'the audit stays honest about when the release actually happened');
 
         // Safe by construction anyway: capacity is derived from the constraints
@@ -1298,11 +1299,214 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
         await seed(store, 'party-alice', proportional(5_000));
         const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
         assert.ok(created.outcome === 'encumbered');
-        await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+        await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const, releasedAt: LATER });
 
         assert.equal((await store.getEncumbrance(ADMIN, TENANT_A, created.encumbrance.id))?.status, 'released');
         assert.equal((await store.listEncumbrancesByMandateRef(ADMIN, TENANT_A, 'mandate-1')).length, 1);
         assert.equal((await store.listActiveEncumbrances(ADMIN, availabilityOf('party-alice', { at: LATER }))).length, 0, 'but it no longer constrains anything');
+        await store.close();
+      });
+
+      // -----------------------------------------------------------------
+      // Terminalization from a trusted governed release execution.
+      //
+      // The production basis, and the whole reason a persistent constraint can
+      // now end without an operator. What these pin down is not that a release
+      // works — the scenario suite drives the real lifecycle end to end — but
+      // that the *store* refuses every shape of basis that is not grounds for
+      // ending this particular constraint.
+      // -----------------------------------------------------------------
+
+      it('terminalizes from a confirmed governed release execution, recording the lineage that justified it', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+
+        // No system context. What makes this trustworthy is the execution
+        // reference, which only the release service can mint — not the caller's
+        // privilege, which is what an operator override needs.
+        const released = await store.releaseEncumbrance(TENANT_A_CONTEXT, {
+          tenantId: TENANT_A,
+          encumbranceId: created.encumbrance.id,
+          basis: { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: 'release-mandate-1', executionRef: 'release-exec-1' },
+          releasedAt: LATER,
+        });
+        assert.equal(released.status, 'released');
+        assert.equal(released.releaseBasis, 'governed-execution');
+        assert.equal(released.releaseAction, 'release-encumbrance');
+        assert.equal(released.releaseMandateRef, 'release-mandate-1');
+        assert.equal(released.releaseExecutionRef, 'release-exec-1');
+        assert.equal(released.releasedBy, undefined, 'no operator is named, because none acted');
+        assert.equal(released.releaseReasonCode, undefined);
+
+        // The position is untouched and exactly the constrained capacity came
+        // back. Not 9 000.
+        assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-alice', ASSET, ECONOMIC))?.scope, proportional(5_000));
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice', { at: LATER }));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.available, proportional(5_000));
+
+        // And the release execution is findable, which is what makes crash
+        // recovery decidable rather than guessed.
+        const found = await store.getEncumbranceByReleaseExecutionRef(ADMIN, TENANT_A, 'release-exec-1');
+        assert.equal(found?.id, created.encumbrance.id);
+        assert.equal(await store.getEncumbranceByReleaseExecutionRef(ADMIN, TENANT_A, 'release-exec-never'), null);
+        await store.close();
+      });
+
+      it('refuses grounds that are not grounds for ending a constraint', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+        const target = { tenantId: TENANT_A, encumbranceId: created.encumbrance.id };
+
+        // An action that is not classified as releasing. `'collateralize'` is
+        // the one that matters: an arrangement's own action must never be able
+        // to discharge the constraint it created.
+        assert.equal(
+          await errorCode(() =>
+            store.releaseEncumbrance(ADMIN, {
+              ...target,
+              basis: { kind: 'governed-execution', action: 'collateralize', mandateRef: 'mandate-1', executionRef: 'exec-1' },
+            }),
+          ),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+        );
+        assert.equal(
+          await errorCode(() =>
+            store.releaseEncumbrance(ADMIN, {
+              ...target,
+              basis: { kind: 'governed-execution', action: 'transfer', mandateRef: 'm', executionRef: 'e' },
+            }),
+          ),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+        );
+
+        // A blank reference is not a reference.
+        assert.equal(
+          await errorCode(() =>
+            store.releaseEncumbrance(ADMIN, {
+              ...target,
+              basis: { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: '', executionRef: 'e' },
+            }),
+          ),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+        );
+        assert.equal(
+          await errorCode(() =>
+            store.releaseEncumbrance(ADMIN, {
+              ...target,
+              basis: { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: 'm', executionRef: '' },
+            }),
+          ),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+        );
+
+        // An override nobody is named for, for no recorded reason, cannot be
+        // reviewed afterwards and is refused.
+        assert.equal(
+          await errorCode(() => store.releaseEncumbrance(ADMIN, { ...target, basis: { kind: 'administrative', assertedBy: '', reasonCode: 'x' } })),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+        );
+        assert.equal(
+          await errorCode(() => store.releaseEncumbrance(ADMIN, { ...target, basis: { kind: 'administrative', assertedBy: 'ops', reasonCode: '' } })),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID',
+        );
+
+        assert.equal((await store.getEncumbrance(ADMIN, TENANT_A, created.encumbrance.id))?.status, 'active', 'and every refusal left it standing');
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.available, proportional(1_000));
+        await store.close();
+      });
+
+      it('binds one confirmed release execution to exactly one constraint', async () => {
+        // Without this, a service that genuinely released A could present the
+        // same execution reference for its sibling B and discharge a commitment
+        // nothing ever released.
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+        const a = await store.recordEncumbrance(ADMIN, encumbrance('exec-a', 'mandate-a', 'party-alice', proportional(3_000)));
+        const b = await store.recordEncumbrance(ADMIN, encumbrance('exec-b', 'mandate-b', 'party-alice', proportional(2_000)));
+        assert.ok(a.outcome === 'encumbered' && b.outcome === 'encumbered');
+
+        const basis = { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: 'release-mandate-1', executionRef: 'release-exec-1' } as const;
+        await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: a.encumbrance.id, basis, releasedAt: LATER });
+
+        assert.equal(
+          await errorCode(() => store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: b.encumbrance.id, basis, releasedAt: LATER })),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT',
+        );
+
+        assert.equal((await store.getEncumbrance(ADMIN, TENANT_A, b.encumbrance.id))?.status, 'active', 'the sibling stands');
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice', { at: LATER }));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.encumbered, proportional(2_000));
+        assert.deepEqual(capacity.available, proportional(8_000), 'exactly 3 000 came back, and not 5 000');
+        await store.close();
+      });
+
+      it('replays the same terminalization and refuses a different one', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+        const basis = { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: 'release-mandate-1', executionRef: 'release-exec-1' } as const;
+
+        const first = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis, releasedAt: LATER });
+        const replay = await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis, releasedAt: MUCH_LATER });
+        assert.equal(replay.releasedAt, first.releasedAt, 'the same grounds return the record unchanged');
+
+        // Different grounds for a terminal constraint means two lifecycles both
+        // believe they discharged it. That is a fact a caller has to see.
+        assert.equal(
+          await errorCode(() =>
+            store.releaseEncumbrance(ADMIN, {
+              tenantId: TENANT_A,
+              encumbranceId: created.encumbrance.id,
+              basis: { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: 'release-mandate-2', executionRef: 'release-exec-2' },
+            }),
+          ),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT',
+        );
+        assert.equal(
+          await errorCode(() =>
+            store.releaseEncumbrance(ADMIN, {
+              tenantId: TENANT_A,
+              encumbranceId: created.encumbrance.id,
+              basis: { kind: 'administrative', assertedBy: 'ops', reasonCode: 'repair' },
+            }),
+          ),
+          'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT',
+        );
+
+        const capacity = await store.resolveAvailability(ADMIN, availabilityOf('party-alice', { at: MUCH_LATER }));
+        assert.ok(capacity.outcome === 'available');
+        assert.deepEqual(capacity.available, proportional(5_000), 'capacity restored exactly once');
+        await store.close();
+      });
+
+      it('records who overrode and why, when an operator overrides', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(created.outcome === 'encumbered');
+
+        const released = await store.releaseEncumbrance(ADMIN, {
+          tenantId: TENANT_A,
+          encumbranceId: created.encumbrance.id,
+          basis: { kind: 'administrative', assertedBy: 'actor-operations-lead', reasonCode: 'external-discharge-verified-out-of-band' },
+          releasedAt: LATER,
+        });
+        assert.equal(released.releaseBasis, 'administrative');
+        assert.equal(released.releasedBy, 'actor-operations-lead');
+        assert.equal(released.releaseReasonCode, 'external-discharge-verified-out-of-band');
+        // The two paths stay distinguishable forever: an override never wears
+        // a governed discharge's lineage.
+        assert.equal(released.releaseMandateRef, undefined);
+        assert.equal(released.releaseExecutionRef, undefined);
         await store.close();
       });
 
@@ -1319,13 +1523,33 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
         assert.equal(await errorCode(() => store.getEncumbrance(TENANT_B_CONTEXT, TENANT_A, created.encumbrance.id)), 'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION');
         assert.equal(await store.getEncumbrance(TENANT_B_CONTEXT, TENANT_B, created.encumbrance.id), null);
         assert.equal(
-          await errorCode(() => store.releaseEncumbrance(ADMIN, { tenantId: TENANT_B, encumbranceId: created.encumbrance.id, basis: 'administrative' })),
+          await errorCode(() => store.releaseEncumbrance(ADMIN, { tenantId: TENANT_B, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const })),
           'GOVERNED_AUTHORITY_ENCUMBRANCE_NOT_FOUND',
         );
         assert.equal(
           await errorCode(() => store.recordEncumbrance(TENANT_B_CONTEXT, encumbrance('exec-cross', 'mandate-x', 'party-alice', proportional(1_000)))),
           'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION',
         );
+
+        // A governed release basis crosses no boundary either: neither the
+        // terminalization nor the release-execution lookup that recovery uses.
+        assert.equal(
+          await errorCode(() =>
+            store.releaseEncumbrance(TENANT_B_CONTEXT, {
+              tenantId: TENANT_A,
+              encumbranceId: created.encumbrance.id,
+              basis: { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: 'm', executionRef: 'e' },
+            }),
+          ),
+          'GOVERNED_AUTHORITY_ACCESS_SCOPE_VIOLATION',
+        );
+        await store.releaseEncumbrance(ADMIN, {
+          tenantId: TENANT_A,
+          encumbranceId: created.encumbrance.id,
+          basis: { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: 'release-mandate-1', executionRef: 'release-exec-1' },
+          releasedAt: LATER,
+        });
+        assert.equal(await store.getEncumbranceByReleaseExecutionRef(TENANT_B_CONTEXT, TENANT_B, 'release-exec-1'), null);
 
         // And Tenant B's own capacity is untouched by Tenant A's constraint.
         const tenantB = await store.resolveAvailability(TENANT_B_CONTEXT, availabilityOf('party-alice', { tenantId: TENANT_B }));
@@ -1605,7 +1829,7 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
         // Either ordering is correct; what must never happen is both the
         // constraint standing and the capacity being handed out.
         const results = await Promise.allSettled([
-          store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative' }),
+          store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const }),
           store.acquireReservation(ADMIN, reservation('mandate-2', 'party-alice', proportional(4_000))),
         ]);
         assert.equal(results[0]?.status, 'fulfilled', 'the privileged release always completes');
@@ -1672,7 +1896,7 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
           'GOVERNED_AUTHORITY_ENCUMBRANCE_UNCOVERED',
         );
 
-        await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+        await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const, releasedAt: LATER });
         await store.applyTransition(ADMIN, movement('exec-now-fine', 'party-alice', 'party-bob', proportional(5_000)));
         assert.deepEqual((await store.getPosition(ADMIN, TENANT_A, 'party-bob', ASSET, ECONOMIC))?.scope, proportional(5_000));
         await store.close();
@@ -1951,7 +2175,7 @@ describe('Governed Authority Store — SQLite', () => {
     assert.deepEqual(availability.available, proportional(7_500), 'a migrated deployment has no commitments, so everything it holds is available');
 
     const health = await migrated.health();
-    assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v3');
+    assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v4');
     assert.equal(health.activeReservationCount, 0);
     assert.equal(health.activeEncumbranceCount, 0, 'and no constraints were invented for history that predates them');
 
@@ -1964,6 +2188,70 @@ describe('Governed Authority Store — SQLite', () => {
     await migrated.close();
   });
 
+
+  it('brings a v3 database forward, keeping its constraints and inventing no releases', async () => {
+    // The newest migration, and the one with the most obvious way to get it
+    // wrong: v4 adds the release lineage, so a careless migration could have
+    // decided that a historical constraint was "released" or re-sealed a digest
+    // it had no business touching. Neither happens — every new column is
+    // nullable and conditional in the digest projection, so a constraint that
+    // was never released is byte-identical under v4.
+    const path = join(directory, 'schema-v3-migration.sqlite');
+    const store = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+    await seed(store, 'party-alice', proportional(5_000));
+    await store.acquireReservation(ADMIN, reservation('mandate-pre-v4', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+    const created = await store.recordEncumbrance(
+      ADMIN,
+      encumbrance('exec-pre-v4', 'mandate-pre-v4', 'party-alice', proportional(4_000), { consumesReservationsForMandateRef: 'mandate-pre-v4' }),
+    );
+    assert.ok(created.outcome === 'encumbered');
+    const digestBefore = created.encumbrance.digest;
+    await store.close();
+
+    // Rewind to exactly what a v3 database looks like: the version row says v3,
+    // and the release lineage columns and index do not exist.
+    const { default: Database } = await import('better-sqlite3');
+    const rewind = new Database(path);
+    rewind.prepare(`DELETE FROM governed_authority_store_versions`).run();
+    rewind.prepare(`INSERT INTO governed_authority_store_versions (schema_version, migration_state, recorded_at) VALUES (?, ?, ?)`).run(
+      'aoc.governed-authority-store.schema.v3',
+      'applied',
+      NOW,
+    );
+    rewind.exec(`DROP INDEX IF EXISTS idx_governed_authority_encumbrances_release_execution;`);
+    for (const column of ['release_action', 'release_mandate_ref', 'release_execution_ref', 'released_by', 'release_reason_code']) {
+      rewind.exec(`ALTER TABLE governed_authority_encumbrances DROP COLUMN ${column};`);
+    }
+    rewind.close();
+
+    const migrated = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
+    const constraint = await migrated.getEncumbrance(ADMIN, TENANT_A, created.encumbrance.id);
+    assert.equal(constraint?.status, 'active', 'the constraint survived, and was not decided to have been released');
+    assert.equal(constraint?.digest, digestBefore, 'and its digest is unchanged — no row was re-sealed');
+    assert.equal(constraint?.releaseBasis, undefined);
+    assert.equal(constraint?.releaseExecutionRef, undefined);
+
+    const capacity = await migrated.resolveAvailability(ADMIN, availabilityOf('party-alice'));
+    assert.ok(capacity.outcome === 'available');
+    assert.deepEqual(capacity.encumbered, proportional(4_000));
+    assert.deepEqual(capacity.available, proportional(1_000), 'and it still constrains exactly what it constrained');
+
+    const health = await migrated.health();
+    assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v4');
+    assert.equal(health.activeEncumbranceCount, 1);
+
+    // And the new lifecycle works from here on, including the durable
+    // one-execution-one-constraint index the migration created.
+    const released = await migrated.releaseEncumbrance(ADMIN, {
+      tenantId: TENANT_A,
+      encumbranceId: created.encumbrance.id,
+      basis: { kind: 'governed-execution', action: 'release-encumbrance', mandateRef: 'release-mandate-1', executionRef: 'release-exec-1' },
+      releasedAt: LATER,
+    });
+    assert.equal(released.status, 'released');
+    assert.equal((await migrated.getEncumbranceByReleaseExecutionRef(ADMIN, TENANT_A, 'release-exec-1'))?.id, created.encumbrance.id);
+    await migrated.close();
+  });
 
   describe('encumbrance durability across restart', () => {
     it('a constraint survives a restart, and still refuses the overlapping commitment afterwards', async () => {
@@ -2004,7 +2292,7 @@ describe('Governed Authority Store — SQLite', () => {
       await seed(store, 'party-alice', proportional(5_000));
       const created = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
       assert.ok(created.outcome === 'encumbered');
-      await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: 'administrative', releasedAt: LATER });
+      await store.releaseEncumbrance(ADMIN, { tenantId: TENANT_A, encumbranceId: created.encumbrance.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const, releasedAt: LATER });
       await store.close();
 
       const reopened = await createSqliteGovernedAuthorityStore(path, { now: () => NOW });
@@ -2050,7 +2338,7 @@ describe('Governed Authority Store — SQLite', () => {
       assert.equal(carried[0]?.status, 'active', 'with its status untouched — the rebuild is a copy, not a reinterpretation');
 
       const health = await migrated.health();
-      assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v3');
+      assert.equal(health.schemaVersion, 'aoc.governed-authority-store.schema.v4');
       assert.equal(health.activeEncumbranceCount, 0, 'no constraint was invented for history that predates them');
 
       const capacity = await migrated.resolveAvailability(ADMIN, availabilityOf('party-alice'));
@@ -2076,6 +2364,14 @@ describe('Governed Authority Store — SQLite', () => {
     const tampers = [
       ['scope', `UPDATE governed_authority_encumbrances SET scope_basis_points = 1`],
       ['status', `UPDATE governed_authority_encumbrances SET status = 'released', released_at = '${LATER}', release_basis = 'administrative'`],
+      // A forged governed discharge: the row claims a release action, a release
+      // mandate and a release execution nobody ever produced. Exactly the shape
+      // an attacker with database access would reach for, and the one that must
+      // not be believed.
+      [
+        'forged release lineage',
+        `UPDATE governed_authority_encumbrances SET status = 'released', released_at = '${LATER}', release_basis = 'governed-execution', release_action = 'release-encumbrance', release_mandate_ref = 'forged-mandate', release_execution_ref = 'forged-execution'`,
+      ],
       ['source action', `UPDATE governed_authority_encumbrances SET source_action = 'transfer'`],
       ['source mandate', `UPDATE governed_authority_encumbrances SET source_mandate_ref = 'mandate-other'`],
       ['source execution', `UPDATE governed_authority_encumbrances SET source_execution_ref = 'exec-other'`],

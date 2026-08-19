@@ -311,4 +311,14 @@ The bounded claim is exactly:
 - **Cross-deployment delegation portability.** Proving to another sovereign
   deployment that an actor holds delegated authority originating elsewhere would
   be Protocol work. Nothing here requires it.
-- **A `DELEGATE` governed action.** Not implemented — see the ADR.
+- **A `DELEGATE` governed action.** Not implemented — see the ADR. A fifth
+  governed action was added later (`RELEASE_ENCUMBRANCE`, see
+  `AOC_GOVERNED_ENCUMBRANCE_RELEASE.md`), and it changes nothing here: it
+  qualified because ending a persistent constraint has a durable governed effect
+  on what future actions may do, while delegating still changes only who may
+  ask. Delegated *release* capability, on the other hand, is ordinary business
+  for this layer — the same lineage, the same non-amplification axes, the same
+  revocation source of truth. A delegation cannot broaden the resource, the
+  action, the trust domain, the validity window or the depth on its way to
+  `release-encumbrance` any more than on its way to the other four, and revoking
+  the parent takes the child's reach with it.

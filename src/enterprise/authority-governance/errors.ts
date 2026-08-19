@@ -77,6 +77,31 @@ export type AuthorityGovernanceErrorCode =
   | 'GOVERNED_AUTHORITY_ENCUMBRANCE_UNCOVERED'
   /** A stored encumbrance's digest does not match its contents. Reads fail closed rather than dropping the row — silently skipping a tampered encumbrance would free exactly the authority it constrains. */
   | 'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED'
+  /**
+   * A terminalization was asked for on grounds that are not grounds for ending
+   * a constraint: an action not classified as releasing, a governed-execution
+   * basis missing its mandate or execution reference, or an administrative
+   * override naming neither an operator nor a reason.
+   *
+   * The release counterpart of `GOVERNED_AUTHORITY_ENCUMBRANCE_BASIS_INVALID`,
+   * and separate from it on purpose: "this cannot be encumbered" and "this
+   * cannot be released" are opposite failures and an operator reading one must
+   * not have to guess which happened.
+   */
+  | 'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_BASIS_INVALID'
+  /**
+   * A release execution reference that already terminalized one constraint was
+   * presented as grounds for terminalizing a different one, or a constraint
+   * that is already released was presented with materially different release
+   * grounds.
+   *
+   * Refused rather than reinterpreted: one confirmed release discharges exactly
+   * what it discharged, and a second lifecycle believing it discharged the same
+   * record is a fact a caller has to see rather than a no-op to swallow.
+   */
+  | 'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_CONFLICT'
+  /** A privileged administrative withdrawal was attempted without a system context. Ordinary discharge goes through the governed release lifecycle; an operator override is not reachable from a request path. */
+  | 'GOVERNED_AUTHORITY_ENCUMBRANCE_RELEASE_NOT_PERMITTED'
   // -------------------------------------------------------------------------
   // Holder-bound representation. Same taxonomy, same discipline, and the same
   // deliberate absence: there is **no code for "this representative may not

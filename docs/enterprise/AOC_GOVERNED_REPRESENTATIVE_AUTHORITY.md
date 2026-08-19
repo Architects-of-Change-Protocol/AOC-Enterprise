@@ -405,6 +405,29 @@ bound to.
 See `AOC_DELEGATED_CAPABILITIES_DERIVED_AUTHORITY.md` and
 `docs/architecture/ADR-NATIVE-DELEGATED-CAPABILITIES.md`.
 
+## Where representation does not apply: governed encumbrance release
+
+`RELEASE_ENCUMBRANCE`, the fifth governed action, is authorized by Action
+Authority alone. Holder-bound representation plays **no part** in it, and the
+reason is worth stating precisely, because the surface reading points the other
+way: a release visibly concerns a constraint over Alice's authority, so it looks
+as though the requester ought to be bound to Alice.
+
+It ought not, because a release exercises nothing of Alice's. It ends a
+constraint rather than drawing on a fraction of a right, so its request declares
+no `governedRights`, the Kernel's governed-authority check is correctly
+`not_performed`, and there is no holder's authority being exercised for a
+representative to be *bound to*. Requiring representation of the encumbered
+holder would have asserted the opposite — that discharging a constraint is an
+exercise of the constrained authority — and, worse, would have implied that
+Alice controls whether her own constraint ends. She does not: being the
+encumbered holder confers no release authority at all.
+
+If a deployment ever introduces a distinct release-authority *principal* that a
+requester acts for, representation would become the right question about **that**
+principal — never automatically about the encumbered holder. See
+`AOC_GOVERNED_ENCUMBRANCE_RELEASE.md`, "Who may release".
+
 ## Not implemented, deliberately
 
 - **No `DELEGATE` governed action.** This is authority infrastructure, not a

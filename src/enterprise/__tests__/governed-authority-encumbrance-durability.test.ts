@@ -224,7 +224,7 @@ describe('Encumbrance durability — a constraint outlives the process that reco
     const [constraint] = await first.authorityStore.listEncumbrancesByMandateRef(ADMIN_CONTEXT, GA_TENANT_A, outcome.mandate.id);
     assert.ok(constraint !== undefined);
     // The privileged act, from an operator context a request path never holds.
-    await first.authorityStore.releaseEncumbrance(ADMIN_CONTEXT, { tenantId: GA_TENANT_A, encumbranceId: constraint.id, basis: 'administrative' });
+    await first.authorityStore.releaseEncumbrance(ADMIN_CONTEXT, { tenantId: GA_TENANT_A, encumbranceId: constraint.id, basis: { kind: 'administrative', assertedBy: 'actor-administrator', reasonCode: 'operator-withdrawal' } as const });
     await first.close();
 
     const second = await openProcess(paths, 2_000);
