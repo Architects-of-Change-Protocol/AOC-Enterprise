@@ -38,7 +38,7 @@ import type { KernelDecisionStatus } from '../../kernel/index.js';
  * secured party, cumulative committed scope, release evidence). See
  * `docs/enterprise/AOC_COLLATERALIZE_ACTION.md`, "TOKENIZE vs COLLATERALIZE".
  *
- * Boundary: AOC Enterprise governs the authority to collateralize. It is not
+ * Boundary: Soberanía Enterprise governs the authority to collateralize. It is not
  * a lender, a collateral agent, a registry, or a platform. Nothing in this
  * module originates a loan, computes interest or loan-to-value, values or
  * prices an asset, creates or perfects a security interest, determines
@@ -112,7 +112,7 @@ export interface CollateralizationMandateRecord {
    * tokenization analogue, and the reason this record carries a scope rather
    * than a unit count.
    *
-   * A reported release does **not** decrement it: AOC cannot verify that an
+   * A reported release does **not** decrement it: Soberanía cannot verify that an
    * external encumbrance actually ended and must never create fresh
    * collateralization headroom on the strength of an unverified report.
    */

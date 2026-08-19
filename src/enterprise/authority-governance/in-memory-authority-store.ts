@@ -350,7 +350,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       const occurredAt = requireStrictUtcAuthorityTimestamp(input.occurredAt, 'occurredAt');
       const recordedAt = requireStrictUtcAuthorityTimestamp(now(), 'recordedAt');
 
-      // Replay check first, and before any position is read: an execution AOC
+      // Replay check first, and before any position is read: an execution Soberanía
       // has already applied must produce no second debit and no second credit,
       // whatever the current balances happen to be.
       const alreadyApplied = transitions.filter(
@@ -384,7 +384,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
         // This is emphatically not "encumbered authority cannot be moved": a
         // holder with 5 000 bp and a 4 000 bp constraint may still move 1 000,
         // and does, right here. What it refuses is the movement that would
-        // leave AOC holding a constraint over authority its holder no longer
+        // leave Soberanía holding a constraint over authority its holder no longer
         // possesses — a record referring to nothing, and a state in which every
         // subsequent capacity question reports `overencumbered`.
         //
@@ -558,7 +558,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       const recordedAt = requireStrictUtcAuthorityTimestamp(now(), 'recordedAt');
       const idempotencyKey = input.idempotencyKey ?? input.sourceMandateRef;
 
-      // Replay first, and before availability is read: an acquisition AOC has
+      // Replay first, and before availability is read: an acquisition Soberanía has
       // already made must not commit a second quantity, whatever the current
       // availability happens to be.
       const existing = [...reservations.values()].find(
@@ -836,7 +836,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       const recordedAt = requireStrictUtcAuthorityTimestamp(now(), 'recordedAt');
       const idempotencyKey = input.idempotencyKey ?? deriveEncumbranceIdempotencyKey(input.sourceExecutionRef, input.governedRight);
 
-      // Replay first, and before capacity is read: an execution AOC has already
+      // Replay first, and before capacity is read: an execution Soberanía has already
       // encumbered must not constrain a second quantity, whatever the current
       // capacity happens to be. This is what makes an execution retry safe.
       const existing = [...encumbrances.values()].find(
@@ -932,7 +932,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
       ) {
         throw new AuthorityGovernanceError(
           'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
-          'This governed authority cannot be constrained by that quantity: the two scopes are of different kinds, or name different unit denominations, and AOC holds no conversion between them.',
+          'This governed authority cannot be constrained by that quantity: the two scopes are of different kinds, or name different unit denominations, and Soberanía holds no conversion between them.',
           {
             tenantId: input.tenantId,
             holderRef: input.holderRef,
@@ -1144,7 +1144,7 @@ export function createInMemoryGovernedAuthorityStore(options: CreateInMemoryGove
  * A replay must be a replay of the *same* movement. An execution reference
  * that comes back naming a different source, target, quantity or set of rights
  * is not an idempotent retry — it is either a caller bug or an attempt to
- * launder a second movement through a reference AOC has already accepted, and
+ * launder a second movement through a reference Soberanía has already accepted, and
  * returning the original transitions for it would silently authorize the
  * difference.
  */

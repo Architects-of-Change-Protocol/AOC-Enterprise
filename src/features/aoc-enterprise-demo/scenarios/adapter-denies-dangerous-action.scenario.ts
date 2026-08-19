@@ -18,7 +18,7 @@ export const ADAPTER_DENIES_DANGEROUS_ACTION_SCENARIO: DemoScenario = {
   category: 'enforcement',
   summary:
     'PMFreak Closure Agent attempts approve_payment through the Payments Workflow adapter, which denies the action outright even though Recognition and Authority would allow it.',
-  enterpriseMessage: 'AOC enforcement can be stricter at the execution boundary than upstream recognition alone.',
+  enterpriseMessage: 'Soberanía enforcement can be stricter at the execution boundary than upstream recognition alone.',
   buyerPain: "Enterprises need a last line of defense at the execution boundary, not just trust in upstream policy checks.",
   aocValue: 'A registered EnforcementAdapter can deny specific actions outright -- adapter deny always wins over an upstream allow.',
   personas: [PMFREAK_PERSONA_ID, VICTOR_PERSONA_ID, FINANCE_APPROVER_PERSONA_ID],

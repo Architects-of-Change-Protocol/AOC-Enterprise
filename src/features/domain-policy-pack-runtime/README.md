@@ -1,21 +1,21 @@
-# AOC Domain Policy Pack Runtime
+# Soberanía Domain Policy Pack Runtime
 
 Recognition Runtime answers "can this action be recognized?" Authority Graph
 answers "where did the authority behind this action come from?" Approval
 Runtime answers "who can approve this, and did they?" External Agent
 Handshake answers "does this external agent have local standing?" Action
 Enforcement answers "should real execution be blocked?" None of them answer
-the question that only shows up once AOC is deployed at a real enterprise:
+the question that only shows up once Soberanía is deployed at a real enterprise:
 
 **Which domain-specific, jurisdiction-specific, customer-specific or
-industry-specific rules apply to this autonomous action, and what must AOC
+industry-specific rules apply to this autonomous action, and what must Soberanía
 require before the action can be recognized, approved, enforced or blocked?**
 
 That is the Domain Policy Pack Runtime's job.
 
-## Why AOC should not hardcode all laws into the core runtimes
+## Why Soberanía should not hardcode all laws into the core runtimes
 
-AOC's core runtimes are **constitutional**: they answer the same questions
+Soberanía's core runtimes are **constitutional**: they answer the same questions
 for every deployment, every customer, every jurisdiction. "Is this actor
 recognized?" and "did a real approver with real authority sign off?" do not
 change based on which industry a customer is in. Hardcoding "if customer is
@@ -33,17 +33,17 @@ policy when the enterprise requires it -- as an explicit, versioned,
 testable, auditable pack loaded on top of the constitutional core, not baked
 into it.
 
-## Core AOC governance vs. domain policy packs
+## Core Soberanía governance vs. domain policy packs
 
-| Core AOC runtime | Question it answers |
+| Core Soberanía runtime | Question it answers |
 | --- | --- |
 | Recognition Runtime | Is the actor recognized? |
 | Authority Graph | Where did authority come from? |
 | Approval Runtime | Is human approval required or valid? |
 | External Agent Handshake | Does an external agent have local standing? |
 | Action Enforcement | Should execution be blocked? |
-| AOC Control Plane | Can an operator inspect the proof trail? |
-| AOC Enterprise Demo | Can the system be proven end-to-end? |
+| Soberanía Control Plane | Can an operator inspect the proof trail? |
+| Soberanía Enterprise Demo | Can the system be proven end-to-end? |
 | **Domain Policy Pack Runtime** | **Which domain/jurisdiction/customer policy applies, and what does it require?** |
 
 The Domain Policy Pack Runtime never re-implements or bypasses any of the
@@ -333,7 +333,7 @@ handling, and a low-risk allowed read that still records a policy decision.
 `inputHash` (the `PolicyEvaluationInput`), `ruleResultsHash` (every
 `PolicyRuleEvaluationResult`), `decisionHash` (the `PolicyPackDecision`) --
 using the same `stableStringify` + SHA-256 pattern used across every other
-AOC runtime (recursively sort object keys so hashing never depends on
+Soberanía runtime (recursively sort object keys so hashing never depends on
 insertion order). `proofHash` then chains all three hashes together with the
 applicable pack version IDs, matched rule IDs, and the previous proof's hash
 (`previousHash`), so identical inputs always produce an identical
@@ -378,14 +378,14 @@ a real jurisdiction, regulation, or industry certification:
 | `sports-event-settlement-basic` | sports_event_settlement | event record evidence, authority proof, value-threshold approval, unsupported-jurisdiction manual verification, counterparty requirement |
 | `financial-approval-basic` | financial_approval | finance review capability gate, deny-by-default bank details management, approval proof for financial side effects, dual approval at critical risk |
 | `jurisdictional-baseline-demo` | general_enterprise | a **placeholder** showing the shape of a jurisdictional pack -- legal/contractual review, sign_contract authority+approval, source-reference obligation, and (because it encodes no real jurisdiction) every jurisdiction-tagged action requires manual verification |
-| `global-legal-baseline` (`aoc.global_legal_baseline.v1`) | legal | see [AOC Global Legal Baseline Pack v1](#aoc-global-legal-baseline-pack-v1) below |
+| `global-legal-baseline` (`aoc.global_legal_baseline.v1`) | legal | see [Soberanía Global Legal Baseline Pack v1](#aoc-global-legal-baseline-pack-v1) below |
 
-## AOC Global Legal Baseline Pack v1
+## Soberanía Global Legal Baseline Pack v1
 
 `packs/global-legal-baseline.policy-pack.ts` (pack id `aoc.global_legal_baseline.v1`,
 registered via `registerGlobalLegalBaselinePolicyPack(runtime)`) is a
 **baseline legal-awareness layer**, not a legal compliance engine. It gives
-AOC a reusable, deterministic baseline for jurisdiction awareness
+Soberanía a reusable, deterministic baseline for jurisdiction awareness
 (jurisdiction-unknown/conflict handling, missing jurisdiction-specific-pack
 detection), authority-boundary flags (missing authority proof binding a
 principal, authority scope mismatch, unidentified principal), legal-review
@@ -533,12 +533,12 @@ doesn't, the pack (or the test) has a nondeterminism bug.
 
 ## Control Plane visibility
 
-The AOC Control Plane's Policy Packs section
+The Soberanía Control Plane's Policy Packs section
 (`../aoc-control-plane/components/policy-packs/`) surfaces this runtime's
 state to an operator. A few rules govern that integration:
 
 1. Policy packs, versions, rules, evaluations, decisions, proofs and events
-   can all be surfaced in the AOC Control Plane -- see
+   can all be surfaced in the Soberanía Control Plane -- see
    `integrations/control-plane-policy-pack-adapter.ts`
    (`buildPolicyPackControlPlaneViewModel`), which the Control Plane's own
    `control-plane-policy-pack-read-model-service.ts` consumes and re-projects
@@ -591,7 +591,7 @@ That module never re-evaluates a policy rule -- it packages the decision and
 proof this runtime already produced, preserving `demoOnly`/
 `legalCompleteness` as plain metadata, never a compliance claim.
 
-## AOC Enterprise Pilot Template
+## Soberanía Enterprise Pilot Template
 
 Sample policy packs registered here (payments-basic, procurement-basic,
 data-boundary-basic, financial-approval-basic, sports-event-settlement-basic,

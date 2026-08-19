@@ -57,7 +57,7 @@ export function renderDemoRunToHtml(run: CommercialDemoRun): string {
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>AOC Access Governance — Commercial Reference Demo</title>
+<title>Soberanía Access Governance — Commercial Reference Demo</title>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; line-height: 1.5; color: #1a1a1a; background: #fafafa; }
@@ -97,7 +97,7 @@ export function renderDemoRunToHtml(run: CommercialDemoRun): string {
 </head>
 <body>
 <header>
-  <span class="tag">AOC Architectural Consolidation Program · Sequence R006.A</span>
+  <span class="tag">Soberanía Architectural Consolidation Program · Sequence R006.A</span>
   <h1>Commercial Reference Demo — Governed Access for M&amp;A Diligence Documents</h1>
   <p><strong>${escapeHtml(BUSINESS_SCENARIO.customerName)}</strong> — ${escapeHtml(BUSINESS_SCENARIO.customerDescription)}</p>
   <p>${escapeHtml(BUSINESS_SCENARIO.whyGovernedAccess)}</p>

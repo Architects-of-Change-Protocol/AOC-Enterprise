@@ -18,10 +18,10 @@ export const INTERNAL_AGENT_ALLOWED_SCENARIO: DemoScenario = {
   category: 'enforcement',
   summary:
     'PMFreak Closure Agent is recognized inside Datasys Agent Republic, holds authority delegated from Victor, and drafts the closure email for project:HMP-14665.',
-  enterpriseMessage: 'AOC can allow low-risk autonomous work when identity, authority and scope are valid.',
+  enterpriseMessage: 'Soberanía can allow low-risk autonomous work when identity, authority and scope are valid.',
   buyerPain: "Enterprises don't trust autonomous agents to act without proof that identity, authority and scope were actually checked.",
   aocValue:
-    'AOC only allows execution once Recognition and Authority independently agree the action is in scope -- and the real executor runs exactly once.',
+    'Soberanía only allows execution once Recognition and Authority independently agree the action is in scope -- and the real executor runs exactly once.',
   personas: [PMFREAK_PERSONA_ID, VICTOR_PERSONA_ID, DATASYS_PERSONA_ID],
   primaryActorId: PMFREAK_ACTOR_ID,
   trustDomainId: TRUST_DOMAIN_ID,

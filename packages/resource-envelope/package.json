@@ -2,7 +2,7 @@
   "name": "@aoc-enterprise/resource-envelope",
   "version": "0.1.0",
   "private": true,
-  "description": "Enterprise-owned, provider-neutral envelope describing a governed external resource. Composes AOC Protocol's ResourceRef; contains no credential, provider SDK type, or runtime logic.",
+  "description": "Enterprise-owned, provider-neutral envelope describing a governed external resource. Composes Soberanía Protocol's ResourceRef; contains no credential, provider SDK type, or runtime logic.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

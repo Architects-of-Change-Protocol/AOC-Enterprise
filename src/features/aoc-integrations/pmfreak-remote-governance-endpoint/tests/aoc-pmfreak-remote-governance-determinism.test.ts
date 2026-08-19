@@ -53,7 +53,7 @@ function readModuleFile(relativePath: string): string {
   return readFileSync(resolve(process.cwd(), 'src/features/aoc-integrations/pmfreak-remote-governance-endpoint', relativePath), 'utf8');
 }
 
-describe('AOC PMFreak Remote Governance Endpoint -- determinism', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- determinism', () => {
   it('never uses network calls, LLM calls, OCR/PDF parsing, or non-deterministic clocks/randomness', () => {
     assert.ok(MODULE_RELATIVE_FILES.length > 5);
 

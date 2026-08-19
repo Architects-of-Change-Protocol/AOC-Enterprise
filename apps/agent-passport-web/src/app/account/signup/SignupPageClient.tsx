@@ -52,7 +52,7 @@ export function SignupPageClient() {
     <div className="container" style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 480 }}>
       <div className="page-header" style={{ marginBottom: 32 }}>
         <div className="section-label">Buyer Account</div>
-        <h1>Create your AOC buyer account</h1>
+        <h1>Create your Soberanía buyer account</h1>
         <p style={{ color: 'var(--text-muted)' }}>
           Own your AI agent registry. Invite teammates. Track governance evidence.
         </p>

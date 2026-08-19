@@ -19,7 +19,7 @@ export const FULL_PROOF_CHAIN_AUDIT_SCENARIO: DemoScenario = {
   category: 'audit',
   summary:
     'An enterprise operator opens the Control Plane after the client follow-up is approved and executed, then inspects the chain from the enforcement proof back through the approval proof, the recognition decision and the authority proof.',
-  enterpriseMessage: 'AOC gives enterprise operators an auditable chain of why autonomous execution was allowed or blocked.',
+  enterpriseMessage: 'Soberanía gives enterprise operators an auditable chain of why autonomous execution was allowed or blocked.',
   buyerPain: "Enterprises won't trust an autonomous decision they cannot trace back to its evidence after the fact.",
   aocValue: 'Every enforcement proof carries the ids of the recognition, authority and approval proofs that produced it, so the full chain is always reconstructible.',
   personas: [PMFREAK_PERSONA_ID, VICTOR_PERSONA_ID, AOC_OPERATOR_PERSONA_ID],

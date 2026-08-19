@@ -27,7 +27,7 @@ const SAFE_LABEL_TEXT_PATTERNS: readonly RegExp[] = POLICY_PACK_SAFE_LABELS.flat
  * "does not claim/constitute/provide/guarantee [to be]") is a safe
  * disclaimer, not an overclaim -- e.g. "not GDPR compliant" or "does not
  * claim to be HIPAA compliant" must never be flagged. This mirrors the exact
- * false-positive bug the AOC Jurisdiction Pack Runtime work already found
+ * false-positive bug the Soberanía Jurisdiction Pack Runtime work already found
  * for "not legal advice", generalized to every prohibited phrase.
  */
 const NEGATED_PROHIBITED_PHRASE_PATTERNS: readonly RegExp[] = POLICY_PACK_PROHIBITED_OVERCLAIM_PHRASES.map((phrase) => {
@@ -53,7 +53,7 @@ function stripSafeDisclaimerText(text: string): string {
 }
 
 /**
- * Domain-agnostic claim-safety evaluator. Applies to every AOC policy pack
+ * Domain-agnostic claim-safety evaluator. Applies to every Soberanía policy pack
  * kind -- legal, security, privacy, healthcare, finance, AI governance,
  * project governance -- not just legal packs. Never calls a network or a
  * language model, and never scans a document image or PDF; this is a pure
@@ -74,7 +74,7 @@ export function evaluatePolicyPackClaimSafety(value: unknown, options?: PolicyPa
     if (!scanText.includes(lowerPhrase)) continue;
 
     if (allowedSourceProvidedClaims.has(lowerPhrase)) {
-      warnings.push(`"${phrase}" is present as an explicitly allowed source-provided claim; it must be labeled as source-provided, not as AOC's own conclusion.`);
+      warnings.push(`"${phrase}" is present as an explicitly allowed source-provided claim; it must be labeled as source-provided, not as Soberanía's own conclusion.`);
       continue;
     }
 

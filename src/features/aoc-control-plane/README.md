@@ -1,19 +1,19 @@
-# AOC Control Plane UI
+# Soberanía Control Plane UI
 
-AOC is no longer just a protocol or a runtime -- Recognition Runtime, Authority
+Soberanía is no longer just a protocol or a runtime -- Recognition Runtime, Authority
 Graph, Approval Runtime, External Agent Handshake and Action Enforcement
 together form an enforceable governance system. The Control Plane makes that
 system *operable*: it is the surface a human operator uses to inspect,
 understand and (where safe) act on what those five runtimes have decided.
 
 It answers one question, repeatedly, across every governed action: **who did
-what, under what authority, with what evidence, and did AOC actually allow
+what, under what authority, with what evidence, and did Soberanía actually allow
 it?**
 
 ## Why a control plane, and why after enforcement
 
 Once Action Enforcement exists, every action in the system either executed
-because AOC allowed it, or never ran because AOC blocked it. That is a large
+because Soberanía allowed it, or never ran because Soberanía blocked it. That is a large
 amount of decision state -- recognition decisions, authority chains, approval
 quorums, external handshakes, enforcement outcomes, and the proofs chaining
 them together -- with no way for a person to see it. The Control Plane is the
@@ -197,7 +197,7 @@ independently of Action Enforcement. An **enforcement decision**
 action allowed to execute right now?", which folds together recognition,
 authority, approval, evidence, external standing *and* (optionally) the
 policy pack evaluation above. A policy pack can only ever narrow an
-enforcement decision that every earlier AOC layer already allowed -- it
+enforcement decision that every earlier Soberanía layer already allowed -- it
 never overrides a core denial, and a `policy_warning`/`policy_allowed`
 result never shows as blocked unless something else in the chain blocked it.
 
@@ -222,7 +222,7 @@ id, resolving `policyDecisionType` by looking that id up in Domain Policy
 Pack Runtime's own decisions. `blockedByPolicy` is `true` only when the
 enforcement decision's own `reasonCode` exactly equals its
 `policyReasonCode` -- i.e. the policy pack outcome is what actually stopped
-execution, not some other AOC layer that happened to run after a policy
+execution, not some other Soberanía layer that happened to run after a policy
 warning.
 
 ### 6. Policy pack versions and matched rules
@@ -447,7 +447,7 @@ route table to integrate into, so no route was registered here.
   `generatedAt`; without it, `generatedAt` defaults to the demo world's own
   `trustDomain.updatedAt` rather than a wall-clock read.
 - The demo fixture uses each runtime's injectable `ManualClock` /
-  sequential id generator (the same pattern every other AOC module uses),
+  sequential id generator (the same pattern every other Soberanía module uses),
   so two independent builds of the fixture produce byte-identical output --
   verified directly in `tests/control-plane-read-model-service.test.ts`
   ("produces deterministic output for the same input").
@@ -490,7 +490,7 @@ via
 That adapter is read-model-only: it never mutates Control Plane state and
 never creates policy/evidence/enforcement truth of its own.
 
-## AOC Enterprise Pilot Template
+## Soberanía Enterprise Pilot Template
 
 Control Plane walkthroughs can now be included in Enterprise Pilot
 Templates via

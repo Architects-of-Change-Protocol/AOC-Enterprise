@@ -1,4 +1,4 @@
-/** Error surface of the AOC Enterprise Host SDK. Purely transport-level -- no governance semantics. */
+/** Error surface of the Soberanía Enterprise Host SDK. Purely transport-level -- no governance semantics. */
 
 /** A non-2xx response carrying the Host's error envelope (or a raw body for the frozen non-enveloped responses). */
 export class EnterpriseHostApiError extends Error {

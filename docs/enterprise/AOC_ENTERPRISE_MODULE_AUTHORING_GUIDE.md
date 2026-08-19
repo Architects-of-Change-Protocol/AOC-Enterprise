@@ -1,6 +1,6 @@
-# AOC Enterprise Module Authoring Guide
+# Soberanía Enterprise Module Authoring Guide
 
-This guide is for adding a new operational module to the AOC Enterprise
+This guide is for adding a new operational module to the Soberanía Enterprise
 Host's module registry -- not for adding governance/decision logic (that
 belongs in the Kernel, `src/kernel/`) and not for a dynamic/loadable
 plugin (this system doesn't have those; see

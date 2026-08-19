@@ -31,7 +31,7 @@ export const EVIDENCE_REQUIRED_BLOCK_SCENARIO: DemoScenario = {
   shortTitle: 'Evidence Required',
   category: 'recognition',
   summary: 'PMFreak Closure Agent attempts to prepare invoice support without the invoice backup evidence its capability token requires.',
-  enterpriseMessage: 'AOC ensures agents do not execute operational or financial workflows without required evidence.',
+  enterpriseMessage: 'Soberanía ensures agents do not execute operational or financial workflows without required evidence.',
   buyerPain: 'Enterprises need proof that an agent had the right supporting documentation before it touched invoicing.',
   aocValue: "PMFreak's invoice-support capability token declares an evidence requirement; Recognition Runtime enforces it before Enforcement is even reached.",
   personas: [PMFREAK_PERSONA_ID, VICTOR_PERSONA_ID],

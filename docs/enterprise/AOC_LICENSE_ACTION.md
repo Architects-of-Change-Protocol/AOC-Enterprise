@@ -11,27 +11,27 @@
 Two layers, two vocabularies. They are not synonyms and must not be conflated:
 
 ```
-AOC Protocol
+Soberanía Protocol
   → Sovereignty Capabilities     what a sovereign holds
 
-AOC Enterprise
+Soberanía Enterprise
   → Governed Actions             what may be exercised
   → Enforcements                 the evaluation of whether it may be
   → Grants / Mandates            the durable authorization that results
   → Evidence                     what an external system reported afterwards
 ```
 
-AOC Enterprise now has **three** governed actions:
+Soberanía Enterprise now has **three** governed actions:
 
 ```
 TOKENIZE                = a Governed Action.
 COLLATERALIZE           = a Governed Action.
 LICENSE                 = a Governed Action.
 
-License Enforcement     = AOC Enterprise evaluates whether, and on what
+License Enforcement     = Soberanía Enterprise evaluates whether, and on what
                           terms, LICENSE may be exercised.
 
-LicenseMandate          = the durable, AOC-owned authorization artifact a
+LicenseMandate          = the durable, Soberanía-owned authorization artifact a
                           successful LICENSE enforcement produced.
 ```
 
@@ -60,13 +60,13 @@ The contract type is named `EnterpriseLicenseMandate` rather than
 > already-governed asset, for specified uses, within a specified operating
 > context, under defined governance conditions.
 
-AOC Enterprise governs whether licensing is authorized, who may grant it, to
+Soberanía Enterprise governs whether licensing is authorized, who may grant it, to
 whom, over which governed rights, within which scope, for what permitted uses,
 and under which conditions.
 
 ## Boundary — authorization is not legal validity
 
-AOC Enterprise is able to say exactly one kind of thing:
+Soberanía Enterprise is able to say exactly one kind of thing:
 
 > This authority graph, policy state, approval state and obligation set
 > permitted Actor A to grant License L to Licensee B under Terms T.
@@ -81,9 +81,9 @@ It does **not** say, and no field in these contracts should be read as saying:
 - that the underlying right is legally licensable or transferable;
 - that any external contract was signed or accepted.
 
-Those are facts about the world. AOC knows them only if some external system
+Those are facts about the world. Soberanía knows them only if some external system
 independently evidences them — which is what
-`EnterpriseLicenseExecutionEvidence` exists to record, and even then AOC has
+`EnterpriseLicenseExecutionEvidence` exists to record, and even then Soberanía has
 preserved a report, not verified a fact.
 
 **Governance authorization != universal legal validity.**
@@ -193,7 +193,7 @@ fails closed rather than coercing one into the other:
 | --- | --- | --- |
 | absent | absent | contained |
 | present | absent | refused — cannot show containment |
-| absent | present | refused — AOC never authorized a portion |
+| absent | present | refused — Soberanía never authorized a portion |
 | present | present | compared, same kind and denomination only |
 
 When a license *is* fractionally expressed, the same integer basis-point
@@ -206,8 +206,8 @@ used for economically significant fractional rights anywhere.
 `EnterpriseLicensedUseType` — `display`, `reproduce`, `distribute`,
 `broadcast`, `modify`, `derivative-work`, `internal-use`, `commercial-use`,
 `model-training`. A closed, provider-neutral, asset-neutral union. These are
-**AOC's own governed-use categories**: they are not statutory definitions, they
-do not track any jurisdiction's exclusive-rights enumeration, and AOC asserts
+**Soberanía's own governed-use categories**: they are not statutory definitions, they
+do not track any jurisdiction's exclusive-rights enumeration, and Soberanía asserts
 no legal meaning for them.
 
 `constraints.prohibitedUses` is not redundant with the `permittedUses`
@@ -246,8 +246,8 @@ refused rather than assumed empty.
 ### Duration — four distinct instants
 
 ```
-mandate.effectiveFrom            AOC's authority to grant begins
-mandate.expiresAt                AOC's authority to grant ends
+mandate.effectiveFrom            Soberanía's authority to grant begins
+mandate.expiresAt                Soberanía's authority to grant ends
 execution.licenseEffectiveAt     the external license itself begins
 execution.licenseExpiresAt       the external license itself ends
 constraints.maximumLicenseTermEndsAt
@@ -256,7 +256,7 @@ constraints.maximumLicenseTermEndsAt
 
 These are **not** the same thing and are never conflated. A `LicenseMandate`
 expiring does not terminate an external license already granted under it; it
-ends AOC's authority to grant further ones.
+ends Soberanía's authority to grant further ones.
 
 ### Exclusivity
 
@@ -270,7 +270,7 @@ license, or that an exclusive license blocks any other license.** Many
 non-exclusive licenses may coexist. Whether a prior exclusive grant should
 block a new request is a *policy* question: the full serialized terms travel to
 the Kernel as `action.parameters`, so a deployment's policy can inspect prior
-mandates and evidence and deny an incompatible request. AOC hard-codes no such
+mandates and evidence and deny an incompatible request. Soberanía hard-codes no such
 rule and invents no universal law.
 
 ### Sublicensing and assignment
@@ -280,7 +280,7 @@ three-value dispositions — `prohibited` | `approval-required` | `permitted` �
 because silence about whether a licensee may sublicense or assign is precisely
 the ambiguity a governed authorization exists to remove.
 
-AOC records the disposition; it does not run the further approval. No
+Soberanía records the disposition; it does not run the further approval. No
 `SUBLICENSE` or `ASSIGN_LICENSE` governed action is introduced.
 
 `assignment` additionally carries the **only** condition under which a license
@@ -301,7 +301,7 @@ deliberately *not* cumulative.
 Collateral scope accumulates because encumbering a finite right twice exhausts
 it. Licensed units do not: ten seats to Company B and ten to Company C exhaust
 nothing about the asset. Whether more than one license may be granted at all is
-answered by `additionalLicensesAllowed`, not by a unit pool. AOC counts
+answered by `additionalLicensesAllowed`, not by a unit pool. Soberanía counts
 nothing, observes no usage, and enforces no limit at run time — this is a
 ceiling compared against what an external system reports.
 
@@ -328,7 +328,7 @@ Deliberately not modelled, not calculated, and not settled.
 an external agreement reference must be reported when the license is executed,
 and it is *checked* at execution
 (`EXTERNAL_AGREEMENT_REFERENCE_REQUIRED`). The evidence itself travels through
-the existing `evidenceRefs` and obligation machinery. AOC records the
+the existing `evidenceRefs` and obligation machinery. Soberanía records the
 reference and never interprets, resolves, or verifies what it names.
 
 ## Authority, approvals and obligations
@@ -375,7 +375,7 @@ Durable invariants pushed down to the database:
 | `execution_id PRIMARY KEY` | one external license recorded at most once |
 | `mandate_id UNIQUE` on revocations | at most one revocation per mandate |
 | `(mandate_id, sequence) UNIQUE` | restart-stable append order |
-| `execution_id` foreign key on lifecycle | a reported end names a license AOC has evidence of |
+| `execution_id` foreign key on lifecycle | a reported end names a license Soberanía has evidence of |
 
 `terms_json` is the canonical serialization; `terms_digest` is the Governance
 Store's own digest primitive over it. Every read recomputes the digest and
@@ -394,7 +394,7 @@ durable invariant the domain does not have.
 
 Revoking a mandate withdraws the authority to grant *further* licenses. It does
 **not** terminate, cancel, rescind, or invalidate a license an external system
-has already granted — AOC governs authority and is not a party to the
+has already granted — Soberanía governs authority and is not a party to the
 agreement.
 
 Execution evidence recorded before revocation is preserved immutably, and the
@@ -426,7 +426,7 @@ LICENSE decision → LicenseMandate → authorization_artifact  (sequence 1)
 ```
 
 A `LicenseMandate` is classified `authorization_artifact` — never
-`external_artifact`, never `execution_record` — because it is AOC-owned
+`external_artifact`, never `execution_record` — because it is Soberanía-owned
 authorization evidence.
 
 **Integrity is not authority.** A valid reference digest proves only that the

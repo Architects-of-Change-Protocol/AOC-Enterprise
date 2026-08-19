@@ -1,4 +1,4 @@
-# AOC Kernel Integration Guide
+# Soberanía Kernel Integration Guide
 
 How a future consumer (Enterprise Runtime HTTP API, an SDK, PMFreak, Agent Passport, JAPI) is expected to call
 `AocKernel`. This PR does not add an HTTP surface -- it documents the shape a future one would use, and adds only

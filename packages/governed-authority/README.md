@@ -1,6 +1,6 @@
 # @aoc-enterprise/governed-authority
 
-The action-neutral vocabulary of **governed authority state**: what AOC
+The action-neutral vocabulary of **governed authority state**: what Soberanía
 Enterprise currently recognizes an actor as controlling, why, and how a
 completed governed action changes it.
 

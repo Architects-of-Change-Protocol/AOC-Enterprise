@@ -25,7 +25,7 @@ import { NOW, buildKernelParityWorld, toKernelRequest } from './support.js';
  * recognition/authority/approval -- this is what
  * `docs/kernel/AOC_KERNEL_CURRENT_EXECUTION_MODEL.md` sec. 10 documents as
  * "domain policy mismatch": a domain-specific rule can still block an
- * action every core AOC layer already allowed.
+ * action every core Soberanía layer already allowed.
  */
 const BANK_ACCOUNT_CHANGE_DENIAL_INTEGRATION: EnforcementPolicyPackIntegration = {
   evaluatePolicyForEnforcement(input: EnforcementPolicyPackEvaluationInput): EnforcementPolicyPackEvaluationResult {
@@ -43,7 +43,7 @@ const BANK_ACCOUNT_CHANGE_DENIAL_INTEGRATION: EnforcementPolicyPackIntegration =
 };
 
 describe('Kernel characterization: policy denial', () => {
-  it('domain policy mismatch: policy pack denies an action every core AOC layer already allowed', async () => {
+  it('domain policy mismatch: policy pack denies an action every core Soberanía layer already allowed', async () => {
     const fixture = buildDatasysEnforcementFixture();
     const legacyRuntime = createActionEnforcementRuntime(createEnforcementRuntimeContext(NOW), bridgeRecognitionRuntime(fixture.recognitionRuntime), {
       policyPackIntegration: BANK_ACCOUNT_CHANGE_DENIAL_INTEGRATION,

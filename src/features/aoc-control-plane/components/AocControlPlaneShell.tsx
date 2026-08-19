@@ -23,7 +23,7 @@ export function AocControlPlaneShell({
     <div className="aoc-control-plane-shell">
       <header className="aoc-control-plane-shell__header">
         <div>
-          <h1>AOC Control Plane</h1>
+          <h1>Soberanía Control Plane</h1>
           <p className="aoc-control-plane-shell__subtitle">Governed execution for autonomous agents, tools, workflows and external systems</p>
         </div>
         <div className="aoc-control-plane-shell__header-controls">

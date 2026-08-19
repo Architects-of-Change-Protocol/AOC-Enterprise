@@ -38,7 +38,7 @@ export interface AocControlPlanePageProps {
 }
 
 /**
- * The single mount point for the AOC Control Plane. It only ever reads
+ * The single mount point for the Soberanía Control Plane. It only ever reads
  * `readModel` -- built upstream by ControlPlaneReadModelService from the
  * five governance runtimes -- and dispatches `commands` verbatim to
  * whatever ControlPlaneCommandService wiring the caller supplies. It never

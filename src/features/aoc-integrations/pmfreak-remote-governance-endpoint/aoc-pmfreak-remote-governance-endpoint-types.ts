@@ -1,13 +1,13 @@
 import type { AocPMFreakGovernanceRequest, AocPMFreakGovernanceResponse } from '../pmfreak-governance-request-intake/index.js';
 
 /**
- * AOC PMFreak Remote Governance Endpoint v1 -- domain types.
+ * Soberanía PMFreak Remote Governance Endpoint v1 -- domain types.
  *
- * This module exposes the already-merged AOC PMFreak Governance Request
+ * This module exposes the already-merged Soberanía PMFreak Governance Request
  * Intake (`aoc.integration.pmfreak.governance_request_intake.v1`) through a
- * safe remote endpoint/handler boundary, so PMFreak can call AOC Governance
+ * safe remote endpoint/handler boundary, so PMFreak can call Soberanía Governance
  * remotely in a later PMFreak-repo PR. Runtime direction is unchanged:
- * PMFreak consumes AOC Governance, never the reverse. This module never
+ * PMFreak consumes Soberanía Governance, never the reverse. This module never
  * mutates PMFreak data, never executes a PMFreak action, and never writes a
  * decision back into PMFreak.
  */

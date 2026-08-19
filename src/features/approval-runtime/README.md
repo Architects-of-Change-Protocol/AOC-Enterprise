@@ -1,4 +1,4 @@
-# AOC Approval Runtime
+# Soberanía Approval Runtime
 
 Recognition Runtime answers "can this action be recognized?" Authority Graph
 answers "where did the authority behind this action come from?" Neither one

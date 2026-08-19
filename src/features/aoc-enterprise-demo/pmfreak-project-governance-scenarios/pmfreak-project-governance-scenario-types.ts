@@ -1,5 +1,5 @@
 /**
- * AOC PMFreak Project Governance Scenario Pack v1 -- domain types.
+ * Soberanía PMFreak Project Governance Scenario Pack v1 -- domain types.
  *
  * This module models what happens when a PMFreak project agent attempts an
  * action inside a realistic project-governance scenario: billing readiness,

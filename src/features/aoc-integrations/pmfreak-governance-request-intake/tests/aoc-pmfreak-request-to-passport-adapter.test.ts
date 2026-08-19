@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mapAocPMFreakGovernanceRequestToEvaluationInput, mapAocPMFreakGovernanceRequestToPassportResolverInput } from '../aoc-pmfreak-request-to-passport-adapter.js';
 import { demoAocPMFreakBillingMissingApprovalRequest } from '../aoc-pmfreak-governance-intake-fixtures.js';
 
-describe('AOC PMFreak Governance Request Intake -- request-to-evaluation adapter', () => {
+describe('Soberanía PMFreak Governance Request Intake -- request-to-evaluation adapter', () => {
   it('preserves agent, action, project, evidence, and approval context', () => {
     const request = demoAocPMFreakBillingMissingApprovalRequest;
     const input = mapAocPMFreakGovernanceRequestToEvaluationInput(request);

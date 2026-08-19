@@ -220,7 +220,7 @@ describe('TRANSFER — governed action through the real Kernel', () => {
     assert.equal(
       record.references.filter((reference) => reference.referenceType === 'execution_record').length,
       0,
-      'a mandate is what AOC authorized, never evidence that someone else acted',
+      'a mandate is what Soberanía authorized, never evidence that someone else acted',
     );
   });
 });
@@ -366,7 +366,7 @@ describe('TRANSFER — execution containment', () => {
       buildConformingTransferExecution(mandate.id, { externalConsiderationReference: 'consideration-2026-0001' }),
     );
     assert.equal(execution.externalConsiderationReference, 'consideration-2026-0001');
-    assert.ok(!('amount' in execution) && !('currency' in execution), 'AOC holds no monetary quantity for a transfer');
+    assert.ok(!('amount' in execution) && !('currency' in execution), 'Soberanía holds no monetary quantity for a transfer');
   });
 
   it('denies a movement that reports no agreement reference when the authorization required one', async () => {
@@ -576,7 +576,7 @@ describe('TRANSFER — revocation and lifecycle evidence', () => {
     assert.deepEqual(
       mandateAfter.transferredScope,
       { kind: 'proportional', basisPoints: 2500 },
-      'AOC cannot verify a reversal and must not manufacture fresh transfer capacity from an unverified report',
+      'Soberanía cannot verify a reversal and must not manufacture fresh transfer capacity from an unverified report',
     );
 
     // And the capacity really is gone: a further movement is still refused.

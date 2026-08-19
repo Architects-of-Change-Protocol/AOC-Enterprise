@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { validateAocPMFreakRemoteGovernanceContentType } from '../aoc-pmfreak-remote-governance-content-type-guard.js';
 import { createAocPMFreakRemoteGovernanceEndpointConfig } from '../aoc-pmfreak-remote-governance-endpoint-config.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- content-type guard', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- content-type guard', () => {
   const config = createAocPMFreakRemoteGovernanceEndpointConfig();
 
   it('allows application/json', () => {

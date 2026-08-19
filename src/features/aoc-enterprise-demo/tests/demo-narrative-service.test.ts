@@ -5,7 +5,7 @@ import { createEnterpriseDemoSuite } from '../services/index.js';
 import { createDemoNarrativeService } from '../services/demo-narrative-service.js';
 
 describe('DemoNarrativeService', () => {
-  it('creates buyer pain, AOC value, what-happened, why-it-matters, proof explanation and suggested narration', async () => {
+  it('creates buyer pain, Soberanía value, what-happened, why-it-matters, proof explanation and suggested narration', async () => {
     const suite = createEnterpriseDemoSuite();
     const run = await suite.runner.runScenario('internal-agent-allowed');
     const scenario = suite.registry.getScenario('internal-agent-allowed')!;

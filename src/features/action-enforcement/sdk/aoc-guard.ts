@@ -74,7 +74,7 @@ function buildIntent(input: GuardActionRequestInput): ExecutionIntent {
 
 /**
  * The primary SDK entry point: `await aocGuard.enforce(actionRequest, execute)`.
- * If AOC does not return `execute_allowed`, `execute` is never invoked.
+ * If Soberanía does not return `execute_allowed`, `execute` is never invoked.
  */
 export class AocGuard {
   constructor(private readonly runtime: ActionEnforcementRuntime) {}

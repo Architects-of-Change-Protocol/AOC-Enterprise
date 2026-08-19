@@ -1,4 +1,4 @@
-# Governance Treaty Layer (AOC Core)
+# Governance Treaty Layer (Soberanía Core)
 
 Governance treaties add **durable, multi-runtime governance state** on top of transient runtime negotiations.
 
@@ -11,7 +11,7 @@ Governance treaties add **durable, multi-runtime governance state** on top of tr
 - Treaty: persistent, lifecycle-managed, quorum-governed, amendable, and dispute-aware.
 
 ## Treaty vs legal contract
-This is **not legal contract automation**. Treaty objects are protocol governance artifacts used by AOC runtimes to enforce technical authority boundaries.
+This is **not legal contract automation**. Treaty objects are protocol governance artifacts used by Soberanía runtimes to enforce technical authority boundaries.
 
 ## Lifecycle philosophy
 Treaties are created in `proposed`, then activated. They can be suspended, disputed, expired, or revoked. Revoked treaties are terminal; expired treaties require extension amendment.

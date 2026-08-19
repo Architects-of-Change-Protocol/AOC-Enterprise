@@ -126,7 +126,7 @@ export class EnforcementPreflightService {
      * `policy_pack_evaluated` fires whenever a policy pack integration is
      * configured -- regardless of whether the policy chain ever reached
      * `domain_policy_pack` -- so the audit trail always shows that a policy
-     * pack was consulted, even when an earlier core AOC policy already
+     * pack was consulted, even when an earlier core Soberanía policy already
      * blocked the request. It never changes `decision` itself.
      */
     const policyPackChainResult = evaluation.policyResults.find((result) => result.policyId === DOMAIN_POLICY_PACK_POLICY_ID);

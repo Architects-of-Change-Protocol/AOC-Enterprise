@@ -114,7 +114,7 @@ for (const root of scanRoots) {
     const text = await readFile(file, 'utf8');
 
     if (containsProtocolSiblingPath(text)) {
-      violations.push(`${rel}: references the AOC Protocol sibling-repository path directly; imports must resolve through the '@aoc/protocol' package only.`);
+      violations.push(`${rel}: references the Soberanía Protocol sibling-repository path directly; imports must resolve through the '@aoc/protocol' package only.`);
     }
 
     for (const specifier of extractProtocolImportSpecifiers(text)) {

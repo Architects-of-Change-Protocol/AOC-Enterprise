@@ -1,7 +1,7 @@
 # ADR: Canonical Access Decision (R004.E)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: R004.C (`ResourceRef` canonicality conclusion), R004.D
   (`ADR-RESOURCE-ENVELOPE.md`, `EnterpriseResourceEnvelope`),
   `packages/scoped-access/src/enterprise-scoped-access-request.ts` (the
@@ -51,7 +51,7 @@ Create `EnterpriseAccessDecision` in a new package,
   `resource: EnterpriseResourceEnvelope` are properties, not supertypes. A
   decision is not "a request with a verdict" or "a resource with a verdict"
   -- it is a description about a completed evaluation involving both.
-- **Reuses AOC Protocol's `PolicyDecision`** (`'allow' | 'deny' |
+- **Reuses Soberanía Protocol's `PolicyDecision`** (`'allow' | 'deny' |
   'conditional'`) directly for `outcome`, rather than inventing a new enum or
   reusing the Enterprise-local `EnterprisePolicyDecision`
   (`@aoc-enterprise/policy-runtime`), which carries `obligations` --
@@ -109,7 +109,7 @@ second source of truth.
 
 Both exist in the repository and are superficially similar. `PolicyDecision`
 (`@aoc/protocol`) is a bare three-state outcome vocabulary; it is already
-canonical across AOC (referenced by `PolicyDecisionResult.decision` in
+canonical across Soberanía (referenced by `PolicyDecisionResult.decision` in
 Protocol's own adapter surface) and is a `protectedSymbol` in
 `scripts/check-protocol-consumption.mjs`, meaning no Enterprise file may
 redefine it -- only reuse it. `EnterprisePolicyDecision`

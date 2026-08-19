@@ -201,7 +201,7 @@ describe('the production release gap, before it is closed', () => {
     assert.deepEqual(before.available, bp(1_000));
 
     // An ordinary tenant caller reports a full release, naming itself as the
-    // reporter. Accepted as evidence — AOC records what an external system
+    // reporter. Accepted as evidence — Soberanía records what an external system
     // says — and it changes nothing about what Alice may commit.
     const observation = await world.collateralization.recordRelease(TENANT_CONTEXT, {
       mandateId: collateralMandate.id,
@@ -526,7 +526,7 @@ describe('release authority is explicit, and nothing implies it', () => {
     // And the mandate issued before the withdrawal remains a durable
     // authorization: the temporal semantics are the ones every other governed
     // action already has, not a one-off. Withdrawing the requester's authority
-    // does not retroactively unmake an authorization AOC already granted; what
+    // does not retroactively unmake an authorization Soberanía already granted; what
     // ends a live mandate is revoking the mandate.
     const executed = await world.encumbranceRelease.executeEncumbranceRelease(TENANT_CONTEXT, { mandateId: allowed.mandate!.id });
     assert.equal(executed.encumbrance.status, 'released');

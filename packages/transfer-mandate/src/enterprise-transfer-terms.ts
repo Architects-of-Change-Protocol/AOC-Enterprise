@@ -53,9 +53,9 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * mandate that permits no partial movement must be executed for exactly the
  * authorized scope rather than merely "no more than" it.
  *
- * ## What AOC Enterprise does and does not claim
+ * ## What Soberanía Enterprise does and does not claim
  *
- * AOC Enterprise governs *whether a transfer is authorized*: whether this
+ * Soberanía Enterprise governs *whether a transfer is authorized*: whether this
  * authority graph, policy state, approval state and obligation set permitted
  * this actor to move this right, in this portion, from this holder to this
  * recipient.
@@ -65,19 +65,19 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * or controls anything; any registry was updated; any consideration was paid;
  * any agreement was signed; any formality was satisfied in any jurisdiction;
  * the right was legally transferable; or the transferor genuinely held what it
- * purported to move. Those are facts about the world, and AOC knows them only
+ * purported to move. Those are facts about the world, and Soberanía knows them only
  * if some external system independently evidences them -- which is what
  * `EnterpriseTransferExecutionEvidence` exists to record.
  *
  * Most importantly, and unlike anything the previous three actions had to say:
- * **recording that a transfer executed does not move authority inside AOC.**
+ * **recording that a transfer executed does not move authority inside Soberanía.**
  * See `docs/architecture/ADR-TRANSFER-ACTION.md`, "Post-transfer authority".
  *
  * Nothing here moves an asset, updates a registry, computes or settles a
  * price, escrows funds, calculates tax, values anything, drafts or signs an
  * agreement, or contacts any external system. Every `external*` field and
  * every entry in `permittedRegistries` is a provider-neutral opaque label that
- * AOC records and compares as a string and never interprets, resolves, or
+ * Soberanía records and compares as a string and never interprets, resolves, or
  * executes against.
  *
  * This is a pure data contract: no persistence, no service, no API, no policy
@@ -90,7 +90,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * serialization, and references to records owned elsewhere rather than
  * embeddings of them.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/transfer-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/transfer-mandate`).
  */
 export const ENTERPRISE_TRANSFER_SCHEMA_VERSION = '1.0.0' as const;
 
@@ -105,8 +105,8 @@ export const ENTERPRISE_TRANSFER_SCHEMA_VERSION = '1.0.0' as const;
  *
  * The field is named `capability` throughout the repository's internal
  * contracts; read `capability: 'transfer'` as "the identifier of the Governed
- * Action `TRANSFER`". `TRANSFER` is an **AOC Enterprise Governed Action**, not
- * an AOC Protocol Sovereignty Capability: the conceptual vocabulary (Governed
+ * Action `TRANSFER`". `TRANSFER` is an **Soberanía Enterprise Governed Action**, not
+ * a Soberanía Protocol Sovereignty Capability: the conceptual vocabulary (Governed
  * Action / Enforcement / Mandate / Evidence) and the internal field name are
  * allowed to differ, and no repository-wide rename is implied.
  */
@@ -181,7 +181,7 @@ export function isEnterpriseTransferCapability(capability: unknown): capability 
  * is deliberate. Whether a usage right may be assigned, whether an ownership
  * interest may be split, and whether a contractual claim is capable of
  * novation are matters of the arrangement and the jurisdiction, not of this
- * vocabulary. AOC evaluates configured authority, policy, approvals and
+ * vocabulary. Soberanía evaluates configured authority, policy, approvals and
  * obligations; it encodes no universal legal rule about transferability.
  */
 export const ENTERPRISE_TRANSFERABLE_RIGHT_TYPES = GOVERNED_RIGHT_TYPES;
@@ -230,14 +230,14 @@ export const ENTERPRISE_TRANSFER_FULL_BASIS_POINTS = GOVERNED_RIGHTS_SCOPE_FULL_
  * real arrangement that neither `true` nor `false` can express.
  *
  * Used by `constraints.onwardTransferAllowed`, and recorded with an important
- * honesty caveat: **AOC does not enforce this against the recipient.** Once a
- * right has left the transferor, AOC has no authority relationship with the
+ * honesty caveat: **Soberanía does not enforce this against the recipient.** Once a
+ * right has left the transferor, Soberanía has no authority relationship with the
  * recipient through which to refuse anything -- indeed it has no authority
  * relationship with the recipient at all (see
  * `docs/architecture/ADR-TRANSFER-ACTION.md`). This field records what the
  * transferring party declared, so that a later governed request can be
  * evaluated against it by policy, and so an auditor can see what was intended.
- * It is a declaration AOC preserves, never a rule AOC applies to a party it
+ * It is a declaration Soberanía preserves, never a rule Soberanía applies to a party it
  * does not govern.
  */
 export const ENTERPRISE_TRANSFER_DISPOSITIONS = {
@@ -250,8 +250,8 @@ export type EnterpriseTransferDisposition = (typeof ENTERPRISE_TRANSFER_DISPOSIT
 
 /**
  * Declared, provider-neutral limits a transfer authorization carries. Every
- * field is a description AOC records and can compare; none is an instruction
- * AOC carries out, and none is interpreted against any real registry,
+ * field is a description Soberanía records and can compare; none is an instruction
+ * Soberanía carries out, and none is interpreted against any real registry,
  * recipient, or legal system.
  *
  * - `partialTransferAllowed` -- required, because it has no safe default and
@@ -267,7 +267,7 @@ export type EnterpriseTransferDisposition = (typeof ENTERPRISE_TRANSFER_DISPOSIT
  *   genuine domain finding, not a simplification -- see the package README.
  * - `onwardTransferAllowed` -- required disposition, described above. Silence
  *   about whether a recipient may move the right onward is precisely the
- *   ambiguity a governed authorization exists to remove, even though AOC
+ *   ambiguity a governed authorization exists to remove, even though Soberanía
  *   cannot enforce the answer.
  * - `recipientAcceptanceRequired?` -- records that this authorization requires
  *   the recipient's acceptance to be evidenced when the transfer is executed,
@@ -275,23 +275,23 @@ export type EnterpriseTransferDisposition = (typeof ENTERPRISE_TRANSFER_DISPOSIT
  *   rather than merely declared. Deliberately expressed this way rather than
  *   as an acceptance workflow: whether a given transfer needs acceptance is
  *   entirely arrangement-specific (a registered book-entry movement typically
- *   does not; a novated contractual claim typically does), so AOC neither
+ *   does not; a novated contractual claim typically does), so Soberanía neither
  *   requires it universally nor runs it. A deployment that wants acceptance to
  *   be *governed* rather than *evidenced* expresses it through the Approval
  *   Runtime, which already models exactly that. See
  *   `docs/architecture/ADR-TRANSFER-ACTION.md`, "Recipient acceptance".
  * - `considerationEvidenceRequired?` -- records that this authorization
  *   requires evidence of consideration to be reported when the transfer is
- *   executed. This is the whole of AOC's involvement with money in a transfer:
+ *   executed. This is the whole of Soberanía's involvement with money in a transfer:
  *   the requirement is expressed as "evidence must be produced", the evidence
- *   itself is an opaque reference, and AOC computes no price, holds no escrow,
+ *   itself is an opaque reference, and Soberanía computes no price, holds no escrow,
  *   settles nothing, converts nothing, and infers no amount. There is
  *   deliberately no amount field anywhere in this package.
  * - `externalAgreementReferenceRequired?` -- records that an external
  *   agreement reference must be reported with the transfer.
  * - `permittedRegistries?` -- an opaque allow-list of registry labels the
  *   external transfer may be effected through. Absent means "not restricted by
- *   this authorization", never "any registry is endorsed". AOC does not
+ *   this authorization", never "any registry is endorsed". Soberanía does not
  *   resolve a registry, contact one, or assume one exists.
  */
 export interface EnterpriseTransferConstraints {

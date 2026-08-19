@@ -18,7 +18,7 @@ export const EXTERNAL_AGENT_LIMITED_VISA_SCENARIO: DemoScenario = {
   category: 'external_agents',
   summary:
     'Trusted Partner Research Agent completes External Agent Handshake and receives a limited visa and ingress grant to read the project summary for project:HMP-14665.',
-  enterpriseMessage: 'AOC lets trusted external agents collaborate with bounded, auditable access.',
+  enterpriseMessage: 'Soberanía lets trusted external agents collaborate with bounded, auditable access.',
   buyerPain: 'Enterprises need to collaborate with partner-run agents without granting them unbounded internal access.',
   aocValue: "A completed handshake produces a real, scope-limited AgentVisa and IngressGrant that enforcement checks on every request.",
   personas: [TRUSTED_PARTNER_PERSONA_ID],

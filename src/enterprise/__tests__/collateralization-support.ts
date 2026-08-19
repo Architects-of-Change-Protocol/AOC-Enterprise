@@ -77,7 +77,7 @@ export const COLLATERAL_EXECUTOR_REF = 'provider-collateral-platform-c';
 export const SECURED_PARTY_REF = 'party-lender-b';
 /** An unauthorized substitute for the secured party. */
 export const OTHER_SECURED_PARTY_REF = 'party-lender-c';
-/** The obligation the collateral secures. An opaque canonical reference -- AOC neither originates it nor judges its validity. */
+/** The obligation the collateral secures. An opaque canonical reference -- Soberanía neither originates it nor judges its validity. */
 export const SECURED_OBLIGATION_REF = 'obligation-001';
 /** An unauthorized substitute for the secured obligation. */
 export const OTHER_SECURED_OBLIGATION_REF = 'obligation-002';

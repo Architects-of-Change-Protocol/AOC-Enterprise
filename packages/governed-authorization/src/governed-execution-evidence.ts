@@ -12,9 +12,9 @@ import type { GovernedRightType } from './governed-right.js';
  * they do not decide. It is the same observation-only relationship
  * `EnterpriseUsageEvent` has to `EnterpriseAccessGrant`.
  *
- * A mandate proves AOC authorized something. One of these is the only thing
+ * A mandate proves Soberanía authorized something. One of these is the only thing
  * that says it actually happened — and even then it says so on someone else's
- * word: it is a report AOC preserved, never a fact AOC verified.
+ * word: it is a report Soberanía preserved, never a fact Soberanía verified.
  *
  * ## What is deliberately not here
  *
@@ -41,7 +41,7 @@ import type { GovernedRightType } from './governed-right.js';
  * scope and registration references — four domains, nothing in common.
  *
  * `externalSystem` and `externalTransactionReference` are opaque,
- * provider-neutral values AOC stores and echoes and never parses, resolves,
+ * provider-neutral values Soberanía stores and echoes and never parses, resolves,
  * validates, or acts on.
  */
 export interface GovernedExecutionEvidenceCore {
@@ -86,11 +86,11 @@ export interface GovernedExecutionEvidenceCore {
  *   need to be *authorized* rather than *observed*, that is a separate
  *   governed action with its own request, decision and mandate.
  * - **It is not a status.** Presenting an externally-reported fact as
- *   governance state would be AOC claiming to know, or to have caused,
+ *   governance state would be Soberanía claiming to know, or to have caused,
  *   something it did not.
  * - **It restores nothing.** Recording a release, a termination or a reversal
  *   never decrements the artifact's execution count or its cumulative
- *   quantity, because AOC cannot verify the report and must not manufacture
+ *   quantity, because Soberanía cannot verify the report and must not manufacture
  *   fresh capacity from an unverified one.
  */
 export interface GovernedLifecycleEvidenceCore {
@@ -99,7 +99,7 @@ export interface GovernedLifecycleEvidenceCore {
   readonly mandateRef: CanonicalId;
   /** The specific external act being reported on. A lifecycle report concerns one act, never an artifact in the abstract. */
   readonly executionRef: CanonicalId;
-  /** Who reported it. An opaque party pointer — AOC neither requires nor infers which role the reporter holds. */
+  /** Who reported it. An opaque party pointer — Soberanía neither requires nor infers which role the reporter holds. */
   readonly reportedBy: CanonicalId;
   readonly correlationId: CanonicalId;
   readonly externalSystem?: string;

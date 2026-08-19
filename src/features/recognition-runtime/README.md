@@ -1,6 +1,6 @@
-# AOC Recognition Runtime
+# Soberanía Recognition Runtime
 
-The Recognition Runtime is the first working implementation of AOC's capability-token
+The Recognition Runtime is the first working implementation of Soberanía's capability-token
 protocol for recognized autonomous action:
 
 - **Passport** lets an actor be recognized.

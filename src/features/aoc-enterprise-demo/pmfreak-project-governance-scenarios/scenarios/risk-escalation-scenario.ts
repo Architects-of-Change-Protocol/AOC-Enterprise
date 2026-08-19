@@ -19,7 +19,7 @@ export const riskEscalationPrepareEscalationScenario: PMFreakProjectGovernanceSc
   scenarioId: PMFREAK_SCENARIO_RISK_ESCALATION_PREPARE_ESCALATION_ID,
   title: 'Risk Escalation -- Prepare Escalation',
   description:
-    'The Risk Agent detects the unconfirmed-customer-acceptance risk in preparation for an escalation draft. AOC Enterprise checks passport status, the real runtime guard, authority scope, and capability before allowing the detection to proceed. Drafting mitigation, closing the risk, assigning blame, or escalating externally all remain out of scope for this action and require separate approval.',
+    'The Risk Agent detects the unconfirmed-customer-acceptance risk in preparation for an escalation draft. Soberanía Enterprise checks passport status, the real runtime guard, authority scope, and capability before allowing the detection to proceed. Drafting mitigation, closing the risk, assigning blame, or escalating externally all remain out of scope for this action and require separate approval.',
   category: 'risk_escalation',
   agentId: 'pmfreak.agent.risk',
   primaryRole: 'risk',

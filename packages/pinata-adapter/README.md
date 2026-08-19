@@ -204,7 +204,7 @@ rather than returning a `PinataProviderExecutionFailure`.
 
 ## Install / build
 
-Part of the AOC Enterprise workspace:
+Part of the Soberanía Enterprise workspace:
 
 ```bash
 npm run build --workspace @aoc-enterprise/pinata-adapter

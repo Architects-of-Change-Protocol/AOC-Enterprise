@@ -3,7 +3,7 @@
 ## What this answers
 
 PMFreak's conversational-brain agents (Planning, Risk, Evidence, Client
-Communication, Billing Readiness, Change Control) need a real, verifiable AOC
+Communication, Billing Readiness, Change Control) need a real, verifiable Soberanía
 identity -- not a narrow demo. This package wires PMFreak's six agent roles
 to the actual, already-existing, generic **Agent Passport Core**
 (`@aoc-enterprise/agent-governance`) instead of

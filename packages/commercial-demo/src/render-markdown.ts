@@ -23,7 +23,7 @@ function renderScenario(scenario: ScenarioResult): string {
 /** Renders the full commercial demo run as portable Markdown — the same content as the HTML report and console transcript, suitable for a PR body, a docs page, or a chat message. */
 export function renderDemoRunToMarkdown(run: CommercialDemoRun): string {
   const sections: string[] = [];
-  sections.push('# AOC Access Governance — Commercial Reference Demo (R006.A)');
+  sections.push('# Soberanía Access Governance — Commercial Reference Demo (R006.A)');
   sections.push(`**Customer:** ${BUSINESS_SCENARIO.customerName} — ${BUSINESS_SCENARIO.customerDescription}`);
   sections.push(`**Why Governed Access:** ${BUSINESS_SCENARIO.whyGovernedAccess}`);
   sections.push(

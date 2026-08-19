@@ -1,7 +1,7 @@
 # @aoc-enterprise/resource-envelope
 
 The canonical Enterprise-owned contract for **a governed external resource**:
-`EnterpriseResourceEnvelope`. It composes AOC Protocol's `ResourceRef` — it
+`EnterpriseResourceEnvelope`. It composes Soberanía Protocol's `ResourceRef` — it
 never duplicates, extends, or reimplements it — and adds only the
 provider-neutral location, integrity, descriptive, lifecycle and
 audit-correlation semantics that Access Governance needs and Protocol does
@@ -13,21 +13,21 @@ provider SDK, no runtime execution.
 ## Purpose
 
 Access Governance eventually needs to reason about resources that live
-outside AOC (a contract PDF in S3, a dataset pinned to IPFS via Pinata, a
-document in SharePoint) without AOC ever holding credentials for those
+outside Soberanía (a contract PDF in S3, a dataset pinned to IPFS via Pinata, a
+document in SharePoint) without Soberanía ever holding credentials for those
 systems or executing provider-specific code. `EnterpriseResourceEnvelope` is
 the description of such a resource that a governance decision can be made
 *about* — never the mechanism that reaches it.
 
 ## Ownership
 
-- **Identity** (`kind`, `id`, `tenantId`, `attributes`) is owned by AOC
+- **Identity** (`kind`, `id`, `tenantId`, `attributes`) is owned by Soberanía
   Protocol's `ResourceRef` (`@aoc/protocol`). This package never duplicates
   those fields; every function here that needs identity reads
   `envelope.resource`.
 - **Everything else on `EnterpriseResourceEnvelope`** — `location`,
   `integrity`, `descriptor`, `lifecycleState`, `registeredAt`,
-  `correlationId` — is owned by AOC Enterprise
+  `correlationId` — is owned by Soberanía Enterprise
   (`@aoc-enterprise/resource-envelope`), because it is governance metadata
   about a resource, not part of what makes the resource *that* resource.
   Protocol has no concept of "where a resource's bytes live" or "has this
@@ -220,7 +220,7 @@ events to resources and requests today. Not implemented here.
 
 ## Install / build
 
-Part of the AOC Enterprise workspace:
+Part of the Soberanía Enterprise workspace:
 
 ```bash
 npm run build --workspace @aoc-enterprise/resource-envelope

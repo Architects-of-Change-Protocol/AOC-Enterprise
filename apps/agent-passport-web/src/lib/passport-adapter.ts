@@ -183,7 +183,7 @@ export async function createSampleAgentPassport(): Promise<IssuedAgentPassportBu
   return enrollAgent({
     agentName: 'SalesBot CR',
     ownerId: 'aoc-demo-company',
-    ownerName: 'AOC Demo Company',
+    ownerName: 'Soberanía Demo Company',
     purpose:
       'Assist with sales conversations and CRM lead capture under human-supervised governance.',
     jurisdiction: 'CR',

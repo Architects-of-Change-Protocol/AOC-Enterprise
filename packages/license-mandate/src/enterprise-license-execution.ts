@@ -33,7 +33,7 @@ import type { EnterpriseLicensableRightType, EnterpriseLicenseExclusivity, Enter
  * external license actually granted under a previously-issued
  * `EnterpriseLicenseMandate`**.
  *
- * This is the integration boundary, and it is the whole of it. AOC Enterprise
+ * This is the integration boundary, and it is the whole of it. Soberanía Enterprise
  * does not draft agreements, capture signatures, operate a licensing
  * marketplace, list or price licenses, calculate or collect royalties, settle
  * payments, compute tax, meter usage, or enforce DRM, and it ships no
@@ -44,15 +44,15 @@ import type { EnterpriseLicensableRightType, EnterpriseLicenseExclusivity, Enter
  * `mandateRef` and therefore, transitively, to the decision, approvals,
  * obligations, authority and asset that authorized it.
  *
- * **A mandate proves AOC authorized the license. This record is the only
+ * **A mandate proves Soberanía authorized the license. This record is the only
  * thing that says a license was actually granted**, and even then it says so
- * on someone else's word: it is a report AOC preserved, never a fact AOC
+ * on someone else's word: it is a report Soberanía preserved, never a fact Soberanía
  * verified. Nothing here asserts that the agreement is legally enforceable,
  * that any formality was satisfied, that consideration passed, or that the
  * licensee accepted anything beyond what the reporting system claims.
  *
  * The `external*` fields and every value in `contexts` are opaque,
- * provider-neutral values AOC stores and echoes and never parses, resolves,
+ * provider-neutral values Soberanía stores and echoes and never parses, resolves,
  * validates, or acts on. Nothing here assumes a jurisdiction, a legal system,
  * a media type, a distribution platform, or an asset class.
  *
@@ -68,7 +68,7 @@ import type { EnterpriseLicensableRightType, EnterpriseLicenseExclusivity, Enter
  * observes, it does not decide -- the same observation-only posture
  * `EnterpriseUsageEvent` takes toward `EnterpriseAccessGrant`.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/license-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/license-mandate`).
  */
 export interface EnterpriseLicenseExecutionEvidence extends GovernedExecutionEvidenceCore {
   /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
@@ -86,11 +86,11 @@ export interface EnterpriseLicenseExecutionEvidence extends GovernedExecutionEvi
   readonly rightsScope?: EnterpriseLicenseRightsScope;
   /** The operating context the granted license is confined to, by opaque dimension. Measured against `permittedContexts`. */
   readonly contexts?: Readonly<Record<string, readonly string[]>>;
-  /** When the external license itself takes effect, as reported. Deliberately distinct from the mandate's `effectiveFrom`, which bounds AOC authority. */
+  /** When the external license itself takes effect, as reported. Deliberately distinct from the mandate's `effectiveFrom`, which bounds Soberanía authority. */
   readonly licenseEffectiveAt?: UtcDateTime;
   /** When the external license itself ends, as reported. Deliberately distinct from the mandate's `expiresAt`; measured against `maximumLicenseTermEndsAt`. */
   readonly licenseExpiresAt?: UtcDateTime;
-  /** How large the granted license is in named units, as reported. Measured against `maximumLicensedUnits`. Not a usage measurement -- AOC meters nothing. */
+  /** How large the granted license is in named units, as reported. Measured against `maximumLicensedUnits`. Not a usage measurement -- Soberanía meters nothing. */
   readonly licensedUnits?: EnterpriseLicensedUnits;
   /** Opaque provider label (e.g. a licensing platform or rights administrator name). Never a credential, endpoint, or client. */
   readonly externalSystem?: string;
@@ -105,7 +105,7 @@ export interface EnterpriseLicenseExecutionEvidence extends GovernedExecutionEvi
 /**
  * How an external license ended, in the reporting system's own terms. A
  * closed vocabulary because these are the reported *categories*, not legal
- * conclusions: AOC records which word the external system used and derives
+ * conclusions: Soberanía records which word the external system used and derives
  * nothing from the choice.
  */
 export const ENTERPRISE_LICENSE_LIFECYCLE_TYPES = {
@@ -130,13 +130,13 @@ export type EnterpriseLicenseLifecycleType = (typeof ENTERPRISE_LICENSE_LIFECYCL
  * - It is **not** `TERMINATE_LICENSE`. No governed action is introduced by
  *   this contract, no authority is evaluated, no decision is produced, and
  *   nothing is authorized. Should terminating a license ever need to be
- *   *authorized* by AOC rather than merely *observed*, that is a separate
+ *   *authorized* by Soberanía rather than merely *observed*, that is a separate
  *   governed action with its own request, decision and mandate.
  * - It is **not** a mandate status. An external license ending is a fact
- *   about that license; presenting it as governance state would be AOC
+ *   about that license; presenting it as governance state would be Soberanía
  *   claiming to know, or to have caused, something it did not.
  * - It does **not** restore exercise headroom. Recording an end does not
- *   decrement the mandate's execution count, because AOC cannot verify the
+ *   decrement the mandate's execution count, because Soberanía cannot verify the
  *   external license actually ended and must not create fresh licensing
  *   capacity on the strength of an unverified report.
  *
@@ -144,7 +144,7 @@ export type EnterpriseLicenseLifecycleType = (typeof ENTERPRISE_LICENSE_LIFECYCL
  * (`mandateRef`), so a reviewer can follow one license from authorization
  * through grant to reported end without a second audit system.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/license-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/license-mandate`).
  */
 export interface EnterpriseLicenseLifecycleEvidence extends GovernedLifecycleEvidenceCore {
   /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
@@ -353,7 +353,7 @@ export function validateEnterpriseLicenseExecutionEvidence(candidate: unknown): 
   if (effectiveMs !== undefined && expiresMs !== undefined && expiresMs <= effectiveMs) {
     errors.push({
       code: 'LICENSE_EXPIRY_NOT_AFTER_EFFECTIVE',
-      message: 'licenseExpiresAt must be strictly after licenseEffectiveAt; a license that ends before it begins is not a report AOC can preserve as meaningful.',
+      message: 'licenseExpiresAt must be strictly after licenseEffectiveAt; a license that ends before it begins is not a report Soberanía can preserve as meaningful.',
     });
   }
 

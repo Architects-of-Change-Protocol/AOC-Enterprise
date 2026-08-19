@@ -1,19 +1,19 @@
-# AOC Enterprise — the `TRANSFER` Governed Action
+# Soberanía Enterprise — the `TRANSFER` Governed Action
 
 ## Where this sits
 
 ```
-AOC Protocol
+Soberanía Protocol
   └─ Sovereignty Capabilities
 
-AOC Enterprise
+Soberanía Enterprise
   └─ Governed Actions          TOKENIZE · COLLATERALIZE · LICENSE · TRANSFER
        └─ Enforcement          the evaluation of whether, and how, one may happen
             └─ Grants / Mandates   the durable artifact a successful evaluation produces
                  └─ Evidence        what an external system reported afterwards
 ```
 
-`TRANSFER` is an **AOC Enterprise Governed Action**. It is *not* an AOC
+`TRANSFER` is an **Soberanía Enterprise Governed Action**. It is *not* a Soberanía
 Protocol Sovereignty Capability. The Kernel's internal field is still named
 `capability`, and `capability: 'transfer'` should be read as "the identifier of
 the Governed Action `TRANSFER`"; no repository-wide rename is implied.
@@ -22,8 +22,8 @@ Three terms, kept apart throughout:
 
 ```
 TRANSFER                 the Governed Action
-Transfer Enforcement     AOC Enterprise's evaluation of whether/how it may happen
-TransferMandate          the durable, AOC-owned authorization artifact it produces
+Transfer Enforcement     Soberanía Enterprise's evaluation of whether/how it may happen
+TransferMandate          the durable, Soberanía-owned authorization artifact it produces
 ```
 
 ## What TRANSFER means
@@ -33,7 +33,7 @@ TransferMandate          the durable, AOC-owned authorization artifact it produc
 > specified current holder to a specified recipient, under defined governance
 > conditions.
 
-AOC governs **the authority to transfer**. It does not perform the transfer.
+Soberanía governs **the authority to transfer**. It does not perform the transfer.
 
 ## TRANSFER is about rights, not objects
 
@@ -156,7 +156,7 @@ side by side in the evidence lineage so a reviewer can see when they differ.
 
 ## Recipient acceptance, and consideration
 
-Neither is hard-coded, and neither is a workflow AOC runs.
+Neither is hard-coded, and neither is a workflow Soberanía runs.
 
 **Acceptance** is expressible two ways, both already existing:
 `constraints.recipientAcceptanceRequired` makes it an evidence requirement
@@ -164,18 +164,18 @@ checked at execution against a reported acceptance reference; or a deployment
 makes it a *governed* prerequisite through the Approval Runtime, which already
 models exactly that. Whether a transfer needs acceptance at all is
 arrangement-specific — a registered book-entry movement typically does not, a
-novated contractual claim typically does — so AOC neither requires it
+novated contractual claim typically does — so Soberanía neither requires it
 universally nor performs it.
 
-**Consideration** is the whole of AOC's involvement with money here:
+**Consideration** is the whole of Soberanía's involvement with money here:
 `constraints.considerationEvidenceRequired` requires that a reference be
-reported. AOC computes no price, holds no funds, escrows nothing, settles
+reported. Soberanía computes no price, holds no funds, escrows nothing, settles
 nothing, converts nothing, and there is deliberately no amount field anywhere
 in this action.
 
 ## What a TransferMandate authorizes, and what it does not say
 
-A mandate means: *AOC authorized this movement, under these conditions.*
+A mandate means: *Soberanía authorized this movement, under these conditions.*
 
 It does **not** mean the movement happened, that title passed, that any
 registry reflects it, that consideration was paid, that any formality was
@@ -192,7 +192,7 @@ reference integrity       ≠   authority
 ## Revocation is not reversal
 
 Revoking withdraws the authority to move *further* rights. It does not undo a
-movement already effected — AOC cannot pull back a right it never held. The
+movement already effected — Soberanía cannot pull back a right it never held. The
 revocation record preserves both the execution count and the cumulative
 transferred scope at the moment authority was withdrawn, so the record shows
 precisely what revocation did not undo. Evidence recorded before revocation is
@@ -203,9 +203,9 @@ reversal or correction is an observation, not a governance act. It is recorded
 as lifecycle evidence and changes neither the mandate's status, nor its
 execution count, nor its transferred scope. **A reported reversal restores no
 transfer capacity** — decrementing on an unverified report would manufacture
-fresh capacity over a right AOC has already recorded as having left.
+fresh capacity over a right Soberanía has already recorded as having left.
 
-## What AOC believes about the recipient afterwards
+## What Soberanía believes about the recipient afterwards
 
 **Nothing.**
 
@@ -220,10 +220,10 @@ a measurement rather than a design statement — see
   the same 25% is still `allowed` at the governance layer; only the
   per-mandate conservation rule stops the same portion moving twice, and that
   rule is scoped to one mandate.
-- The evidence lineage deliberately exposes no `currentHolder`. AOC never
+- The evidence lineage deliberately exposes no `currentHolder`. Soberanía never
   verified the movement and holds no ownership state to update.
 
-What *does* make AOC recognize a recipient is an explicit administrative act —
+What *does* make Soberanía recognize a recipient is an explicit administrative act —
 registering the actor, issuing a passport, a capability token, and an authority
 grant. **No transfer code path performs any of it**, and adding one would be an
 action-specific mutation of the Authority Graph, which is precisely the hack
@@ -244,7 +244,7 @@ request_ref UNIQUE            one request authorizes at most one mandate
 execution_id PRIMARY KEY      one movement is recorded at most once
 mandate_id UNIQUE (revocation) at most one revocation per mandate
 (mandate_id, sequence) UNIQUE restart-stable append order on both evidence tables
-execution_id FOREIGN KEY      a lifecycle report references a movement AOC has evidence of
+execution_id FOREIGN KEY      a lifecycle report references a movement Soberanía has evidence of
 ```
 
 Terms are stored canonically with a digest recomputed on every read, so a scope
@@ -259,7 +259,7 @@ Unlike the licence store, this schema carries a cumulative
 
 ## Boundary
 
-AOC Enterprise is not a registry, a transfer agent, a custodian, a settlement
+Soberanía Enterprise is not a registry, a transfer agent, a custodian, a settlement
 system, an escrow, a title system, or a marketplace. There is no provider
 adapter for transfer and none is implied.
 

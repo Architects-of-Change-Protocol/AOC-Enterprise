@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Adds a buyer-manageable, organization-level registry to AOC Agent Passport.
+Adds a buyer-manageable, organization-level registry to Soberanía Agent Passport.
 Organizations that purchase the `organization_agent_registry` tier get:
 
 - A persistent registry of their governed AI agents
@@ -310,7 +310,7 @@ Once buyers can manage a registry, the next commercial value is exportable gover
 - CSV inventory export (agent name, passport ID, status, issued at)
 - JSON governance export (full passport data per agent)
 - Buyer-ready governance report pack for internal audits, procurement, and compliance reviews
-- Optional: signed export with AOC issuer metadata for external verification
+- Optional: signed export with Soberanía issuer metadata for external verification
 
 ---
 

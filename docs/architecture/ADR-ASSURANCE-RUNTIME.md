@@ -1,4 +1,4 @@
-# ADR: AOC Enterprise Assurance Runtime v1 (PR-007)
+# ADR: Soberanía Enterprise Assurance Runtime v1 (PR-007)
 
 Status: Accepted
 

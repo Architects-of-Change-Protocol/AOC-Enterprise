@@ -87,7 +87,7 @@ test('assertCommitMatches fails when the checked-out commit does not match the p
 
 // --- assertIsProtocolRepository / assertTarballMatchesPackage ---------------
 
-test('assertIsProtocolRepository rejects a repository that is not AOC Protocol', () => {
+test('assertIsProtocolRepository rejects a repository that is not Soberanía Protocol', () => {
   assert.throws(
     () => assertIsProtocolRepository({ name: 'some-other-repo' }, { name: '@aoc/protocol' }),
     /does not look like the Architects_of_Change_Protocol repository/,

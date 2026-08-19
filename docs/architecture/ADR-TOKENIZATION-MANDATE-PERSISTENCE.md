@@ -1,7 +1,7 @@
 # ADR: Durable TokenizationMandate persistence
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: `ADR-TOKENIZE-CAPABILITY.md` (the governed action itself),
   `ADR-DURABLE-GRANTS-REVOCATION.md` (the durable Access Grant store this
   mirrors), `ADR-ENTERPRISE-GOVERNANCE-STORE.md`,

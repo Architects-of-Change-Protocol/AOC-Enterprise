@@ -10,7 +10,7 @@ import { COSTA_RICA_CONTROL_PLANE_REQUIREMENT } from './costa-rica-control-plane
 import { COSTA_RICA_BASE_PACK_ID, COSTA_RICA_BASE_PACK_NAME, COSTA_RICA_BASE_PACK_VERSION, COSTA_RICA_REQUIRED_BASELINE_PACK_ID } from './costa-rica-constants.js';
 
 /**
- * AOC Jurisdiction Costa Rica Base Pack v1
+ * Soberanía Jurisdiction Costa Rica Base Pack v1
  * (`aoc.jurisdiction.costa_rica.base.v1`).
  *
  * A jurisdiction-aware operational baseline for Costa Rica-related actions,
@@ -41,7 +41,7 @@ export interface CreateCostaRicaBaseJurisdictionPackInput {
 }
 
 const DESCRIPTION =
-  'AOC Jurisdiction Costa Rica Base Pack v1 provides a structured jurisdiction-aware baseline for Costa Rica-related actions: it identifies when Costa Rica jurisdiction context may be relevant, which evidence should be collected, which review paths may be required, and which safe labels/export metadata should be produced. It does not encode Costa Rican law, does not interpret Costa Rican law, does not certify compliance with Costa Rican law, does not provide legal advice, and does not replace Costa Rican counsel.';
+  'Soberanía Jurisdiction Costa Rica Base Pack v1 provides a structured jurisdiction-aware baseline for Costa Rica-related actions: it identifies when Costa Rica jurisdiction context may be relevant, which evidence should be collected, which review paths may be required, and which safe labels/export metadata should be produced. It does not encode Costa Rican law, does not interpret Costa Rican law, does not certify compliance with Costa Rican law, does not provide legal advice, and does not replace Costa Rican counsel.';
 
 const SAFETY_NOTE =
   'This pack does not encode Costa Rican law, does not provide legal advice, does not certify compliance with Costa Rican law, does not claim legal completeness, and does not replace Costa Rican counsel. It does not satisfy counsel_reviewed/counsel_attested requirements unless explicitly created with that status and corresponding evidence.';

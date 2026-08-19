@@ -6,8 +6,8 @@ import type { AocPMFreakRemoteGovernanceEndpointClaimSafetyResult } from './aoc-
  * Endpoint-specific unsafe claims, additive to (never replacing) the
  * universal `POLICY_PACK_PROHIBITED_OVERCLAIM_PHRASES`. These stay local to
  * this endpoint rather than being merged into the universal list -- generic
- * AOC runtimes must not depend on PMFreak-remote-governance-endpoint-specific
- * vocabulary. Identical to the phrase list the underlying AOC PMFreak
+ * Soberanía runtimes must not depend on PMFreak-remote-governance-endpoint-specific
+ * vocabulary. Identical to the phrase list the underlying Soberanía PMFreak
  * Governance Request Intake already enforces, so a request or response that
  * passes through both layers is checked against one consistent vocabulary.
  */
@@ -53,7 +53,7 @@ function findAocPMFreakRemoteGovernanceEndpointSpecificPhrases(normalizedText: s
 }
 
 /**
- * Evaluates claim safety for AOC PMFreak Remote Governance Endpoint output,
+ * Evaluates claim safety for Soberanía PMFreak Remote Governance Endpoint output,
  * layering the endpoint-specific prohibited phrase list on top of the
  * universal `evaluatePolicyPackClaimSafety`. Never calls a network or
  * language model; a pure deterministic string scan.
@@ -75,7 +75,7 @@ export function evaluateAocPMFreakRemoteGovernanceEndpointClaimSafety(value: unk
 }
 
 /**
- * Asserts claim safety for AOC PMFreak Remote Governance Endpoint output.
+ * Asserts claim safety for Soberanía PMFreak Remote Governance Endpoint output.
  * Runs the universal `assertNoPolicyPackOverclaim` first (throws on any
  * universal overclaim phrase), then additionally throws on any
  * endpoint-specific unsafe claim.
@@ -86,6 +86,6 @@ export function assertNoAocPMFreakRemoteGovernanceEndpointOverclaim(value: unkno
   const normalized = stringifyForScan(value).toLowerCase();
   const localPhrasesFound = findAocPMFreakRemoteGovernanceEndpointSpecificPhrases(normalized);
   if (localPhrasesFound.length > 0) {
-    throw new Error(`AOC PMFreak remote governance endpoint overclaim detected: ${localPhrasesFound.join(', ')}`);
+    throw new Error(`Soberanía PMFreak remote governance endpoint overclaim detected: ${localPhrasesFound.join(', ')}`);
   }
 }

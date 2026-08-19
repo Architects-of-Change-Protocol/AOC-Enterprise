@@ -13,7 +13,7 @@ export const DEMO_SCRIPT_AUDIENCE_PROFILES: readonly DemoScriptAudienceProfile[]
     audience: 'executive',
     durationMinutes: 4,
     openingPrefix: 'For a business audience: ',
-    closingSuffix: 'That is the enterprise value AOC delivers here.',
+    closingSuffix: 'That is the enterprise value Soberanía delivers here.',
   },
   {
     audience: 'technical',
@@ -31,6 +31,6 @@ export const DEMO_SCRIPT_AUDIENCE_PROFILES: readonly DemoScriptAudienceProfile[]
     audience: 'investor',
     durationMinutes: 3,
     openingPrefix: 'For an investor audience: ',
-    closingSuffix: 'This is what makes AOC governance demonstrable, not just architected.',
+    closingSuffix: 'This is what makes Soberanía governance demonstrable, not just architected.',
   },
 ];

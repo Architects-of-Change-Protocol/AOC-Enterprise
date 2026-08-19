@@ -1,4 +1,4 @@
-# AOC Enterprise Module Lifecycle & Registry v1
+# Soberanía Enterprise Module Lifecycle & Registry v1
 
 ## Purpose
 

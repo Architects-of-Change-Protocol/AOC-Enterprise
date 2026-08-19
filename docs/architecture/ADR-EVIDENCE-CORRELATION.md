@@ -1,7 +1,7 @@
 # ADR: Canonical Evidence Correlation (R004.J)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: R004.D (`ADR-RESOURCE-ENVELOPE.md`, `EnterpriseResourceEnvelope`),
   R004.E (`ADR-ACCESS-DECISION.md`, `EnterpriseAccessDecision`),
   R004.F (`ADR-POLICY-OBLIGATION.md`, `EnterpriseAccessObligation`),
@@ -69,7 +69,7 @@ Create `EnterpriseEvidenceCorrelation` in a new package,
   `evaluatedAt`, `mandatory`, `status`, `issuedAt`, `expiresAt`, `reason`,
   `eventType`, `occurredAt`, `principalId`, ...) is duplicated on
   `EnterpriseEvidenceCorrelation`.
-- **Composes AOC Protocol's `ResourceRef` directly** (`resource: ResourceRef`,
+- **Composes Soberanía Protocol's `ResourceRef` directly** (`resource: ResourceRef`,
   identity only), the same identity-only composition style
   `EnterpriseAccessGrant.resource` / `EnterpriseUsageEvent.resource` already
   establish -- never the full `EnterpriseResourceEnvelope`.

@@ -1,7 +1,7 @@
 /**
  * Enterprise-owned identity claims contract.
  *
- * AOC Protocol's governance explicitly determined that verified-identity/auth
+ * Soberanía Protocol's governance explicitly determined that verified-identity/auth
  * claims (e.g. token subject claims) are an implementation-specific concern
  * and do not belong in `@aoc/protocol`'s public surface — see
  * `docs/protocol/PUBLIC_API.md` in the Protocol repository and
@@ -10,7 +10,7 @@
  * was an Enterprise-invented ambient shim symbol. `VerifiedActorClaims` is the
  * Enterprise-owned replacement.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/identity`). Evolution of this
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/identity`). Evolution of this
  * type is an Enterprise decision, not a Protocol one — do not reintroduce an
  * import of an identity-claims type from `@aoc/protocol`.
  *

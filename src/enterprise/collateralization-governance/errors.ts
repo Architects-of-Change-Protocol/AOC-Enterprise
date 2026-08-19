@@ -14,7 +14,7 @@
  *
  * Also deliberately absent, and specific to this action: no code here asserts
  * anything about the external world. There is no "COLLATERAL_NOT_PERFECTED",
- * no "PRIORITY_LOST", no "COLLATERAL_ALREADY_ENCUMBERED". AOC does not
+ * no "PRIORITY_LOST", no "COLLATERAL_ALREADY_ENCUMBERED". Soberanía does not
  * observe those facts and must not imply that it does.
  */
 export type CollateralizationGovernanceErrorCode =

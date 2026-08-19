@@ -25,7 +25,7 @@ export type ApiHandlerResult<TRes> =
 
 export class ApiHandlerBlockedError extends Error {
   constructor(public readonly outcome: EnforcementOutcome) {
-    super(`API handler blocked by AOC enforcement: ${outcome.decision.reasonCode}`);
+    super(`API handler blocked by Soberanía enforcement: ${outcome.decision.reasonCode}`);
     this.name = 'ApiHandlerBlockedError';
   }
 }

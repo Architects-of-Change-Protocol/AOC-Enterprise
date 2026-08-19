@@ -168,7 +168,7 @@ describe('reference integrity — H. TOKENIZE authorization lineage', () => {
     assert.equal(execution?.referenceType, 'execution_record');
 
     // Same version, same chain, different sequence: the mechanism does not
-    // know or care which of the two is AOC's own authorization.
+    // know or care which of the two is Soberanía's own authorization.
     assert.equal(execution?.integrityVersion, GOVERNANCE_REFERENCE_INTEGRITY_VERSION);
     assert.equal(authorization?.sequence, 1);
     assert.equal(execution?.sequence, 2);

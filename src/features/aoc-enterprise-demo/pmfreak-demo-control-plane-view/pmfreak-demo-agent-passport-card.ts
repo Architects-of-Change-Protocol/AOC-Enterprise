@@ -32,7 +32,7 @@ const PASSPORT_STATUS_LABEL: Record<AgentPassportStatus, string> = {
  */
 export function createPMFreakDemoAgentPassportCard(result: PMFreakProjectGovernanceScenarioRunResult): PMFreakDemoAgentPassportCard {
   const resolution: PMFreakAgentPassportResolution = result.passportResolution;
-  const notes: string[] = ['AOC-governed agent', 'Passport-gated', 'Capability-gated', 'Authority-scoped'];
+  const notes: string[] = ['Soberanía-governed agent', 'Passport-gated', 'Capability-gated', 'Authority-scoped'];
   if (!resolution.allowedByRuntimeGuard) notes.push('This action is not authorized by the real runtime guard.');
   if (!resolution.allowedByCapabilityToken) notes.push('No valid capability token authorizes this action.');
   if (!resolution.allowedByAuthorityScope) notes.push('This attempt falls outside the authority scope evaluated for this run.');

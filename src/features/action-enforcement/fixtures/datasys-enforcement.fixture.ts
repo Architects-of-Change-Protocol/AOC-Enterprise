@@ -139,7 +139,7 @@ export function bridgeRecognitionRuntime(recognitionRuntime: AocRecognitionRunti
 
 /**
  * Builds the full "Datasys Agent Republic" world across all four upstream
- * AOC runtimes, then composes Action Enforcement on top through the
+ * Soberanía runtimes, then composes Action Enforcement on top through the
  * structural Recognition Runtime bridge. This is the shared fixture every
  * other action-enforcement fixture and integration/demo test builds on.
  */

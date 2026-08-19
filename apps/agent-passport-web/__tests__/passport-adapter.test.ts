@@ -16,7 +16,7 @@ const SAMPLE_INPUT = {
   agentName: 'TestAgent Alpha',
   ownerId: 'test-owner-1',
   ownerName: 'Test Owner Corp',
-  purpose: 'Automated testing agent for AOC passport adapter.',
+  purpose: 'Automated testing agent for Soberanía passport adapter.',
   jurisdiction: 'US',
   autonomyLevel: 'low' as const,
   riskTier: 'low' as const,
@@ -77,7 +77,7 @@ describe('passport-adapter', () => {
   it('createSampleAgentPassport creates SalesBot CR passport', async () => {
     const sample = await createSampleAgentPassport();
     assert.equal(sample.passport.agentName, 'SalesBot CR');
-    assert.equal(sample.passport.ownerName, 'AOC Demo Company');
+    assert.equal(sample.passport.ownerName, 'Soberanía Demo Company');
     assert.equal(sample.passport.jurisdiction, 'CR');
     assert.equal(sample.passport.autonomyLevel, 'medium');
     assert.equal(sample.passport.riskTier, 'medium');

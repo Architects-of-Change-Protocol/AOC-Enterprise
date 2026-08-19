@@ -16,7 +16,7 @@ import { createEnforcementRuntimeContext } from '../runtime/enforcement-runtime-
 
 const NOW = '2026-01-01T00:00:00.000Z';
 
-/** Always allows -- proves that a policy pack "allow" never gets a chance to matter once an earlier core AOC layer already denied. */
+/** Always allows -- proves that a policy pack "allow" never gets a chance to matter once an earlier core Soberanía layer already denied. */
 const ALWAYS_ALLOW_POLICY_PACK = { evaluatePolicyForEnforcement: () => ({ type: 'policy_allowed' as const, allowed: true, reasonCode: 'OK', reason: 'ok' }) };
 
 function fakeRecognition(result: RecognitionVerificationResult): EnforcementRecognitionIntegration {
@@ -73,7 +73,7 @@ function setUp(options: SetUpOptions) {
   return { store, idempotencyService, preflightService };
 }
 
-describe('Policy pack "allow" never overrides an existing AOC denial', () => {
+describe('Policy pack "allow" never overrides an existing Soberanía denial', () => {
   it('1. does not override an unrecognized actor', () => {
     const { store, preflightService } = setUp({ recognitionResult: { type: 'unrecognized_actor', reasonCode: 'ROGUE', reason: 'rogue' } });
     const decision = preflightService.preflight(store.saveRequest(buildRequest()));

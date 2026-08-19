@@ -76,7 +76,7 @@ export type EnterpriseTokenizationMandateStatus = GovernedAuthorizationStatus;
  * external system has already issued (see the package README, "Revocation
  * semantics").
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/tokenization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/tokenization-mandate`).
  */
 export interface EnterpriseTokenizationMandate extends GovernedAuthorizationArtifact<EnterpriseTokenizationTerms> {
   /** Re-declared as this action's own literal so a serialized mandate names its schema on its face and cannot be replayed through a sibling action's contract. */

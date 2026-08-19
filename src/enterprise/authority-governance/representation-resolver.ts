@@ -30,7 +30,7 @@ export interface CreateGovernedRepresentationResolverOptions {
  * Deliberately thin, and deliberately the *only* place that question is
  * answered. It decides nothing about capabilities, policy, approvals,
  * obligations or evidence, and it cannot allow anything — `AocKernel` asks it
- * one question, gets one fact back, and remains the only component in AOC
+ * one question, gets one fact back, and remains the only component in Soberanía
  * Enterprise that produces a decision.
  *
  * ## Ordering of the checks, and why it is what it is
@@ -177,7 +177,7 @@ export function createGovernedRepresentationResolver(
           ) {
             // Never coerced, exactly as the authority resolver never coerces:
             // a proportional ceiling and a unit count describe different
-            // quantities and AOC holds no conversion between them.
+            // quantities and Soberanía holds no conversion between them.
             keep({ outcome: 'incompatible_scope', representativeAuthorityId: id, permitted, requested });
             continue;
           }

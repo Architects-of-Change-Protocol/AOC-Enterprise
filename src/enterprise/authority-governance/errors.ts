@@ -9,7 +9,7 @@
  * action modules: there is **no code for "the actor lacks authority over this
  * right"**. That is not an error. It is a governance denial, produced by the
  * Kernel from a `GovernedAuthorityCoverage` verdict and returned with the
- * Kernel's own reason codes, in the same shape every other denial in AOC has.
+ * Kernel's own reason codes, in the same shape every other denial in Soberanía has.
  * This module never converts a coverage verdict into an exception, and never
  * converts an exception into a coverage verdict — a store that cannot be read
  * is emphatically not an actor that holds nothing.
@@ -23,7 +23,7 @@
 export type AuthorityGovernanceErrorCode =
   /** A conserving transition asked to debit more than the source position holds. Authority is never negative and never clamped. */
   | 'GOVERNED_AUTHORITY_INSUFFICIENT_SCOPE'
-  /** Two scopes that cannot be compared or added met: a proportional share against a unit count, or two unit denominations AOC holds no conversion between. */
+  /** Two scopes that cannot be compared or added met: a proportional share against a unit count, or two unit denominations Soberanía holds no conversion between. */
   | 'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE'
   /** A scope that is not a well-formed non-negative integer quantity. */
   | 'GOVERNED_AUTHORITY_SCOPE_INVALID'
@@ -66,9 +66,9 @@ export type AuthorityGovernanceErrorCode =
    * A transition would leave the holder with less authority than the persistent
    * constraints already standing over it.
    *
-   * A *structural* refusal, not a business rule. AOC is not saying encumbered
+   * A *structural* refusal, not a business rule. Soberanía is not saying encumbered
    * authority may never move — a holder with 5 000 bp and a 4 000 bp constraint
-   * may still transfer 1 000. It is saying AOC will not end up holding a
+   * may still transfer 1 000. It is saying Soberanía will not end up holding a
    * constraint that refers to authority its holder no longer possesses, and
    * will not silently move that constraint to the recipient to avoid the
    * problem. Which of those a deployment eventually wants is action policy this

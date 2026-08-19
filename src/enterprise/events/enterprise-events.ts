@@ -2,7 +2,7 @@ import type { KernelEvaluationResult } from '../../kernel/index.js';
 import type { EnterpriseLifecycleEvent } from '../lifecycle/lifecycle-events.js';
 
 /**
- * The AOC Enterprise Host's own event catalog. These are
+ * The Soberanía Enterprise Host's own event catalog. These are
  * operational/integration events about the *hosting* of an evaluation, not
  * governance decisions -- the Kernel neither emits nor knows about them
  * (see `ports.ts`'s documented omission of a `KernelEventSink`). The event

@@ -1,4 +1,4 @@
-# ADR: The four-enforcement semantic audit — what vocabulary genuinely belongs to AOC Enterprise
+# ADR: The four-enforcement semantic audit — what vocabulary genuinely belongs to Soberanía Enterprise
 
 - Status: accepted. **Supersedes the three-enforcement audit** recorded in this
   file at commit `91460d3`; that audit's conclusions are preserved below, each
@@ -13,7 +13,7 @@
 
 ## Context
 
-AOC Enterprise now governs four concrete exercises of authority over a governed
+Soberanía Enterprise now governs four concrete exercises of authority over a governed
 asset:
 
 ```
@@ -292,7 +292,7 @@ distinctions or become a union every consumer must narrow.
   TOKENIZE       ownership unchanged
   COLLATERALIZE  ownership unchanged
   LICENSE        ownership unchanged
-  TRANSFER       ownership arguably changed — and AOC does not know it
+  TRANSFER       ownership arguably changed — and Soberanía does not know it
   ```
 
 - **Measured** (`transfer-authority-transition.test.ts`): after a complete,
@@ -374,7 +374,7 @@ Every regression suite and every release check was re-run after the extraction:
 root **3906 pass / 0 fail**, workspaces **996 pass / 0 fail**, and every check
 that passed at baseline still passes.
 
-## Does AOC Enterprise need a generic enforcement framework?
+## Does Soberanía Enterprise need a generic enforcement framework?
 
 **No — and after four implementations it is clearer why it never will.**
 
@@ -469,12 +469,12 @@ speculatively.
 ```
 
 The diagram was incomplete, and `TRANSFER` is what showed where. Changing who
-holds a right does require an authority transition, and AOC has no primitive
+holds a right does require an authority transition, and Soberanía has no primitive
 for one at any layer. Everything above that final box is now proven and, where
 it was vocabulary, shared.
 
 After four enforcements the smallest reusable semantic vocabulary that
-genuinely belongs to AOC Enterprise is exactly what
+genuinely belongs to Soberanía Enterprise is exactly what
 `@aoc-enterprise/governed-authorization` now contains:
 
 1. a **governed asset reference** (already Protocol's `ResourceRef`);

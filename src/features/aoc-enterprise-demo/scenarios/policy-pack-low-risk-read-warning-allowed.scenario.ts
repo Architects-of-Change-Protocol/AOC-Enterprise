@@ -19,10 +19,10 @@ export const POLICY_PACK_LOW_RISK_READ_WARNING_ALLOWED_SCENARIO: DemoScenario = 
   category: 'policy_packs',
   summary:
     'Trusted Partner Research Agent, having completed External Agent Handshake, performs read_project_summary touching only non-sensitive project metadata; the data-boundary-basic policy pack records an explicit allow and execution proceeds.',
-  enterpriseMessage: 'AOC does not overblock low-risk work; it preserves execution while recording a policy decision for the audit trail.',
+  enterpriseMessage: 'Soberanía does not overblock low-risk work; it preserves execution while recording a policy decision for the audit trail.',
   buyerPain: 'A policy engine that blocks every action to be safe is unusable -- enterprises need policy enforcement that stays out of the way for genuinely low-risk work.',
   aocValue:
-    'The data-boundary-basic policy pack explicitly evaluates and allows read_project_summary when it touches no sensitive or prohibited data domain; every core AOC layer already allowed the request, so enforcement executes and the policy decision/proof are recorded alongside it.',
+    'The data-boundary-basic policy pack explicitly evaluates and allows read_project_summary when it touches no sensitive or prohibited data domain; every core Soberanía layer already allowed the request, so enforcement executes and the policy decision/proof are recorded alongside it.',
   personas: [TRUSTED_PARTNER_PERSONA_ID],
   primaryActorId: TRUSTED_PARTNER_AGENT_ID,
   trustDomainId: TRUST_DOMAIN_ID,

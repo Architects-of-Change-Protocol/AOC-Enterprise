@@ -28,7 +28,7 @@ export function createPMFreakDemoGovernanceChecksSection(viewModel: PMFreakDemoC
     sectionId: PMFREAK_DEMO_NARRATIVE_SECTION_IDS.governanceChecks,
     kind: 'governance_checks',
     title: 'Governance Checks',
-    summary: 'AOC Enterprise checked the existing scenario result against passport, capability, authority scope, evidence and approval gates before presenting a decision.',
+    summary: 'Soberanía Enterprise checked the existing scenario result against passport, capability, authority scope, evidence and approval gates before presenting a decision.',
     bullets,
     safeLabels: [...GOVERNANCE_CHECK_SAFE_LABELS],
     warnings: [],

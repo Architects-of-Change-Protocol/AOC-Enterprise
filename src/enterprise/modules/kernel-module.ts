@@ -17,8 +17,8 @@ export function createKernelModule(kernel: AocKernel, now: () => string): Enterp
     descriptor: {
       id: KERNEL_MODULE_ID,
       version: AOC_KERNEL_VERSION,
-      displayName: 'AOC Kernel',
-      description: 'The governance decision engine hosted by AOC Enterprise.',
+      displayName: 'Soberanía Kernel',
+      description: 'The governance decision engine hosted by Soberanía Enterprise.',
       criticality: 'required',
       dependencies: [{ moduleId: PROVIDERS_MODULE_ID }],
       capabilities: ['kernel.evaluate'],

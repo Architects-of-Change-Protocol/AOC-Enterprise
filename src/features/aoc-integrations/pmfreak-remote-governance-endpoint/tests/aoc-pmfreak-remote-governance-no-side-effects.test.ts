@@ -48,7 +48,7 @@ function readModuleFile(relativePath: string): string {
   return readFileSync(resolve(process.cwd(), 'src/features/aoc-integrations/pmfreak-remote-governance-endpoint', relativePath), 'utf8');
 }
 
-describe('AOC PMFreak Remote Governance Endpoint -- no side effects', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- no side effects', () => {
   it('exposes no PMFreak mutation, action execution, or writeback function from its public surface', () => {
     for (const exportName of Object.keys(endpoint)) {
       assert.ok(

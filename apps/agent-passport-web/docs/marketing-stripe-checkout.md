@@ -1,4 +1,4 @@
-# AOC Agent Passport — Marketing & Stripe Checkout
+# Soberanía Agent Passport — Marketing & Stripe Checkout
 
 Sprint documentation for the marketing landing page and Stripe Checkout integration.
 

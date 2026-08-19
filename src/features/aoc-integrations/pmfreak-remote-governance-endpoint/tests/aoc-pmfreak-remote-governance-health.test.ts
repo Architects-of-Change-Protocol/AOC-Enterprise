@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakRemoteGovernanceEndpointHealth } from '../aoc-pmfreak-remote-governance-health.js';
 import { createAocPMFreakRemoteGovernanceEndpointConfig } from '../aoc-pmfreak-remote-governance-endpoint-config.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- health', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- health', () => {
   it('reports healthy for a default config', () => {
     const health = createAocPMFreakRemoteGovernanceEndpointHealth({ config: createAocPMFreakRemoteGovernanceEndpointConfig() });
     assert.equal(health.status, 'healthy');

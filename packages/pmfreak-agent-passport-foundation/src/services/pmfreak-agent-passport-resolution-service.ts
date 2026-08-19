@@ -114,7 +114,7 @@ export interface PMFreakAgentPassportResolution {
 }
 
 const SAFE_FRAMING_WARNING =
-  'This decision reflects AOC Enterprise passport, runtime-guard, capability, evidence, and approval gating only. It is not legal advice, not a compliance certification, and not a guarantee of contractual, billing, or invoice validity.';
+  'This decision reflects Soberanía Enterprise passport, runtime-guard, capability, evidence, and approval gating only. It is not legal advice, not a compliance certification, and not a guarantee of contractual, billing, or invoice validity.';
 
 const APPROVAL_TYPE_TO_DECISION: Readonly<Record<PMFreakApprovalRequirementType, PMFreakPassportActionDecision>> = {
   legal_review: 'require_legal_review',

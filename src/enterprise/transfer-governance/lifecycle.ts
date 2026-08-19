@@ -39,7 +39,7 @@ import type { TransferMandateRecord, TransferMandateStatus } from './contracts.j
  *
  * Revoking a mandate withdraws the authority to move *further* rights from
  * that moment. It does **not** undo, unwind, rescind, or reverse a movement an
- * external system has already effected — AOC governs authority and cannot pull
+ * external system has already effected — Soberanía governs authority and cannot pull
  * back a right it never held and did not move. Execution evidence recorded
  * before revocation is preserved immutably, and the revocation record itself
  * preserves both the execution count and the cumulative transferred scope at
@@ -51,7 +51,7 @@ import type { TransferMandateRecord, TransferMandateStatus } from './contracts.j
  * is recorded as `TransferLifecycleRecord` and changes neither the mandate's
  * status, nor its execution count, nor its transferred scope. Decrementing the
  * transferred scope on an unverified reversal report would silently
- * manufacture fresh transfer capacity over a right AOC has already recorded as
+ * manufacture fresh transfer capacity over a right Soberanía has already recorded as
  * having left — which is precisely the escalation this module exists to
  * prevent, and the most tempting one this action offers.
  *
@@ -164,7 +164,7 @@ export interface TransferExerciseProposal {
  * in order to move more.
  *
  * The three evidence requirements are passed as presence flags rather than
- * values: each constraint asks whether a reference was reported, and AOC never
+ * values: each constraint asks whether a reference was reported, and Soberanía never
  * interprets, resolves, or verifies what any of them names. In particular
  * `externalConsiderationReference` is never an amount, and no arithmetic is
  * performed on it anywhere.
@@ -200,7 +200,7 @@ export function assertTransferExerciseAuthorized(record: TransferMandateRecord, 
  * zero: `enterpriseTransferMandateAuthorizes` has already refused an
  * incommensurable pair by this point, so reaching `null` here would mean the
  * store's own accounting had diverged from the contract's, and continuing
- * would record a total AOC could not justify.
+ * would record a total Soberanía could not justify.
  */
 export function nextTransferredScope(
   current: EnterpriseTransferScope | undefined,

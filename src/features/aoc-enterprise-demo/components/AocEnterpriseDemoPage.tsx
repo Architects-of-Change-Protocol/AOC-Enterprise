@@ -28,7 +28,7 @@ export interface AocEnterpriseDemoPageProps {
 }
 
 /**
- * The single mount point for the AOC Enterprise Demo Scenario Pack. It only
+ * The single mount point for the Soberanía Enterprise Demo Scenario Pack. It only
  * ever reads `scenarios`/`run`/`scripts` -- built upstream by
  * DemoScenarioRegistry, DemoScenarioRunner and DemoScriptService from real
  * runtime output -- and dispatches `onRunScenario` verbatim to whatever
@@ -51,7 +51,7 @@ export function AocEnterpriseDemoPage({
   return (
     <div className="aoc-enterprise-demo-page">
       <header>
-        <h1>AOC Enterprise Demo Scenario Pack</h1>
+        <h1>Soberanía Enterprise Demo Scenario Pack</h1>
         <p className="aoc-enterprise-demo-page__subtitle">Deterministic enterprise scenarios for governed autonomous execution</p>
       </header>
 

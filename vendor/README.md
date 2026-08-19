@@ -1,7 +1,7 @@
 # `vendor/`
 
 Contains a single tracked artifact: `aoc-protocol-0.1.0.tgz`, a reproducible `npm pack` build of
-`@aoc/protocol` from the AOC Protocol repository at the commit pinned in
+`@aoc/protocol` from the Soberanía Protocol repository at the commit pinned in
 [`protocol-consumer.lock.json`](../protocol-consumer.lock.json).
 
 This is the canonical interim dependency mechanism while `@aoc/protocol` remains unpublished (see

@@ -4,7 +4,7 @@ import type { ControlPlaneAuditEvent } from './types.js';
 /**
  * Explicit, sole boundary between Enterprise's legacy, persisted, snake_case
  * `ControlPlaneAuditEvent` (see `.aoc-control-plane.json` via
- * `FileControlPlaneStore`, and `types.ts`) and AOC Protocol's canonical
+ * `FileControlPlaneStore`, and `types.ts`) and Soberanía Protocol's canonical
  * `AuditEventEnvelope`. Every field is mapped by hand -- no structural cast,
  * no object spread from one shape into the other -- so a future Protocol
  * field-shape change surfaces here as a compiler error, not a silent runtime

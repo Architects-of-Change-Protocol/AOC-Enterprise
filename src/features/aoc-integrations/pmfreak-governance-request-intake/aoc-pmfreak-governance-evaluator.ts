@@ -127,7 +127,7 @@ function decidePassportRuntime(request: AocPMFreakGovernanceRequest): PassportRu
 }
 
 /**
- * Evaluates a PMFreak governance request and returns a governed AOC
+ * Evaluates a PMFreak governance request and returns a governed Soberanía
  * response. Deterministic in `deterministic_local` mode (the default) and
  * in `passport_runtime` mode (backed by a deterministic fixture registry).
  * Never mutates `input.request`, never contacts PMFreak, never executes an

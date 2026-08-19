@@ -55,7 +55,7 @@ export type ControlPlaneAuditEventType =
  * Enterprise's legacy, snake_case, persisted audit event shape (see
  * `.aoc-control-plane.json` via `FileControlPlaneStore`). This is
  * deliberately NOT `AuditEventEnvelope & {...}` -- it is a standalone,
- * Enterprise-owned persisted shape, decoupled from AOC Protocol's contract.
+ * Enterprise-owned persisted shape, decoupled from Soberanía Protocol's contract.
  * `audit-envelope-mapper.ts` is the sole, explicit boundary between this
  * legacy shape and the real `@aoc/protocol` `AuditEventEnvelope`; nothing
  * else in this package should structurally cast or spread between the two.

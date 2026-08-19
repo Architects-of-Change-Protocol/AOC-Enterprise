@@ -277,7 +277,7 @@ export interface GovernedAuthorityStore {
    * cover the constraint.
    *
    * Idempotent on the idempotency key, which defaults to the execution
-   * reference and right: replaying an execution AOC has already encumbered
+   * reference and right: replaying an execution Soberanía has already encumbered
    * returns the original constraint with `replayed: true` and constrains no
    * second quantity. Throws `GOVERNED_AUTHORITY_ENCUMBRANCE_CONFLICT` when the
    * same execution identity comes back naming a different holder, resource,

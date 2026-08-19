@@ -1,5 +1,5 @@
 /**
- * AOC Enterprise Assurance Runtime v1 (PR-007) -- versioned, evidence-driven
+ * Soberanía Enterprise Assurance Runtime v1 (PR-007) -- versioned, evidence-driven
  * control evaluation, findings, deterministic scoring, eligibility, and
  * continuous Assurance signals. See
  * `docs/enterprise/AOC_ASSURANCE_RUNTIME.md`.

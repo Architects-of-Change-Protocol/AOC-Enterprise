@@ -8,7 +8,7 @@ governed access**: `EnterpriseEvidenceCorrelation`. It references
 `EnterpriseAccessGrant` (`@aoc-enterprise/access-grant`, R004.G),
 `EnterpriseGrantRevocation` (`@aoc-enterprise/grant-revocation`, R004.H), and
 `EnterpriseUsageEvent` (`@aoc-enterprise/usage-event`, R004.I) -- each by an
-opaque identifier -- and composes AOC Protocol's `ResourceRef` directly. It
+opaque identifier -- and composes Soberanía Protocol's `ResourceRef` directly. It
 never embeds, duplicates, or extends any of them.
 
 This package is a pure data contract: no persistence, no service, no API, no
@@ -76,7 +76,7 @@ whatever produced them.
 - **Everything on `EnterpriseEvidenceCorrelation`** -- `id`, `resource`,
   `decisionRefs`, `obligationRefs?`, `grantRefs?`, `usageRefs?`,
   `revocationRefs?`, `correlatedAt`, `metadata?`, `description?` -- is owned
-  by AOC Enterprise (`@aoc-enterprise/evidence-correlation`).
+  by Soberanía Enterprise (`@aoc-enterprise/evidence-correlation`).
 
 ## Composition with the R004 line (Phase 2 / Phase 4)
 
@@ -394,7 +394,7 @@ this change**:
 
 ## Install / build
 
-Part of the AOC Enterprise workspace:
+Part of the Soberanía Enterprise workspace:
 
 ```bash
 npm run build --workspace @aoc-enterprise/evidence-correlation

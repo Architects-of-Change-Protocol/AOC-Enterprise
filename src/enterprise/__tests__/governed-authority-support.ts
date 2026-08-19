@@ -866,7 +866,7 @@ export function conformingExecution(
 }
 
 /**
- * The canonical "the release officer asks AOC to discharge one constraint"
+ * The canonical "the release officer asks Soberanía to discharge one constraint"
  * submission.
  *
  * Note what it does *not* carry, and cannot: no holder, no right, no scope, no

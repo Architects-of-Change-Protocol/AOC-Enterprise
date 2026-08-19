@@ -48,7 +48,7 @@ function readModuleFile(relativePath: string): string {
   return readFileSync(resolve(process.cwd(), 'src/features/aoc-integrations/pmfreak-governance-request-intake', relativePath), 'utf8');
 }
 
-describe('AOC PMFreak Governance Request Intake -- no side effects', () => {
+describe('Soberanía PMFreak Governance Request Intake -- no side effects', () => {
   it('exposes no PMFreak mutation, action execution, or writeback function from its public surface', () => {
     for (const exportName of Object.keys(intake)) {
       assert.ok(!/mutate|writeback|sendEmail|sendClientCommunication|postToSlack|createInvoice|certifyInvoiceValidity|certifyCustomerAcceptance|certifyCompliance/i.test(exportName), `unexpected export name suggests a side effect: ${exportName}`);

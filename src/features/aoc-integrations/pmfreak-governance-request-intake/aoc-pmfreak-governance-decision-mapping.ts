@@ -42,19 +42,19 @@ export function mapAocPMFreakDecisionToSeverity(decision: AocPMFreakGovernanceDe
  * authorization, or risk-free execution.
  */
 const SAFE_FRAMING_CLAUSE =
-  'This reflects AOC Enterprise passport, evidence, and approval gating only; it is not an invoice validity certification, not a customer acceptance certification, and not a compliance or legal determination.';
+  'This reflects Soberanía Enterprise passport, evidence, and approval gating only; it is not an invoice validity certification, not a customer acceptance certification, and not a compliance or legal determination.';
 
 const HEADLINE_BY_DECISION: Readonly<Record<AocPMFreakGovernanceDecision, (actionTitle: string) => string>> = {
-  allow: (actionTitle) => `AOC allows the PMFreak action "${actionTitle}" to proceed based on the evidence and approvals present in this request.`,
-  deny: (actionTitle) => `AOC denies the PMFreak action "${actionTitle}" based on the state of this request.`,
-  hold: (actionTitle) => `AOC holds the PMFreak action "${actionTitle}" pending further review.`,
-  require_evidence: (actionTitle) => `AOC requires additional evidence before the PMFreak action "${actionTitle}" can proceed.`,
-  require_pm_approval: (actionTitle) => `AOC requires PM approval before the PMFreak action "${actionTitle}" can proceed.`,
-  require_customer_validation: (actionTitle) => `AOC requires customer validation before the PMFreak action "${actionTitle}" can proceed.`,
-  require_billing_review: (actionTitle) => `AOC requires billing review before the PMFreak action "${actionTitle}" can proceed.`,
-  require_contract_review: (actionTitle) => `AOC requires contract review before the PMFreak action "${actionTitle}" can proceed.`,
-  require_security_review: (actionTitle) => `AOC requires security review before the PMFreak action "${actionTitle}" can proceed.`,
-  require_executive_approval: (actionTitle) => `AOC requires executive approval before the PMFreak action "${actionTitle}" can proceed.`,
+  allow: (actionTitle) => `Soberanía allows the PMFreak action "${actionTitle}" to proceed based on the evidence and approvals present in this request.`,
+  deny: (actionTitle) => `Soberanía denies the PMFreak action "${actionTitle}" based on the state of this request.`,
+  hold: (actionTitle) => `Soberanía holds the PMFreak action "${actionTitle}" pending further review.`,
+  require_evidence: (actionTitle) => `Soberanía requires additional evidence before the PMFreak action "${actionTitle}" can proceed.`,
+  require_pm_approval: (actionTitle) => `Soberanía requires PM approval before the PMFreak action "${actionTitle}" can proceed.`,
+  require_customer_validation: (actionTitle) => `Soberanía requires customer validation before the PMFreak action "${actionTitle}" can proceed.`,
+  require_billing_review: (actionTitle) => `Soberanía requires billing review before the PMFreak action "${actionTitle}" can proceed.`,
+  require_contract_review: (actionTitle) => `Soberanía requires contract review before the PMFreak action "${actionTitle}" can proceed.`,
+  require_security_review: (actionTitle) => `Soberanía requires security review before the PMFreak action "${actionTitle}" can proceed.`,
+  require_executive_approval: (actionTitle) => `Soberanía requires executive approval before the PMFreak action "${actionTitle}" can proceed.`,
 };
 
 /** Builds a claim-safe summary sentence for a decision. Never claims invoice validity, customer acceptance, compliance, or legal status. */

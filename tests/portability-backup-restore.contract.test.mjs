@@ -1,4 +1,4 @@
-// Contract tests for the AOC Enterprise v1 backup/restore/portability
+// Contract tests for the Soberanía Enterprise v1 backup/restore/portability
 // tooling (docs/operations/AOC_ENTERPRISE_BACKUP_V1.md,
 // AOC_ENTERPRISE_RESTORE_V1.md). Exercises the real scripts against real
 // SQLite stores seeded through the actual Enterprise Host services (via

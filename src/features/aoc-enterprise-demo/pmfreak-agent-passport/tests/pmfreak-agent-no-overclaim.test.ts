@@ -52,7 +52,7 @@ describe('PMFreak Agent Passport Demo Pack passes the universal no-overclaim har
   });
 
   it('36. safe PMFreak labels do not false-positive', () => {
-    const safeText = 'AOC-governed agent; Not production integration; Not compliance certification; Evidence required; Approval required';
+    const safeText = 'Soberanía-governed agent; Not production integration; Not compliance certification; Evidence required; Approval required';
     const result = evaluatePMFreakAgentPassportClaimSafety(safeText);
 
     assert.equal(result.safe, true, JSON.stringify(result.prohibitedPhrasesFound));

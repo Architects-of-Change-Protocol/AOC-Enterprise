@@ -26,7 +26,7 @@ export const milestoneAcceptanceValidateAcceptanceScenario: PMFreakProjectGovern
   scenarioId: PMFREAK_SCENARIO_MILESTONE_ACCEPTANCE_VALIDATE_ACCEPTANCE_ID,
   title: 'Milestone Acceptance -- Validate Acceptance Signals',
   description:
-    'The Evidence Agent classifies a bundle of collected evidence for milestone acceptance review. AOC Enterprise checks passport status, the real runtime guard, authority scope, capability, and required deliverable evidence before allowing the classification to proceed. The Evidence Agent cannot certify customer acceptance -- that decision is out of scope for this action and this pack.',
+    'The Evidence Agent classifies a bundle of collected evidence for milestone acceptance review. Soberanía Enterprise checks passport status, the real runtime guard, authority scope, capability, and required deliverable evidence before allowing the classification to proceed. The Evidence Agent cannot certify customer acceptance -- that decision is out of scope for this action and this pack.',
   category: 'milestone_acceptance',
   agentId: 'pmfreak.agent.evidence',
   primaryRole: 'evidence',

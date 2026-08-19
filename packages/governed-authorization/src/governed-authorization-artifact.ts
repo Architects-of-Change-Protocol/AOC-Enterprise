@@ -1,7 +1,7 @@
 import type { CanonicalId, ResourceRef, UtcDateTime } from '@aoc/protocol';
 
 /**
- * The lifecycle of an AOC Enterprise authorization artifact, as a deliberate
+ * The lifecycle of a Soberanía Enterprise authorization artifact, as a deliberate
  * two-state union.
  *
  * `'active'` records that this is, as far as the artifact's own history is
@@ -24,14 +24,14 @@ import type { CanonicalId, ResourceRef, UtcDateTime } from '@aoc/protocol';
  * external arrangement ending — a licence terminated, collateral released, a
  * transfer reversed — is a fact about that arrangement, not about this
  * authorization. Promoting an externally-reported fact into governance state
- * would be AOC claiming to know, or to have caused, something it did not.
+ * would be Soberanía claiming to know, or to have caused, something it did not.
  * Such reports are recorded as separate, append-only, observation-only
  * evidence that references the artifact, never as a status on it.
  */
 export type GovernedAuthorizationStatus = 'active' | 'revoked';
 
 /**
- * The action-neutral skeleton of a durable AOC Enterprise authorization
+ * The action-neutral skeleton of a durable Soberanía Enterprise authorization
  * artifact: **the identity of an authorization, its linkage to the governance
  * decision that produced it, its validity window, and its revocation state.**
  *
@@ -63,7 +63,7 @@ export type GovernedAuthorizationStatus = 'active' | 'revoked';
  *
  * ## What this artifact never claims
  *
- * An authorization artifact records that AOC authorized something. It never
+ * An authorization artifact records that Soberanía authorized something. It never
  * records that the thing happened: no token was minted, no security interest
  * created, no licence granted, and no right moved by the existence of one of
  * these. That is what execution evidence is for.
@@ -85,9 +85,9 @@ export interface GovernedAuthorizationArtifact<TTerms> {
   readonly requestedBy: CanonicalId;
   /** The canonical Kernel decision that authorized this artifact. An artifact can only exist because a governance decision produced it. */
   readonly decisionRef: CanonicalId;
-  /** When AOC's authority under this artifact begins. Never the external arrangement's own effective date. */
+  /** When Soberanía's authority under this artifact begins. Never the external arrangement's own effective date. */
   readonly effectiveFrom: UtcDateTime;
-  /** When AOC's authority under this artifact ends. Never a claim about anything already done externally. */
+  /** When Soberanía's authority under this artifact ends. Never a claim about anything already done externally. */
   readonly expiresAt: UtcDateTime;
   readonly correlationId: CanonicalId;
   /** The Governance Store aggregate that durably proves the decision — its trace, reason codes, events and integrity chain. */

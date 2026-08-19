@@ -6,7 +6,7 @@ import { resourceRefIdentityEquals } from '@aoc-enterprise/resource-envelope';
  * `EnterpriseResourceEnvelope` (R004.D), `EnterpriseAccessDecision` (R004.E),
  * `EnterpriseAccessObligation` (R004.F), `EnterpriseAccessGrant` (R004.G),
  * `EnterpriseGrantRevocation` (R004.H), and `EnterpriseUsageEvent` (R004.I)
- * -- and, by identity primitive, over AOC Protocol's `ResourceRef`.
+ * -- and, by identity primitive, over Soberanía Protocol's `ResourceRef`.
  *
  * Every contract beneath this one is the immutable record of a single fact
  * about a governed access lifecycle: a resource was registered, a request
@@ -37,7 +37,7 @@ import { resourceRefIdentityEquals } from '@aoc-enterprise/resource-envelope';
  * canonical correlation graph connecting immutable business artifacts that
  * were produced elsewhere, by other contracts, at other times.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/evidence-correlation`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/evidence-correlation`).
  *
  * See the package README for the full design rationale, ownership boundary,
  * and relationship to every contract in the R004 line, plus future

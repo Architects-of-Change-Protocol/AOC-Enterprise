@@ -29,7 +29,7 @@ export const POLICY_PACK_CONTROL_PLANE_WALKTHROUGH_SCENARIO: DemoScenario = {
   category: 'policy_packs',
   summary:
     'An operator opens the Control Plane after a representative sweep of policy-pack scenarios -- a required finance review, a hard deny, two evidence requirements, a compliance-review requirement, and an allowed low-risk read -- and inspects Policy Packs, Enforcement and Proofs together.',
-  enterpriseMessage: 'AOC makes policy-pack enforcement explainable to operators and buyers: every pack, rule, decision, proof and enforcement link is inspectable from one place.',
+  enterpriseMessage: 'Soberanía makes policy-pack enforcement explainable to operators and buyers: every pack, rule, decision, proof and enforcement link is inspectable from one place.',
   buyerPain: 'Buyers and operators do not trust a policy engine they cannot inspect -- they need to see exactly which rule matched, which decision it produced, and how it ties back to the enforcement outcome.',
   aocValue:
     'Every policy pack decision this walkthrough produced is real: matched against a real rule, proven with a real policy proof, and linked back to the real enforcement decision it informed -- all inspectable in the Control Plane\'s Policy Packs, Enforcement and Proofs panels.',

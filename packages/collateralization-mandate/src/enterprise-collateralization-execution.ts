@@ -28,7 +28,7 @@ import type { EnterpriseCollateralizableRightType, EnterpriseCollateralizationSc
  * external collateral arrangement actually created under a previously-issued
  * `EnterpriseCollateralizationMandate`**.
  *
- * This is the integration boundary, and it is the whole of it. AOC Enterprise
+ * This is the integration boundary, and it is the whole of it. Soberanía Enterprise
  * does not create security interests, file with any registry, perfect
  * anything, determine priority, originate or service loans, value assets, or
  * liquidate collateral, and it ships no provider adapter for
@@ -40,11 +40,11 @@ import type { EnterpriseCollateralizableRightType, EnterpriseCollateralizationSc
  * that authorized it.
  *
  * The `external*` fields, `jurisdiction` and `priorityRank` are opaque,
- * provider-neutral values AOC stores and echoes and never parses, resolves,
+ * provider-neutral values Soberanía stores and echoes and never parses, resolves,
  * validates against any registry, or acts on. Nothing here assumes a
  * blockchain, a government lien registry, a UCC filing system, a securities
  * platform, real estate, or any jurisdiction's law. `priorityRank` records
- * what an external system *reported*; it is never a priority AOC determined,
+ * what an external system *reported*; it is never a priority Soberanía determined,
  * and recording it is not a claim of legal perfection or of standing against
  * any third party.
  *
@@ -58,7 +58,7 @@ import type { EnterpriseCollateralizableRightType, EnterpriseCollateralizationSc
  * observes, it does not decide -- the same observation-only posture
  * `EnterpriseUsageEvent` takes toward `EnterpriseAccessGrant`.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/collateralization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/collateralization-mandate`).
  */
 export interface EnterpriseCollateralizationExecutionEvidence extends GovernedExecutionEvidenceCore {
   /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
@@ -77,16 +77,16 @@ export interface EnterpriseCollateralizationExecutionEvidence extends GovernedEx
   readonly securedAmount?: EnterpriseSecuredAmount;
   /** Opaque provider label (e.g. a platform or collateral agent name). Never a credential, endpoint, or client. */
   readonly externalSystem?: string;
-  /** Opaque registry/provider label, measured against `permittedRegistries`. AOC neither resolves nor contacts it, and does not assume a registry exists. */
+  /** Opaque registry/provider label, measured against `permittedRegistries`. Soberanía neither resolves nor contacts it, and does not assume a registry exists. */
   readonly externalRegistry?: string;
   /** Opaque reference to the security/collateral agreement the external system created. */
   readonly externalAgreementReference?: string;
   /** Opaque reference to whatever filing or registration the external system performed, if any. Not a claim that a filing perfected anything. */
   readonly externalFilingReference?: string;
   readonly externalTransactionReference?: string;
-  /** Opaque jurisdiction label, measured against `permittedJurisdictions`. AOC hard-codes no jurisdiction and interprets none. */
+  /** Opaque jurisdiction label, measured against `permittedJurisdictions`. Soberanía hard-codes no jurisdiction and interprets none. */
   readonly jurisdiction?: string;
-  /** The ranking the external system reports, `1` most senior. Reported, never determined by AOC. */
+  /** The ranking the external system reports, `1` most senior. Reported, never determined by Soberanía. */
   readonly priorityRank?: number;
   readonly evidenceRefs?: readonly CanonicalId[];
 }
@@ -94,7 +94,7 @@ export interface EnterpriseCollateralizationExecutionEvidence extends GovernedEx
 /**
  * How an external collateral arrangement ended, in the reporting system's own
  * terms. A closed vocabulary because these are the reported *categories*, not
- * legal conclusions: AOC records which word the external system used and
+ * legal conclusions: Soberanía records which word the external system used and
  * derives nothing from the choice.
  */
 export const ENTERPRISE_COLLATERAL_RELEASE_TYPES = {
@@ -118,13 +118,13 @@ export type EnterpriseCollateralReleaseType = (typeof ENTERPRISE_COLLATERAL_RELE
  * - It is **not** `RELEASE_COLLATERAL`. No governed action is introduced by
  *   this contract, no authority is evaluated, no decision is produced, and
  *   nothing is authorized. Should releasing collateral ever need to be
- *   *authorized* by AOC rather than merely *observed*, that is a separate
+ *   *authorized* by Soberanía rather than merely *observed*, that is a separate
  *   governed action with its own request, decision and mandate.
  * - It is **not** a mandate status. An external release is a fact about an
- *   external arrangement; presenting it as governance state would be AOC
+ *   external arrangement; presenting it as governance state would be Soberanía
  *   claiming to know, or to have caused, something it did not.
  * - It does **not** restore committed scope. Recording a release does not
- *   decrement the scope committed under a mandate, because AOC cannot verify
+ *   decrement the scope committed under a mandate, because Soberanía cannot verify
  *   that the external encumbrance actually ended and must not create headroom
  *   on the strength of an unverified report.
  *
@@ -132,7 +132,7 @@ export type EnterpriseCollateralReleaseType = (typeof ENTERPRISE_COLLATERAL_RELE
  * (`mandateRef`), so a reviewer can follow one arrangement from authorization
  * through creation to reported release without a second audit system.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/collateralization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/collateralization-mandate`).
  */
 export interface EnterpriseCollateralizationReleaseEvidence extends GovernedLifecycleEvidenceCore {
   /** Re-declared as this action's own literal so a serialized record names its schema on its face. */

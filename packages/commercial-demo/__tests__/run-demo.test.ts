@@ -114,7 +114,7 @@ describe('rendering', () => {
   it('renders a Markdown report covering every scenario', async () => {
     const run = await runCommercialDemo();
     const markdown = renderDemoRunToMarkdown(run);
-    assert.ok(/# AOC Access Governance/.test(markdown))
+    assert.ok(/# Soberanía Access Governance/.test(markdown))
     assert.ok(/Audit Reconstruction/.test(markdown))
   });
 });

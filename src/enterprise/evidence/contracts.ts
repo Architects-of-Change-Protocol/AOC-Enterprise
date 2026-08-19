@@ -1,7 +1,7 @@
 import type { KernelDecisionStatus } from '../../kernel/index.js';
 
 /**
- * Canonical model of the AOC Enterprise Evidence Bundle v1 (PR-005). An
+ * Canonical model of the Soberanía Enterprise Evidence Bundle v1 (PR-005). An
  * Evidence Bundle is a deliberate, disclosure-governed *projection* of one
  * Governance Store aggregate (`GovernanceRecord`, PR-004) — never a copy,
  * dump, backup, or SQL export of it. The Governance Store keeps the complete

@@ -1,15 +1,15 @@
 /**
- * AOC PMFreak Governance Request Intake v1 -- shared identifiers.
+ * Soberanía PMFreak Governance Request Intake v1 -- shared identifiers.
  *
- * AOC Enterprise is the governance provider; PMFreak is the governance
+ * Soberanía Enterprise is the governance provider; PMFreak is the governance
  * consumer. Every id below is a deterministic, opaque identifier, never a
- * claim about a real PMFreak deployment. This module owns its own AOC-side
+ * claim about a real PMFreak deployment. This module owns its own Soberanía-side
  * compatibility DTOs and never imports from the PMFreak repo.
  */
 
 export const AOC_PMFREAK_GOVERNANCE_REQUEST_INTAKE_ID = 'aoc.integration.pmfreak.governance_request_intake.v1' as const;
 
-export const AOC_PMFREAK_GOVERNANCE_REQUEST_INTAKE_NAME = 'AOC PMFreak Governance Request Intake v1' as const;
+export const AOC_PMFREAK_GOVERNANCE_REQUEST_INTAKE_NAME = 'Soberanía PMFreak Governance Request Intake v1' as const;
 
 export const AOC_PMFREAK_GOVERNANCE_REQUEST_INTAKE_VERSION = 'v1' as const;
 
@@ -53,8 +53,8 @@ export const AOC_PMFREAK_GOVERNANCE_INTAKE_FORBIDDEN_OPERATIONS = [
 ] as const;
 
 export const AOC_PMFREAK_GOVERNANCE_INTAKE_SAFE_LABELS = [
-  'AOC Governance intake',
-  'PMFreak consumes AOC Governance',
+  'Soberanía Governance intake',
+  'PMFreak consumes Soberanía Governance',
   'No PMFreak mutation performed',
   'No action execution performed',
   'No invoice validity claimed',
@@ -65,7 +65,7 @@ export const AOC_PMFREAK_GOVERNANCE_INTAKE_SAFE_LABELS = [
 
 export const AOC_PMFREAK_GOVERNANCE_INTAKE_DISCLAIMERS = [
   'This intake receives PMFreak governance requests.',
-  'This intake evaluates requests for AOC governance decisions.',
+  'This intake evaluates requests for Soberanía governance decisions.',
   'This intake returns governed decisions to PMFreak.',
   'This intake does not mutate PMFreak data.',
   'This intake does not execute PMFreak actions.',

@@ -1,6 +1,6 @@
 /**
  * Compatibility shim (PR-004). The PR-002 minimal decision store evolved
- * into the AOC Enterprise Governance Store v1 — `../governance-store/` is
+ * into the Soberanía Enterprise Governance Store v1 — `../governance-store/` is
  * its home. This module preserves the historical import path; every symbol
  * re-exported here is the v1 contract. The legacy method surface
  * (`persistEvaluation`, `getRequestById`, …) still exists on the v1

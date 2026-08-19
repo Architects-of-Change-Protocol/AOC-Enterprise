@@ -90,7 +90,7 @@ export interface CreateEnterpriseOptions {
 }
 
 /**
- * The AOC Enterprise Host's stable application-level boundary. The HTTP
+ * The Soberanía Enterprise Host's stable application-level boundary. The HTTP
  * server (`host/enterprise-server.ts`) consumes exactly this interface and
  * nothing more of the composition root's internals. `evaluate()` is the
  * only place governance requests reach the Kernel; `health()` reports
@@ -219,7 +219,7 @@ export function getInternalEnterpriseConfiguration(enterprise: AocEnterprise): E
 }
 
 /**
- * The AOC Enterprise Host's single composition root (mission: "Create one
+ * The Soberanía Enterprise Host's single composition root (mission: "Create one
  * Enterprise composition root"). Every dependency `AocKernel` is handed --
  * and every dependency the Enterprise Host itself needs -- is constructed
  * exactly once, here. The Kernel only ever receives the narrow interfaces

@@ -94,7 +94,7 @@ describe('Governed authority — the mandatory Alice to Bob reference scenario',
     assert.ok(outcome.mandate !== undefined);
 
     // This is the transition-trigger decision, measured. A TransferMandate is
-    // AOC's authority to move a right, not the movement.
+    // Soberanía's authority to move a right, not the movement.
     assert.deepEqual(await heldScope(world, ALICE, ECONOMIC), { kind: 'proportional', basisPoints: 10_000 });
     assert.equal(await heldScope(world, BOB, ECONOMIC), null);
   });

@@ -20,7 +20,7 @@ const EXPECTED_STATUS_BY_CODE: Readonly<Record<AocPMFreakRemoteGovernanceEndpoin
   unknown_error: 500,
 };
 
-describe('AOC PMFreak Remote Governance Endpoint -- status mapping', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- status mapping', () => {
   for (const [code, expectedStatus] of Object.entries(EXPECTED_STATUS_BY_CODE)) {
     it(`maps "${code}" to HTTP ${expectedStatus}`, () => {
       const error = createAocPMFreakRemoteGovernanceEndpointError(code as AocPMFreakRemoteGovernanceEndpointErrorCode, 'demo message');

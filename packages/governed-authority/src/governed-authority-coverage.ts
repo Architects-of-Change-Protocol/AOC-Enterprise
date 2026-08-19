@@ -9,7 +9,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * learns nothing about positions, transitions, tables, tenancy guards or
  * digests. That boundary is what keeps this a source of richer *authority
  * facts* for the existing decision engine rather than a second decision
- * engine — `AocKernel` remains the only thing in AOC Enterprise that decides.
+ * engine — `AocKernel` remains the only thing in Soberanía Enterprise that decides.
  */
 export interface GovernedAuthorityQuery {
   readonly tenantId: string;
@@ -67,7 +67,7 @@ export type GovernedAuthorityCoverage =
   | { readonly outcome: 'no_right_authority'; readonly governedRight: GovernedRightType }
   /** A live position exists and is smaller than what was asked for. */
   | { readonly outcome: 'insufficient_scope'; readonly positionId: string; readonly available: GovernedRightsScope; readonly requested: GovernedRightsScope }
-  /** A position exists but its quantity is not commensurable with the request — a proportional share against a unit count, or two unit denominations AOC holds no conversion between. Never coerced; always refused. */
+  /** A position exists but its quantity is not commensurable with the request — a proportional share against a unit count, or two unit denominations Soberanía holds no conversion between. Never coerced; always refused. */
   | { readonly outcome: 'incompatible_scope'; readonly positionId: string; readonly available: GovernedRightsScope; readonly requested: GovernedRightsScope }
   /** A position exists for this holder and right, but not at the instant asked about — it has ended, or has not begun. */
   | { readonly outcome: 'expired'; readonly positionId: string };

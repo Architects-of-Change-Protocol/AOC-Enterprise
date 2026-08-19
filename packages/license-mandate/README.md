@@ -30,12 +30,12 @@ patent or trademark registry. No jurisdiction-specific legal policy. No KYC,
 AML, wallet, blockchain or smart-contract integration. No provider adapter.
 
 Every `external*` field and every value in `permittedContexts` is an opaque,
-provider-neutral label AOC records and compares as a string and never
+provider-neutral label Soberanía records and compares as a string and never
 interprets, resolves, or executes against.
 
 ## Authorization is not legal validity
 
-This package lets AOC Enterprise say exactly one kind of thing: *this authority
+This package lets Soberanía Enterprise say exactly one kind of thing: *this authority
 graph, policy state, approval state and obligation set permitted Actor A to
 grant License L to Licensee B under Terms T.*
 
@@ -45,7 +45,7 @@ copyright subsists, that a patent is valid, that a trademark is registered, that
 the right is legally licensable, or that any contract was signed.
 
 **A `LicenseMandate` is not a claim that a license exists.** Until execution
-evidence is recorded, AOC's position is that it authorized the grant and does
+evidence is recorded, Soberanía's position is that it authorized the grant and does
 not know whether the grant was made.
 
 ## Actions this package deliberately does not introduce
@@ -54,7 +54,7 @@ not know whether the grant was made.
 `ENTERPRISE_ACTIONS_DISTINCT_FROM_LICENSE` as *different* actions, and none is
 implemented. Sublicensing and assignment are represented only as declared
 constraints on this authorization. Should any of them ever need to be
-*authorized* by AOC rather than merely declared or observed, each is a separate
+*authorized* by Soberanía rather than merely declared or observed, each is a separate
 governed action with its own request, decision and mandate.
 
 ## Two kinds of scope
@@ -88,8 +88,8 @@ an invented binding protects nothing.
 
 Nothing in this package concludes that an asset may carry only one license, or
 that an exclusive license blocks any other. Many non-exclusive licenses may
-coexist. `exclusivity` is a declaration AOC records and compares, never a rule
-AOC enforces against the world. Whether a prior exclusive grant should block a
+coexist. `exclusivity` is a declaration Soberanía records and compares, never a rule
+Soberanía enforces against the world. Whether a prior exclusive grant should block a
 new request is a **policy** question — the full serialized terms travel to the
 Kernel, so policy can inspect prior mandates and evidence and deny an
 incompatible request.
@@ -97,13 +97,13 @@ incompatible request.
 ## Revocation is not termination
 
 Revoking a `LicenseMandate` withdraws authority to grant *further* licenses. It
-makes no claim that a license already granted ceased to exist — AOC governs
+makes no claim that a license already granted ceased to exist — Soberanía governs
 authority and is not a party to the agreement.
 
 An externally-reported end (`expired`, `terminated`, `cancelled`,
 `surrendered`, `superseded`) is recorded as `EnterpriseLicenseLifecycleEvidence`
 — append-only observation, never a mandate status, never a governed action, and
-never a restoration of licensing capacity AOC cannot verify was freed.
+never a restoration of licensing capacity Soberanía cannot verify was freed.
 
 ## Duplication with TOKENIZE and COLLATERALIZE, and why it is not yet extracted
 

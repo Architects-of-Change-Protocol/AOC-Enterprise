@@ -179,7 +179,7 @@ describe('Constitution creation', () => {
     const constitution = createAgentConstitution(ENROLLMENT, 'AOC-AGT-2026-EU-TEST01');
     const articleVIII = constitution.articles.find((a) => a.number === 'VIII');
     assert.ok(articleVIII !== undefined);
-    assert.ok(articleVIII !== undefined && articleVIII.content.includes("AOC-governed verification status"));
+    assert.ok(articleVIII !== undefined && articleVIII.content.includes("Soberanía-governed verification status"));
   });
 
   it('is stable (same input → same canonical hash)', () => {

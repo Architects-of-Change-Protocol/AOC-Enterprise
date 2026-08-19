@@ -19,7 +19,7 @@ export const POLICY_PACK_INVOICE_EVIDENCE_REQUIRED_SCENARIO: DemoScenario = {
   category: 'policy_packs',
   summary:
     'PMFreak Closure Agent attempts prepare_invoice_support with its own capability-token evidence requirement satisfied, but without the purchase_order/invoice evidence the procurement-basic policy pack independently requires.',
-  enterpriseMessage: 'AOC does not let agents proceed with procurement workflows unless required supporting evidence exists, even after every core AOC layer has already allowed the request.',
+  enterpriseMessage: 'Soberanía does not let agents proceed with procurement workflows unless required supporting evidence exists, even after every core Soberanía layer has already allowed the request.',
   buyerPain: "Enterprises need proof an agent had the right purchase-order documentation before it touched procurement -- a capability token's own evidence rule is not the whole policy.",
   aocValue:
     'The procurement-basic policy pack requires purchase_order (or invoice) evidence for prepare_invoice_support independently of Recognition Runtime\'s own evidence check; Action Enforcement blocks execution until that evidence is attached.',
@@ -45,7 +45,7 @@ export const POLICY_PACK_INVOICE_EVIDENCE_REQUIRED_SCENARIO: DemoScenario = {
       kind: 'enforcement',
       title: 'Domain Policy Pack Runtime requires evidence',
       description: 'Action Enforcement preflight consults the policy pack integration; procurement-basic matches and requires purchase-order evidence.',
-      operatorNarration: 'This blocks even though every core AOC layer -- recognition, authority -- already allowed the request.',
+      operatorNarration: 'This blocks even though every core Soberanía layer -- recognition, authority -- already allowed the request.',
       expectedState: 'policy_requires_evidence',
       expectedEventSource: 'enforcement',
     },
@@ -70,7 +70,7 @@ export const POLICY_PACK_INVOICE_EVIDENCE_REQUIRED_SCENARIO: DemoScenario = {
       id: 'operator-explanation',
       kind: 'operator_explanation',
       title: 'Explain evidence-backed execution',
-      description: 'Summarize that AOC does not let procurement workflows proceed without the policy-required evidence.',
+      description: 'Summarize that Soberanía does not let procurement workflows proceed without the policy-required evidence.',
       operatorNarration: 'This demo pack models an enterprise policy requirement, not a legal conclusion.',
     },
   ],

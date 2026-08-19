@@ -1,4 +1,4 @@
-# AOC Authority Graph & Delegation Runtime
+# Soberanía Authority Graph & Delegation Runtime
 
 The Recognition Runtime answers "can this action be recognized?" -- it proves
 a capability token exists, is valid, in scope, and not revoked. It does not

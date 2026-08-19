@@ -25,7 +25,7 @@ import type { EnterpriseTransferScope, EnterpriseTransferTermsValidationCode, En
  * external movement of rights actually effected under a previously-issued
  * `EnterpriseTransferMandate`**.
  *
- * This is the integration boundary, and it is the whole of it. AOC Enterprise
+ * This is the integration boundary, and it is the whole of it. Soberanía Enterprise
  * does not move rights, operate or update a registry, act as a transfer agent
  * or custodian, pass title, draft or sign agreements, price a transfer, hold
  * or release consideration, escrow anything, settle, or compute tax, and it
@@ -36,22 +36,22 @@ import type { EnterpriseTransferScope, EnterpriseTransferTermsValidationCode, En
  * transitively, to the decision, approvals, obligations, authority and asset
  * that authorized it.
  *
- * **A mandate proves AOC authorized the movement. This record is the only
+ * **A mandate proves Soberanía authorized the movement. This record is the only
  * thing that says a movement actually happened**, and even then it says so on
- * someone else's word: it is a report AOC preserved, never a fact AOC
+ * someone else's word: it is a report Soberanía preserved, never a fact Soberanía
  * verified. Nothing here asserts that title passed, that any registry reflects
  * the movement, that consideration was paid, that any formality was satisfied,
  * or that the recipient can exercise anything.
  *
  * In particular -- and this is the single most important boundary this action
- * has -- **recording this evidence does not move authority inside AOC.** The
+ * has -- **recording this evidence does not move authority inside Soberanía.** The
  * recipient named here gains no standing, no capability token, no authority
  * grant, and no ability to submit governed requests over the transferred
  * right. See `docs/architecture/ADR-TRANSFER-ACTION.md`, "Post-transfer
  * authority".
  *
  * The `external*` fields and `registry` are opaque, provider-neutral values
- * AOC stores and echoes and never parses, resolves, validates, or acts on.
+ * Soberanía stores and echoes and never parses, resolves, validates, or acts on.
  * `externalConsiderationReference` is a reference and never an amount: there
  * is no monetary quantity anywhere in this package, deliberately.
  *
@@ -66,7 +66,7 @@ import type { EnterpriseTransferScope, EnterpriseTransferTermsValidationCode, En
  * observes, it does not decide -- the same observation-only posture
  * `EnterpriseUsageEvent` takes toward `EnterpriseAccessGrant`.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/transfer-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/transfer-mandate`).
  */
 export interface EnterpriseTransferExecutionEvidence extends GovernedExecutionEvidenceCore {
   /** Re-declared as this action's own literal so a serialized record names its schema on its face. */
@@ -91,7 +91,7 @@ export interface EnterpriseTransferExecutionEvidence extends GovernedExecutionEv
   /** How much of the named rights this movement carried. Summed across executions and held inside the mandate's authorized scope. */
   readonly transferredScope: EnterpriseTransferScope;
   readonly correlationId: CanonicalId;
-  /** When the external movement itself takes effect, as reported. Deliberately distinct from the mandate's `effectiveFrom`, which bounds AOC authority. */
+  /** When the external movement itself takes effect, as reported. Deliberately distinct from the mandate's `effectiveFrom`, which bounds Soberanía authority. */
   readonly transferEffectiveAt?: UtcDateTime;
   /** Opaque registry label the movement was effected through. Measured against `permittedRegistries`. Never resolved or contacted. */
   readonly registry?: string;
@@ -101,7 +101,7 @@ export interface EnterpriseTransferExecutionEvidence extends GovernedExecutionEv
   readonly externalAgreementReference?: string;
   /** Opaque reference to the recipient's acceptance, as the external system records it. Not a claim that acceptance was legally effective. */
   readonly externalAcceptanceReference?: string;
-  /** Opaque reference to whatever evidences consideration. **Never an amount** -- AOC computes, holds and settles nothing. */
+  /** Opaque reference to whatever evidences consideration. **Never an amount** -- Soberanía computes, holds and settles nothing. */
   readonly externalConsiderationReference?: string;
   /** Opaque reference to the registry entry, book-entry movement, or filing the external system produced. */
   readonly externalRegistrationReference?: string;
@@ -112,7 +112,7 @@ export interface EnterpriseTransferExecutionEvidence extends GovernedExecutionEv
 /**
  * What an external system reported subsequently happened to a movement it had
  * already reported. A closed vocabulary because these are the reported
- * *categories*, not legal conclusions: AOC records which word the external
+ * *categories*, not legal conclusions: Soberanía records which word the external
  * system used and derives nothing from the choice.
  *
  * - `registered` -- the movement was recorded in a registry or book of record.
@@ -124,9 +124,9 @@ export interface EnterpriseTransferExecutionEvidence extends GovernedExecutionEv
  * Note that `'completed'` and `'settled'` are deliberately absent. The
  * execution evidence *is* the report that the movement happened; a second
  * "it really happened" category would invite a caller to treat the first
- * record as provisional, which it is not -- AOC's position after
+ * record as provisional, which it is not -- Soberanía's position after
  * `EnterpriseTransferExecutionEvidence` is already "an external system says
- * this movement occurred", and no further word from that system makes AOC's
+ * this movement occurred", and no further word from that system makes Soberanía's
  * knowledge any less second-hand.
  */
 export const ENTERPRISE_TRANSFER_LIFECYCLE_TYPES = {
@@ -152,17 +152,17 @@ export type EnterpriseTransferLifecycleType = (typeof ENTERPRISE_TRANSFER_LIFECY
  * - It is **not** `REVERSE_TRANSFER`, `RESCIND_TRANSFER` or `RETURN`. No
  *   governed action is introduced by this contract, no authority is evaluated,
  *   no decision is produced, and nothing is authorized. Should reversing a
- *   transfer ever need to be *authorized* by AOC rather than merely
+ *   transfer ever need to be *authorized* by Soberanía rather than merely
  *   *observed*, that is a separate governed action with its own request,
  *   decision and mandate -- and, because a reversal moves rights back, it
  *   would be a transfer in its own right rather than an undo button on this
  *   one.
  * - It is **not** a mandate status. An external movement being reversed is a
- *   fact about that movement; presenting it as governance state would be AOC
+ *   fact about that movement; presenting it as governance state would be Soberanía
  *   claiming to know, or to have caused, something it did not.
  * - It does **not** restore transfer headroom. Recording a reversal does not
  *   decrement the mandate's `transferredScope` or `executionCount`, because
- *   AOC cannot verify the reversal actually occurred and must not create fresh
+ *   Soberanía cannot verify the reversal actually occurred and must not create fresh
  *   transfer capacity on the strength of an unverified report. This is the
  *   strictest instance of a rule the collateral and licence actions already
  *   observe, and the one where the temptation to break it is greatest.
@@ -172,7 +172,7 @@ export type EnterpriseTransferLifecycleType = (typeof ENTERPRISE_TRANSFER_LIFECY
  * authorization through execution to reported outcome without a second audit
  * system.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/transfer-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/transfer-mandate`).
  */
 export interface EnterpriseTransferLifecycleEvidence extends GovernedLifecycleEvidenceCore {
   /** Re-declared as this action's own literal so a serialized record names its schema on its face. */

@@ -7,7 +7,7 @@
 
 ## Context: the gap the governed-authority foundation left
 
-The previous foundation gave AOC Enterprise the ability to say *which party
+The previous foundation gave Soberanía Enterprise the ability to say *which party
 controls which governed right, and how much of it*, and to move that authority
 when a governed execution completes. It closed two questions:
 
@@ -116,7 +116,7 @@ it. It is **not** delegated the authority position — positions are not
 transferable objects. It is **not** given a share of the holder's quantity —
 nothing is debited or credited by a grant.
 
-What is delegated is **the ability to cause AOC to evaluate the holder's
+What is delegated is **the ability to cause Soberanía to evaluate the holder's
 governed authority for a request, within a bounded envelope**. The
 representative supplies the request; the holder supplies the authority; the
 Kernel combines the two for the duration and scope of that one request and no
@@ -235,7 +235,7 @@ folding them would have forced one coverage union to carry two verdicts and
 would have left a denial unable to say which of the two proofs was missing.
 
 No `RepresentativeKernel`, `DelegationKernel`, `ProxyKernel` or `AgencyKernel`.
-`AocKernel` remains the only component in AOC Enterprise that decides.
+`AocKernel` remains the only component in Soberanía Enterprise that decides.
 
 Both facts are resolved in one step, because they share everything the
 resolution needs — tenant, resource, right list, instant — and because a caller

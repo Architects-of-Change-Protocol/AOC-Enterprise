@@ -21,7 +21,7 @@ export const AOC_OPERATOR_PERSONA_ID = 'persona-aoc-operator';
  * Reusable demo personas. Every persona whose `actorId` is set corresponds to
  * a real Actor registered in the enterprise demo world's Recognition Runtime
  * (see enterprise-demo-world.fixture.ts) -- nothing here is a fabricated
- * identity. The AOC Operator is the only persona without an `actorId`: they
+ * identity. The Soberanía Operator is the only persona without an `actorId`: they
  * observe the Control Plane read model but are not themselves a recognized
  * actor inside the Datasys Agent Republic trust domain.
  */
@@ -83,7 +83,7 @@ export const ENTERPRISE_DEMO_PERSONAS: readonly DemoPersona[] = [
   },
   {
     id: AOC_OPERATOR_PERSONA_ID,
-    displayName: 'AOC Operator',
+    displayName: 'Soberanía Operator',
     type: 'human',
     role: 'Human Operator, Control Plane',
     description: 'Views the Control Plane and understands proof chains and blocked-execution reasons; not itself a recognized actor.',

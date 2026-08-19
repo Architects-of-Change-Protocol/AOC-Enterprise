@@ -107,7 +107,7 @@ export function buildMinimalPilotTemplate(overrides: Partial<PilotTemplate> = {}
     industry: 'technology_services',
     primaryUseCase: 'test use case',
     businessPain: 'test business pain',
-    aocValueProposition: 'test AOC value proposition',
+    aocValueProposition: 'test Soberanía value proposition',
     targetBuyerPersonaIds: ['persona-buyer-test'],
     targetOperatorPersonaIds: ['persona-operator-test'],
     trustDomainId: 'trust-domain-test',

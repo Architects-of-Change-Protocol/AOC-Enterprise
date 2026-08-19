@@ -27,7 +27,7 @@ import type { KernelDecisionStatus } from '../../kernel/index.js';
  * shapes — tenant and bookkeeping fields the pure contracts have no field
  * for — never a competing definition of what a mandate *is*.
  *
- * Boundary: AOC Enterprise governs the authority to tokenize. It is not the
+ * Boundary: Soberanía Enterprise governs the authority to tokenize. It is not the
  * tokenization platform. Nothing in this module mints, issues, transfers, or
  * values a token, holds a key, or speaks to a chain; there is no provider
  * adapter here and none is implied by these types.

@@ -46,7 +46,7 @@ export interface RegisterPolicyPackParams {
  * Single composition root for the Domain Policy Pack Runtime. Wires
  * PolicyPackStore, PolicyPackLedger, PolicyPackRegistry,
  * PolicyPackEvaluationService and PolicyPackSimulationService together and
- * exposes the small, stable API surface other AOC runtimes and the demo/
+ * exposes the small, stable API surface other Soberanía runtimes and the demo/
  * control-plane adapters are expected to call.
  */
 export class PolicyPackRuntime {

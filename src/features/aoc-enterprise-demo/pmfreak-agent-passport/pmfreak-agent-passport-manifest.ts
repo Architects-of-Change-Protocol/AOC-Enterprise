@@ -4,10 +4,10 @@ import { PMFREAK_AGENT_PASSPORT_DEMO_PACK_ID, PMFREAK_AGENT_PASSPORT_DEMO_PACK_N
 import { PMFREAK_CONTROL_PLANE_REQUIREMENT } from './pmfreak-control-plane-summary.js';
 
 /**
- * AOC PMFreak Agent Passport Demo Pack v1 (`aoc.demo.pmfreak.agent_passport.v1`).
+ * Soberanía PMFreak Agent Passport Demo Pack v1 (`aoc.demo.pmfreak.agent_passport.v1`).
  *
  * A deterministic demo pack showing how PMFreak project-management agents
- * can operate with AOC Enterprise passports: recognized identity, a
+ * can operate with Soberanía Enterprise passports: recognized identity, a
  * role-specific authority scope, an active capability token, sufficient
  * evidence, required approvals, and a non-revoked status -- never merely
  * because they are technically able to act.
@@ -31,7 +31,7 @@ export interface CreatePMFreakAgentPassportDemoPackManifestInput {
 }
 
 const DESCRIPTION =
-  'AOC PMFreak Agent Passport Demo Pack v1 demonstrates how PMFreak project-management agents can operate as AOC-governed actors: identity, passport status, role-specific authority scope, capability tokens, evidence requirements, approval requirements, policy decisions, Control Plane summaries, and export metadata. It does not integrate with PMFreak production, does not access real PMFreak/Datasys data, does not mutate real projects, schedules, or billing, and does not send real client communications.';
+  'Soberanía PMFreak Agent Passport Demo Pack v1 demonstrates how PMFreak project-management agents can operate as Soberanía-governed actors: identity, passport status, role-specific authority scope, capability tokens, evidence requirements, approval requirements, policy decisions, Control Plane summaries, and export metadata. It does not integrate with PMFreak production, does not access real PMFreak/Datasys data, does not mutate real projects, schedules, or billing, and does not send real client communications.';
 
 const SAFETY_NOTE =
   'This pack does not implement real PMFreak API integration, real PMFreak authentication, real project/schedule/billing mutation, real communication sending, or real invoice creation. A passport granting authority never substitutes for a required approval -- approvals still gate execution. This pack does not provide legal advice and does not certify compliance.';

@@ -663,8 +663,8 @@ describe('Holder-bound representation — validity and withdrawal', () => {
 
   it('a mandate already issued survives a later withdrawal, and still executes', async () => {
     // The temporal decision, asserted rather than assumed. Representation is
-    // permission to cause AOC to *issue* an authorization; a TransferMandate is
-    // an authorization AOC has already issued, with its own lifecycle. Nothing
+    // permission to cause Soberanía to *issue* an authorization; a TransferMandate is
+    // an authorization Soberanía has already issued, with its own lifecycle. Nothing
     // in the existing Enterprise semantics revokes an issued mandate when the
     // authority behind its issuance later lapses, and inventing a cascade here
     // would have been a new governance act rather than an implementation of one.

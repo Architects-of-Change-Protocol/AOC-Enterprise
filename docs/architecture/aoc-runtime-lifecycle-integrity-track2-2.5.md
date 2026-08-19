@@ -1,4 +1,4 @@
-# AOC Runtime Lifecycle Integrity — Track 2.2.5
+# Soberanía Runtime Lifecycle Integrity — Track 2.2.5
 
 ## Lifecycle API audit and risk inventory
 

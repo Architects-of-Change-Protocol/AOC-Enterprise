@@ -4,7 +4,7 @@ import type { AgentPassportError } from '../passport/errors.js';
 import type { AssuranceError } from '../assurance/errors.js';
 
 /**
- * The AOC Enterprise Host's own HTTP error taxonomy (mission's "Enterprise
+ * The Soberanía Enterprise Host's own HTTP error taxonomy (mission's "Enterprise
  * Error Model"). A denied/approval-required/indeterminate governance
  * outcome is never represented as one of these -- those are successful
  * evaluations with a `KernelEvaluationResult` body; see
@@ -106,7 +106,7 @@ export const EnterpriseHttpErrors = {
   infrastructureFailure: (message = 'An unexpected Enterprise Host failure occurred.') => new EnterpriseHttpError(500, 'INFRASTRUCTURE_FAILURE', message),
   providerUnavailable: (message = 'A configured provider is unavailable.') => new EnterpriseHttpError(503, 'PROVIDER_UNAVAILABLE', message),
   enterpriseNotReady: (lifecycleState: string) =>
-    new EnterpriseHttpError(503, 'ENTERPRISE_NOT_READY', 'AOC Enterprise is not ready to evaluate governance requests.', undefined, { lifecycleState }),
+    new EnterpriseHttpError(503, 'ENTERPRISE_NOT_READY', 'Soberanía Enterprise is not ready to evaluate governance requests.', undefined, { lifecycleState }),
 };
 
 /**

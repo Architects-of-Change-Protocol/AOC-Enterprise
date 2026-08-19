@@ -35,7 +35,7 @@ import { completeTrustedPartnerHandshake, buildTrustedPartnerReadGuardInput } fr
 import { buildApprovePaymentGuardInput, paymentsAdapter } from '../../action-enforcement/fixtures/side-effect-action.fixture.js';
 
 /**
- * Deterministic demo state for the AOC Control Plane. Everything here is
+ * Deterministic demo state for the Soberanía Control Plane. Everything here is
  * produced by calling the real runtime facades of the five governance
  * modules -- Recognition, Authority Graph, Approval, External Agent
  * Handshake and Action Enforcement -- through their own public methods and
@@ -85,7 +85,7 @@ export interface ControlPlaneRuntimeBundle {
         readonly draftClosureEmailDryRun: EnforcementOutcome<string>;
         /** jurisdictional-baseline-demo: policy pack warns (manual verification) but never blocks -- a `policy_warning` evaluation that still executes. */
         readonly policyWarningRead: EnforcementOutcome<string>;
-        /** payments-basic: change_bank_account is denied outright by the policy pack even though every core AOC layer allows it -- the one policy-blocked execution. */
+        /** payments-basic: change_bank_account is denied outright by the policy pack even though every core Soberanía layer allows it -- the one policy-blocked execution. */
         readonly policyDeniedChangeBankAccount: EnforcementOutcome<string>;
         /** procurement-basic: the policy pack's own evidence rule (not Recognition Runtime's) blocks this request. */
         readonly policyRequiresEvidenceInvoiceSupport: EnforcementOutcome<string>;
@@ -95,7 +95,7 @@ export interface ControlPlaneRuntimeBundle {
 }
 
 /**
- * Builds the shared "Datasys Agent Republic" world across all five AOC
+ * Builds the shared "Datasys Agent Republic" world across all five Soberanía
  * runtimes, then drives a representative set of real scenarios through them
  * so every Control Plane panel has genuine, varied state to display:
  * an allowed + executed action, a pending-then-approved approval (plus a

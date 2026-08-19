@@ -1,6 +1,6 @@
 # Agent Passport production persistence
 
-AOC Agent Passport now persists issued passport bundles and related governance records in SQLite as a production-hardening step beyond the earlier in-memory MVP store.
+Soberanía Agent Passport now persists issued passport bundles and related governance records in SQLite as a production-hardening step beyond the earlier in-memory MVP store.
 
 ## What is persisted
 

@@ -12,7 +12,7 @@ const POLICY_ID = 'domain_policy_pack';
  * policy in the chain (recognition, approval, evidence, external standing,
  * adapter) has already had to pass for this policy to even run. A policy
  * pack `deny`/`requires_evidence`/`requires_approval`/`requires_authority`/
- * `requires_external_standing` blocks even though every core AOC layer
+ * `requires_external_standing` blocks even though every core Soberanía layer
  * allowed it -- that is the entire point of this integration.
  */
 export class DomainPolicyPackPolicy implements EnforcementPolicy {

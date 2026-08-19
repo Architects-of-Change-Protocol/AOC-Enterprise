@@ -1,9 +1,9 @@
 # ADR: Canonical Provider Translation Model (R005.B)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
-- Sequence: R005.B, AOC Architectural Consolidation Program
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Deciders: Soberanía Enterprise architecture
+- Sequence: R005.B, Soberanía Architectural Consolidation Program
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/canonical-provider-translation-model-icite4`
 - Related: `ADR-ACCESS-LIFECYCLE.md` (R005.0, frozen input — treated as
   frozen architecture, not modified by this change),
@@ -418,7 +418,7 @@ consumers only (none created, modified, or migrated by this change):
 | `npm run typecheck` (root, `tsc -b --pretty false` across every project reference) | Passed with no output (clean). |
 | `npm run lint` (root: `check-node16-imports.mjs` + `lint-architecture.mjs` + `lint-public-surface.mjs`) | `Node16 import and boundary checks passed` / `Architecture lint passed` / `Public surface lint passed`. |
 | `node scripts/check-duplicate-semantic-contracts.mjs` | Reports three pre-existing violations (`EnterpriseResourceEnvelope`/`SerializedEnterpriseResourceEnvelope` in `access-decision` vs. `resource-envelope`; `AgentPassport` in `agent-governance` vs. `enterprise-host-sdk`) — confirmed identical before and after this change (`git stash` diff), i.e. pre-existing on the base branch and untouched by this sequence. No name introduced by `packages/provider-translation` appears in the violation list. |
-| `node scripts/check-aoc-boundaries.mjs` | `AOC boundary check passed`. |
+| `node scripts/check-aoc-boundaries.mjs` | `Soberanía boundary check passed`. |
 | `node scripts/validate-publishability.mjs` | `Publishability validation completed successfully` (1413 shipped JS artifacts scanned, none import `@aoc/protocol` at runtime). |
 | `npm test --workspaces --if-present` (every workspace, including the new package) | Exit code 0 across all workspaces; no failures. |
 | `npm run build` (root, full monorepo build) | Passed with no output (clean). |

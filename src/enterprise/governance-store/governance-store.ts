@@ -69,7 +69,7 @@ export interface PersistEvaluationResult {
 }
 
 /**
- * The AOC Enterprise Governance Store v1 (`aoc.governance-store.v1`): the
+ * The Soberanía Enterprise Governance Store v1 (`aoc.governance-store.v1`): the
  * canonical, append-oriented, integrity-verifiable durable record of every
  * governance evaluation the Enterprise Host performs.
  *

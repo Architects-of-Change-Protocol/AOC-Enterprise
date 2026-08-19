@@ -1,8 +1,8 @@
 /**
- * AOC PMFreak Remote Governance Endpoint v1 -- shared identifiers.
+ * Soberanía PMFreak Remote Governance Endpoint v1 -- shared identifiers.
  *
- * AOC Enterprise is the governance provider; PMFreak is the governance
- * consumer. This module exposes the already-merged AOC PMFreak Governance
+ * Soberanía Enterprise is the governance provider; PMFreak is the governance
+ * consumer. This module exposes the already-merged Soberanía PMFreak Governance
  * Request Intake through a safe remote endpoint/handler boundary. Every id
  * below is a deterministic, opaque identifier, never a claim about a real
  * PMFreak deployment.
@@ -10,7 +10,7 @@
 
 export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_ID = 'aoc.integration.pmfreak.remote_governance_endpoint.v1' as const;
 
-export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_NAME = 'AOC PMFreak Remote Governance Endpoint v1' as const;
+export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_NAME = 'Soberanía PMFreak Remote Governance Endpoint v1' as const;
 
 export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_VERSION = 'v1' as const;
 
@@ -23,7 +23,7 @@ export const PMFREAK_SYSTEM_ID = 'pmfreak' as const;
 /** Default HTTP path this endpoint is documented under, whether or not an actual HTTP route is wired up in this repo. */
 export const AOC_PMFREAK_REMOTE_GOVERNANCE_DEFAULT_PATH = '/api/aoc/pmfreak/governance/evaluate' as const;
 
-/** What this endpoint can do. It only receives, parses, validates, and evaluates PMFreak governance requests (delegating evaluation to the existing AOC PMFreak Governance Request Intake) and serializes governance responses -- it never mutates PMFreak, never executes a PMFreak action, and never writes a decision back into PMFreak. */
+/** What this endpoint can do. It only receives, parses, validates, and evaluates PMFreak governance requests (delegating evaluation to the existing Soberanía PMFreak Governance Request Intake) and serializes governance responses -- it never mutates PMFreak, never executes a PMFreak action, and never writes a decision back into PMFreak. */
 export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_CAPABILITIES = {
   receiveHttpGovernanceRequest: 'receive_http_governance_request',
   parseGovernanceRequest: 'parse_governance_request',
@@ -49,8 +49,8 @@ export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_FORBIDDEN_OPERATIONS = [
 ] as const;
 
 export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_SAFE_LABELS = [
-  'AOC PMFreak remote governance endpoint',
-  'PMFreak consumes AOC Governance',
+  'Soberanía PMFreak remote governance endpoint',
+  'PMFreak consumes Soberanía Governance',
   'Governance decision returned',
   'No PMFreak mutation performed',
   'No action execution performed',
@@ -62,8 +62,8 @@ export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_SAFE_LABELS = [
 
 export const AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_DISCLAIMERS = [
   'This endpoint receives PMFreak governance requests.',
-  'This endpoint evaluates requests through AOC PMFreak Governance Request Intake.',
-  'This endpoint returns governed AOC decisions.',
+  'This endpoint evaluates requests through Soberanía PMFreak Governance Request Intake.',
+  'This endpoint returns governed Soberanía decisions.',
   'This endpoint does not mutate PMFreak data.',
   'This endpoint does not execute PMFreak actions.',
   'This endpoint does not write back to PMFreak.',

@@ -2,7 +2,7 @@
 
 The canonical Enterprise-owned contract for **the evaluated result of a
 request to access a governed resource**: `EnterpriseAccessDecision`. It
-composes AOC Protocol's `PolicyDecision`, Enterprise's
+composes Soberanía Protocol's `PolicyDecision`, Enterprise's
 `EnterpriseScopedAccessRequest`, and Enterprise's `EnterpriseResourceEnvelope`
 -- it never duplicates, extends, or reimplements any of them.
 
@@ -31,7 +31,7 @@ It records the immutable outcome of an evaluation that happened elsewhere.
 ## Ownership
 
 - **Decision outcome vocabulary** (`'allow' | 'deny' | 'conditional'`) is
-  owned by AOC Protocol's `PolicyDecision` (`@aoc/protocol`). This package
+  owned by Soberanía Protocol's `PolicyDecision` (`@aoc/protocol`). This package
   never redefines it; `outcome: PolicyDecision` reads it directly.
 - **The evaluated request** (`principalId`, `resource`, `requestedScope`,
   `requestedAt`, `action?`) is owned by
@@ -47,7 +47,7 @@ It records the immutable outcome of an evaluation that happened elsewhere.
   `decision.resource`.
 - **Everything else on `EnterpriseAccessDecision`** -- `evaluatedAt`,
   `correlationId`, `reason?`, `policyEvaluationRef?`, `evidenceRefs?` -- is
-  owned by AOC Enterprise (`@aoc-enterprise/access-decision`), because it is
+  owned by Soberanía Enterprise (`@aoc-enterprise/access-decision`), because it is
   metadata about the evaluation event itself, not part of the request or the
   resource.
 
@@ -101,7 +101,7 @@ identity mechanism, since both still delegate to the one canonical
 
 ## Decision semantics
 
-`outcome: PolicyDecision` reuses AOC Protocol's existing tri-state decision
+`outcome: PolicyDecision` reuses Soberanía Protocol's existing tri-state decision
 vocabulary (`'allow' | 'deny' | 'conditional'`), already canonical at the
 Protocol level (`PolicyDecisionResult.decision` in `@aoc/protocol/adapters`)
 and protected from redefinition by `scripts/check-protocol-consumption.mjs`'s
@@ -248,7 +248,7 @@ this contract records only that a decision was made, never how to act on it.
 
 ## Install / build
 
-Part of the AOC Enterprise workspace:
+Part of the Soberanía Enterprise workspace:
 
 ```bash
 npm run build --workspace @aoc-enterprise/access-decision

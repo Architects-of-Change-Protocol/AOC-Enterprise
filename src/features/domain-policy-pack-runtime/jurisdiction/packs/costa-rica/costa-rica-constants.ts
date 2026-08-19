@@ -1,5 +1,5 @@
 /**
- * AOC Jurisdiction Costa Rica Base Pack v1 -- shared identifiers.
+ * Soberanía Jurisdiction Costa Rica Base Pack v1 -- shared identifiers.
  *
  * This module carries no real Costa Rican law. `countryCode`/`jurisdictionId`
  * are opaque identifiers used to route composition and registry lookups, not
@@ -17,7 +17,7 @@ export const COSTA_RICA_JURISDICTION_LABEL = 'Costa Rica' as const;
 
 export const COSTA_RICA_BASE_PACK_ID = 'aoc.jurisdiction.costa_rica.base.v1' as const;
 
-export const COSTA_RICA_BASE_PACK_NAME = 'AOC Jurisdiction Costa Rica Base Pack v1' as const;
+export const COSTA_RICA_BASE_PACK_NAME = 'Soberanía Jurisdiction Costa Rica Base Pack v1' as const;
 
 export const COSTA_RICA_BASE_PACK_VERSION = '1.0.0' as const;
 

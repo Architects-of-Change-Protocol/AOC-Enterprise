@@ -1,4 +1,4 @@
-# AOC Enterprise Intellectual Property Overview
+# Soberanía Enterprise Intellectual Property Overview
 
 > STATUS: DRAFT — PENDING PROFESSIONAL LEGAL REVIEW.
 > This document is a factual inventory derived from repository contents
@@ -7,7 +7,7 @@
 
 ## 1. Ownership
 
-AOC Enterprise, as embodied in this repository, is owned by Onchainfest
+Soberanía Enterprise, as embodied in this repository, is owned by Onchainfest
 LLC, subject to:
 
 - third-party open source and commercial dependencies (see
@@ -17,8 +17,8 @@ LLC, subject to:
 - material governed by a separate contract (e.g. a customer- or
   partner-specific agreement) that has not been reviewed as part of this
   inventory;
-- AOC Protocol and its own, separate terms — AOC Protocol is a distinct
-  repository and project that AOC Enterprise consumes as a dependency,
+- Soberanía Protocol and its own, separate terms — Soberanía Protocol is a distinct
+  repository and project that Soberanía Enterprise consumes as a dependency,
   not material owned or claimed by this repository (see
   `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md`).
 
@@ -30,16 +30,16 @@ directories, `.gitkeep` placeholders, or unfulfilled roadmap intent are
 excluded from this table; where relevant they are called out separately
 in the notes below the table.
 
-| Activo | Estado | Rutas | Tipo de IP | Dependencia de AOC Protocol | Observaciones |
+| Activo | Estado | Rutas | Tipo de IP | Dependencia de Soberanía Protocol | Observaciones |
 |---|---|---|---|---|---|
-| AOC Kernel (governance decision engine) | Implemented, tested | `src/kernel/**` | Copyright; trade secret (decision logic) | Consumes `@aoc/protocol` contracts | Sole decision-maker in the request path; boundary enforced by structural tests |
-| AOC Enterprise Host (runtime hosting/API) | Implemented, tested | `src/enterprise/**` (134 source files) | Copyright; trade secret | Orchestrates around, does not redefine, protocol contracts | HTTP adapter, composition root, persistence, events, health, telemetry; 27 documented API endpoints (`release/RELEASE_MANIFEST.json`) |
-| AOC Enterprise Runtime (grants, delegation, vault, federation) | Implemented, tested | `src/runtime/**` (43 source files) | Copyright; trade secret | Consumes protocol primitives | Independently tested; does not call `AocKernel.evaluate()` |
+| Soberanía Kernel (governance decision engine) | Implemented, tested | `src/kernel/**` | Copyright; trade secret (decision logic) | Consumes `@aoc/protocol` contracts | Sole decision-maker in the request path; boundary enforced by structural tests |
+| Soberanía Enterprise Host (runtime hosting/API) | Implemented, tested | `src/enterprise/**` (134 source files) | Copyright; trade secret | Orchestrates around, does not redefine, protocol contracts | HTTP adapter, composition root, persistence, events, health, telemetry; 27 documented API endpoints (`release/RELEASE_MANIFEST.json`) |
+| Soberanía Enterprise Runtime (grants, delegation, vault, federation) | Implemented, tested | `src/runtime/**` (43 source files) | Copyright; trade secret | Consumes protocol primitives | Independently tested; does not call `AocKernel.evaluate()` |
 | Governance Store (persistence layer) | Implemented | `src/enterprise/governance-store/**` | Copyright; trade secret (schema/design) | None | SQLite + in-memory providers; schema-version guards |
-| Assurance Runtime / AOC SAF framework | Implemented | `src/enterprise/assurance/**` | Copyright; trade secret | None | `AOC_SAF_FRAMEWORK_ID = 'aoc.saf'`; sealed, re-derived section digests |
+| Assurance Runtime / Soberanía SAF framework | Implemented | `src/enterprise/assurance/**` | Copyright; trade secret | None | `AOC_SAF_FRAMEWORK_ID = 'aoc.saf'`; sealed, re-derived section digests |
 | Evidence lifecycle (Evidence Bundle) | Implemented | `src/enterprise/evidence/**` | Copyright; trade secret | None | Per `docs/architecture/ADR-EVIDENCE-BUNDLE.md` |
 | Agent Passport Runtime (governance execution) | Implemented, tested (27 source files, 2 test files) | `packages/agent-governance/**` | Copyright; trade secret | None | Passport issuance/verification, constitution, runtime-guard decisions; consumed in ~39 locations |
-| Enterprise Host SDK | Implemented, tested | `packages/enterprise-host-sdk/**` | Copyright | Consumes AOC Enterprise's own API, not AOC Protocol directly | Typed HTTP client; frozen v1.0.0 surface; zero runtime dependencies |
+| Enterprise Host SDK | Implemented, tested | `packages/enterprise-host-sdk/**` | Copyright | Consumes Soberanía Enterprise's own API, not Soberanía Protocol directly | Typed HTTP client; frozen v1.0.0 surface; zero runtime dependencies |
 | Tenant isolation (enforcement) | Implemented, empirically verified | `src/enterprise/governance-store/**` (shared tenant-scoping helpers) | Trade secret | None | Verified under concurrency (0 cross-tenant leaks in load testing per `docs/release/TECHNICAL_DUE_DILIGENCE_V1.md` §3). **Not** the same as `packages/tenant-governance`, which is contracts-only (see below) |
 | Adapters (transport layer) | Implemented | `src/enterprise/adapters/node-http-adapter.ts`, `src/runtime/adapters/**` | Copyright | None | Single transport-aware module per host, per architecture docs |
 | Operational tooling (backup/restore/portability) | Implemented, tested | `scripts/portability/**`, `scripts/generate-release-manifest.mjs` | Copyright; trade secret (procedures) | None | `backup:v1` / `restore:v1` / `validate:portability:v1`; 18 contract tests |
@@ -62,7 +62,7 @@ exist as workspace directories but contain no source beyond a
 `.gitkeep` placeholder. Their names conceptually mirror the "Protocol
 primitive layer" described in `docs/architecture/foundation.md`, but
 today they contain no implementation, and no protocol-primitive
-redefinition currently exists in AOC Enterprise as a result. They are
+redefinition currently exists in Soberanía Enterprise as a result. They are
 listed here for completeness and founder awareness, not as implemented
 assets. See Section 5.
 
@@ -106,7 +106,7 @@ Expressly not owned by Onchainfest LLC as part of this repository:
   OIDC/SAML/SCIM as integration targets described in
   `docs/architecture/repo-boundaries.md`) — the standards themselves are
   not owned by Onchainfest LLC; only original integration code is.
-- **AOC Protocol** — a separate repository
+- **Soberanía Protocol** — a separate repository
   (`Architects-of-Change-Protocol/Architects_of_Change_Protocol`) with
   its own ownership and licensing; consumed here as the `@aoc/protocol`
   peer dependency. See `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md`.
@@ -141,7 +141,7 @@ addressed:
 - **Rationale for the empty `packages/consent-engine` /
   `capability-tokens` / `scoped-access` / `identity` / `audit-sdk`
   stubs** — whether these are reserved namespace placeholders for future
-  enterprise-side work, an intentional mirror of AOC Protocol's
+  enterprise-side work, an intentional mirror of Soberanía Protocol's
   conceptual layer for future extension, or leftover scaffolding, is not
   documented in the repository and should be confirmed with engineering
   leadership.
@@ -162,7 +162,7 @@ addressed:
 | Contracts-only packages (`control-plane-sdk`, `tenant-governance`, `org-boundary`, `integration-runtime`, `enterprise-audit`, `policy-runtime`, `canonical-runtime-contracts`) | Copyright only — thin, interface-level expression; not currently a meaningful trade secret given minimal content |
 | Operational tooling, backup/recovery, deployment patterns | Copyright + execution advantage (documented, repeatable procedures are a competitive/operational advantage, not necessarily a legal trade secret in the strict sense) |
 | Names listed in `TRADEMARKS.md` | Trademark (unregistered / registration status unverified) |
-| AOC Protocol concepts consumed by reference (consent, capability tokens, scoped access grammar) | Public specification (owned and governed separately by the AOC Protocol project, not by this repository) |
+| Soberanía Protocol concepts consumed by reference (consent, capability tokens, scoped access grammar) | Public specification (owned and governed separately by the Soberanía Protocol project, not by this repository) |
 | Empty stub packages (`consent-engine`, `capability-tokens`, `scoped-access`, `identity`, `audit-sdk`) | Not currently protected — no original expression exists yet to protect |
 | Third-party dependencies | Not applicable — owned by their respective upstream authors |
 

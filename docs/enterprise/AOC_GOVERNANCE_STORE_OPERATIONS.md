@@ -1,6 +1,6 @@
-# AOC Governance Store — Operations Guide
+# Soberanía Governance Store — Operations Guide
 
-Operating the Governance Store v1 in the AOC Enterprise Host.
+Operating the Governance Store v1 in the Soberanía Enterprise Host.
 
 ## Initialization
 

@@ -1,6 +1,6 @@
-# AOC Agent Passport — Current Model (Preliminary Analysis, PR-006)
+# Soberanía Agent Passport — Current Model (Preliminary Analysis, PR-006)
 
-This document is the required preliminary analysis for PR-006 (AOC
+This document is the required preliminary analysis for PR-006 (Soberanía
 Enterprise Agent Passport Runtime v1). It inventories every existing
 "Agent Passport" or "passport"-shaped concept in the repository *before*
 any new code was written, so the new Passport Runtime reconciles with
@@ -69,7 +69,7 @@ outcome. It has no constitution/policy-manifest/signature/QR fields.
 
 `apps/agent-passport-web/src/app/api/agent-passports/route.ts`,
 `.../[passportId]/route.ts`, `.../[passportId]/verify/route.ts`
-(commercial product API, Next.js route handlers, not part of AOC
+(commercial product API, Next.js route handlers, not part of Soberanía
 Enterprise's `src/enterprise/` HTTP surface).
 
 ## 5. Existing database tables
@@ -161,7 +161,7 @@ revocation (both are direct field mutations on a stored row).
 
 ## 14. Existing Evidence references
 
-None of the existing Passport implementations reference the AOC
+None of the existing Passport implementations reference the Soberanía
 Enterprise Governance Store or Evidence Bundle (PR-004/PR-005 did not
 exist when they were built). `packages/agent-governance`'s
 `passport-events.ts` and `pmfreak-agent-passport-foundation`'s

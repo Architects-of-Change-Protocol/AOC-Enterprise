@@ -44,7 +44,7 @@ export interface AocKernelOptions {
    * Present, it answers "does this holder control this much of this right?"
    * for every right a request declares in `action.governedRights`, and can
    * only narrow an already-viable outcome into a denial. It never grants
-   * anything: this class remains the only component in AOC Enterprise that
+   * anything: this class remains the only component in Soberanía Enterprise that
    * produces a decision.
    */
   readonly governedAuthorityProvider?: GovernedAuthorityProvider;
@@ -82,7 +82,7 @@ function createRealIdGenerator(): KernelIdGenerator {
 }
 
 /**
- * Canonical AOC Enterprise Kernel entry point. Wraps the existing, unmodified
+ * Canonical Soberanía Enterprise Kernel entry point. Wraps the existing, unmodified
  * `ActionEnforcementRuntime`/`AocGuard` engine (recognition, authority,
  * approval, evidence, external handshake, and domain policy pack are all
  * reached transitively through the injected `RecognitionProvider`) and

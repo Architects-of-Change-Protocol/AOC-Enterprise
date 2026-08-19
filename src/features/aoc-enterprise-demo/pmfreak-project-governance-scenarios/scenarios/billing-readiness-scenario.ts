@@ -21,7 +21,7 @@ const PRIMARY_ACTION_ID = 'pmfreak.foundation.action.billing.check_readiness';
  * gating path; marking a milestone ready for billing is a separate,
  * higher-risk action this pack does not attempt here.
  *
- * `allow` in this demo means only that AOC Enterprise's governance model
+ * `allow` in this demo means only that Soberanía Enterprise's governance model
  * allows the agent to check readiness in PMFreak. It does not certify
  * invoice validity, does not certify customer acceptance, and does not
  * guarantee billing entitlement.
@@ -30,7 +30,7 @@ export const billingReadinessCheckReadinessScenario: PMFreakProjectGovernanceSce
   scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID,
   title: 'Billing Readiness -- Check Milestone Readiness',
   description:
-    'The Billing Readiness Agent checks whether the Phase 1 delivery milestone appears ready for billing. AOC Enterprise checks passport status, the real runtime guard, authority scope, capability, required deliverable and customer-acceptance evidence, and required PM/billing approvals before allowing the demo action to proceed.',
+    'The Billing Readiness Agent checks whether the Phase 1 delivery milestone appears ready for billing. Soberanía Enterprise checks passport status, the real runtime guard, authority scope, capability, required deliverable and customer-acceptance evidence, and required PM/billing approvals before allowing the demo action to proceed.',
   category: 'billing_readiness',
   agentId: 'pmfreak.agent.billing_readiness',
   primaryRole: 'billing_readiness',
@@ -63,7 +63,7 @@ export const billingReadinessCheckReadinessScenario: PMFreakProjectGovernanceSce
     projectClosureSensitive: true,
   },
   safeNarrative:
-    'AOC allows the Billing Readiness Agent to check this milestone\'s readiness only once deliverable evidence, customer acceptance evidence, PM approval, and billing review are all present. This does not certify invoice validity, does not certify customer acceptance, and does not guarantee billing entitlement.',
+    'Soberanía allows the Billing Readiness Agent to check this milestone\'s readiness only once deliverable evidence, customer acceptance evidence, PM approval, and billing review are all present. This does not certify invoice validity, does not certify customer acceptance, and does not guarantee billing entitlement.',
 };
 
 export const billingReadinessScenarios: readonly PMFreakProjectGovernanceScenario[] = [billingReadinessCheckReadinessScenario];

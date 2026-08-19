@@ -1,4 +1,4 @@
-# AOC Action Enforcement Gateway & SDK
+# Soberanía Action Enforcement Gateway & SDK
 
 Recognition Runtime decides whether an action can be recognized. Authority Graph
 proves where the authority behind it came from. Approval Runtime governs human
@@ -8,7 +8,7 @@ touch the real world -- they only ever produce decisions.
 **Action Enforcement Gateway is the execution boundary.** It is the only place
 in this repo where a real, application-supplied `execute()` callback is ever
 invoked, and it invokes that callback exactly once, and only when every
-upstream AOC layer has already said yes.
+upstream Soberanía layer has already said yes.
 
 > No allow decision, no execution. No valid recognition, no execution. No
 > valid authority, no execution. No valid approval, no execution. No valid
@@ -30,7 +30,7 @@ segregation-of-duties, or handshake/visa issuance. Those stay exactly where
 they are. Action Enforcement's core thesis is:
 
 ```
-Action Enforcement Gateway -> Recognition Runtime -> optional AOC integrations
+Action Enforcement Gateway -> Recognition Runtime -> optional Soberanía integrations
                                                       already wired into
                                                       Recognition Runtime
 ```
@@ -276,7 +276,7 @@ validating it -- it never re-derives or overrides that validation.
 
 ## Domain Policy Pack Runtime integration
 
-AOC core (this feature, Recognition Runtime, Authority Graph, Approval
+Soberanía core (this feature, Recognition Runtime, Authority Graph, Approval
 Runtime, External Agent Handshake) is **constitutional**: unrecognized
 actors, invalid passports, revoked/expired capabilities, missing approvals
 and missing external standing are always denied, for every customer, in
@@ -302,7 +302,7 @@ as it did before this integration existed -- no new fields appear on
 `EnforcementDecision`/`EnforcementProof`, no new events are recorded, and
 the `domain_policy_pack` policy always passes with `policy_not_applicable`.
 
-### Why policy pack `allow` can never override a core AOC denial
+### Why policy pack `allow` can never override a core Soberanía denial
 
 `domain_policy_pack` sits in the fixed policy chain **after** emergency
 deny, recognition required, allow decision required, approval pending,
@@ -310,8 +310,8 @@ evidence required, external standing and adapter permission -- and **before**
 idempotency, execution timeout, side-effect boundary and dry run. The chain
 evaluates in order and stops at the first failure
 (`EnforcementPolicyEvaluator`), so `domain_policy_pack` is only ever reached
-once every core AOC layer has already independently allowed the request.
-A policy pack result can therefore only ever *narrow* what core AOC already
+once every core Soberanía layer has already independently allowed the request.
+A policy pack result can therefore only ever *narrow* what core Soberanía already
 allowed -- never widen it. Concretely: policy pack `allow` cannot override an
 unrecognized actor, a rogue actor, an invalid passport, an invalid or revoked
 or expired capability, invalid authority, a missing or invalid approval, a
@@ -320,8 +320,8 @@ dry run, or idempotency duplicate suppression -- all of those resolve (and,
 if they deny, stop the chain) before `domain_policy_pack` ever runs. A
 policy pack `deny` (or `requires_evidence`/`requires_approval`/
 `requires_authority`/`requires_external_standing`), on the other hand, *can*
-still block execution even though every core AOC layer allowed it -- that is
-the entire point of this integration: core AOC says an action is
+still block execution even though every core Soberanía layer allowed it -- that is
+the entire point of this integration: core Soberanía says an action is
 structurally permitted; the policy pack says whether it is also
 domain-appropriate right now.
 
@@ -360,7 +360,7 @@ When a policy pack integration is configured, `EnforcementDecision` and
 `policyPackVersionIds`/`policyMatchedRuleIds` (plus `policyReasonCode`/
 `policyReason`/`policyEffectiveRiskLevel` on the decision) whenever the
 policy pack actually evaluated the request -- including when an earlier core
-AOC layer already denied it, so the audit trail always shows a policy pack
+Soberanía layer already denied it, so the audit trail always shows a policy pack
 was consulted. `EnforcementProofService` folds these same fields into the
 proof's `sha256` digest alongside every existing input, so changing which
 policy pack version or rule produced a decision changes the proof hash,
@@ -375,7 +375,7 @@ policy-caused block also records an `EnforcementViolation` (`policy_denied`/
 other blocked decision.
 
 `policyDecisionId`/`policyProofId` (and the other `policy*` fields above) are
-now visible in the AOC Control Plane: the Policy Packs section's
+now visible in the Soberanía Control Plane: the Policy Packs section's
 `PolicyEnforcementLinkPanel` and the Enforcement section's
 `EnforcementDecisionDetail`/`EnforcementProofDetail` both render them
 verbatim, and link them back to the underlying `PolicyPackDecision`/

@@ -266,7 +266,7 @@ export function createInMemoryLicenseMandateStore(options: CreateInMemoryLicense
       if (!log.some((execution) => execution.id === input.executionId)) {
         throw new LicenseGovernanceError(
           'LICENSE_EXECUTION_NOT_FOUND',
-          `No license execution '${input.executionId}' recorded under mandate '${mandate.id}'; a lifecycle report must reference a license AOC has evidence of.`,
+          `No license execution '${input.executionId}' recorded under mandate '${mandate.id}'; a lifecycle report must reference a license Soberanía has evidence of.`,
           { mandateId: mandate.id, executionId: input.executionId },
         );
       }

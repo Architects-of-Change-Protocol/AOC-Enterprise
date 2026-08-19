@@ -25,7 +25,7 @@ after(async () => {
   await Promise.all(startedServers.map((server) => server.close()));
 });
 
-describe('POST /api/governance/evaluate (AOC Enterprise API)', () => {
+describe('POST /api/governance/evaluate (Soberanía Enterprise API)', () => {
   it('returns 200 and an allowed decision for a fully-authorized request, executing the real Kernel', async () => {
     const started = await startTestServer();
 

@@ -284,7 +284,7 @@ describe('TOKENIZE durability — C. execution evidence survives restart', () =>
     assert.ok(referencedIds.includes(recorded.execution.id), 'the execution reference must survive restart');
 
     // ...and so does their *classification*. Recovering the reference but
-    // losing which of the two is AOC's own authorization would defeat the
+    // losing which of the two is Soberanía's own authorization would defeat the
     // point of keeping them apart.
     const referenceTypesById = new Map((record?.references ?? []).map((reference) => [reference.externalId, reference.referenceType]));
     assert.equal(referenceTypesById.get(mandateId), 'authorization_artifact');
@@ -788,7 +788,7 @@ describe('TOKENIZE reference scenario — durable governed action, end to end', 
     assert.equal(recovered.status, 'active');
     assert.deepEqual(recovered.terms, outcome.mandate.terms, 'the recovered mandate authorizes exactly what was decided');
 
-    // Tokenizer X performs issuance externally; AOC records only the evidence.
+    // Tokenizer X performs issuance externally; Soberanía records only the evidence.
     // Nothing here mints, signs, or contacts anything.
     const execution = await day2.service.recordExecution(TENANT_A_CONTEXT, {
       mandateId,

@@ -11,7 +11,7 @@ export interface KernelTraceStep {
 }
 
 /**
- * An operational execution trace, not the AOC Evidence Bundle: it explains
+ * An operational execution trace, not the Soberanía Evidence Bundle: it explains
  * which stages ran and what each one decided, built entirely from data the
  * wrapped engine already produced (`EnforcementDecision.policyResults`,
  * `RecognitionVerificationResult`). It never carries secrets, tokens, raw

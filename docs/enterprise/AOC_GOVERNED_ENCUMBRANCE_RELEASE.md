@@ -1,7 +1,7 @@
-# AOC Governed Encumbrance Release
+# Soberanía Governed Encumbrance Release
 
 How an **ACTIVE persistent authority constraint stops constraining**, and why it
-may do so only because AOC can prove a legitimate governed release lifecycle
+may do so only because Soberanía can prove a legitimate governed release lifecycle
 completed — never because somebody said so.
 
 Companion to `docs/architecture/ADR-GOVERNED-ENCUMBRANCE-RELEASE.md`, which
@@ -78,7 +78,7 @@ capacity restored                     derived from what is still active, never i
 
 Collapsing any two of those links is the failure mode. The most tempting
 collapse is the last but one — *"someone said the collateral was released"*
-becoming *"capacity is free"* — and AOC never makes it.
+becoming *"capacity is free"* — and Soberanía never makes it.
 
 ## The fifth governed action
 
@@ -101,7 +101,7 @@ is.
 The name is `release-encumbrance` rather than `release` or `discharge`, and the
 tradeoff is recorded in the ADR: `release` collides with three existing
 unrelated meanings in this codebase (`releaseReservation`, `releaseEncumbrance`,
-`recordRelease`), and `discharge` carries legal semantics AOC must not claim.
+`recordRelease`), and `discharge` carries legal semantics Soberanía must not claim.
 The chosen name is precise about both the verb and the governed object, which
 is also what keeps it from becoming a universal "release anything" action.
 
@@ -209,10 +209,10 @@ would free capacity for an arrangement that may still stand. It leaves the
 constraint standing — blocking capacity that may in fact be free, which is the
 recoverable direction — and is safe to retry under the same idempotency key,
 derived from the mandate so a conforming adapter performs at most one external
-release however many times AOC asks.
+release however many times Soberanía asks.
 
 **A caller cannot supply an outcome.** There is no parameter through which one
-could reach the service, and the only `confirmed_success` AOC will act on is one
+could reach the service, and the only `confirmed_success` Soberanía will act on is one
 returned by a port invocation the service made itself. A confirmation naming a
 *different* constraint is downgraded to a definitive failure with
 `executor_target_mismatch` and terminalizes nothing.
@@ -274,7 +274,7 @@ the ordering is the safety property:
 | mandate issued, execution not attempted | yes | yes — capacity stays constrained |
 | execution confirmed failure, constraint active | yes | yes |
 | execution unknown, constraint active | yes | yes, conservatively |
-| external success, local evidence not persisted | yes | conservative — nothing was released as far as AOC knows; retry under the same idempotency key |
+| external success, local evidence not persisted | yes | conservative — nothing was released as far as Soberanía knows; retry under the same idempotency key |
 | evidence persisted `confirmed_success`, constraint still active | yes | conservative — capacity blocked, not freed; recoverable |
 | constraint `released`, evidence `confirmed_success` | yes | terminal |
 
@@ -357,13 +357,13 @@ phase does not answer.
 
 ## The legal boundary
 
-An AOC governed release means:
+A Soberanía governed release means:
 
 > this Enterprise deployment has completed its configured governed release
 > process, and no longer treats the targeted persistent authority constraint as
 > active.
 
-It does **not** mean, and AOC never claims, that:
+It does **not** mean, and Soberanía never claims, that:
 
 - a legal lien was discharged;
 - a security interest was extinguished or a perfection terminated;
@@ -372,7 +372,7 @@ It does **not** mean, and AOC never claims, that:
 - a debt was satisfied.
 
 An executor's `confirmed_success` means the configured execution system reported
-a successful release, bounded by that adapter's own contract. AOC preserves the
+a successful release, bounded by that adapter's own contract. Soberanía preserves the
 provider's reference and interprets none of it.
 
 ## What this lifecycle does not decide

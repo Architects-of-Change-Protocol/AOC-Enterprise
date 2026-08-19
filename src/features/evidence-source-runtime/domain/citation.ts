@@ -18,7 +18,7 @@ export type CitationTargetType =
   | 'demo_scenario'
   | 'export_package';
 
-/** Links a source document and/or evidence artifact to a decision or proof produced by another AOC runtime. */
+/** Links a source document and/or evidence artifact to a decision or proof produced by another Soberanía runtime. */
 export interface Citation {
   readonly id: string;
   readonly sourceDocumentId?: string;

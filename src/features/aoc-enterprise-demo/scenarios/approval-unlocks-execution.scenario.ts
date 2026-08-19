@@ -19,7 +19,7 @@ export const APPROVAL_UNLOCKS_EXECUTION_SCENARIO: DemoScenario = {
   category: 'approval',
   summary:
     'The client follow-up action is routed to Victor for approval. Victor approves, and PMFreak retries with the resulting approval proof.',
-  enterpriseMessage: 'AOC does not only block; it provides a governed path to unlock execution.',
+  enterpriseMessage: 'Soberanía does not only block; it provides a governed path to unlock execution.',
   buyerPain: 'Enterprises worry a "blocked" governance system has no path forward for legitimate work.',
   aocValue: "A real ApprovalProof from Victor's decision, presented on the retried request, is what changes enforcement's decision.",
   personas: [PMFREAK_PERSONA_ID, VICTOR_PERSONA_ID],

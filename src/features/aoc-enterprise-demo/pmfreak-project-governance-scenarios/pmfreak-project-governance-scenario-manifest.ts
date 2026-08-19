@@ -8,7 +8,7 @@ import {
 import { PMFREAK_SCENARIO_CONTROL_PLANE_REQUIREMENT } from './pmfreak-scenario-control-plane-summary.js';
 
 /**
- * AOC PMFreak Project Governance Scenario Pack v1 (`aoc.demo.pmfreak.project_governance_scenarios.v1`).
+ * Soberanía PMFreak Project Governance Scenario Pack v1 (`aoc.demo.pmfreak.project_governance_scenarios.v1`).
  *
  * A deterministic demo pack showing what happens when PMFreak project agents
  * attempt actions inside realistic project-governance scenarios: billing
@@ -39,7 +39,7 @@ export interface CreatePMFreakProjectGovernanceScenarioPackManifestInput {
 }
 
 const DESCRIPTION =
-  'AOC PMFreak Project Governance Scenario Pack v1 demonstrates how AOC Enterprise governs PMFreak project agents inside realistic project-governance scenarios: billing readiness, milestone acceptance, schedule change, risk escalation, client communication, and change control. It builds on the real @aoc-enterprise/pmfreak-agent-passport-foundation package -- every scenario decision comes from that package\'s resolver, never a duplicate. It does not integrate with PMFreak production, does not access real PMFreak/Datasys data, does not mutate real projects, schedules, or billing, and does not send real client communications.';
+  'Soberanía PMFreak Project Governance Scenario Pack v1 demonstrates how Soberanía Enterprise governs PMFreak project agents inside realistic project-governance scenarios: billing readiness, milestone acceptance, schedule change, risk escalation, client communication, and change control. It builds on the real @aoc-enterprise/pmfreak-agent-passport-foundation package -- every scenario decision comes from that package\'s resolver, never a duplicate. It does not integrate with PMFreak production, does not access real PMFreak/Datasys data, does not mutate real projects, schedules, or billing, and does not send real client communications.';
 
 const SAFETY_NOTE =
   'This pack does not implement real PMFreak API integration, real PMFreak authentication, real project/schedule/billing mutation, real communication sending, or real invoice creation. It does not certify customer acceptance, does not certify invoice or billing readiness, does not provide legal advice, and does not certify compliance -- including Costa Rica jurisdiction context, which is carried only as an opaque routing reference.';

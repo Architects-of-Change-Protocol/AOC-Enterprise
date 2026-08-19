@@ -1,4 +1,4 @@
-AOC ENTERPRISE — PROPRIETARY SOFTWARE LICENSE
+SOBERANÍA ENTERPRISE — PROPRIETARY SOFTWARE LICENSE
 
 Copyright © 2026 Onchainfest LLC. All Rights Reserved.
 
@@ -11,7 +11,7 @@ Copyright © 2026 Onchainfest LLC. All Rights Reserved.
 
 ## 1. Ownership
 
-AOC Enterprise (the "Software"), including its source code, object code,
+Soberanía Enterprise (the "Software"), including its source code, object code,
 documentation, schemas, configuration, build tooling, and all associated
 materials contained in this repository, is the proprietary property of
 Onchainfest LLC ("Onchainfest," "we," "us," or "our"), except where a
@@ -81,13 +81,13 @@ third-party component. See `NOTICE.md`, `docs/legal/OPEN_SOURCE_DEPENDENCIES.md`
 and `docs/legal/THIRD_PARTY_NOTICES.md` for the current dependency
 inventory.
 
-## 6. Relationship to AOC Protocol
+## 6. Relationship to Soberanía Protocol
 
-AOC Enterprise is built on top of, and consumes, AOC Protocol — a
+Soberanía Enterprise is built on top of, and consumes, Soberanía Protocol — a
 separate project with its own repository, contributors, and licensing
-terms. This license governs only the AOC Enterprise repository and its
+terms. This license governs only the Soberanía Enterprise repository and its
 original contents. It does not grant, restrict, claim, or otherwise
-affect any rights in AOC Protocol. See
+affect any rights in Soberanía Protocol. See
 `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md` for the boundary between
 the two projects.
 

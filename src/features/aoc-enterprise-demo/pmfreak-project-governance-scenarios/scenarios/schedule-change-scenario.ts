@@ -22,7 +22,7 @@ export const scheduleChangeDetectVarianceScenario: PMFreakProjectGovernanceScena
   scenarioId: PMFREAK_SCENARIO_SCHEDULE_CHANGE_DETECT_VARIANCE_ID,
   title: 'Schedule Change -- Detect Variance',
   description:
-    'The Planning Agent detects schedule variance against the project baseline. AOC Enterprise checks passport status, the real runtime guard, authority scope, capability, and required schedule-baseline and dependency evidence before allowing the detection to proceed. Proposing a replan, applying a change, or committing a new date to the customer are all out of scope for this action.',
+    'The Planning Agent detects schedule variance against the project baseline. Soberanía Enterprise checks passport status, the real runtime guard, authority scope, capability, and required schedule-baseline and dependency evidence before allowing the detection to proceed. Proposing a replan, applying a change, or committing a new date to the customer are all out of scope for this action.',
   category: 'schedule_change',
   agentId: 'pmfreak.agent.planning',
   primaryRole: 'planning',
@@ -65,7 +65,7 @@ export const scheduleChangeApplyReplanScenario: PMFreakProjectGovernanceScenario
   scenarioId: PMFREAK_SCENARIO_SCHEDULE_CHANGE_APPLY_REPLAN_ID,
   title: 'Schedule Change -- Apply Replan',
   description:
-    'The Planning Agent attempts to apply a schedule change that carries a customer-facing, contract-sensitive commitment. The real Planning role profile explicitly prohibits this action, so AOC Enterprise denies the attempt regardless of evidence or approvals.',
+    'The Planning Agent attempts to apply a schedule change that carries a customer-facing, contract-sensitive commitment. The real Planning role profile explicitly prohibits this action, so Soberanía Enterprise denies the attempt regardless of evidence or approvals.',
   category: 'schedule_change',
   agentId: 'pmfreak.agent.planning',
   primaryRole: 'planning',

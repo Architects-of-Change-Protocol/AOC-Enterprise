@@ -311,7 +311,7 @@ describe('Encumbrance — the mandatory 5000 / 4000 / 4000 scenario', () => {
 
     // No priority, seniority or ranking anywhere: two constraints coexist
     // exactly insofar as the holder's authority permits, and nothing orders
-    // them. Ranking collateral is legal policy AOC does not hold.
+    // them. Ranking collateral is legal policy Soberanía does not hold.
     assert.equal((await constraining(world)).length, 2);
   });
 });
@@ -330,7 +330,7 @@ describe('Encumbrance — a constraint outlives the mandate that created it', ()
 
     // Mandate A is now exhausted as an authorization *and* revoked, so nothing
     // about it authorizes anything any more. The arrangement its executor
-    // created does not cease to exist because AOC withdrew permission to create
+    // created does not cease to exist because Soberanía withdrew permission to create
     // more of them — which is exactly why revocation is not release.
     await world.collateralization.revokeMandate(TENANT_CONTEXT, { mandateId: a.id, reason: 'authorization withdrawn', requestedBy: GA_MANAGER_ACTOR_ID });
     assert.equal((await world.collateralization.getMandate(TENANT_CONTEXT, a.id)).status, 'revoked');
@@ -603,7 +603,7 @@ describe('Encumbrance — structural consistency with an authority-changing acti
   it('17. a transfer the holder can still cover proceeds — this is not "collateralized authority cannot move"', async () => {
     const world = await encumberedWorld();
 
-    // Alice keeps 4 500, which still covers the 4 000 standing over her. AOC
+    // Alice keeps 4 500, which still covers the 4 000 standing over her. Soberanía
     // holds no rule about whether encumbered property may change hands; that is
     // domain and legal policy, and inventing one here would be inventing law.
     const outcome = await world.transfer.requestTransfer(
@@ -619,7 +619,7 @@ describe('Encumbrance — structural consistency with an authority-changing acti
 
     // 2 000 would leave Alice with 3 000 and a 4 000 constraint referring to
     // authority she no longer possesses. That is not a judgement about
-    // collateral: it is a refusal to leave AOC holding a record of nothing.
+    // collateral: it is a refusal to leave Soberanía holding a record of nothing.
     assert.equal(
       await refusalCode(() =>
         world.transfer.requestTransfer(TENANT_CONTEXT, GA_TENANT_A, transferRequest('structural-big', transferTerms(ALICE, BOB, [ECONOMIC], bp(2_000)))),

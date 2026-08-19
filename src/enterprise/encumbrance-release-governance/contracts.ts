@@ -38,7 +38,7 @@ import type { GovernedAuthorityEncumbrance } from '@aoc-enterprise/governed-auth
  *
  * ```
  * encumbered holder   whose authority stays constrained     (read from the constraint)
- * requester           who asks AOC to release it            (needs release action authority)
+ * requester           who asks Soberanía to release it            (needs release action authority)
  * secured party       who benefited from the arrangement    (a COLLATERALIZE role; not authority)
  * executor            what performs the external release    (a trusted port, never a caller)
  * operator            who may override in a repair          (system context only)
@@ -57,7 +57,7 @@ import type { GovernedAuthorityEncumbrance } from '@aoc-enterprise/governed-auth
  * - **Not a deletion.** A released constraint is kept, with the lineage that
  *   ended it. History stays reconstructible.
  * - **Not a legal discharge.** A confirmed release means the configured
- *   execution system reported that it released the arrangement. AOC does not
+ *   execution system reported that it released the arrangement. Soberanía does not
  *   claim a lien was discharged, a security interest extinguished, a registry
  *   updated, a creditor paid or a debt satisfied.
  * - **Not partial.** One mandate discharges one constraint in whole. See
@@ -117,7 +117,7 @@ export type EncumbranceReleaseMandateStatus = 'active' | 'executed' | 'revoked';
  * no source execution. Every one of those is read from the canonical
  * `GovernedAuthorityEncumbrance` at execution time, because a mandate that
  * restated them could authorize a discharge on terms that had drifted from the
- * constraint AOC actually holds — and because a caller able to supply them
+ * constraint Soberanía actually holds — and because a caller able to supply them
  * could choose which constraint a release "really" meant.
  */
 export interface EncumbranceReleaseMandateRecord {

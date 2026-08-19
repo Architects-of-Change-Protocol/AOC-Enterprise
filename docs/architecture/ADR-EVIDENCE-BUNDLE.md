@@ -1,7 +1,7 @@
-# ADR: AOC Enterprise Evidence Bundle v1
+# ADR: Soberanía Enterprise Evidence Bundle v1
 
 - Status: Accepted (PR-005)
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: `ADR-ENTERPRISE-GOVERNANCE-STORE.md`,
   `docs/enterprise/AOC_EVIDENCE_BUNDLE.md`,
   `docs/enterprise/EVIDENCE_PROJECTION_MODEL.md`,
@@ -9,7 +9,7 @@
 
 ## Context
 
-- PR-004 gave AOC Enterprise a canonical, durable, integrity-verifiable
+- PR-004 gave Soberanía Enterprise a canonical, durable, integrity-verifiable
   Governance Record for every evaluation. That record is sufficient for
   internal reconstruction, audit, integrity checking, and querying.
 - It is not safe to hand to a third party. A `GovernanceRecord` carries
@@ -17,7 +17,7 @@
   request/result payloads, record ids, and digests meant for internal
   reconstruction -- an external auditor, partner, or customer should never
   receive it verbatim.
-- AOC's product roadmap depends on being able to *share* proof of a
+- Soberanía's product roadmap depends on being able to *share* proof of a
   decision -- to an auditor, a partner, a customer, or eventually a
   Passport/Assurance runtime -- without sharing everything the Store knows.
   RFC-005 already establishes this principle (`Truth ≠ Disclosure`) at the
@@ -25,7 +25,7 @@
 
 ## Decision
 
-Create the AOC Enterprise Evidence Bundle v1 (`src/enterprise/evidence/`):
+Create the Soberanía Enterprise Evidence Bundle v1 (`src/enterprise/evidence/`):
 
 - **A one-way projection**: `GovernanceRecord → DisclosurePolicy →
   EvidenceBundle`. The Projector (`projector.ts`) is the only place this
@@ -90,7 +90,7 @@ the model already carries `bundleVersion`, `verification` (provenance), and
 
 ## Consequences
 
-- Positive: AOC Enterprise can now produce something safe to share
+- Positive: Soberanía Enterprise can now produce something safe to share
   externally, with a documented, typed, testable disclosure boundary
   instead of ad hoc field-stripping at the call site. Multiple Bundles at
   different disclosure levels can coexist for the same decision, each

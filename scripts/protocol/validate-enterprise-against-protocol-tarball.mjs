@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Validates AOC Enterprise against a real, packed @aoc/protocol tarball in an
+// Validates Soberanía Enterprise against a real, packed @aoc/protocol tarball in an
 // isolated temporary copy of the repository. This is the canonical proof that
 // Enterprise does not require the `@aoc/protocol` sibling-path checkout: the
 // temporary copy installs the tarball, resolves every documented-gap symbol

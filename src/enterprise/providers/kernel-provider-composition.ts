@@ -12,7 +12,7 @@ import { bridgeRecognitionRuntime } from '../../features/action-enforcement/fixt
 import type { KernelClock, KernelIdGenerator, RecognitionProvider } from '../../kernel/index.js';
 
 /**
- * The AOC Enterprise Host's one composition root for the transitive engines a
+ * The Soberanía Enterprise Host's one composition root for the transitive engines a
  * `RecognitionProvider` bridges together. `AocKernel`'s own real port
  * surface is exactly `recognitionProvider` (+ optional `policyPackProvider`,
  * `clock`, `idGenerator`) -- see `kernel/contracts/ports.ts`. Authority,

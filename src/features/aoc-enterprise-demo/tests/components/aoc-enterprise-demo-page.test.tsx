@@ -20,7 +20,7 @@ describe('AocEnterpriseDemoPage', () => {
 
   it('renders the page title', () => {
     const html = renderToStaticMarkup(<AocEnterpriseDemoPage scenarios={scenarios} />);
-    assert.ok(html.includes('AOC Enterprise Demo Scenario Pack'));
+    assert.ok(html.includes('Soberanía Enterprise Demo Scenario Pack'));
   });
 
   it('renders the subtitle', () => {

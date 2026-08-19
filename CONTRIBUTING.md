@@ -1,14 +1,14 @@
-# Contributing to AOC Enterprise
+# Contributing to Soberanía Enterprise
 
 > STATUS: DRAFT — PENDING PROFESSIONAL LEGAL REVIEW.
 
-AOC Enterprise is proprietary software owned by Onchainfest LLC (see
+Soberanía Enterprise is proprietary software owned by Onchainfest LLC (see
 `LICENSE`, `NOTICE.md`, `COPYRIGHT.md`). This is **not** an open source
 project, and this document does not use an open-contribution model.
 
 ## Contributions require prior authorization
 
-AOC Enterprise does not accept unsolicited public contributions (e.g.
+Soberanía Enterprise does not accept unsolicited public contributions (e.g.
 unsolicited pull requests from outside contributors). All contributions
 — code, documentation, schemas, tests, or other materials merged into
 this repository — require prior authorization from Onchainfest LLC and
@@ -87,8 +87,8 @@ this repository's existing architectural and process conventions:
 
 - Respect the layering rules in `docs/architecture/foundation.md`,
   `docs/architecture/protocol-integration.md`, and
-  `docs/architecture/repo-boundaries.md` — in particular, AOC Enterprise
-  code must not redefine AOC Protocol primitive semantics.
+  `docs/architecture/repo-boundaries.md` — in particular, Soberanía Enterprise
+  code must not redefine Soberanía Protocol primitive semantics.
 - Follow the test and validation conventions in
   `docs/testing/TEST_STRATEGY_V1.md`.
 - Do not introduce new production dependencies without documenting them

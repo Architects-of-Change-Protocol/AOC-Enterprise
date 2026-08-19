@@ -1,9 +1,9 @@
 # ADR: Access Governance Lifecycle (R005.0)
 
 - Status: **Accepted — Frozen**
-- Deciders: AOC Enterprise architecture
-- Sequence: R005.0, AOC Architectural Consolidation Program
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Deciders: Soberanía Enterprise architecture
+- Sequence: R005.0, Soberanía Architectural Consolidation Program
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/access-governance-lifecycle-adr-0v93ka`
 - Frozen at commit: `6f725fdc81a98af0120ee125fc43ba2a68285922`
   (merge of PR #85, `feat(access-governance): add EnterpriseEvidenceCorrelation

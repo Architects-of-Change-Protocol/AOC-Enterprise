@@ -19,7 +19,7 @@ export const clientCommunicationDraftStatusUpdateScenario: PMFreakProjectGoverna
   scenarioId: PMFREAK_SCENARIO_CLIENT_COMMUNICATION_DRAFT_STATUS_UPDATE_ID,
   title: 'Client Communication -- Draft Status Update',
   description:
-    'The Client Communication Agent drafts a neutral, non-committal status update for the customer. AOC Enterprise checks passport status, the real runtime guard, authority scope, and capability, and -- because the draft is customer-facing content -- requires PM approval before treating the draft as fully cleared. The draft is never sent by this action.',
+    'The Client Communication Agent drafts a neutral, non-committal status update for the customer. Soberanía Enterprise checks passport status, the real runtime guard, authority scope, and capability, and -- because the draft is customer-facing content -- requires PM approval before treating the draft as fully cleared. The draft is never sent by this action.',
   category: 'client_communication',
   agentId: 'pmfreak.agent.client_communication',
   primaryRole: 'client_communication',
@@ -70,7 +70,7 @@ export const clientCommunicationSendStatusUpdateScenario: PMFreakProjectGovernan
   scenarioId: PMFREAK_SCENARIO_CLIENT_COMMUNICATION_SEND_STATUS_UPDATE_ID,
   title: 'Client Communication -- Send Status Update',
   description:
-    'The Client Communication Agent attempts to send a previously drafted status update externally to the customer. AOC Enterprise requires a client-communication-draft evidence record and PM approval before allowing the send.',
+    'The Client Communication Agent attempts to send a previously drafted status update externally to the customer. Soberanía Enterprise requires a client-communication-draft evidence record and PM approval before allowing the send.',
   category: 'client_communication',
   agentId: 'pmfreak.agent.client_communication',
   primaryRole: 'client_communication',
@@ -98,7 +98,7 @@ export const clientCommunicationSendStatusUpdateScenario: PMFreakProjectGovernan
     customerCommitment: false,
     contractSensitive: false,
   },
-  safeNarrative: 'AOC allows the Client Communication Agent to send this update only once a drafted communication and PM approval are both present. This does not certify legal approval or contractual authorization.',
+  safeNarrative: 'Soberanía allows the Client Communication Agent to send this update only once a drafted communication and PM approval are both present. This does not certify legal approval or contractual authorization.',
 };
 
 export const clientCommunicationScenarios: readonly PMFreakProjectGovernanceScenario[] = [clientCommunicationDraftStatusUpdateScenario, clientCommunicationSendStatusUpdateScenario];

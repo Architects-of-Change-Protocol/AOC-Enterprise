@@ -1,10 +1,10 @@
-# AOC Agent Passport Core
+# Soberanía Agent Passport Core
 
 ## What it is
 
-AOC Agent Passport Core is the identity anchor for AI agents operating under the AOC governance framework. It establishes a verifiable, tamper-evident identity spine from enrollment through runtime execution.
+Soberanía Agent Passport Core is the identity anchor for AI agents operating under the Soberanía governance framework. It establishes a verifiable, tamper-evident identity spine from enrollment through runtime execution.
 
-Every governed agent must carry a verifiable AOC Passport. If the passport is missing, invalid, expired, suspended, revoked, or tampered with, future runtime enforcement must be able to refuse governed execution.
+Every governed agent must carry a verifiable Soberanía Passport. If the passport is missing, invalid, expired, suspended, revoked, or tampered with, future runtime enforcement must be able to refuse governed execution.
 
 ## What it is not
 
@@ -48,7 +48,7 @@ AOC-AGT-{YEAR}-{REGION}-{ENTROPY}
 
 Example: `AOC-AGT-2026-EU-7K4F9Q`
 
-- `AOC-AGT` — fixed prefix, identifies this as an AOC Agent Governance Passport
+- `AOC-AGT` — fixed prefix, identifies this as a Soberanía Agent Governance Passport
 - `YEAR` — 4-digit UTC year derived from `issuedAt`
 - `REGION` — jurisdiction segment, defaults to `GLOBAL`
 - `ENTROPY` — 6-character uppercase alphanumeric random or deterministic segment
@@ -83,7 +83,7 @@ Revoked and expired are terminal: no further transitions are permitted.
 
 | Level | Meaning |
 |-------|---------|
-| `registered` | Agent is enrolled in the AOC registry |
+| `registered` | Agent is enrolled in the Soberanía registry |
 | `constitutional` | Agent has a signed constitution and policy manifest |
 | `observed` | Agent activity is observed by the governance layer (future) |
 | `governed` | Agent is subject to real-time policy enforcement (future) |
@@ -123,7 +123,7 @@ The policy manifest is a machine-enforceable runtime document that specifies:
 - `riskTier` / `autonomyLevel` — risk classification
 - `audit` — audit level, retention days, and whether auditing is mandatory
 
-This manifest is the intended future input to **AOC Runtime Guard**.
+This manifest is the intended future input to **Soberanía Runtime Guard**.
 
 ---
 
@@ -169,7 +169,7 @@ The passport is tamper-*evident*. Changing any field in the passport, constituti
 
 The runtime seal creates a local enforcement anchor. A governed runtime that embeds `AgentRuntimeSeal` can reject execution without a live network call:
 
-> Removing the passport does not destroy the agent, but it destroys the agent's AOC-governed verification status. In governed runtimes, missing or invalid passports must cause governed execution to fail.
+> Removing the passport does not destroy the agent, but it destroys the agent's Soberanía-governed verification status. In governed runtimes, missing or invalid passports must cause governed execution to fail.
 
 ---
 

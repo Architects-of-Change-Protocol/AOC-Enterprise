@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { parseAocPMFreakRemoteGovernanceRequestBody } from '../aoc-pmfreak-remote-governance-parser.js';
 import { demoAocPMFreakBillingAllowedRequest } from '../../pmfreak-governance-request-intake/index.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- parser', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- parser', () => {
   it('accepts a well-formed PMFreak governance request', () => {
     const result = parseAocPMFreakRemoteGovernanceRequestBody(demoAocPMFreakBillingAllowedRequest);
     assert.equal(result.ok, true);

@@ -45,7 +45,7 @@ import type { KernelDecisionStatus } from '../../kernel/index.js';
  * `docs/enterprise/AOC_LICENSE_ACTION.md`, "TOKENIZE vs COLLATERALIZE vs
  * LICENSE".
  *
- * Boundary: AOC Enterprise governs the authority to license. It is not a
+ * Boundary: Soberanía Enterprise governs the authority to license. It is not a
  * licensing platform, a contract system, a royalty engine, a marketplace, or
  * a rights registry. Nothing in this module drafts an agreement, captures a
  * signature, prices or values anything, calculates or settles a royalty or
@@ -102,9 +102,9 @@ export interface LicenseMandateRecord {
   /** The Governance Store aggregate that durably proves that decision (trace, reason codes, events, integrity chain). */
   readonly evaluationRef?: string;
 
-  /** When AOC's authority to grant under this mandate begins. Not the external license's effective date. */
+  /** When Soberanía's authority to grant under this mandate begins. Not the external license's effective date. */
   readonly effectiveFrom: string;
-  /** When AOC's authority to grant under this mandate ends. Not the external license's expiry. */
+  /** When Soberanía's authority to grant under this mandate ends. Not the external license's expiry. */
   readonly expiresAt: string;
   readonly correlationId: string;
   readonly issuerRef?: string;
@@ -126,7 +126,7 @@ export interface LicenseMandateRecord {
    * asset. `maximumLicensedUnits` is therefore a per-license ceiling, checked
    * against each grant, never summed into a pool.
    *
-   * A reported termination or expiry does **not** decrement it: AOC cannot
+   * A reported termination or expiry does **not** decrement it: Soberanía cannot
    * verify that an external license actually ended and must never create
    * fresh licensing capacity on the strength of an unverified report.
    */

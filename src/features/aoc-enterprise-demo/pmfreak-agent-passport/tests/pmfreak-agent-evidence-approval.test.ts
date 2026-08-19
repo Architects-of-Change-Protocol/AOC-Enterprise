@@ -158,7 +158,7 @@ describe('Billing Readiness Agent -- the primary demo scenario', () => {
     assert.equal(resolution.evidenceSatisfied, true);
     assert.equal(resolution.approvalsSatisfied, true);
 
-    // This means AOC allows the *agent action* to mark readiness in the demo --
+    // This means Soberanía allows the *agent action* to mark readiness in the demo --
     // it must never be read as certifying invoice validity, customer acceptance,
     // or guaranteed billing.
     const rendered = JSON.stringify(resolution).toLowerCase();
