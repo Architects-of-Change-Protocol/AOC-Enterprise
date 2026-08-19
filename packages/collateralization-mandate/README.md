@@ -37,7 +37,7 @@ against any registry, liquidates or seizes anything, or contacts any external
 system. It is a pure data contract: no persistence, no service, no API, no
 policy engine, no execution.
 
-**AOC Enterprise governs whether collateralization is authorized. External
+**Soberanía Enterprise governs whether collateralization is authorized. External
 systems execute the collateral arrangement.**
 
 ## Three distinctions that carry weight
@@ -103,19 +103,19 @@ Exclusivity, priority/ranking and aggregate limits are expressed as
 assumptions this contract makes on anyone's behalf.
 
 `requiredPriorityRank` records a requirement placed on an external system and
-is compared against what that system *reports*. It is not a claim that AOC
+is compared against what that system *reports*. It is not a claim that Soberanía
 determined, perfected, or can enforce priority anywhere.
 
 ## Revocation is not release
 
 ```
-revocation of authority to perform further collateralization   ← what AOC can do
-external treatment of a security interest already created      ← not AOC's to claim
+revocation of authority to perform further collateralization   ← what Soberanía can do
+external treatment of a security interest already created      ← not Soberanía's to claim
 ```
 
 Revoking a mandate blocks new external collateralization from that moment. It
 does **not** release, discharge, terminate, or invalidate a security interest
-an external system already created, and AOC does not pretend otherwise.
+an external system already created, and Soberanía does not pretend otherwise.
 Execution evidence recorded before revocation is preserved immutably, and the
 revocation record preserves both the execution count and the committed scope at
 the moment authority was withdrawn.
@@ -128,13 +128,13 @@ that an external system **reported** one of those, and is deliberately:
 
 - **not** a governed action. No `RELEASE_COLLATERAL` exists. No authority is
   evaluated, no decision is produced, nothing is authorized. If releasing
-  collateral ever needs to be *authorized* by AOC rather than merely
+  collateral ever needs to be *authorized* by Soberanía rather than merely
   *observed*, that is a separate governed action with its own request,
   decision and mandate.
 - **not** a mandate status. `EnterpriseCollateralizationMandateStatus` is
   `'active' | 'revoked'` and nothing else.
 - **not** a restoration of headroom. Recording a release does not decrement
-  committed scope: AOC cannot verify that the external encumbrance ended and
+  committed scope: Soberanía cannot verify that the external encumbrance ended and
   must not manufacture fresh collateralization capacity from an unverified
   report.
 
@@ -160,5 +160,5 @@ A third enforcement is the right moment to decide, not this one.
 
 ## Ownership
 
-AOC Enterprise. Depends only on `@aoc/protocol` (types) and
+Soberanía Enterprise. Depends only on `@aoc/protocol` (types) and
 `@aoc-enterprise/resource-envelope` (`resourceRefIdentityEquals`).

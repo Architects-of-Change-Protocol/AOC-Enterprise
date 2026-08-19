@@ -11,13 +11,13 @@ import type { PMFreakDemoNarrativeSection } from './pmfreak-demo-narrative-expor
 export function createPMFreakDemoExecutiveSummarySection(viewModel: PMFreakDemoControlPlaneViewModel): PMFreakDemoNarrativeSection {
   const { decisionBadge } = viewModel;
 
-  const summary = `A PMFreak demo agent attempted a governed demo project-governance action. AOC Enterprise evaluated the existing scenario result and returned \`${decisionBadge.decision}\`. ${decisionBadge.description} This export explains the demo decision; it does not create a new decision.`;
+  const summary = `A PMFreak demo agent attempted a governed demo project-governance action. Soberanía Enterprise evaluated the existing scenario result and returned \`${decisionBadge.decision}\`. ${decisionBadge.description} This export explains the demo decision; it does not create a new decision.`;
 
   const bullets = [
     `Scenario: ${viewModel.scenarioTitle}`,
     `Decision: ${decisionBadge.label} (\`${decisionBadge.decision}\`)`,
     `Scenario narrative: ${viewModel.summary}`,
-    'This export explains an existing AOC Enterprise decision. It does not create a new governance decision.',
+    'This export explains an existing Soberanía Enterprise decision. It does not create a new governance decision.',
   ];
 
   const section: PMFreakDemoNarrativeSection = {
@@ -26,7 +26,7 @@ export function createPMFreakDemoExecutiveSummarySection(viewModel: PMFreakDemoC
     title: 'Executive Summary',
     summary,
     bullets,
-    safeLabels: ['AOC-governed agent', 'Demo narrative export'],
+    safeLabels: ['Soberanía-governed agent', 'Demo narrative export'],
     warnings: [],
   };
 

@@ -1,41 +1,41 @@
-# AOC Protocol ↔ AOC Enterprise Boundary
+# Soberanía Protocol ↔ Soberanía Enterprise Boundary
 
 > STATUS: DRAFT — PENDING PROFESSIONAL LEGAL REVIEW.
 > This document combines a technical description (derived from
 > `docs/architecture/foundation.md`, `docs/architecture/protocol-integration.md`,
 > `docs/architecture/repo-boundaries.md`, and `docs/enterprise/AOC_ENTERPRISE_HOST.md`)
 > with a legal/commercial framing. Where the repository does not contain
-> evidence for a claim (e.g. about AOC Protocol's own internal
+> evidence for a claim (e.g. about Soberanía Protocol's own internal
 > implementation, which lives in a separate repository this review did
 > not access), this document says so rather than assuming.
 
 ## Summary
 
-AOC Protocol and AOC Enterprise are two separate projects with a
-one-directional dependency: **AOC Enterprise depends on AOC Protocol;
-AOC Protocol does not depend on AOC Enterprise.**
+Soberanía Protocol and Soberanía Enterprise are two separate projects with a
+one-directional dependency: **Soberanía Enterprise depends on Soberanía Protocol;
+Soberanía Protocol does not depend on Soberanía Enterprise.**
 
-- **AOC Protocol** is a separate GitHub repository
+- **Soberanía Protocol** is a separate GitHub repository
   (`Architects-of-Change-Protocol/Architects_of_Change_Protocol`) that
   defines portable, implementation-agnostic security and governance
   primitives — identity contracts, capability token contracts, consent
   grant contracts, audit event envelope contracts, and scoped access
   grammar. It is described in this repository's own architecture docs
   as required to "remain product-neutral and enterprise-neutral."
-- **AOC Enterprise** (this repository) is the commercial orchestration,
-  runtime, and operational layer that consumes AOC Protocol's published
+- **Soberanía Enterprise** (this repository) is the commercial orchestration,
+  runtime, and operational layer that consumes Soberanía Protocol's published
   contracts via the `@aoc/protocol` package and builds a deployable,
   governable, auditable product on top of them.
 
-This document describes AOC Enterprise's side of that boundary, as
-evidenced by this repository. It does not speak authoritatively for AOC
+This document describes Soberanía Enterprise's side of that boundary, as
+evidenced by this repository. It does not speak authoritatively for Soberanía
 Protocol's own repository, governance, or licensing, which this review
-did not access beyond what AOC Enterprise's own docs and CI
+did not access beyond what Soberanía Enterprise's own docs and CI
 configuration reveal.
 
-## What belongs to AOC Protocol
+## What belongs to Soberanía Protocol
 
-Per `docs/architecture/protocol-integration.md`, AOC Protocol is the
+Per `docs/architecture/protocol-integration.md`, Soberanía Protocol is the
 "single source of truth" for:
 
 - identity contracts
@@ -44,22 +44,22 @@ Per `docs/architecture/protocol-integration.md`, AOC Protocol is the
 - audit event envelope contracts
 - scoped access grammar
 
-Per `docs/architecture/foundation.md`, AOC Protocol "owns the normative
+Per `docs/architecture/foundation.md`, Soberanía Protocol "owns the normative
 models for consent, scoped access, capability semantics, identity
 claims, and audit events" and "must remain product-neutral and
 enterprise-neutral."
 
-## What belongs to AOC Enterprise
+## What belongs to Soberanía Enterprise
 
-Per the same documents, AOC Enterprise owns orchestration contracts and
+Per the same documents, Soberanía Enterprise owns orchestration contracts and
 implementations for:
 
 - `policy-runtime` (runtime policy decisions and enterprise guardrails)
 - `tenant-governance`, `org-boundary` (tenant/org boundary management)
 - `integration-runtime` (connector frameworks)
 - `control-plane-sdk`, `enterprise-audit`, `agent-governance`
-- the AOC Kernel (`src/kernel`), AOC Enterprise Host (`src/enterprise`),
-  and AOC Enterprise Runtime (`src/runtime`) — the actual executable
+- the Soberanía Kernel (`src/kernel`), Soberanía Enterprise Host (`src/enterprise`),
+  and Soberanía Enterprise Runtime (`src/runtime`) — the actual executable
   systems that operationalize protocol primitives.
 
 These contracts are, per `protocol-integration.md`, "intentionally
@@ -69,7 +69,7 @@ executable implementation.
 
 ## What Enterprise consumes from Protocol
 
-AOC Enterprise imports protocol symbols from the canonical package entry
+Soberanía Enterprise imports protocol symbols from the canonical package entry
 `@aoc/protocol` (never deep-imports protocol internals, per
 `protocol-integration.md`). In this repository, the dependency is wired
 as:
@@ -82,26 +82,26 @@ as:
   check
 - `types/aoc-protocol/` and `tests/fixtures/protocol-stub/`: type-only
   fallbacks used when the sibling checkout is unavailable, so
-  publishability validation does not require the full AOC Protocol
+  publishability validation does not require the full Soberanía Protocol
   checkout
 
-This confirms AOC Protocol is consumed as a genuine external dependency,
+This confirms Soberanía Protocol is consumed as a genuine external dependency,
 not vendored or copied into this repository.
 
 ## What Enterprise implements
 
 Per `docs/legal/IP_OVERVIEW.md` Section 2, the concrete implementations
-that exist in this repository include: the AOC Kernel decision engine,
-the AOC Enterprise Host (HTTP API, persistence, events, telemetry,
-health), the AOC Enterprise Runtime (grants, delegation, vault,
-federation), the Governance Store, the Assurance Runtime (AOC SAF
+that exist in this repository include: the Soberanía Kernel decision engine,
+the Soberanía Enterprise Host (HTTP API, persistence, events, telemetry,
+health), the Soberanía Enterprise Runtime (grants, delegation, vault,
+federation), the Governance Store, the Assurance Runtime (Soberanía SAF
 framework), the Evidence lifecycle, the Agent Passport Runtime, the
 Enterprise Host SDK, tenant-isolation enforcement in the store layer,
 transport adapters, and operational tooling (backup/restore/deployment).
 
 ## What Enterprise monetizes
 
-Based on repository evidence, the monetizable surface is the AOC
+Based on repository evidence, the monetizable surface is the Soberanía
 Enterprise Host service (the API described by
 `release/RELEASE_MANIFEST.json`'s 27-endpoint surface), its SDK, the
 operational/deployment tooling around it, and product-specific
@@ -113,39 +113,39 @@ none should be assumed to exist beyond what is coded here.
 
 ## What Enterprise operates
 
-The AOC Enterprise Host is designed to be run as a deployed service
+The Soberanía Enterprise Host is designed to be run as a deployed service
 (`scripts/run-enterprise-host.mjs`, `docs/operations/DEPLOYMENT_GUIDE_V1.md`),
 with its own persistence (SQLite or in-memory), health/liveness/readiness
-endpoints, structured logging, and telemetry counters. AOC Protocol, by
+endpoints, structured logging, and telemetry counters. Soberanía Protocol, by
 contrast, is not something this repository operates — it is a
-compile-time dependency of AOC Enterprise, not run as a separate service
-by AOC Enterprise, and not bundled into AOC Enterprise's shipped runtime
+compile-time dependency of Soberanía Enterprise, not run as a separate service
+by Soberanía Enterprise, and not bundled into Soberanía Enterprise's shipped runtime
 artifacts (see the note on `validate-publishability.mjs` below).
 
 ## What a customer can deploy
 
-A customer with a Commercial Agreement for AOC Enterprise can deploy the
-AOC Enterprise Host (and, where licensed, the Enterprise Runtime, SDK,
-and supporting tooling) as described in the deployment guide. AOC
-Enterprise is built against AOC Protocol's published contracts at
+A customer with a Commercial Agreement for Soberanía Enterprise can deploy the
+Soberanía Enterprise Host (and, where licensed, the Enterprise Runtime, SDK,
+and supporting tooling) as described in the deployment guide. Soberanía
+Enterprise is built against Soberanía Protocol's published contracts at
 compile time, but `scripts/validate-publishability.mjs` treats
 `@aoc/protocol` as a **compile-time type dependency only** and
 independently asserts, on every publishability run, that no shipped/
 packed JS artifact imports `@aoc/protocol` at runtime. A customer
-deployment of AOC Enterprise's built artifacts therefore does not
-necessarily include AOC Protocol's own code at runtime — only Enterprise
+deployment of Soberanía Enterprise's built artifacts therefore does not
+necessarily include Soberanía Protocol's own code at runtime — only Enterprise
 code that was type-checked against Protocol's contracts during the
 build.
 
 ## What a customer does not get by acquiring Enterprise
 
-Acquiring rights to AOC Enterprise under a Commercial Agreement does
+Acquiring rights to Soberanía Enterprise under a Commercial Agreement does
 **not**, by itself:
 
-- transfer ownership of, or any rights in, AOC Protocol or its
+- transfer ownership of, or any rights in, Soberanía Protocol or its
   repository;
-- grant the right to modify, redistribute, or relicense AOC Protocol
-  independent of whatever terms AOC Protocol's own project publishes;
+- grant the right to modify, redistribute, or relicense Soberanía Protocol
+  independent of whatever terms Soberanía Protocol's own project publishes;
 - grant rights to Onchainfest LLC's trademarks (see `TRADEMARKS.md`)
   beyond what is expressly stated in the agreement;
 - include source code access, unless source access is an explicit term
@@ -157,21 +157,21 @@ Acquiring rights to AOC Enterprise under a Commercial Agreement does
 The following require a written Commercial Agreement rather than being
 available by default:
 
-- production use, deployment, or redistribution of AOC Enterprise;
-- any sublicense or resale of AOC Enterprise or derived services;
+- production use, deployment, or redistribution of Soberanía Enterprise;
+- any sublicense or resale of Soberanía Enterprise or derived services;
 - use of Onchainfest LLC's trademarks in customer-facing materials;
 - access to source code (as opposed to compiled artifacts), where
   applicable.
 
 ## Capability matrix
 
-Where this repository contains no evidence either way for AOC
+Where this repository contains no evidence either way for Soberanía
 Protocol's own implementation (since that repository was not part of
-this review), the "AOC Protocol" column reflects only what AOC
+this review), the "Soberanía Protocol" column reflects only what Soberanía
 Enterprise's own documentation states about Protocol's role — not an
 independent audit of the Protocol repository.
 
-| Capacidad | AOC Protocol | AOC Enterprise | Régimen | Evidencia | Observaciones |
+| Capacidad | Soberanía Protocol | Soberanía Enterprise | Régimen | Evidencia | Observaciones |
 |---|---|---|---|---|---|
 | Specifications (primitive semantics) | Sí — owns normative models | No — consumes only | Protocol-owned; separate repo/license | `foundation.md`, `protocol-integration.md` | Enterprise imports via `@aoc/protocol` only |
 | Primitives (consent-engine, capability-tokens, scoped-access, identity, audit-sdk) | Sí — canonical per `protocol-integration.md` | Reserved / not implemented (empty stub packages) | Protocol-owned; Enterprise-side stubs currently empty | `packages/consent-engine` etc. contain only `.gitkeep` | No redefinition currently exists because no Enterprise-side code exists; must remain consumption-only if implemented |
@@ -189,16 +189,16 @@ independent audit of the Protocol repository.
 | Metering | No evidence | No evidence found in this repository | Not implemented | — | Do not assume metering exists; none found |
 | Support tooling | Out of scope for this repo | Sí | Enterprise-owned | `docs/operations/RUNBOOKS_V1.md`, `scripts/portability/**` | — |
 | Observability | No | Sí (logs + health probes; no `/metrics` endpoint) | Enterprise-owned | `src/enterprise/telemetry` | Documented gap, not a defect |
-| Assurance execution | No | Sí — AOC SAF framework | Enterprise-owned | `src/enterprise/assurance` | — |
+| Assurance execution | No | Sí — Soberanía SAF framework | Enterprise-owned | `src/enterprise/assurance` | — |
 | Identity implementation | Sí — owns primitive identity contracts | Reserved / not implemented as a dedicated package | Protocol owns the primitive; Enterprise-side dedicated package unimplemented | `packages/identity` contains only `.gitkeep` | Where/how identity claims are actually handled at runtime (e.g. inline in Kernel/Enterprise code vs. a dedicated module) was not fully traced in this review — flagged for engineering confirmation |
 | Commercial integrations | No | Sí | Enterprise-owned | `packages/pmfreak-agent-passport-foundation`, `apps/agent-passport-web` | — |
 
 ## Dependency direction
 
-- AOC Enterprise may depend on public or versioned contracts published
-  by AOC Protocol (currently `@aoc/protocol >=0.1.0`).
-- AOC Protocol must not depend on AOC Enterprise's proprietary code.
-  Nothing in this repository grants AOC Protocol any such dependency,
+- Soberanía Enterprise may depend on public or versioned contracts published
+  by Soberanía Protocol (currently `@aoc/protocol >=0.1.0`).
+- Soberanía Protocol must not depend on Soberanía Enterprise's proprietary code.
+  Nothing in this repository grants Soberanía Protocol any such dependency,
   and none was found.
 - Proprietary Enterprise extensions must not silently redefine the
   public protocol standard. This repository's own linting
@@ -211,17 +211,17 @@ independent audit of the Protocol repository.
 
 ## Commercial rights
 
-- Access to AOC Protocol (e.g., as an open resource, if and when AOC
+- Access to Soberanía Protocol (e.g., as an open resource, if and when Soberanía
   Protocol is made available on such terms by its own project) does
-  **not** grant any rights to AOC Enterprise. AOC Enterprise's licensing
+  **not** grant any rights to Soberanía Enterprise. Soberanía Enterprise's licensing
   is governed exclusively by `LICENSE` and any executed Commercial
   Agreement.
-- Acquiring AOC Enterprise under a Commercial Agreement does **not**
-  transfer ownership of AOC Protocol, its source code, or its
-  specifications, and does not transfer ownership of AOC Enterprise's
+- Acquiring Soberanía Enterprise under a Commercial Agreement does **not**
+  transfer ownership of Soberanía Protocol, its source code, or its
+  specifications, and does not transfer ownership of Soberanía Enterprise's
   own source code either, unless an executed written agreement expressly
   says so.
-- Where AOC Protocol has its own separate license, that license governs
-  use of AOC Protocol directly; this document does not restate or
+- Where Soberanía Protocol has its own separate license, that license governs
+  use of Soberanía Protocol directly; this document does not restate or
   supersede it, because this review did not have access to that
   repository's own license terms.

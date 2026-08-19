@@ -62,7 +62,7 @@ import {
  * E exists because D is answered against a *position*, and a position does not
  * change when a mandate is issued. Two requests could therefore each observe
  * Alice's whole 5 000 bp, each conclude that 4 000 fits, and each be
- * authorized — leaving AOC having told two counterparties they could move the
+ * authorized — leaving Soberanía having told two counterparties they could move the
  * same authority. Conservation at execution bounded the damage but did not
  * prevent the over-authorization; this suite is about preventing it.
  *

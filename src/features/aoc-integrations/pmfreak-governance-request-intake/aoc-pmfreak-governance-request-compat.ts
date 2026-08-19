@@ -1,5 +1,5 @@
 /**
- * AOC-side compatibility surface for PMFreak Governance Request Client v1's
+ * Soberanía-side compatibility surface for PMFreak Governance Request Client v1's
  * request shape. The canonical declaration lives in
  * `aoc-pmfreak-governance-intake-types.ts` alongside every other type this
  * intake owns; this module re-exports it under the name the PR's suggested

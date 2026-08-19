@@ -1,11 +1,11 @@
 import type { CanonicalId, ResourceRef, UtcDateTime } from '@aoc/protocol';
 
 /**
- * Enterprise composition over AOC Protocol's `ResourceRef`.
+ * Enterprise composition over Soberanía Protocol's `ResourceRef`.
  *
  * `ResourceRef` (`kind`, `id`, `tenantId?`, `attributes?`) is canonical in
  * `@aoc/protocol` -- it is the sole identity primitive for "a resource" across
- * AOC. `EnterpriseResourceEnvelope` does not extend it (contrast with
+ * Soberanía. `EnterpriseResourceEnvelope` does not extend it (contrast with
  * `EnterpriseScopedAccessRequest` in `@aoc-enterprise/scoped-access`, which
  * does extend `ScopedAccessRequest`): a governed external resource needs
  * location, integrity and lifecycle semantics that are not additive fields on
@@ -27,7 +27,7 @@ import type { CanonicalId, ResourceRef, UtcDateTime } from '@aoc/protocol';
  * store) -- neither of those exists yet, and this contract does not assume
  * or depend on their shape.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/resource-envelope`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/resource-envelope`).
  */
 export const ENTERPRISE_RESOURCE_ENVELOPE_SCHEMA_VERSION = '1.0.0' as const;
 

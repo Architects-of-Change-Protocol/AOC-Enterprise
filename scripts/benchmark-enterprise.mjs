@@ -1,4 +1,4 @@
-// AOC Enterprise v1 performance baseline (PR-008).
+// Soberanía Enterprise v1 performance baseline (PR-008).
 //
 // Reproducible micro/meso benchmark of the Enterprise Host against real
 // SQLite stores. Run AFTER `npm run build`:
@@ -321,7 +321,7 @@ const output = { environment, results };
 if (JSON_ONLY) {
   console.log(JSON.stringify(output, null, 2));
 } else {
-  console.log('AOC Enterprise v1 benchmark baseline');
+  console.log('Soberanía Enterprise v1 benchmark baseline');
   console.log(JSON.stringify(environment, null, 2));
   console.log('');
   const rows = Object.entries(results).filter(([, v]) => v !== null && typeof v === 'object' && 'p50Ms' in v);

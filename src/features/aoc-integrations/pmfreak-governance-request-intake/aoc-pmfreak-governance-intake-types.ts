@@ -1,12 +1,12 @@
 /**
- * AOC PMFreak Governance Request Intake v1 -- domain types.
+ * Soberanía PMFreak Governance Request Intake v1 -- domain types.
  *
  * Runtime direction: PMFreak agent attempts an action -> PMFreak builds a
  * governance request (PMFreak Governance Request Client v1's vocabulary) ->
- * AOC Enterprise receives and evaluates the request -> AOC Enterprise
+ * Soberanía Enterprise receives and evaluates the request -> Soberanía Enterprise
  * returns a governed decision -> PMFreak receives the decision.
  *
- * This module owns its own AOC-side compatibility DTOs. It never imports
+ * This module owns its own Soberanía-side compatibility DTOs. It never imports
  * from the PMFreak repo, never mutates PMFreak data, never executes a
  * PMFreak action, and never writes a decision back into PMFreak.
  */
@@ -191,7 +191,7 @@ export interface AocPMFreakGovernanceRequest {
 }
 
 // ---------------------------------------------------------------------------
-// AOC governance response compatibility DTO
+// Soberanía governance response compatibility DTO
 // ---------------------------------------------------------------------------
 
 export type AocPMFreakGovernanceDecision =

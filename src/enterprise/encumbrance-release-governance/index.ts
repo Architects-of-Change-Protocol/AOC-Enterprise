@@ -1,6 +1,6 @@
 /**
  * Encumbrance Release Governance Runtime — the `RELEASE_ENCUMBRANCE` governed
- * action, and the fifth member of AOC Enterprise's canonical action set.
+ * action, and the fifth member of Soberanía Enterprise's canonical action set.
  *
  * ```
  * TOKENIZE             authorize creating token representations of governed rights

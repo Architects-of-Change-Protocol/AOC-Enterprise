@@ -1,7 +1,7 @@
 # ADR: Canonical Access Grant (R004.G)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: R004.D (`ADR-RESOURCE-ENVELOPE.md`, `EnterpriseResourceEnvelope`),
   R004.E (`ADR-ACCESS-DECISION.md`, `EnterpriseAccessDecision`), R004.F
   (`ADR-POLICY-OBLIGATION.md`, `EnterpriseAccessObligation`)
@@ -82,7 +82,7 @@ Create `EnterpriseAccessGrant` in a new package, `@aoc-enterprise/access-grant`
 - **References `EnterpriseAccessObligation`s by opaque correlation ids**
   (`obligationRefs?: readonly CanonicalId[]`, pointing at
   `EnterpriseAccessObligation.id` values), never by embedding them.
-- **Composes AOC Protocol's `ResourceRef` directly** (`resource: ResourceRef`),
+- **Composes Soberanía Protocol's `ResourceRef` directly** (`resource: ResourceRef`),
   not the full `EnterpriseResourceEnvelope` -- per
   `EnterpriseResourceEnvelope`'s own README commitment (quoted above). A
   grant needs resource identity, never the envelope's storage-lifecycle

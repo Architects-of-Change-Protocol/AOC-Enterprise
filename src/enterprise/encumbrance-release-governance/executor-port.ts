@@ -7,7 +7,7 @@ import { EncumbranceReleaseGovernanceError } from './errors.js';
  * This port is the whole of the answer to "why can a caller not simply assert
  * that the collateral was released?". Everything above it — request, authority,
  * policy, approvals, obligations, mandate — establishes that a discharge is
- * *permitted*. None of it establishes that a discharge *happened*, and AOC has
+ * *permitted*. None of it establishes that a discharge *happened*, and Soberanía has
  * no way to know that on its own. So the service does not decide it: it calls
  * this port and records what the port reported, and only a
  * `'confirmed_success'` reported by a port invocation the service made itself
@@ -25,7 +25,7 @@ import { EncumbranceReleaseGovernanceError } from './errors.js';
  *
  * `'confirmed_success'` means: *the configured execution system reported that
  * it released the arrangement this constraint records.* It does not mean, and
- * AOC never claims, that a statutory discharge occurred, that a security
+ * Soberanía never claims, that a statutory discharge occurred, that a security
  * interest was extinguished, that a lien registry anywhere was updated, that a
  * creditor was paid, or that a debt was satisfied. Those are facts about the
  * world that this deployment observes through one configured system, and the
@@ -60,7 +60,7 @@ export interface EncumbranceReleaseExecutionRequest {
    * Derived from the release mandate, which authorizes exactly one discharge,
    * so a retry after an indeterminate outcome presents the same key and a
    * conforming adapter performs at most one external release however many
-   * times AOC asks.
+   * times Soberanía asks.
    */
   readonly idempotencyKey: string;
   readonly attemptedAt: string;
@@ -118,7 +118,7 @@ export interface InMemoryEncumbranceReleaseExecutorOptions {
   /**
    * Reports success for a constraint other than the one asked about, so the
    * target-mismatch defence can be exercised. A real provider should never do
-   * this; the point is that AOC does not rely on it not doing it.
+   * this; the point is that Soberanía does not rely on it not doing it.
    */
   readonly respondForEncumbranceRef?: string;
 }

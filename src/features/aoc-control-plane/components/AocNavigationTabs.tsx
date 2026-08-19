@@ -8,7 +8,7 @@ export interface AocNavigationTabsProps {
 
 export function AocNavigationTabs({ selected, onSelect }: AocNavigationTabsProps): React.ReactElement {
   return (
-    <nav className="aoc-navigation-tabs" aria-label="AOC Control Plane sections">
+    <nav className="aoc-navigation-tabs" aria-label="Soberanía Control Plane sections">
       <ul role="tablist">
         {AOC_NAVIGATION_ITEMS.map((item) => {
           const isSelected = item.section === selected;

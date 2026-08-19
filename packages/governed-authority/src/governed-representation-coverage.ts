@@ -14,7 +14,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * which is the whole point of requiring both.
  *
  * Like its sibling, this is a source of *facts* and not a decision engine.
- * `AocKernel` remains the only thing in AOC Enterprise that decides.
+ * `AocKernel` remains the only thing in Soberanía Enterprise that decides.
  */
 export interface GovernedRepresentationQuery {
   readonly tenantId: string;
@@ -78,7 +78,7 @@ export type GovernedRepresentationCoverage =
   | { readonly outcome: 'action_not_represented'; readonly representativeAuthorityId: string; readonly action: string }
   /** A binding covers the right and action, and its ceiling is smaller than the request. */
   | { readonly outcome: 'scope_exceeded'; readonly representativeAuthorityId: string; readonly permitted: GovernedRightsScope; readonly requested: GovernedRightsScope }
-  /** A binding's ceiling is not commensurable with the request — a proportional ceiling against a unit count, or two denominations AOC holds no conversion between. Never coerced; always refused. */
+  /** A binding's ceiling is not commensurable with the request — a proportional ceiling against a unit count, or two denominations Soberanía holds no conversion between. Never coerced; always refused. */
   | { readonly outcome: 'incompatible_scope'; readonly representativeAuthorityId: string; readonly permitted: GovernedRightsScope; readonly requested: GovernedRightsScope }
   /** A covering binding exists but not at this instant — it has ended, or has not begun. */
   | { readonly outcome: 'expired'; readonly representativeAuthorityId: string }

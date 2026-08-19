@@ -33,8 +33,8 @@ const UNSAFE_PHRASES = [
 ];
 
 const SAFE_PHRASES = [
-  'AOC Governance intake',
-  'PMFreak consumes AOC Governance',
+  'Soberanía Governance intake',
+  'PMFreak consumes Soberanía Governance',
   'Governance decision returned',
   'No PMFreak mutation performed',
   'No action execution performed',
@@ -46,7 +46,7 @@ const SAFE_PHRASES = [
   'Approval required',
 ];
 
-describe('AOC PMFreak Governance Request Intake -- claim safety', () => {
+describe('Soberanía PMFreak Governance Request Intake -- claim safety', () => {
   it('catches every required unsafe phrase', () => {
     for (const phrase of UNSAFE_PHRASES) {
       const result = evaluateAocPMFreakGovernanceIntakeClaimSafety(`This output claims: ${phrase}.`);

@@ -33,13 +33,13 @@ import { SideEffectBoundaryPolicy } from './side-effect-boundary-policy.js';
  * even considered; adapter permission gates the transport regardless of
  * what recognition said. `domain_policy_pack` runs immediately after
  * `adapter_permission` and before `idempotency` -- by the time it runs,
- * every core AOC layer (recognition/authority/approval/handshake/adapter)
+ * every core Soberanía layer (recognition/authority/approval/handshake/adapter)
  * has already independently passed, so a policy pack `allow` can only ever
  * preserve that outcome, never create one; a policy pack `deny`/
  * `requires_evidence`/`requires_approval`/`requires_authority`/
  * `requires_external_standing` still blocks even though every core layer
  * allowed it. Idempotency, expiry, side-effect boundary and dry-run apply
- * only once both core AOC and domain policy have already cleared.
+ * only once both core Soberanía and domain policy have already cleared.
  */
 export function createDefaultEnforcementPolicyChain(): readonly EnforcementPolicy[] {
   return [

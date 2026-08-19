@@ -33,9 +33,9 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * - `LICENSE != PROTOCOLIZE`. Protocolization establishes the governed
  *   identity/authority/evidence context; licensing presupposes it.
  *
- * ## What AOC Enterprise does and does not claim
+ * ## What Soberanía Enterprise does and does not claim
  *
- * AOC Enterprise governs *whether licensing is authorized*: whether this
+ * Soberanía Enterprise governs *whether licensing is authorized*: whether this
  * authority graph, policy state, approval state and obligation set permitted
  * this actor to grant this permission to this licensee on these terms.
  *
@@ -44,7 +44,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * agreement satisfies any local formality; consideration was paid; royalties
  * were settled; tax was paid; copyright subsists; a patent is valid; a
  * trademark is registered; the underlying right is legally licensable; or an
- * external contract was signed. Those are facts about the world, and AOC
+ * external contract was signed. Those are facts about the world, and Soberanía
  * knows them only if some external system independently evidences them --
  * which is what `EnterpriseLicenseExecutionEvidence` exists to record.
  *
@@ -52,7 +52,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * royalty, charges money, meters usage, enforces DRM, prices a license,
  * values an asset, calculates tax, or contacts any external system. Every
  * `external*` field and every entry in `permittedContexts` is a
- * provider-neutral opaque label that AOC records and compares as a string and
+ * provider-neutral opaque label that Soberanía records and compares as a string and
  * never interprets, resolves, or executes against.
  *
  * This is a pure data contract: no persistence, no service, no API, no policy
@@ -64,7 +64,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * codes, identity/structural equality, deterministic serialization, and
  * references to records owned elsewhere rather than embeddings of them.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/license-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/license-mandate`).
  */
 export const ENTERPRISE_LICENSE_SCHEMA_VERSION = '1.0.0' as const;
 
@@ -79,8 +79,8 @@ export const ENTERPRISE_LICENSE_SCHEMA_VERSION = '1.0.0' as const;
  *
  * The field is named `capability` throughout the repository's internal
  * contracts; read `capability: 'license'` as "the identifier of the Governed
- * Action `LICENSE`". `LICENSE` is an **AOC Enterprise Governed Action**, not
- * an AOC Protocol Sovereignty Capability: the conceptual vocabulary
+ * Action `LICENSE`". `LICENSE` is an **Soberanía Enterprise Governed Action**, not
+ * a Soberanía Protocol Sovereignty Capability: the conceptual vocabulary
  * (Governed Action / Enforcement / Mandate / Evidence) and the internal field
  * name are allowed to differ, and no repository-wide rename is implied.
  */
@@ -127,7 +127,7 @@ export function isEnterpriseLicenseCapability(capability: unknown): capability i
  * the authorized rights include a usage right, it does not assert that such a
  * right exists, that anyone holds it, or that it is licensable under any
  * legal system. Authority must already be established upstream by the
- * primitives AOC evaluates (Authority Graph), and AOC never infers it from
+ * primitives Soberanía evaluates (Authority Graph), and Soberanía never infers it from
  * the fact that a request was submitted.
  *
  * Deliberately a closed union, consistent with every other governance
@@ -164,8 +164,8 @@ export type EnterpriseLicensableRightType = GovernedRightType;
  * `model-training` name the same right and two very different permissions.
  *
  * Deliberately a closed, provider-neutral, asset-neutral union. These are
- * AOC's own governed-use categories: they are **not** statutory definitions,
- * they do not track any jurisdiction's exclusive-rights enumeration, and AOC
+ * Soberanía's own governed-use categories: they are **not** statutory definitions,
+ * they do not track any jurisdiction's exclusive-rights enumeration, and Soberanía
  * asserts no legal meaning for them. A deployment that needs a finer
  * distinction expresses it through `permittedContexts` (opaque, extensible)
  * or through obligations, never by widening this vocabulary informally -- a
@@ -212,7 +212,7 @@ export type EnterpriseLicensedUseType = (typeof ENTERPRISE_LICENSED_USE_TYPES)[k
  * middle case, and collapsing `'sole'` into either neighbour would silently
  * change what was authorized.
  *
- * **This is a declaration AOC records and compares, never a rule AOC
+ * **This is a declaration Soberanía records and compares, never a rule Soberanía
  * enforces against the world.** It never follows from this contract that an
  * asset may carry only one license, that an exclusive license blocks any
  * other license, or that a conflicting license is invalid. Whether a
@@ -248,10 +248,10 @@ const EXCLUSIVITY_RANK: Readonly<Record<EnterpriseLicenseExclusivity, number>> =
  * "may be done, but only with a further approval" is a real and common
  * arrangement that neither `true` nor `false` can express.
  *
- * AOC records the disposition; it does not run the further approval. A
+ * Soberanía records the disposition; it does not run the further approval. A
  * deployment that wants `'approval-required'` to mean something operational
  * expresses that through the Approval Runtime and obligations, and -- if
- * sublicensing or assignment must ever be *authorized* by AOC rather than
+ * sublicensing or assignment must ever be *authorized* by Soberanía rather than
  * merely declared -- through a separate governed action with its own request,
  * decision and mandate. `SUBLICENSE` and `ASSIGN_LICENSE` are deliberately
  * not introduced by this package.
@@ -324,8 +324,8 @@ export const ENTERPRISE_LICENSE_FULL_BASIS_POINTS = GOVERNED_RIGHTS_SCOPE_FULL_B
  * impossible. Collapsing the two would let a seat count be compared against a
  * proportional share, which is exactly the escalation this package refuses.
  *
- * It is also not a metering system. AOC counts nothing, observes no usage,
- * and enforces no limit at run time. This is a ceiling AOC records and
+ * It is also not a metering system. Soberanía counts nothing, observes no usage,
+ * and enforces no limit at run time. This is a ceiling Soberanía records and
  * compares against what an external system *reports*, per granted license.
  * Denominations are opaque: `500` of one denomination is never comparable to
  * `500` of another.
@@ -337,8 +337,8 @@ export interface EnterpriseLicensedUnits {
 
 /**
  * Declared, provider-neutral limits a license authorization carries. Every
- * field is a description AOC records and can compare; none is an instruction
- * AOC carries out, and none is interpreted against any real platform,
+ * field is a description Soberanía records and can compare; none is an instruction
+ * Soberanía carries out, and none is interpreted against any real platform,
  * licensee, or legal system.
  *
  * - `prohibitedUses?` -- governed uses this authorization explicitly excludes.
@@ -351,7 +351,7 @@ export interface EnterpriseLicensedUnits {
  * - `permittedContexts?` -- the operating context the license is confined to,
  *   as a map from an opaque *dimension* label to an opaque allow-list of
  *   values. `{ territory: ['a'], channel: ['web'] }` and
- *   `{ environment: ['production'] }` are both well-formed, and AOC
+ *   `{ environment: ['production'] }` are both well-formed, and Soberanía
  *   interprets neither. Territory is deliberately **not** the root concept:
  *   for software the operating context may be an environment, for content a
  *   channel or platform, for data a market -- and hard-coding geography would
@@ -360,7 +360,7 @@ export interface EnterpriseLicensedUnits {
  *   endorsement of any value.
  * - `maximumLicenseTermEndsAt?` -- the latest instant the *external* license
  *   this authorization permits may run to. Deliberately distinct from the
- *   mandate's own `expiresAt`, which bounds AOC's authority to grant rather
+ *   mandate's own `expiresAt`, which bounds Soberanía's authority to grant rather
  *   than the granted license's life. Absent means this authorization declares
  *   no ceiling on the external term.
  * - `maximumLicensedUnits?` -- the per-license ceiling described above.
@@ -379,7 +379,7 @@ export interface EnterpriseLicensedUnits {
  *   This is the hook for arrangements that depend on an external contract,
  *   payment, royalty or consideration: the requirement is expressed as
  *   "evidence must be produced", and the evidence itself is carried by the
- *   existing `evidenceRefs` and obligation machinery. AOC computes no
+ *   existing `evidenceRefs` and obligation machinery. Soberanía computes no
  *   royalty, charges nothing, settles nothing, and infers no consideration.
  */
 export interface EnterpriseLicenseConstraints {
@@ -523,7 +523,7 @@ export function enterpriseLicensedUnitsEquals(a: EnterpriseLicensedUnits | undef
 
 /**
  * Whether `inner` does not exceed `outer`. Unit counts in different
- * denominations are never comparable -- AOC holds no conversion between a
+ * denominations are never comparable -- Soberanía holds no conversion between a
  * "seat" and an "installation", and silently coercing between labels is
  * exactly the escalation this refusal prevents -- so a denomination mismatch
  * is `false`, never a conversion.
@@ -553,7 +553,7 @@ export function enterpriseLicenseRightsScopeEquals(
  *   fact, and treating it as "100%" would invert the containment.
  * - `outer` absent, `inner` present -- **not** contained. An authorization
  *   that never expressed a portion did not authorize one to be asserted, and
- *   AOC cannot verify a fraction it never granted.
+ *   Soberanía cannot verify a fraction it never granted.
  * - both present -- contained iff the kinds match and the quantity fits.
  *   Proportional shares and unit counts describe different quantities and are
  *   never coerced into one another; unitized scopes must also agree on

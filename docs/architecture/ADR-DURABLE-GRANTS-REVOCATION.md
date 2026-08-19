@@ -1,9 +1,9 @@
 # ADR: Durable Grants + Truthful Effective Revocation (Sovereign Execution Binding, Slice 1)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Sequence: Slice 1 of N, Sovereign Execution Binding
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/durable-grants-revocation-tctqpg`
 - Related: `ADR-ACCESS-LIFECYCLE.md` (R005.0, frozen input), `ADR-PROVIDER-ADAPTER-CONTRACT.md`
   (R005.A, frozen input), `ADR-PROVIDER-TRANSLATION-MODEL.md` (R005.B, frozen
@@ -24,7 +24,7 @@ into
 > measures when revocation actually becomes effective, and produces
 > correlated evidence."
 
-It does **not** claim, and this slice explicitly forbids claiming, "AOC
+It does **not** claim, and this slice explicitly forbids claiming, "Soberanía
 instantly kills every Pinata URL." That claim is false for the current
 Pinata provider and is never made by this slice's code, tests, or
 documentation.
@@ -39,7 +39,7 @@ separating that single claim into four, each independently true or false,
 independently recorded:
 
 1. **Governance Revocation** — the durable, tenant-scoped business fact
-   that AOC Enterprise no longer considers a grant valid. Represented by
+   that Soberanía Enterprise no longer considers a grant valid. Represented by
    `AccessGrantRecord.status: 'revoked'` plus an
    `AccessGrantRevocationRecord`
    (`src/enterprise/access-governance/contracts.ts`), composed directly
@@ -104,7 +104,7 @@ about **this one provider adapter**, verified directly against the real
 `pinata` SDK surface (`packages/pinata-adapter/src/pinata-provider-client.ts`):
 Pinata's private-gateway signed access links (`gateways.private.createAccessLink`)
 carry their own `expires` bound and have no companion "revoke this link"
-API. It is not evidence that AOC Enterprise's architecture cannot support
+API. It is not evidence that Soberanía Enterprise's architecture cannot support
 real-time revocation — a future provider adapter (e.g. one fronting
 short-lived, individually-revocable capability tokens) can genuinely
 declare `effectiveRevocationMode: 'immediate_selective'`, and this
@@ -208,7 +208,7 @@ paths route to the correct, distinct identifier and never to each other.
   issue/revoke input is validated through `validateEnterpriseAccessGrant`/
   `validateEnterpriseGrantRevocation` (`@aoc-enterprise/access-grant`,
   `@aoc-enterprise/grant-revocation`) before being durably persisted.
-- **AOC Protocol** is not modified. **A2 Mediated Credential architecture**
+- **Soberanía Protocol** is not modified. **A2 Mediated Credential architecture**
   is preserved: this slice adds no encryption, KMS, `ProtectedAsset`,
   player, `ExecutionGrant` asset binding, fingerprinting, or watermarking —
   all explicitly out of scope, reserved for later slices.

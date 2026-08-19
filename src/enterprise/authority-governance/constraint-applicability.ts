@@ -156,7 +156,7 @@ export const GOVERNED_ACTION_CONSTRAINT_PROFILES: readonly GovernedActionConstra
     // at all — an absent `rightsScope` is emphatically not 100%, so there is no
     // quantity for a constraint to reduce. An `economic-interest` constraint
     // does not reach a `usage-right` licence, and there is deliberately no
-    // cross-right relation that would let it: AOC holds no evidence those
+    // cross-right relation that would let it: Soberanía holds no evidence those
     // quantities are commensurable. Licence scarcity — exclusivity, seat
     // ceilings, duration — remains action-local policy.
     action: LICENSE,
@@ -341,7 +341,7 @@ export function applicableGovernedConstraintsFor(args: {
   if (applicability.status === 'constraint_state_invalid') {
     throw new AuthorityGovernanceError(
       'GOVERNED_AUTHORITY_CONSTRAINT_STATE_INVALID',
-      `A persistent constraint standing over '${args.holderRef}' cannot be classified, so AOC cannot prove this action respects it; refusing rather than treating it as unrelated.`,
+      `A persistent constraint standing over '${args.holderRef}' cannot be classified, so Soberanía cannot prove this action respects it; refusing rather than treating it as unrelated.`,
       {
         tenantId: args.tenantId,
         holderRef: args.holderRef,

@@ -340,7 +340,7 @@ describe('COLLATERALIZE — release and discharge evidence', () => {
     assert.equal(after.executionCount, 1);
   });
 
-  it('refuses a release that references an arrangement AOC has no evidence of', async () => {
+  it('refuses a release that references an arrangement Soberanía has no evidence of', async () => {
     const world = buildCollateralizationWorld();
     const outcome = await world.service.requestCollateralization(TENANT_A_CONTEXT, COLLATERAL_TENANT_A, buildCollateralStewardRequest());
     const mandateId = outcome.mandate?.id ?? '';
@@ -412,7 +412,7 @@ describe('COLLATERALIZE — revocation', () => {
       'revocation preserves how far the authorization had already been exercised',
     );
 
-    // The already-recorded arrangement is untouched: AOC never claims to have
+    // The already-recorded arrangement is untouched: Soberanía never claims to have
     // released a security interest an external system created.
     const executions = await world.service.listExecutions(TENANT_A_CONTEXT, mandateId);
     assert.equal(executions.length, 1);
@@ -581,13 +581,13 @@ describe('COLLATERALIZE — evidence lineage', () => {
 });
 
 describe('COLLATERALIZE — boundary', () => {
-  it('never asserts that AOC created, perfected, valued or ranked anything', async () => {
+  it('never asserts that Soberanía created, perfected, valued or ranked anything', async () => {
     const world = buildCollateralizationWorld();
     const outcome = await world.service.requestCollateralization(TENANT_A_CONTEXT, COLLATERAL_TENANT_A, buildCollateralStewardRequest());
     const mandateId = outcome.mandate?.id ?? '';
     const executed = await world.service.recordExecution(TENANT_A_CONTEXT, buildConformingExecution(mandateId, { executionId: 'exec-1' }));
 
-    // Everything AOC holds about the external world came from the report, and
+    // Everything Soberanía holds about the external world came from the report, and
     // is stored under an `external*`/reported name -- never as a determination.
     assert.equal(executed.execution.priorityRank, 1, 'the ranking is what the external system reported');
     assert.equal(executed.execution.externalFilingReference, 'filing-2026-0001');
@@ -637,9 +637,9 @@ describe('COLLATERALIZE — boundary', () => {
 });
 
 /**
- * Evidence classification: what AOC authorized, versus what an external
+ * Evidence classification: what Soberanía authorized, versus what an external
  * system later did about it. The `CollateralizationMandate` is produced and
- * owned by AOC Enterprise, so it is an `authorization_artifact`; the external
+ * owned by Soberanía Enterprise, so it is an `authorization_artifact`; the external
  * collateral arrangement and its release are reports about someone else's
  * actions and stay `execution_record`s.
  *
@@ -680,7 +680,7 @@ describe('COLLATERALIZE — governance evidence classification', () => {
     assert.equal(byId.get(release.id)?.referenceType, 'execution_record');
 
     // The whole lineage in one aggregate, with exactly one authorization in it:
-    // decision -> what AOC authorized -> what was externally done -> what was
+    // decision -> what Soberanía authorized -> what was externally done -> what was
     // externally released.
     const authorizationRefs = (record?.references ?? []).filter((reference) => reference.referenceType === 'authorization_artifact');
     assert.deepEqual(

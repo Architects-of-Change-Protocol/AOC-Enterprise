@@ -5,7 +5,7 @@ issued authorization**: `EnterpriseAccessGrant`. It references
 `EnterpriseAccessDecision` (`@aoc-enterprise/access-decision`) and
 `EnterpriseAccessObligation` (`@aoc-enterprise/access-obligation`) by opaque
 correlation ids -- it never embeds, duplicates, or extends either -- and
-composes AOC Protocol's `ResourceRef` directly, the same identity primitive
+composes Soberanía Protocol's `ResourceRef` directly, the same identity primitive
 `EnterpriseResourceEnvelope` composes.
 
 This package is a pure data contract: no persistence, no service, no API, no
@@ -52,12 +52,12 @@ translate into provider-specific execution -- never that execution itself.
   This package never duplicates any `EnterpriseAccessObligation` field
   (`type`, `mandatory`, `severity`, `parameters`, ...).
 - **Resource identity** (`kind`, `id`, `tenantId`, `attributes`) is owned by
-  AOC Protocol's `ResourceRef` (`@aoc/protocol`), composed directly as
+  Soberanía Protocol's `ResourceRef` (`@aoc/protocol`), composed directly as
   `resource: ResourceRef` -- not the full `EnterpriseResourceEnvelope`. This
   package never duplicates those fields.
 - **Everything else on `EnterpriseAccessGrant`** -- `id`, `status`,
   `principalId`, `issuedAt`, `expiresAt`, `correlationId`, `issuerRef?`,
-  `auditRefs?` -- is owned by AOC Enterprise (`@aoc-enterprise/access-grant`),
+  `auditRefs?` -- is owned by Soberanía Enterprise (`@aoc-enterprise/access-grant`),
   because it is metadata about the issuance event itself.
 
 ## Why composition by reference, not embedding
@@ -354,7 +354,7 @@ against the current time -- see "Explicit non-responsibilities."
 
 ## Install / build
 
-Part of the AOC Enterprise workspace:
+Part of the Soberanía Enterprise workspace:
 
 ```bash
 npm run build --workspace @aoc-enterprise/access-grant

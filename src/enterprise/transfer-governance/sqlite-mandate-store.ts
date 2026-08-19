@@ -74,7 +74,7 @@ const DEFAULT_BUSY_TIMEOUT_MS = 5_000;
 //    restart-stable append order independent of insertion timing or rowid
 //    reuse.
 //  - `lifecycle_id PRIMARY KEY` + an `execution_id` foreign key -> a reported
-//    registration/reversal always references a movement AOC actually has
+//    registration/reversal always references a movement Soberanía actually has
 //    evidence of.
 //
 // `terms_json` is the canonical serialization of `EnterpriseTransferTerms`
@@ -862,7 +862,7 @@ export async function createSqliteTransferMandateStore(
       if (transferredScope === null) {
         throw new TransferGovernanceError(
           'TRANSFER_EXECUTION_NOT_AUTHORIZED',
-          'The reported movement is not commensurable with the portion already transferred under this mandate; refusing to record a total AOC could not justify.',
+          'The reported movement is not commensurable with the portion already transferred under this mandate; refusing to record a total Soberanía could not justify.',
           { refusalCode: 'CUMULATIVE_SCOPE_EXCEEDS_MANDATE', mandateId: mandate.id },
         );
       }
@@ -930,7 +930,7 @@ export async function createSqliteTransferMandateStore(
       if (selectExecutionByIdAndMandate.get(input.executionId, mandate.id) === undefined) {
         throw new TransferGovernanceError(
           'TRANSFER_EXECUTION_NOT_FOUND',
-          `No transfer execution '${input.executionId}' recorded under mandate '${mandate.id}'; a lifecycle report must reference a movement AOC has evidence of.`,
+          `No transfer execution '${input.executionId}' recorded under mandate '${mandate.id}'; a lifecycle report must reference a movement Soberanía has evidence of.`,
           { mandateId: mandate.id, executionId: input.executionId },
         );
       }
@@ -962,7 +962,7 @@ export async function createSqliteTransferMandateStore(
         // Deliberately a single INSERT and nothing else: a reported outcome is
         // an observation about an external movement, so there is no mandate row
         // to update. In particular `transferred_scope_json` and
-        // `execution_count` are untouched even for a reported reversal -- AOC
+        // `execution_count` are untouched even for a reported reversal -- Soberanía
         // cannot verify the movement was undone and must not manufacture fresh
         // transfer capacity over a right already recorded as having left.
         insertLifecycle.run({

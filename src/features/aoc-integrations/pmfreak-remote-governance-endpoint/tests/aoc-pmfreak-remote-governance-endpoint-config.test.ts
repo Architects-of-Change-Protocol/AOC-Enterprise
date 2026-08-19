@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakRemoteGovernanceEndpointConfig } from '../aoc-pmfreak-remote-governance-endpoint-config.js';
 import { AOC_PMFREAK_REMOTE_GOVERNANCE_DEFAULT_PATH, AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_ID } from '../aoc-pmfreak-remote-governance-endpoint-constants.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- config defaults', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- config defaults', () => {
   it('defaults to a safe-by-default configuration', () => {
     const config = createAocPMFreakRemoteGovernanceEndpointConfig();
 
@@ -37,7 +37,7 @@ describe('AOC PMFreak Remote Governance Endpoint -- config defaults', () => {
   });
 });
 
-describe('AOC PMFreak Remote Governance Endpoint -- config cannot enable mutation/execution/writeback/invoicing/communications', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- config cannot enable mutation/execution/writeback/invoicing/communications', () => {
   it('forces allowPMFreakMutations to false and warns when a caller requests true', () => {
     const config = createAocPMFreakRemoteGovernanceEndpointConfig({ allowPMFreakMutations: true });
     assert.equal(config.allowPMFreakMutations, false);
@@ -86,7 +86,7 @@ describe('AOC PMFreak Remote Governance Endpoint -- config cannot enable mutatio
   });
 });
 
-describe('AOC PMFreak Remote Governance Endpoint -- production safety', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- production safety', () => {
   it('warns when environment is production and authMode is none_demo', () => {
     const config = createAocPMFreakRemoteGovernanceEndpointConfig({ environment: 'production', authMode: 'none_demo' });
     assert.ok(config.warnings.some((warning) => warning.includes('production')));

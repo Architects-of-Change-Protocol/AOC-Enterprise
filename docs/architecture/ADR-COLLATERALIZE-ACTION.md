@@ -1,7 +1,7 @@
 # ADR: `COLLATERALIZE` as a governed action, and what the second enforcement taught us
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: `ADR-TOKENIZE-CAPABILITY.md`,
   `ADR-TOKENIZATION-MANDATE-PERSISTENCE.md`, `ADR-ACCESS-GRANT.md`,
   `ADR-POLICY-OBLIGATION.md`, `ADR-ENTERPRISE-GOVERNANCE-STORE.md`,
@@ -10,7 +10,7 @@
 
 ## Context
 
-AOC Enterprise must be able to govern whether a defined scope of specified
+Soberanía Enterprise must be able to govern whether a defined scope of specified
 rights of an already-governed asset may be committed as collateral securing a
 referenced obligation: by whom, for whose benefit, through which executor,
 under which conditions, after which approvals, and with what durable evidence.
@@ -21,7 +21,7 @@ This is deliberately the **second** real enforcement. `TOKENIZE` was the
 first. The purpose of implementing a second one is not only to have it, but to
 obtain a second concrete specimen so we can tell — from code, not from
 intuition — which parts of the first implementation were genuinely generic
-AOC Enterprise Enforcement infrastructure and which were specific to
+Soberanía Enterprise Enforcement infrastructure and which were specific to
 tokenization.
 
 The method was therefore fixed in advance: **implement concretely first,
@@ -79,17 +79,17 @@ satisfied or terminated. We considered three models and rejected two:
 
 - **A `RELEASE_COLLATERAL` governed action** — rejected for this change. It
   would be a real governed action with its own request, decision and mandate,
-  and nothing yet requires AOC to *authorize* a release rather than *observe*
+  and nothing yet requires Soberanía to *authorize* a release rather than *observe*
   one.
 - **A mandate status (`'released'`)** — rejected outright. An external release
   is a fact about an external arrangement. Presenting it as governance state
-  would be AOC claiming to know, or to have caused, something it did not, and
+  would be Soberanía claiming to know, or to have caused, something it did not, and
   would give the mandate a second source of truth that no pure validation
   function could keep consistent.
 - **An append-only evidence record referencing the specific execution it ends**
   — adopted. It fits the existing evidence model with no lifecycle redesign.
 
-Critically, recording a release does **not** decrement committed scope: AOC
+Critically, recording a release does **not** decrement committed scope: Soberanía
 cannot verify the external encumbrance ended and must not manufacture fresh
 collateralization headroom from an unverified report. Release evidence is
 accepted after revocation and after expiry, because reports about an
@@ -114,7 +114,7 @@ an existing interest blocks another, that collateral is transferable, or that
 collateralization transfers ownership. Exclusivity, priority/ranking and
 aggregate limits are **constraints** on an authorization, evaluated as policy.
 `requiredPriorityRank` records a requirement placed on an external system and
-is compared against what that system *reports* — never a priority AOC
+is compared against what that system *reports* — never a priority Soberanía
 determined or a claim of legal perfection. No jurisdiction, asset class, or
 technology is assumed anywhere.
 
@@ -167,7 +167,7 @@ framework.
 
 ## Consequences
 
-- AOC Enterprise now demonstrably has a governance architecture that is **not
+- Soberanía Enterprise now demonstrably has a governance architecture that is **not
   tokenization-specific**: the same asset can be the subject of two
   independent governed actions, each with its own enforcement, mandate,
   durable store and evidence chain.
@@ -178,7 +178,7 @@ framework.
 - `authorization_artifact` as a `GovernanceReferenceRecord.referenceType` has
   now earned its place on the evidence — two grant-shaped mandate artifacts
   are both being recorded as `external_artifact`, which is a real mislabel for
-  records AOC itself produces. It is **not** introduced here because emitting a
+  records Soberanía itself produces. It is **not** introduced here because emitting a
   new stored value is a Governance Store change with its own migration and
   version-guard story; bundling it with a new governed action would put a
   persistence-compatibility change where reviewers are not looking for one. It
@@ -191,7 +191,7 @@ framework.
   two emitted values. Historical `external_artifact` rows are left unrewritten.
   See "Reference vocabulary" in
   `docs/enterprise/AOC_ENTERPRISE_GOVERNANCE_STORE.md`.
-- No AOC Protocol change was required or is recommended. Enterprise maintains
+- No Soberanía Protocol change was required or is recommended. Enterprise maintains
   the complete collateralization authority/evidence lineage on its own;
   Protocol supplied only `ResourceRef`. `COLLATERALIZE` suggests an
   *encumbrance / governed-interest lineage* concept much as `TOKENIZE`
@@ -212,8 +212,8 @@ framework.
   it would let an unverified external report create fresh collateralization
   capacity.
 - **Give the mandate a `'released'` status.** Rejected: a second source of
-  truth for a fact AOC did not determine.
+  truth for a fact Soberanía did not determine.
 - **Model the secured obligation as a full lending-domain object.** Rejected:
   an opaque canonical reference plus an optional never-interpreted kind label
-  answers "what is this securing?" without AOC acquiring a lending domain it
+  answers "what is this securing?" without Soberanía acquiring a lending domain it
   has no business owning.

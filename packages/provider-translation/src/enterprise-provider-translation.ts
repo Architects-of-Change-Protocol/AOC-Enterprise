@@ -42,7 +42,7 @@ import { ENTERPRISE_PROVIDER_CAPABILITIES } from '@aoc-enterprise/provider-adapt
  * enforcement, no orchestration. See the package README for the full design
  * rationale and the R005.0/R005.A boundary this contract sits on top of.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/provider-translation`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/provider-translation`).
  */
 export const ENTERPRISE_PROVIDER_TRANSLATION_SCHEMA_VERSION = '1.0.0' as const;
 

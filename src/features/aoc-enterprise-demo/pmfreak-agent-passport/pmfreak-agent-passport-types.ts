@@ -1,8 +1,8 @@
 /**
- * AOC PMFreak Agent Passport Demo Pack v1 -- domain types.
+ * Soberanía PMFreak Agent Passport Demo Pack v1 -- domain types.
  *
  * PMFreak is a project-management agent system. This module models PMFreak
- * agents as AOC-governed actors: they act only when they carry a valid,
+ * agents as Soberanía-governed actors: they act only when they carry a valid,
  * non-revoked passport, a role-scoped authority, an active capability
  * token, sufficient evidence, and (where required) an approval -- never
  * because they are merely technically able to act.

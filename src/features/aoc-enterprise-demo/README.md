@@ -1,25 +1,25 @@
-# AOC Enterprise Demo Scenario Pack
+# Soberanía Enterprise Demo Scenario Pack
 
 Recognition Runtime, Authority Graph, Approval Runtime, External Agent
-Handshake and Action Enforcement make AOC **decidable**. The Control Plane
+Handshake and Action Enforcement make Soberanía **decidable**. The Control Plane
 makes it **auditable and operable**. This module makes it **demonstrable**:
 a curated set of deterministic, runtime-backed scenarios that show an
 enterprise buyer, an internal tester, an investor or a protocol reviewer
-exactly how AOC behaves -- not a description of how it behaves.
+exactly how Soberanía behaves -- not a description of how it behaves.
 
-It answers one question: **how do we prove, end to end, that AOC recognizes,
+It answers one question: **how do we prove, end to end, that Soberanía recognizes,
 governs, approves, trusts and enforces autonomous action -- using the real
 runtime, not a story about it?**
 
 ## Why demo scenarios, and why after the Control Plane
 
-Once the Control Plane exists, a human can inspect any single decision AOC
+Once the Control Plane exists, a human can inspect any single decision Soberanía
 made. What it cannot do on its own is walk someone through a *narrative*: "an
 agent tried to act, here is why it was allowed," "an agent tried to act, here
 is why it was blocked, and here is how a human unlocks it." Enterprise sales
 conversations, internal validation and investor demos all need that
 narrative layer -- curated scenarios with a beginning, a real governance
-outcome, and an explanation -- without which "AOC is decidable and auditable"
+outcome, and an explanation -- without which "Soberanía is decidable and auditable"
 stays an engineering claim instead of something anyone can watch happen.
 
 ## Real runtime-backed scenarios vs. fake demos
@@ -203,10 +203,10 @@ renders five artifact types purely in memory (`DemoExportArtifact.content` is
 a string) -- there is no filesystem write anywhere in this module:
 
 - `json_summary` -- scenario id, outcome, assertion pass/fail summary, proof chain.
-- `markdown_script` -- buyer pain, AOC value, numbered talk track.
+- `markdown_script` -- buyer pain, Soberanía value, numbered talk track.
 - `operator_walkthrough` -- outcome, executor/side-effect facts, steps, proof chain completeness.
 - `technical_trace` -- every real id (`enforcementRequestId`, `enforcementDecisionId`, `recognitionDecisionId`, `authorityProofId`, `approvalProofId`, `handshakeProofId`, `proofHash`) plus per-assertion pass/fail.
-- `sales_one_pager` -- summary, buyer pain, AOC value, enterprise message, demonstrated outcome.
+- `sales_one_pager` -- summary, buyer pain, Soberanía value, enterprise message, demonstrated outcome.
 
 ## The 10 foundational scenarios
 
@@ -231,7 +231,7 @@ Republic, holds authority delegated from Victor, and drafts the closure
 email for `project:HMP-14665`.
 **Buyer pain:** enterprises don't trust an autonomous agent to act without
 proof identity, authority and scope were actually checked.
-**AOC value:** AOC only allows execution once Recognition and Authority
+**Soberanía value:** Soberanía only allows execution once Recognition and Authority
 independently agree the action is in scope, and the real executor runs
 exactly once.
 **Expected runtime behavior:** `execute_allowed`; executor runs once;
@@ -243,7 +243,7 @@ Proofs / Audit (enforcement -> authority chain).
 **Story:** PMFreak attempts `send_client_follow_up` before Victor approves it.
 **Buyer pain:** fear of an autonomous agent emailing a client with no human
 ever reviewing the message.
-**AOC value:** Recognition itself requires human approval for this
+**Soberanía value:** Recognition itself requires human approval for this
 capability, and enforcement blocks execution until it exists.
 **Expected runtime behavior:** `approval_required`; executor never runs; a
 real `ApprovalRequest` is created and left pending.
@@ -255,7 +255,7 @@ panel (blocked decision).
 retries with the resulting `ApprovalProof`.
 **Buyer pain:** a governance system that only blocks, with no path forward,
 is unusable for real work.
-**AOC value:** a real `ApprovalProof` id, presented on the retried request,
+**Soberanía value:** a real `ApprovalProof` id, presented on the retried request,
 is what changes enforcement's decision -- not a UI toggle.
 **Expected runtime behavior:** first attempt `approval_required`, executor
 0 runs; second attempt `execute_allowed`, executor exactly 1 run; final
@@ -268,7 +268,7 @@ Enforcement panel (executed request).
 `invoice_backup` evidence its capability token requires.
 **Buyer pain:** need proof an agent had the right supporting documentation
 before touching invoicing.
-**AOC value:** the evidence requirement is enforced before Enforcement is
+**Soberanía value:** the evidence requirement is enforced before Enforcement is
 even reached.
 **Expected runtime behavior:** `evidence_required`; executor never runs.
 **Show in Control Plane:** Enforcement panel (evidence_required reason code).
@@ -279,7 +279,7 @@ Handshake and receives a scope-limited visa and ingress grant to read the
 project summary.
 **Buyer pain:** need to collaborate with partner-run agents without
 granting unbounded internal access.
-**AOC value:** a completed handshake produces a real, scope-limited
+**Soberanía value:** a completed handshake produces a real, scope-limited
 `AgentVisa`/`IngressGrant` that enforcement checks on every request.
 **Expected runtime behavior:** handshake `accepted`; `execute_allowed`;
 executor runs once.
@@ -290,7 +290,7 @@ grant), Enforcement panel (executed request).
 **Story:** The same agent retries the same read after its visa expires.
 **Buyer pain:** external access needs to expire automatically, not rely on
 someone remembering to revoke it.
-**AOC value:** Handshake Runtime marks the visa expired, and every
+**Soberanía value:** Handshake Runtime marks the visa expired, and every
 subsequent standing check denies it.
 **Expected runtime behavior:** visa `expired`; enforcement decision not
 `allowedToExecute`; executor never runs.
@@ -302,7 +302,7 @@ panel (blocked decision).
 denies the action outright even though Recognition/Authority would allow it.
 **Buyer pain:** need a last line of defense at the execution boundary, not
 just trust in upstream policy checks.
-**AOC value:** a registered `EnforcementAdapter` deny always wins over an
+**Soberanía value:** a registered `EnforcementAdapter` deny always wins over an
 upstream allow.
 **Expected runtime behavior:** `adapter_denied`; executor never runs.
 **Show in Control Plane:** Enforcement panel (adapter_denied reason code).
@@ -312,7 +312,7 @@ upstream allow.
 the identical request and key are submitted again.
 **Buyer pain:** fear of a retried webhook or looping agent sending the same
 client email twice.
-**AOC value:** a presented idempotency key ties a repeat submission to the
+**Soberanía value:** a presented idempotency key ties a repeat submission to the
 prior result; the real executor never runs twice.
 **Expected runtime behavior:** first `execute_allowed` (executor runs once);
 second `duplicate_suppressed` (executor 0 runs); both requests carry the
@@ -325,7 +325,7 @@ key, one executed + one suppressed).
 draft-closure-email action that would otherwise be allowed.
 **Buyer pain:** need one lever that stops every autonomous action
 immediately during an incident.
-**AOC value:** Action Enforcement checks a single emergency-deny flag before
+**Soberanía value:** Action Enforcement checks a single emergency-deny flag before
 every other policy, so it overrides an otherwise fully valid request.
 **Expected runtime behavior:** `emergency_denied`; executor never runs;
 `enforcementRuntime.isEmergencyDenyActive()` is `true`.
@@ -338,7 +338,7 @@ opens the Control Plane and traces the chain from the enforcement proof back
 through the approval proof, recognition decision and authority proof.
 **Buyer pain:** won't trust an autonomous decision that cannot be traced
 back to its evidence after the fact.
-**AOC value:** every enforcement proof carries the ids of the upstream
+**Soberanía value:** every enforcement proof carries the ids of the upstream
 proofs that produced it, so the full chain is always reconstructible.
 **Expected runtime behavior:** `execute_allowed`; proof chain includes
 enforcement, recognition, authority and approval sources and is `complete`.
@@ -375,7 +375,7 @@ panel, Approvals panel.
 Domain Policy Pack Runtime, Policy Pack Enforcement Wiring, and the Policy
 Pack Control Plane Extension all exist independently of this module. This
 extension answers the demo-layer question they leave open: **how do we
-demonstrate, end to end, that AOC can apply domain/customer/jurisdiction
+demonstrate, end to end, that Soberanía can apply domain/customer/jurisdiction
 policy packs during autonomous execution, block unsafe actions, require
 evidence or approval, preserve warnings, and show everything in the Control
 Plane -- using the real runtime, not a story about it?**
@@ -385,7 +385,7 @@ Plane -- using the real runtime, not a story about it?**
 Action Enforcement can already consult a Domain Policy Pack Runtime during
 preflight, and the Control Plane can already display a Policy Packs section.
 What was still missing was the same narrative layer the first ten scenarios
-give every other AOC layer: a curated, runtime-backed walk from "an agent
+give every other Soberanía layer: a curated, runtime-backed walk from "an agent
 tried a policy-governed action" to "here is exactly which rule matched,
 which decision it produced, and what it means for an enterprise buyer."
 
@@ -497,7 +497,7 @@ module they are feature-local and SSR-tested only.
 #### 1. Payment Approval Blocked Pending Finance Review
 **Story:** PMFreak attempts `approve_payment`; payments-basic requires a
 `finance_review` approval.
-**Buyer message:** AOC can prevent autonomous financial execution unless the
+**Buyer message:** Soberanía can prevent autonomous financial execution unless the
 enterprise policy pack requires and receives finance approval.
 **Show in Control Plane:** Policy Packs (matched finance-review rule),
 Enforcement (blocked decision referencing the same policy decision id).
@@ -505,7 +505,7 @@ Enforcement (blocked decision referencing the same policy decision id).
 #### 2. Bank Account Change Denied by Policy Pack
 **Story:** Victor attempts `change_bank_account`; payments-basic denies it
 by default, independent of every other governance layer.
-**Buyer message:** AOC can enforce hard-deny enterprise policies at
+**Buyer message:** Soberanía can enforce hard-deny enterprise policies at
 execution time.
 **Show in Control Plane:** Policy Packs (deny rule + proof), Enforcement
 (blocked decision).
@@ -514,7 +514,7 @@ execution time.
 **Story:** PMFreak attempts `prepare_invoice_support` with Recognition's own
 evidence requirement satisfied, but without the purchase-order evidence
 procurement-basic independently requires.
-**Buyer message:** AOC does not let agents proceed with procurement
+**Buyer message:** Soberanía does not let agents proceed with procurement
 workflows unless required supporting evidence exists.
 **Show in Control Plane:** Policy Packs (evidence requirement), Enforcement
 (evidence_required decision).
@@ -522,7 +522,7 @@ workflows unless required supporting evidence exists.
 #### 4. Sensitive Data Export Blocked Pending Compliance Review
 **Story:** Victor attempts `export_client_data` touching the sensitive `pii`
 data domain; data-boundary-basic requires compliance review.
-**Buyer message:** AOC can protect sensitive data exports through
+**Buyer message:** Soberanía can protect sensitive data exports through
 policy-pack-driven compliance approval requirements.
 **Show in Control Plane:** Policy Packs (compliance-review approval
 requirement), Enforcement (approval_required decision).
@@ -530,7 +530,7 @@ requirement), Enforcement (approval_required decision).
 #### 5. Prohibited Data Export Denied by Policy Pack
 **Story:** Victor attempts `export_client_data` touching the prohibited
 `classified` data domain; data-boundary-basic denies it outright.
-**Buyer message:** AOC can enforce non-negotiable data boundaries before
+**Buyer message:** Soberanía can enforce non-negotiable data boundaries before
 execution.
 **Show in Control Plane:** Policy Packs (denial reason + proof), Enforcement
 (blocked decision).
@@ -539,7 +539,7 @@ execution.
 **Story:** PMFreak (delegated authority from Victor) attempts
 `settle_event_payment` for a known counterparty below the approval
 threshold, but without `event_record` evidence.
-**Buyer message:** AOC can require event records before smart-contract or
+**Buyer message:** Soberanía can require event records before smart-contract or
 payment settlement actions are executed.
 **Show in Control Plane:** Policy Packs (event_record evidence
 requirement), Enforcement (evidence_required decision).
@@ -548,7 +548,7 @@ requirement), Enforcement (evidence_required decision).
 **Story:** Trusted Partner Research Agent, with an active visa, performs
 `read_project_summary` touching only non-sensitive `project_metadata`;
 data-boundary-basic records an explicit `policy_allowed`.
-**Buyer message:** AOC does not overblock low-risk work; it preserves
+**Buyer message:** Soberanía does not overblock low-risk work; it preserves
 execution while recording policy warnings/decisions.
 **Show in Control Plane:** Policy Packs (allow rule + proof, present even
 though nothing was blocked), Enforcement (executed request).
@@ -557,7 +557,7 @@ though nothing was blocked), Enforcement (executed request).
 **Story:** An operator opens the Control Plane after a representative sweep
 of six blocked/pending policy decisions plus one allowed read, all in the
 same policy-pack-configured world.
-**Buyer message:** AOC makes policy-pack enforcement explainable to
+**Buyer message:** Soberanía makes policy-pack enforcement explainable to
 operators and buyers.
 **Show in Control Plane:** Policy Packs (every matched pack/rule/decision
 from the sweep), Enforcement (each linked decision), Proofs / Audit (the
@@ -567,9 +567,9 @@ full policy + enforcement proof chain).
 
 A `policy_warning` or `policy_allowed` result never blocks execution -- it
 is recorded (a real `PolicyPackDecision`/`PolicyPackProof` exist) but
-`EnforcementDecision.allowedToExecute` stays whatever every other AOC layer
+`EnforcementDecision.allowedToExecute` stays whatever every other Soberanía layer
 already decided. A `policy_denied`/`policy_requires_evidence`/
-`policy_requires_approval` result blocks even if every other AOC layer
+`policy_requires_approval` result blocks even if every other Soberanía layer
 already allowed the request -- see `DomainPolicyPackPolicy` in
 `action-enforcement/policies/domain-policy-pack-policy.ts`. Scenario 7
 demonstrates the former; scenarios 1-6 demonstrate the latter.
@@ -601,7 +601,7 @@ follows the same rule:
 - The Control Plane and this demo pack show **enforcement trace and policy
   evidence**, not a legal conclusion. Say "this demo pack models an
   enterprise policy requirement" and "a customer- or counsel-validated pack
-  could encode real customer policy" -- never "AOC proves legal compliance"
+  could encode real customer policy" -- never "Soberanía proves legal compliance"
   or a jurisdiction-specific compliance claim.
 
 ### How to add a future customer/jurisdiction policy-pack demo
@@ -694,7 +694,7 @@ snapshot, and its underlying policy/enforcement decision and proof into one
 `enterprise_demo_packet`. It never fabricates a scenario outcome -- every
 included fact is exactly what the real scenario run produced.
 
-## AOC Enterprise Pilot Template
+## Soberanía Enterprise Pilot Template
 
 Enterprise Demo scenarios can now be packaged into reusable Enterprise Pilot
 Templates via `src/features/aoc-enterprise-pilot-template/services/pilot-scenario-binding-service.ts`,

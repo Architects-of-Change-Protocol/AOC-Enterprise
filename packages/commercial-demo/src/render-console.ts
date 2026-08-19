@@ -45,7 +45,7 @@ export function renderDemoRunToConsole(run: CommercialDemoRun): string {
   const sections: string[] = [];
 
   sections.push(RULE);
-  sections.push('AOC ACCESS GOVERNANCE — COMMERCIAL REFERENCE DEMO (R006.A)');
+  sections.push('SOBERANÍA ACCESS GOVERNANCE — COMMERCIAL REFERENCE DEMO (R006.A)');
   sections.push(RULE);
   sections.push(`Customer: ${BUSINESS_SCENARIO.customerName}`);
   sections.push(BUSINESS_SCENARIO.customerDescription);

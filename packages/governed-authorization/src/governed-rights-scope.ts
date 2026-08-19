@@ -57,7 +57,7 @@ export function governedRightsScopeEquals(a: GovernedRightsScope, b: GovernedRig
  * never comparable: a proportional share and a unit count describe different
  * quantities, and silently coercing between them is exactly the escalation
  * this function exists to prevent. Unitized scopes must also agree on
- * `unitDenomination` — 500 of one unit is not 500 of another, and AOC holds no
+ * `unitDenomination` — 500 of one unit is not 500 of another, and Soberanía holds no
  * conversion between two opaque labels.
  */
 export function governedRightsScopeWithin(inner: GovernedRightsScope, outer: GovernedRightsScope): boolean {

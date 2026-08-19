@@ -3,7 +3,7 @@
  *
  * NOTE: Delegated capability semantics come from AOC-Protocol. Verified actor
  * identity claims are Enterprise-owned (see `@aoc-enterprise/identity`) --
- * AOC Protocol governance determined identity claims are not part of its
+ * Soberanía Protocol governance determined identity claims are not part of its
  * public API.
  */
 

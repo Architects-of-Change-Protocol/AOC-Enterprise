@@ -17,7 +17,7 @@ export const POLICY_PACK_PROHIBITED_DATA_EXPORT_DENIED_SCENARIO: DemoScenario = 
   shortTitle: 'Policy: Prohibited Export Denied',
   category: 'policy_packs',
   summary: 'Victor attempts export_client_data touching a prohibited data domain (classified); the data-boundary-basic policy pack denies the export outright.',
-  enterpriseMessage: 'AOC can enforce non-negotiable data boundaries before execution -- there is no approval path around a prohibited data domain.',
+  enterpriseMessage: 'Soberanía can enforce non-negotiable data boundaries before execution -- there is no approval path around a prohibited data domain.',
   buyerPain: 'Some data must never leave the trust domain regardless of who requests it or what approvals exist -- enterprises need a hard boundary, not a reviewable gate.',
   aocValue:
     'The data-boundary-basic policy pack denies exports touching prohibited data domains outright; Action Enforcement blocks the export with no evidence or approval path that could unlock it.',

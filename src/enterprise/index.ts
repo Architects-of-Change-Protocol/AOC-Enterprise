@@ -1,5 +1,5 @@
 /**
- * Public surface of the AOC Enterprise Host: the production HTTP service
+ * Public surface of the Soberanía Enterprise Host: the production HTTP service
  * that hosts `AocKernel` (`../kernel`). Exposes composition, hosting, and
  * contract types only -- internal orchestration/persistence wiring is
  * reachable for advanced embedding (e.g. a Next.js route handler that
@@ -36,7 +36,7 @@ export type { EnterpriseEvent, EnterpriseEventType, EnterpriseEventPublisher, Go
 export { createDefaultKernelProviders } from './providers/kernel-provider-composition.js';
 export type { KernelProviderSet, KernelWorldHandles } from './providers/kernel-provider-composition.js';
 
-// -- AOC Enterprise Governance Store v1 (PR-004) ----------------------------
+// -- Soberanía Enterprise Governance Store v1 (PR-004) ----------------------------
 
 export { createInMemoryGovernanceStore } from './governance-store/in-memory-governance-store.js';
 export type { CreateGovernanceStoreOptions } from './governance-store/in-memory-governance-store.js';
@@ -109,7 +109,7 @@ export { toKernelTrace, toKernelEvaluationResult } from './governance-store/stor
 export { createGovernanceReadService, resolveGovernanceAccessContext } from './orchestration/governance-read-service.js';
 export type { GovernanceReadService } from './orchestration/governance-read-service.js';
 
-// -- AOC Enterprise Evidence Bundle v1 (PR-005) -----------------------------
+// -- Soberanía Enterprise Evidence Bundle v1 (PR-005) -----------------------------
 
 export {
   AOC_EVIDENCE_BUNDLE_VERSION,
@@ -167,7 +167,7 @@ export {
 export type { EvidenceBuildRequestBody, EvidenceBundleResponseBody, EvidenceVerifyRequestBody } from './api/evidence-contract.js';
 export { mapEvidenceErrorToHttp } from './api/enterprise-http-errors.js';
 
-// -- AOC Enterprise Agent Passport Runtime v1 (PR-006) ----------------------
+// -- Soberanía Enterprise Agent Passport Runtime v1 (PR-006) ----------------------
 
 export {
   AOC_AGENT_PASSPORT_RUNTIME_VERSION,
@@ -237,7 +237,7 @@ export type {
 export { createAgentPassportModule, AGENT_PASSPORT_MODULE_ID } from './modules/passport-module.js';
 export { mapAgentPassportErrorToHttp } from './api/enterprise-http-errors.js';
 
-// -- AOC Enterprise Assurance Runtime v1 (PR-007) ----------------------------
+// -- Soberanía Enterprise Assurance Runtime v1 (PR-007) ----------------------------
 
 export {
   AOC_ASSURANCE_RUNTIME_VERSION,
@@ -427,7 +427,7 @@ export { createEnterpriseRequestListener } from './adapters/node-http-adapter.js
 export { createEnterpriseServer } from './host/enterprise-server.js';
 export type { EnterpriseServer } from './host/enterprise-server.js';
 
-// -- AOC Enterprise Module Lifecycle & Registry (PR-003) --------------------
+// -- Soberanía Enterprise Module Lifecycle & Registry (PR-003) --------------------
 
 export type {
   EnterpriseModuleId,

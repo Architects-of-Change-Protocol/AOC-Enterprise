@@ -28,7 +28,7 @@ import { governedAuthorityEncumbranceConstrains, type GovernedAuthorityEncumbran
  * ```
  *
  * They are five different claims. 1 does not imply 2; 2 does not imply 3 or 4;
- * and 5 is not AOC's to assert at all — it is the deployment's, expressed
+ * and 5 is not Soberanía's to assert at all — it is the deployment's, expressed
  * through ordinary policy, and this module's job is to hand policy the typed
  * facts rather than to invent the rule.
  *
@@ -38,7 +38,7 @@ import { governedAuthorityEncumbranceConstrains, type GovernedAuthorityEncumbran
  * authority may not be transferred, that tokenization conflicts with
  * collateral, or that an exclusive licence blocks a sale. Those may be valid
  * *deployment* policies and this layer is what makes them expressible; they are
- * not AOC truths and none of them is a default.
+ * not Soberanía truths and none of them is a default.
  *
  * There is likewise no priority, seniority or ranking, and no automatic
  * resolution: a conflict is reported, never negotiated, and a constraint in the
@@ -122,7 +122,7 @@ export interface GovernedActionConstraintProfile {
    * holder must still be covered afterwards.
    *
    * This is a **structural** property of the action, not a business rule about
-   * any class, and it is class-agnostic on purpose: AOC may not end up holding
+   * any class, and it is class-agnostic on purpose: Soberanía may not end up holding
    * a constraint over authority its holder no longer has, whatever kind of
    * constraint it is. `TRANSFER` is the only current action with it, and it
    * arrives at the same arithmetic as a capacity constraint by an entirely
@@ -194,7 +194,7 @@ export interface UnappliedGovernedConstraint {
   readonly reason: GovernedConstraintNonApplicabilityReason;
 }
 
-/** One constraint whose applicability could not be decided. Never treated as non-applicable: a constraint AOC cannot classify is a constraint AOC cannot prove it is respecting. */
+/** One constraint whose applicability could not be decided. Never treated as non-applicable: a constraint Soberanía cannot classify is a constraint Soberanía cannot prove it is respecting. */
 export interface InvalidGovernedConstraint {
   readonly constraintId: string;
   readonly sourceAction: string;
@@ -264,7 +264,7 @@ export interface EvaluateGovernedConstraintApplicabilityInput {
  *    resource or right is not this holder's problem, and asking anything
  *    further about it would invite a cross-binding inference. There is
  *    deliberately no cross-right hierarchy: an `economic-interest` constraint
- *    does not constrain a `usage-right` action, because AOC holds no evidence
+ *    does not constrain a `usage-right` action, because Soberanía holds no evidence
  *    that those quantities are commensurable and inventing the relation would
  *    be inventing the policy.
  *
@@ -382,7 +382,7 @@ export interface GovernedConstraintPolicyFact {
    * constraint from the view would have made a deployment's most obvious rule
    * inexpressible: "require approval to tokenize an asset whose economic
    * interest is collateralized" is precisely a rule about a constraint that
-   * consumes none of `TOKENIZE`'s capacity. AOC declines to invent that rule; it
+   * consumes none of `TOKENIZE`'s capacity. Soberanía declines to invent that rule; it
    * must not also withhold the fact the rule needs.
    *
    * A policy reading this must not treat a non-empty list as permission to
@@ -398,7 +398,7 @@ export interface GovernedConstraintPolicyFact {
  *
  * Policy is where cross-action *business* compatibility belongs — "may this
  * deployment tokenize an asset whose economic interest is collateralized?" is
- * a question with different right answers in different deployments, and AOC
+ * a question with different right answers in different deployments, and Soberanía
  * inventing one would be inventing the law. What this carries is the typed
  * facts that question needs and nothing more:
  *

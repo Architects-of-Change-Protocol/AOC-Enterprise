@@ -12,12 +12,11 @@ The following names may be trademarks or intended (unregistered) marks
 of Onchainfest LLC, used in connection with this project and related
 products:
 
-- AOC
-- Architects of Change
-- AOC Protocol
-- AOC Enterprise
-- AOC Assurance
-- AOC SAF
+- Soberanía
+- Soberanía Protocol
+- Soberanía Enterprise
+- Soberanía Assurance
+- Soberanía SAF
 
 None of these names are described in this document as registered
 trademarks. Registration status, if any, may vary by jurisdiction and is
@@ -36,16 +35,25 @@ internal identifiers does not, by itself, establish trademark rights or
 registration; it is noted here only to explain why these terms are
 listed.
 
+This repository also retains the legacy `aoc` / `aoc-enterprise` /
+`AOC_*` naming in package names, environment variables, schema and
+framework identifiers, serialized values, and public code symbols. Those
+strings are internal technical namespaces kept for compatibility, not
+current headline marks, and are not listed above as marks or intended
+marks. Historical documents and frozen release evidence in this
+repository likewise retain the naming in use when they were issued; that
+retention is a record of fact and is not a current trademark claim.
+
 ## What this document does not do
 
 - It does not claim registration of any mark where no registration
   evidence exists.
-- It does not assert trademark rights in "AOC Protocol" beyond
+- It does not assert trademark rights in "Soberanía Protocol" beyond
   identifying it as a name potentially associated with Onchainfest LLC;
   it does not attempt to use this trademark notice to acquire ownership
-  or control over the separate AOC Protocol project itself. See
+  or control over the separate Soberanía Protocol project itself. See
   `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md` for the ownership and
-  governance boundary between AOC Protocol and AOC Enterprise.
+  governance boundary between Soberanía Protocol and Soberanía Enterprise.
 - It does not extend to generic or descriptive terms used in their
   ordinary sense (e.g., "governance," "assurance," "evidence," "agent")
   outside the specific marks listed above.

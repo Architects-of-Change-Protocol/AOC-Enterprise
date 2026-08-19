@@ -1,7 +1,7 @@
 import type { ResourceRef, ScopedAccessRequest } from '@aoc/protocol';
 
 /**
- * Enterprise composition over AOC Protocol's `ScopedAccessRequest`.
+ * Enterprise composition over Soberanía Protocol's `ScopedAccessRequest`.
  *
  * `ScopedAccessRequest` is canonical in `@aoc/protocol`
  * (`principalId`, `resource`, `requestedScope`, `requestedAt` — no `scope` or
@@ -15,7 +15,7 @@ import type { ResourceRef, ScopedAccessRequest } from '@aoc/protocol';
  * This composes the public Protocol type rather than duplicating its fields, so
  * it inherits any future additive change to `ScopedAccessRequest` automatically.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/scoped-access`). Do not reinterpret
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/scoped-access`). Do not reinterpret
  * `action` as an alias of `requestedScope` — they are unrelated fields.
  */
 export interface EnterpriseScopedAccessRequest extends ScopedAccessRequest {

@@ -28,7 +28,7 @@ import type { EnterpriseCollateralizationTerms, EnterpriseCollateralizationTerms
  * Submitting one asserts nothing about who owns the asset, nothing about
  * whether the requester may encumber it, and nothing about whether the
  * referenced obligation is valid: authority is evaluated by the primitives
- * AOC already has (Authority Graph reached through Recognition Runtime, and
+ * Soberanía already has (Authority Graph reached through Recognition Runtime, and
  * the Approval Runtime's own quorum and segregation-of-duties policies), and
  * a request whose requester holds no `COLLATERALIZE` authority is denied by
  * that evaluation, not by this record.
@@ -43,7 +43,7 @@ import type { EnterpriseCollateralizationTerms, EnterpriseCollateralizationTerms
  * This is a pure data contract: no persistence, no service, no API, no policy
  * engine, no provider SDK, no execution.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/collateralization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/collateralization-mandate`).
  */
 export interface EnterpriseCollateralizationRequest {
   readonly schemaVersion: typeof ENTERPRISE_COLLATERALIZATION_SCHEMA_VERSION;

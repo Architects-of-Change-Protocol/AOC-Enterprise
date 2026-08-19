@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakGovernanceIntakeHealth } from '../aoc-pmfreak-governance-intake-health.js';
 import { createAocPMFreakGovernanceRequestIntakeConfig } from '../aoc-pmfreak-governance-intake-config.js';
 
-describe('AOC PMFreak Governance Request Intake -- health model', () => {
+describe('Soberanía PMFreak Governance Request Intake -- health model', () => {
   it('reports healthy for a clean default config', () => {
     const health = createAocPMFreakGovernanceIntakeHealth(createAocPMFreakGovernanceRequestIntakeConfig());
     assert.equal(health.status, 'healthy');

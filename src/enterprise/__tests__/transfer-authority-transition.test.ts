@@ -30,7 +30,7 @@ import {
  *
  * ```
  * 1. Post-transfer authority
- *    After a fully-evidenced transfer of a right to Party B, does AOC
+ *    After a fully-evidenced transfer of a right to Party B, does Soberanía
  *    consider Party B authorized to do anything with it?
  *
  * 2. Authority-source right vs action-target right
@@ -68,7 +68,7 @@ const TENANT_CONTEXT = { system: false, organizationId: TRANSFER_TENANT_A, actor
 // Finding 1 — post-transfer authority.
 // ---------------------------------------------------------------------------
 
-describe('TRANSFER — what AOC believes about the recipient after a completed transfer', () => {
+describe('TRANSFER — what Soberanía believes about the recipient after a completed transfer', () => {
   /** Runs the reference scenario to completion: mandate issued, movement effected and evidenced. */
   async function completedTransfer(worldOverrides: Parameters<typeof buildTransferWorld>[0] = {}) {
     const world = buildTransferWorld(worldOverrides);
@@ -88,7 +88,7 @@ describe('TRANSFER — what AOC believes about the recipient after a completed t
   it('records that the movement occurred, in full, with the recipient named', async () => {
     const { service, mandate, execution } = await completedTransfer();
 
-    // The premise of the question below: AOC really does hold complete,
+    // The premise of the question below: Soberanía really does hold complete,
     // integrity-sealed evidence that 25% of the economic interest moved from
     // Party A to Party B.
     assert.equal(execution.transfereeRef, TRANSFEREE_REF);
@@ -101,7 +101,7 @@ describe('TRANSFER — what AOC believes about the recipient after a completed t
   it('FINDING: the recipient acquires no authority — a governed request by Party B over the same right is denied', async () => {
     const { service } = await completedTransfer();
 
-    // Party B now holds the right, as far as every external system and AOC's
+    // Party B now holds the right, as far as every external system and Soberanía's
     // own evidence are concerned. It submits a TRANSFER of the right it just
     // received, onward to a third party.
     const onward = await service.requestTransfer(
@@ -128,7 +128,7 @@ describe('TRANSFER — what AOC believes about the recipient after a completed t
     assert.equal(onward.mandate, undefined);
   });
 
-  it('FINDING: the transferor retains its authority — AOC did not take anything away either', async () => {
+  it('FINDING: the transferor retains its authority — Soberanía did not take anything away either', async () => {
     const { service } = await completedTransfer();
 
     // The symmetric half of the same finding, and the more consequential one
@@ -136,20 +136,20 @@ describe('TRANSFER — what AOC believes about the recipient after a completed t
     // the completed transfer, so a *second* transfer of the same 25% is
     // authorized at the governance layer. Only the per-mandate conservation
     // rule stops the same portion moving twice, and that rule is scoped to one
-    // mandate: nothing in AOC knows that Party A now holds 25% less.
+    // mandate: nothing in Soberanía knows that Party A now holds 25% less.
     const second = await service.requestTransfer(
       TENANT_CONTEXT,
       TRANSFER_TENANT_A,
       buildTransferManagerRequest({ requestId: 'transfer-request-second', correlationId: 'corr-second' }),
     );
 
-    assert.equal(second.status, 'allowed', 'a completed transfer does not reduce the transferor-side authority AOC holds');
+    assert.equal(second.status, 'allowed', 'a completed transfer does not reduce the transferor-side authority Soberanía holds');
     assert.ok(second.mandate !== undefined);
     assert.deepEqual(second.mandate.terms.scope, { kind: 'proportional', basisPoints: 2500 });
     assert.equal(second.mandate.transferredScope, undefined, 'the new mandate starts from a clean cumulative total');
   });
 
-  it('CONTROL: an explicit administrative grant is what makes AOC recognize the recipient — and nothing in the transfer path performs it', async () => {
+  it('CONTROL: an explicit administrative grant is what makes Soberanía recognize the recipient — and nothing in the transfer path performs it', async () => {
     // Identical scenario, except an administrator has separately issued Party B
     // its own recognition, passport, capability token and authority grant. This
     // is the *only* thing that changes the outcome, and no transfer code path
@@ -184,7 +184,7 @@ describe('TRANSFER — what AOC believes about the recipient after a completed t
 
     // The lineage answers "who was authorized to receive it" and "how much
     // actually moved". It deliberately does not answer "who holds it now",
-    // because AOC has no basis for that claim: it never verified the movement
+    // because Soberanía has no basis for that claim: it never verified the movement
     // and holds no ownership state to update.
     assert.ok(!('currentHolder' in lineage));
     assert.ok(!('holderAfterTransfer' in lineage));

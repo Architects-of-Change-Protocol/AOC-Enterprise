@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Payment Received — AOC Agent Passport',
+  title: 'Payment Received — Soberanía Agent Passport',
 };
 
 interface Props {

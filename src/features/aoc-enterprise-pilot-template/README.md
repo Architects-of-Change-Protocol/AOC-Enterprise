@@ -1,20 +1,20 @@
-# AOC Enterprise Pilot Template
+# Soberanía Enterprise Pilot Template
 
 Recognition Runtime, Authority Graph, Approval Runtime, External Agent
 Handshake, Action Enforcement, the Domain Policy Pack Runtime, Evidence /
-Source / Citation Runtime, the AOC Control Plane, AOC Enterprise Demo, and
+Source / Citation Runtime, the Soberanía Control Plane, Soberanía Enterprise Demo, and
 the Verifiable Export Package answer "can this be recognized, authorized,
 approved, policy-checked, evidenced, enforced, observed and exported?" None
 of them answer the question an enterprise buyer or operator asks before
-they will pilot AOC at all:
+they will pilot Soberanía at all:
 
-**How does a real enterprise customer pilot AOC with a bounded use case,
+**How does a real enterprise customer pilot Soberanía with a bounded use case,
 real runtime-backed scenarios, clear acceptance criteria, operator
 walkthroughs, evidence trails, policy packs, Control Plane visibility, and
 verifiable export packages?**
 
 That is the Enterprise Pilot Template's job -- and it is the **final
-Foundation v1 packaging sprint**. AOC now has the runtime, governance,
+Foundation v1 packaging sprint**. Soberanía now has the runtime, governance,
 evidence, proof and export foundations; this feature packages those
 capabilities into reusable, enterprise-ready, demo-ready,
 implementation-ready pilot kits.
@@ -275,7 +275,7 @@ between two generations of the same content is detectable.
   confirmation of that fact -- never inferred by this feature.
 - No LLM generates any compliance conclusion, narrative, or decision
   anywhere in this feature. No network calls. No nondeterministic time or
-  IDs (`PilotRuntimeContext` injects both, mirroring every other AOC
+  IDs (`PilotRuntimeContext` injects both, mirroring every other Soberanía
   runtime).
 
 ## How to add a new pilot template

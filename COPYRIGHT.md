@@ -35,10 +35,10 @@ This copyright claim does **not** extend to:
   holders under their own licenses. See
   `docs/legal/OPEN_SOURCE_DEPENDENCIES.md` and
   `docs/legal/THIRD_PARTY_NOTICES.md`.
-- **AOC Protocol material.** AOC Protocol is a separate project and
-  repository with its own copyright and licensing regime. Where AOC
-  Enterprise consumes AOC Protocol as a dependency (`@aoc/protocol`),
-  the consumed material remains subject to AOC Protocol's own terms.
+- **Soberanía Protocol material.** Soberanía Protocol is a separate project and
+  repository with its own copyright and licensing regime. Where Soberanía
+  Enterprise consumes Soberanía Protocol as a dependency (`@aoc/protocol`),
+  the consumed material remains subject to Soberanía Protocol's own terms.
   See `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md`.
 - **Public specifications and standards.** Any public, vendor-neutral
   specification or standard referenced by this repository (as opposed

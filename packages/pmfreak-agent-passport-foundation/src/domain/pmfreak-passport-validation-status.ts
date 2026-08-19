@@ -13,7 +13,7 @@
  * satisfaction semantics (terminal statuses satisfy only themselves; a
  * lower-trust status never satisfies a higher-trust requirement) are
  * intentionally identical to the policy-pack lattice so a PMFreak passport
- * attestation's trust level reads consistently with every other AOC trust
+ * attestation's trust level reads consistently with every other Soberanía trust
  * lattice in this repository. If `policy-pack-foundation` is ever exported
  * from the root package's public surface, this mirror should be replaced
  * with a real import (see this package's README, "Future work").

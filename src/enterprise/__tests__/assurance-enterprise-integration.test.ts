@@ -27,7 +27,7 @@ async function bootEnterprise(): Promise<AocEnterprise> {
 
 const ORG_CONTEXT = { organizationId: 'org-1', system: false } as const;
 
-describe('AOC Enterprise -- Assurance Runtime module registration (mission sections 55-57/92)', () => {
+describe('Soberanía Enterprise -- Assurance Runtime module registration (mission sections 55-57/92)', () => {
   it('the Assurance Runtime module is registered, optional by default, and healthy', async () => {
     const enterprise = await bootEnterprise();
     const module = enterprise.modules().find((candidate) => candidate.id === ASSURANCE_MODULE_ID);
@@ -67,7 +67,7 @@ describe('AOC Enterprise -- Assurance Runtime module registration (mission secti
   });
 });
 
-describe('AOC Enterprise -- full end-to-end Assurance scenario (mission section 90)', () => {
+describe('Soberanía Enterprise -- full end-to-end Assurance scenario (mission section 90)', () => {
   it('Passport -> governed action -> Governance Record -> Evidence Bundle -> assessment -> evidence -> controls -> findings -> scores -> eligibility -> completion -> verification -> report', async () => {
     const enterprise = await bootEnterprise();
 
@@ -243,7 +243,7 @@ function metricsMarkedStale(enterprise: AocEnterprise): number {
   return enterprise.telemetry.snapshot().assuranceAssessmentsMarkedStaleCount;
 }
 
-describe('AOC Enterprise -- Assurance HTTP surface (mission section 58)', () => {
+describe('Soberanía Enterprise -- Assurance HTTP surface (mission section 58)', () => {
   async function startTestServer(): Promise<string> {
     const configuration = loadEnterpriseConfiguration({ AOC_ENTERPRISE_HTTP_PORT: '0', AOC_ENTERPRISE_HTTP_HOST: '127.0.0.1' });
     const server = await createEnterpriseServer({ kernelProviders: buildTestKernelProviders(), configuration });
@@ -377,7 +377,7 @@ describe('AOC Enterprise -- Assurance HTTP surface (mission section 58)', () => 
   });
 });
 
-describe('AOC Enterprise -- Assurance failure scenarios (mission section 91)', () => {
+describe('Soberanía Enterprise -- Assurance failure scenarios (mission section 91)', () => {
   it('a failed control is a valid assessment result, never an HTTP failure or Assurance error', async () => {
     const enterprise = await bootEnterprise();
     // No passport, no governed actions: identity controls resolve unknown, never throwing.

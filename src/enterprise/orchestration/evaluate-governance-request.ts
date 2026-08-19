@@ -87,7 +87,7 @@ function idempotencyScopeFor(organizationId: string | undefined): string {
  *
  * Persistence invariant (PR-004 section 64): no successful governance
  * response is ever returned when the required Governance Store commit
- * failed. The Kernel result may exist transiently, but AOC Enterprise does
+ * failed. The Kernel result may exist transiently, but Soberanía Enterprise does
  * not claim governed completion it cannot durably prove.
  */
 export async function evaluateGovernanceRequest(

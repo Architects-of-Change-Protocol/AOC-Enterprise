@@ -47,8 +47,8 @@ import type { GovernedAuthorizationArtifact, GovernedAuthorizationStatus } from 
  *   either.
  * - **Release/discharge is a fact about an external arrangement, not about
  *   this authorization.** An external system reporting that a security
- *   interest was released does not retroactively change what AOC authorized,
- *   and AOC must never present an externally-reported fact as a governance
+ *   interest was released does not retroactively change what Soberanía authorized,
+ *   and Soberanía must never present an externally-reported fact as a governance
  *   state it determined. Release is therefore recorded as separate,
  *   append-only, observation-only evidence
  *   (`EnterpriseCollateralizationReleaseEvidence`) that references the
@@ -96,7 +96,7 @@ export type EnterpriseCollateralizationMandateStatus = GovernedAuthorizationStat
  * a security interest an external system has already created (see the package
  * README, "Revocation is not release").
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/collateralization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/collateralization-mandate`).
  */
 export interface EnterpriseCollateralizationMandate extends GovernedAuthorizationArtifact<EnterpriseCollateralizationTerms> {
   /** Re-declared as this action's own literal so a serialized mandate names its schema on its face and cannot be replayed through a sibling action's contract. */
@@ -300,7 +300,7 @@ export function enterpriseCollateralizationMandateAuthorizes(
     return {
       authorized: false,
       code: 'PRIORITY_RANK_NOT_AUTHORIZED',
-      reason: `This collateralization mandate requires the external arrangement to rank no less senior than ${requiredRank}; the reported ranking is '${String(attempt.priorityRank)}'. AOC compares what an external system reports and determines no priority of its own.`,
+      reason: `This collateralization mandate requires the external arrangement to rank no less senior than ${requiredRank}; the reported ranking is '${String(attempt.priorityRank)}'. Soberanía compares what an external system reports and determines no priority of its own.`,
     };
   }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Validates the format and internal consistency of protocol-consumer.lock.json.
 // This is NOT an npm lockfile -- it is a small, auditable record of which
-// AOC Protocol commit/artifact AOC Enterprise has actually been validated
+// Soberanía Protocol commit/artifact Soberanía Enterprise has actually been validated
 // against (see docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md).
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';

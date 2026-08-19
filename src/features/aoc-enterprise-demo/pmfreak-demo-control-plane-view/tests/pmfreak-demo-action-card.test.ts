@@ -41,7 +41,7 @@ describe('createPMFreakDemoAttemptedActionCard', () => {
     const result = await runPMFreakProjectGovernanceScenario({ scenarioId: PMFREAK_SCENARIO_BILLING_READINESS_CHECK_READINESS_ID }, scenarioRegistry, runnerDeps);
     const card = createPMFreakDemoAttemptedActionCard(result);
 
-    assert.ok(card.safeDescription.includes('AOC evaluated passport, capability, scope, evidence and approvals'));
+    assert.ok(card.safeDescription.includes('Soberanía evaluated passport, capability, scope, evidence and approvals'));
     assert.equal(card.actionAttemptId, result.actionAttemptId);
     assert.equal(card.scenarioCategory, result.category);
   });

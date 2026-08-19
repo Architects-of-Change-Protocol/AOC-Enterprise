@@ -12,7 +12,7 @@ import type { PMFreakAgentPassportControlPlaneSummary, PMFreakAgentPassportResol
  */
 export const PMFREAK_CONTROL_PLANE_SAFE_LABELS = [
   'PMFreak agent passport',
-  'AOC-governed agent',
+  'Soberanía-governed agent',
   'Demo baseline',
   'Authority-scoped',
   'Capability-gated',

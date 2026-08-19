@@ -77,6 +77,6 @@ describe('createPMFreakDemoAgentPassportCard', () => {
     assert.ok(!text.includes('fully trusted'));
     assert.ok(!text.includes('certified'));
     assert.ok(!text.includes('production authorized'));
-    assert.ok(card.notes.includes('AOC-governed agent'));
+    assert.ok(card.notes.includes('Soberanía-governed agent'));
   });
 });

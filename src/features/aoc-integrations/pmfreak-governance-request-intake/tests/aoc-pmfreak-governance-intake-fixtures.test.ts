@@ -29,7 +29,7 @@ const REQUEST_RESPONSE_PAIRS = [
   [demoAocPMFreakCancelledActionRequest, demoAocPMFreakCancelledActionResponse, 'deny'],
 ] as const;
 
-describe('AOC PMFreak Governance Request Intake -- fixtures', () => {
+describe('Soberanía PMFreak Governance Request Intake -- fixtures', () => {
   it('every request fixture is structurally valid', () => {
     for (const [request] of REQUEST_RESPONSE_PAIRS) {
       const result = validateAocPMFreakGovernanceRequest(request);

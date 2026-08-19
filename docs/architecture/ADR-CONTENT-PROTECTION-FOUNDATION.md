@@ -1,9 +1,9 @@
 # ADR: Protected Resource + Content Encryption Foundation (Sovereign Execution Binding, Slice 2)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Sequence: Slice 2 of N, Sovereign Execution Binding
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/aoc-enterprise-slice-2-yq7pgf`
 - Precondition: `ADR-DURABLE-GRANTS-REVOCATION.md` (Slice 1, durable
   `AccessGrant`/`GrantRevocation`, truthful effective revocation) -- verified
@@ -64,10 +64,10 @@ finalizeRevocationEnforcement` two-phase write ordering
 
 ## Architectural boundary preserved
 
-- **AOC Protocol = Sovereignty.** Not modified. This slice adds no
+- **Soberanía Protocol = Sovereignty.** Not modified. This slice adds no
   canonical sovereign asset identity, manifest, or digest semantics of its
   own -- see "Sovereign binding" below.
-- **AOC Enterprise = Governance + Enforcement.** This slice's entire
+- **Soberanía Enterprise = Governance + Enforcement.** This slice's entire
   contribution: `src/enterprise/content-protection/`.
 - **Assurance = Verification.** Not touched; no scoring/monitoring
   authority moved into this slice.
@@ -125,7 +125,7 @@ Instead:
 Enterprise's existing vocabulary is already provider-neutral *resource*
 vocabulary throughout (`AccessGrantResource`, Protocol's own `ResourceRef`
 composed by `EnterpriseAccessGrant`). `ProtectedResource` was chosen over
-`ProtectedAsset` because this module protects both AOC Sovereign Assets
+`ProtectedAsset` because this module protects both Soberanía Sovereign Assets
 (once Protocol exports that contract) and ordinary resources that were
 never sovereignized through Protocol at all (Slice 2 requirement 3) --
 calling every protected thing an "asset" would either overload Protocol's

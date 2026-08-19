@@ -1,4 +1,4 @@
-# AOC Governed Authority Encumbrance
+# Soberanía Governed Authority Encumbrance
 
 How much of a holder's underlying governed authority remains **persistently
 constrained after a governed action has successfully executed**, and therefore
@@ -47,7 +47,7 @@ Running the same two requests concurrently produced the same two mandates.
 
 ## The question this layer adds
 
-AOC could already answer five questions, and none of them is this one:
+Soberanía could already answer five questions, and none of them is this one:
 
 ```
 A  action authority          may this actor invoke this action on this resource?
@@ -101,7 +101,7 @@ three different situations with three different remedies.
 - **Not ownership, and not a claim by anybody.** Alice with 5 000 bp and a
   4 000 bp encumbrance still *holds* 5 000 bp, and her position is not
   rewritten. Nobody — not the requester, not the representative, not the secured
-  party, not AOC — acquires the encumbered scope. There is deliberately no
+  party, not Soberanía — acquires the encumbered scope. There is deliberately no
   `beneficiaryRef` or `securedPartyRef` on the record.
 - **Not a transfer.** Creating one debits nothing, credits nothing and produces
   no `GovernedAuthorityTransition`.
@@ -206,7 +206,7 @@ reserved 4 000, encumbered 4 000   -> the commitment contributes nothing; termin
 ```
 
 Dropping the commitment on the first instalment would free the 3 000 the mandate
-may still legitimately execute, let a competitor take it, and leave AOC unable
+may still legitimately execute, let a competitor take it, and leave Soberanía unable
 to record the constraint when that execution arrived.
 
 ## What creates a constraint
@@ -244,7 +244,7 @@ Two things that emphatically do **not** release one:
   continues to exist.
 - **Mandate revocation, after execution.** Revoking withdraws the authority to
   create *further* arrangements. An arrangement an external system already
-  created does not cease to exist because AOC withdrew permission to make more
+  created does not cease to exist because Soberanía withdrew permission to make more
   of them. Revocation before execution is different, and does return the
   capacity: there the commitment is still a commitment, nothing executed, and
   it ends `'released'`.
@@ -256,7 +256,7 @@ that an external system *reported* an arrangement as released: no authority is
 evaluated, no decision is produced, `reportedBy` is caller-asserted, and any
 tenant-scoped caller can call it. The collateralization module already refuses
 to let such a report decrement its own `committedScope`, on the stated grounds
-that AOC cannot verify an external encumbrance actually ended.
+that Soberanía cannot verify an external encumbrance actually ended.
 
 Letting the same unverified report free authority capacity would be that refusal
 reversed, and would hand any tenant-scoped caller a way to manufacture headroom
@@ -307,9 +307,9 @@ TRANSFER 2 000  ->  Alice keeps 3 000  ->  covers nothing like 4 000  ->  refuse
 ```
 
 This is **not** the business rule "collateralized authority cannot be
-transferred". AOC holds no such rule and does not invent one; a real asset may
+transferred". Soberanía holds no such rule and does not invent one; a real asset may
 well be transferable subject to a lien, and deciding that is domain and legal
-policy. What is refused is narrower and structural: AOC will not end up holding
+policy. What is refused is narrower and structural: Soberanía will not end up holding
 a constraint that refers to authority its holder no longer possesses — a record
 pointing at nothing, after which every capacity question reports
 `overencumbered`.
@@ -334,12 +334,12 @@ generic accounting would turn a business assumption into a conservation rule.
 `DEFERRED_INTER_ACTION_CONFLICT_POLICY` therefore stands, unchanged. The one
 cross-action rule this phase does add is the structural invariant above, which
 is not a claim about what actions mean to each other but a refusal to corrupt
-AOC's own state.
+Soberanía's own state.
 
 Neither is there any **priority**: no seniority, no first or second lien, no
 pari passu, no statutory ranking. Multiple constraints coexist exactly insofar
 as the holder's authority permits, and nothing orders them. Ranking collateral
-is legal policy AOC does not hold.
+is legal policy Soberanía does not hold.
 
 ## Capacity accounting
 
@@ -392,7 +392,7 @@ argument and the recovery path are in the ADR.
 
 Constraints survive process restart, and this is the property that decides
 whether the layer is worth having: an arrangement an external system created
-does not cease to exist because an AOC process restarted, and a deployment that
+does not cease to exist because a Soberanía process restarted, and a deployment that
 came back up reporting the whole position free would hand the same authority out
 twice on its first request.
 
@@ -416,7 +416,7 @@ A tampered row is **not** skipped as unreadable — skipping it would silently f
 exactly the authority it constrains, turning a corrupted record into the
 persistent over-commitment this layer exists to prevent. The whole capacity
 question fails instead, and nothing may be committed or moved against a state
-AOC cannot trust.
+Soberanía cannot trust.
 
 The database carries what it can enforce itself: a closed status set with no
 `'expired'` in it, non-negative quantities, a released row that must name when
@@ -471,13 +471,13 @@ constraint. Every one is a reference.
 
 ## The legal boundary
 
-An AOC encumbrance is **one deployment's record of its own governed state**.
+A Soberanía encumbrance is **one deployment's record of its own governed state**.
 
 It is not a lien, a pledge, a mortgage, a charge, a security interest or a
-registration. AOC creates no legal encumbrance, perfects nothing, files nothing
+registration. Soberanía creates no legal encumbrance, perfects nothing, files nothing
 with any registry, ranks nothing, and makes no claim that any external system,
 counterparty or jurisdiction agrees with it. Legal effect, if any, arises
-entirely outside AOC.
+entirely outside Soberanía.
 
 What the record means, and the whole of what it means: *according to this
 Enterprise deployment's governed state, this much of this holder's authority
@@ -487,7 +487,7 @@ by this execution.*
 ## Protocol boundary
 
 None. Persistent constraints are deployment-local mutable Enterprise state, and
-the AOC Protocol is unchanged. Proving to an *independent* deployment that
+the Soberanía Protocol is unchanged. Proving to an *independent* deployment that
 authority is encumbered here, and having that deployment enforce it, is a
 portability problem this phase does not open.
 

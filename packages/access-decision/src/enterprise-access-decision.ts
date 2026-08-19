@@ -11,12 +11,12 @@ import {
 } from '@aoc-enterprise/resource-envelope';
 
 /**
- * Enterprise composition over AOC Protocol's `PolicyDecision` and Enterprise's
+ * Enterprise composition over Soberanía Protocol's `PolicyDecision` and Enterprise's
  * own `EnterpriseScopedAccessRequest` / `EnterpriseResourceEnvelope`.
  *
  * `PolicyDecision` (`'allow' | 'deny' | 'conditional'`) is canonical in
  * `@aoc/protocol` -- it is the sole outcome vocabulary for "the result of
- * evaluating whether something may proceed" across AOC, already referenced by
+ * evaluating whether something may proceed" across Soberanía, already referenced by
  * `PolicyDecisionResult.decision` in Protocol's own adapter surface. This
  * contract reuses it directly for `outcome` rather than inventing a second,
  * slightly different enum (contrast with the Enterprise-local
@@ -38,7 +38,7 @@ import {
  * perform that evaluation, and it never contacts a provider, issues a grant,
  * or evaluates a permission.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/access-decision`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/access-decision`).
  */
 export const ENTERPRISE_ACCESS_DECISION_SCHEMA_VERSION = '1.0.0' as const;
 

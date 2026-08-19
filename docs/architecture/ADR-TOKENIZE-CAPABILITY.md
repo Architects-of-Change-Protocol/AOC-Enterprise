@@ -1,7 +1,7 @@
 # ADR: `TOKENIZE` as a governed capability
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: `ADR-ACCESS-GRANT.md` (`EnterpriseAccessGrant`),
   `ADR-ACCESS-DECISION.md`, `ADR-POLICY-OBLIGATION.md`,
   `ADR-DURABLE-GRANTS-REVOCATION.md`, `ADR-ENTERPRISE-GOVERNANCE-STORE.md`,
@@ -10,7 +10,7 @@
 
 ## Context
 
-AOC Enterprise must be able to govern whether an already-governed asset may
+Soberanía Enterprise must be able to govern whether an already-governed asset may
 be tokenized: by whom, over which rights, in what portion, through which
 executor, under which conditions, after which approvals, and with what
 durable evidence. It must do so **without becoming a tokenization platform**.
@@ -141,16 +141,16 @@ Shares are integer basis points.
 ## Boundary
 
 ```
-AOC Protocol         asset identity, authority, attestations, evidence,
-                     sovereignty boundary
+Soberanía Protocol    asset identity, authority, attestations, evidence,
+                      sovereignty boundary
       |
-AOC Enterprise       request -> policy -> decision -> obligations ->
-                     approvals -> grant (TokenizationMandate) -> use ->
-                     revocation -> evidence
+Soberanía Enterprise  request -> policy -> decision -> obligations ->
+                      approvals -> grant (TokenizationMandate) -> use ->
+                      revocation -> evidence
       |
-External system      token issuance
+External system       token issuance
 ```
 
-AOC Enterprise owns the decision to authorize tokenization. It never
+Soberanía Enterprise owns the decision to authorize tokenization. It never
 performs issuance, and it never claims authority over tokens an external
 system has already issued.

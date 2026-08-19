@@ -324,7 +324,7 @@ describe('TRANSFER durability — authorization_artifact and reference integrity
 
     const reference = (record?.references ?? []).find((entry) => entry.externalId === mandateId);
     assert.ok(reference, 'the mandate reference must survive the restart');
-    assert.equal(reference.referenceType, 'authorization_artifact', 'a TransferMandate is AOC-owned authorization, never an external artifact');
+    assert.equal(reference.referenceType, 'authorization_artifact', 'a TransferMandate is Soberanía-owned authorization, never an external artifact');
     assert.equal(reference.integrityVersion, GOVERNANCE_REFERENCE_INTEGRITY_VERSION, 'the enforcement path must write protected references');
     assert.equal(reference.sequence, 1);
     assert.equal(verification.valid, true, JSON.stringify(verification.failures));
@@ -359,7 +359,7 @@ describe('TRANSFER durability — authorization_artifact and reference integrity
     assert.deepEqual(
       references.map((reference) => reference.referenceType),
       ['authorization_artifact', 'execution_record', 'execution_record'],
-      'AOC authorized once; the movement and its reported registration are two separate external observations',
+      'Soberanía authorized once; the movement and its reported registration are two separate external observations',
     );
     assert.deepEqual(references.map((reference) => reference.sequence), [1, 2, 3]);
     assert.equal(references[1]?.externalId, moved.execution.id);

@@ -55,13 +55,13 @@ function buildTrace(input: CreateAocPMFreakGovernanceResponseInput): readonly Ao
       stepId: 'decision',
       label: 'Governance decision',
       status: input.decision === 'allow' ? 'passed' : input.decision === 'deny' ? 'blocked' : 'warning',
-      summary: `AOC returned decision "${input.decision}".`,
+      summary: `Soberanía returned decision "${input.decision}".`,
     },
   ];
 }
 
 /**
- * Builds a governed AOC response for PMFreak. Deterministic response id,
+ * Builds a governed Soberanía response for PMFreak. Deterministic response id,
  * preserves `requestId`/`clientId`, never mutates `request`, never contacts
  * PMFreak, never executes an action, and never writes back a decision.
  * Self-scans its own output with `assertNoAocPMFreakGovernanceIntakeOverclaim`

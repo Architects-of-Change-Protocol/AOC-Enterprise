@@ -1,6 +1,6 @@
-# AOC Enterprise Host — Deployment Guide (v1.0.0)
+# Soberanía Enterprise Host — Deployment Guide (v1.0.0)
 
-Deploying the AOC Enterprise Host as a production HTTP service. Companion
+Deploying the Soberanía Enterprise Host as a production HTTP service. Companion
 documents: `docs/operations/RUNBOOKS_V1.md`,
 `docs/operations/BACKUP_RECOVERY_V1.md`,
 `docs/enterprise/AOC_ENTERPRISE_HOST.md`,
@@ -186,7 +186,7 @@ proxy, data on a dedicated volume.
 
 ```ini
 [Unit]
-Description=AOC Enterprise Host
+Description=Soberanía Enterprise Host
 After=network-online.target
 Wants=network-online.target
 

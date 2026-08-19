@@ -1,4 +1,4 @@
-# AOC Governed Authority Reservation
+# Soberanía Governed Authority Reservation
 
 How much of a holder's underlying governed authority is **already committed to
 a still-live governed authorization**, and therefore unavailable to another.
@@ -39,14 +39,14 @@ execute B                                       REFUSED
 ```
 
 Conservation held where it counted — no movement overdrew, and the total was
-never wrong. What went wrong happened earlier: AOC told two counterparties they
+never wrong. What went wrong happened earlier: Soberanía told two counterparties they
 were authorized to move the same 4 000 bp, and only discovered the conflict when
 one of them tried. Running the same two requests concurrently produced the same
 two mandates.
 
 ## The question this layer adds
 
-AOC could already answer four questions, and none of them is this one:
+Soberanía could already answer four questions, and none of them is this one:
 
 ```
 A  action authority          may this actor invoke this action on this resource?
@@ -269,7 +269,7 @@ ways: an explicit compensating release on issuance failure, the reservation's
 own `expiresAt` (never later than the mandate's would have been), and the fact
 that the artifact never existed, so nothing can execute against it.
 
-The inverse ordering was rejected: issuing the mandate first would let AOC
+The inverse ordering was rejected: issuing the mandate first would let Soberanía
 produce a valid authorization artifact and only then discover it has no capacity
 behind it, which is the exact failure this layer exists to prevent.
 
@@ -380,7 +380,7 @@ authority layer's own code, exactly as an unconservable execution already was.
   some actions and not others. `COLLATERALIZE` is bounded by matching-class
   constraints; `TRANSFER` is bounded because the holder's remaining authority
   must still cover what is attached to her — the same arithmetic by an entirely
-  different route; `TOKENIZE` and `LICENSE` are bounded by neither, and AOC still
+  different route; `TOKENIZE` and `LICENSE` are bounded by neither, and Soberanía still
   does **not** claim that tokenizing 5 000 bp conflicts with collateralizing the
   same 5 000 bp. That remains a deployment's question, now expressible as
   deployment policy. See `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.

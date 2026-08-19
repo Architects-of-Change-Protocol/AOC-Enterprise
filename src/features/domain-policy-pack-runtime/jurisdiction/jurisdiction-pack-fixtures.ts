@@ -17,7 +17,7 @@ const DEMO_JURISDICTION = { jurisdictionId: 'demo-jurisdiction', label: 'Demo Ju
 export function buildDemoJurisdictionPackFixture(): JurisdictionPack {
   return createJurisdictionPack({
     id: 'aoc.demo.jurisdiction_pack_runtime.v1',
-    name: 'AOC Demo Jurisdiction Pack (Runtime Fixture)',
+    name: 'Soberanía Demo Jurisdiction Pack (Runtime Fixture)',
     version: '1.0.0',
     jurisdiction: DEMO_JURISDICTION,
     status: 'demo_baseline',

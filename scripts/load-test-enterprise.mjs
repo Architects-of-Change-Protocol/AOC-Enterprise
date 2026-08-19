@@ -1,4 +1,4 @@
-// AOC Enterprise v1 load test (PR-008).
+// Soberanía Enterprise v1 load test (PR-008).
 //
 // Exercises the Enterprise Host over real HTTP with concurrent clients
 // against real SQLite stores (WAL). Run AFTER `npm run build`:
@@ -417,7 +417,7 @@ const output = {
 if (JSON_ONLY) {
   console.log(JSON.stringify(output, null, 2));
 } else {
-  console.log('AOC Enterprise v1 load test');
+  console.log('Soberanía Enterprise v1 load test');
   console.log(JSON.stringify(environment, null, 2));
   console.log('');
   console.log('| scenario | req | conc | rps | p50 ms | p95 ms | p99 ms | max ms | loop-delay mean ms | statuses |');

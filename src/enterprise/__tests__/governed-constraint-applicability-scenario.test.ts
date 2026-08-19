@@ -77,10 +77,10 @@ import {
  *
  * ## What this suite must NOT find
  *
- * There is no AOC rule that collateralized authority may not be transferred,
+ * There is no Soberanía rule that collateralized authority may not be transferred,
  * tokenized or licensed. Every probe below that passes, passes because no such
  * rule exists — and the policy sections prove a deployment can add one without
- * AOC having chosen it.
+ * Soberanía having chosen it.
  *
  * Every world below is the real Kernel, the real Recognition Runtime, the real
  * Authority Graph, the real Governance Store and the real mandate stores.
@@ -270,7 +270,7 @@ describe('Constraint applicability — the canonical action x constraint matrix'
       code: 'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
     });
 
-    // TOKENIZE — no generic rule. AOC has never been given evidence that
+    // TOKENIZE — no generic rule. Soberanía has never been given evidence that
     // tokenizing collateralized authority is a conflict, and does not invent
     // one; the whole 5 000 is tokenizable as far as this layer is concerned.
     assert.deepEqual(await requestTokenize(await constrainedWorld(), 'm-tok', 5_000), { outcome: 'allowed' });
@@ -716,7 +716,7 @@ describe('Constraint applicability — fail-closed', () => {
  * A deployment policy pack that denies one action when a persistent constraint
  * applies to the holder's authority.
  *
- * **This is a test of the mechanism, not an AOC rule.** AOC ships no policy
+ * **This is a test of the mechanism, not an Soberanía rule.** Soberanía ships no policy
  * that connects collateral to transfer, tokenization or licensing, and the fact
  * that this rule has to be written here — by a deployment, in its own policy
  * pack — is exactly the property the phase claims.
@@ -768,8 +768,8 @@ const PERMISSIVE_POLICY: PolicyPackProvider = {
 };
 
 describe('Constraint applicability — deployment policy may narrow', () => {
-  it('17. a deployment can forbid TRANSFER while a collateral constraint stands — and AOC does not', async () => {
-    // Without the rule: allowed, because there is no AOC rule to find.
+  it('17. a deployment can forbid TRANSFER while a collateral constraint stands — and Soberanía does not', async () => {
+    // Without the rule: allowed, because there is no Soberanía rule to find.
     assert.deepEqual(await requestTransfer(await constrainedWorld({ withConstraintPolicyContext: true }), 'pol-tx-default', 500), { outcome: 'allowed' });
 
     // With the deployment's own rule: denied, and denied *as policy* rather
@@ -821,7 +821,7 @@ describe('Constraint applicability — deployment policy may narrow', () => {
     assert.ok(tokenize !== undefined, 'the constraint context reached policy');
     assert.equal(tokenize.resolved, true);
     assert.equal(tokenize.constraints.length, 1, 'the constraint stands over the authority TOKENIZE engages, so policy is told about it');
-    assert.deepEqual(tokenize.constraints[0]?.applicability, [], 'and told that it does not apply — AOC invents no TOKENIZE rule');
+    assert.deepEqual(tokenize.constraints[0]?.applicability, [], 'and told that it does not apply — Soberanía invents no TOKENIZE rule');
     assert.equal(tokenize.status, 'unconstrained');
 
     await world.collateralization.requestCollateralization(
@@ -835,7 +835,7 @@ describe('Constraint applicability — deployment policy may narrow', () => {
     assert.equal(collateralize.status, 'capacity_constrained');
 
     // The distinction is the deliverable: one constraint, two actions, two
-    // different typed answers, and no business rule anywhere in AOC.
+    // different typed answers, and no business rule anywhere in Soberanía.
     assert.equal(tokenize.constraints[0]?.constraintId, collateralize.constraints[0]?.constraintId);
   });
 

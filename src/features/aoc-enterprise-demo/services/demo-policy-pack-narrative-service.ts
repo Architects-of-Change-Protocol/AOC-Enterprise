@@ -5,7 +5,7 @@ import type { DemoScenario } from '../domain/demo-scenario.js';
 /**
  * The single, deterministic legal/compliance disclaimer every policy-pack
  * narrative carries. It never claims legal compliance, jurisdictional
- * completeness, or that AOC provides legal advice -- it states only what is
+ * completeness, or that Soberanía provides legal advice -- it states only what is
  * true: this is a demo-only enterprise policy model, and the Control Plane
  * shows enforcement trace and policy evidence, not a legal conclusion.
  */
@@ -61,7 +61,7 @@ function buildInvestorSection(scenario: DemoScenario): DemoPolicyPackNarrativeSe
     id: `narrative-${scenario.id}-investor`,
     audience: 'investor',
     title: 'Investor framing',
-    body: `Buyer pain: ${scenario.buyerPain} AOC value: ${scenario.aocValue} This is a repeatable enterprise pattern -- the same policy-pack integration applies across payments, procurement, data boundaries and event settlement.`,
+    body: `Buyer pain: ${scenario.buyerPain} Soberanía value: ${scenario.aocValue} This is a repeatable enterprise pattern -- the same policy-pack integration applies across payments, procurement, data boundaries and event settlement.`,
   };
 }
 

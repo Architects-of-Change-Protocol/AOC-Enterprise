@@ -1,5 +1,5 @@
 /**
- * The action-neutral vocabulary of AOC Enterprise's governed authorization
+ * The action-neutral vocabulary of Soberanía Enterprise's governed authorization
  * layer.
  *
  * Everything in this package earned its place by appearing, with identical
@@ -23,7 +23,7 @@
  *   `licenseeRef`, `transferorRef` and `transfereeRef`, and they share
  *   identity representation and nothing else.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/governed-authorization`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/governed-authorization`).
  *
  * See `docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md` for the
  * four-enforcement audit that authorized this extraction, and for the
@@ -31,7 +31,7 @@
  */
 
 /**
- * The canonical vocabulary of governed right categories an AOC Enterprise
+ * The canonical vocabulary of governed right categories a Soberanía Enterprise
  * action may concern.
  *
  * Each value names **which right of the asset is engaged**, and that is a
@@ -56,7 +56,7 @@
  * here, and that refusal is deliberate. Whether a usage right may be assigned,
  * whether an ownership interest may be split, and whether a contractual claim
  * is capable of novation are matters of the arrangement and the jurisdiction.
- * AOC evaluates configured authority, policy, approvals and obligations; it
+ * Soberanía evaluates configured authority, policy, approvals and obligations; it
  * encodes no universal legal rule in this vocabulary.
  *
  * **A value from this union is never, by itself, a statement that anyone holds

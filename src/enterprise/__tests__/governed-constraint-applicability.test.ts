@@ -405,7 +405,7 @@ describe('Constraint applicability — the policy context', () => {
     const context = toGovernedConstraintPolicyContext([evaluate('tokenize', [constraint()])]);
     assert.equal(context.resolved, true);
     // Withholding it would make a deployment's most obvious rule — "require
-    // approval to tokenize collateralized authority" — inexpressible. AOC
+    // approval to tokenize collateralized authority" — inexpressible. Soberanía
     // declines to invent that rule; it must not also hide the fact.
     assert.deepEqual(context.constraints, [
       { constraintId: 'constraint-1', constraintClass: COLLATERAL_COMMITMENT_CAPACITY, sourceAction: 'collateralize', governedRight: ECONOMIC, applicability: [] },

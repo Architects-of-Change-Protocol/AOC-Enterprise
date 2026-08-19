@@ -1,4 +1,4 @@
-# AOC Evidence / Source / Citation Runtime
+# Soberanía Evidence / Source / Citation Runtime
 
 Recognition Runtime answers "can this action be recognized?" Authority Graph
 answers "where did the authority behind this action come from?" Approval
@@ -15,9 +15,9 @@ and how can the evidence trail be audited without trusting the UI?**
 
 That is the Evidence / Source / Citation Runtime's job.
 
-## Why AOC needs evidence after policy packs and enforcement wiring
+## Why Soberanía needs evidence after policy packs and enforcement wiring
 
-AOC is already recognition-backed, authority-backed, approval-backed,
+Soberanía is already recognition-backed, authority-backed, approval-backed,
 policy-backed and enforcement-backed. A policy pack can say "invoice
 required" or "event record required" (`PolicyEvidenceRequirement`). Approval
 Runtime can record `evidenceReviewed` on an `ApprovalDecision`. Action
@@ -77,7 +77,7 @@ anything the other runtimes already decided -- see
   or satisfaction. Applies a real status effect (accept/reject/needs more
   evidence) but is never itself a legal-sufficiency conclusion.
 - **Citation** -- links a `SourceDocument` and/or `EvidenceArtifact` to a
-  decision or proof another AOC runtime produced (a `policy_decision`, an
+  decision or proof another Soberanía runtime produced (a `policy_decision`, an
   `approval_proof`, an `enforcement_decision`, ...), with a deterministic,
   caller-reason-driven `citationText`.
 - **EvidenceLink** -- a lighter-weight connection between an
@@ -312,7 +312,7 @@ verbatim, and legal sufficiency is never inferred from evidence presence.
   `Date.now()`, never `Math.random()`, never a UUID library.
 - Every hash (`metadataHash`, `*Hash` fields on `EvidenceProof`,
   `eventHash`) is computed by the same `createDigest`/`stableStringify`
-  pair used by every other AOC proof (`domain/evidence-proof.ts`), which
+  pair used by every other Soberanía proof (`domain/evidence-proof.ts`), which
   recursively sorts object keys before hashing so ordering never affects
   the result.
 - No LLM evaluates evidence or interprets a law, contract, policy, invoice,
@@ -350,7 +350,7 @@ owning runtime's own decision path to act on newly-satisfied evidence.
 ## How to add a new citation target
 
 1. Add the new literal to `CitationTargetType` (`domain/citation.ts`).
-2. If the new target is owned by another AOC runtime, add a thin
+2. If the new target is owned by another Soberanía runtime, add a thin
    structural helper in the relevant `integrations/*.ts` file (mirroring
    `createCitationForApprovalTarget`/`createCitationForRecognitionDecision`)
    rather than importing that runtime's types directly.

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Move AOC Agent Passport from token-based registry administration toward account-based buyer access.
+Move Soberanía Agent Passport from token-based registry administration toward account-based buyer access.
 
 This sprint adds named buyer accounts, account sessions, registry ownership claiming, team membership model, role-based access, and team invitations. Legacy token and session access is preserved as fallback throughout.
 

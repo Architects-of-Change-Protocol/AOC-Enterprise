@@ -62,7 +62,7 @@ export default async function PassportPage({
     [],
   );
 
-  const badgeSnippet = `<a href="${passport.verificationUrl}" rel="noopener">AOC Governed Agent: ${passport.passportId}</a>`;
+  const badgeSnippet = `<a href="${passport.verificationUrl}" rel="noopener">Soberanía Governed Agent: ${passport.passportId}</a>`;
 
   return (
     <div className="container" style={{ paddingTop: 40, paddingBottom: 80 }}>

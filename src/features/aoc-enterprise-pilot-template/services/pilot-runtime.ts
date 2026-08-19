@@ -27,7 +27,7 @@ export interface PilotRuntimeDeps {
 }
 
 /**
- * The single composition root for the AOC Enterprise Pilot Template
+ * The single composition root for the Soberanía Enterprise Pilot Template
  * feature: wires the store, registry and every service together and
  * exposes the small, stable API other callers (fixtures, tests, a future
  * CLI/UI) are expected to use.

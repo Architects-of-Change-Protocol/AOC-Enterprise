@@ -1,4 +1,4 @@
-# AOC Kernel — Current Execution Model (Pre-Extraction)
+# Soberanía Kernel — Current Execution Model (Pre-Extraction)
 
 This document reconstructs the **actual** execution semantics of `AocGuard.enforce()` as implemented today, before
 any kernel extraction. Every claim below is anchored to a real file, function, type, or test in this repository at
@@ -167,7 +167,7 @@ error/malformed result), idempotency, execution timeout, side-effect boundary, d
 `services/guarded-execution-service.ts:159-199`) builds an `EnforcementProof` for **every** terminal outcome —
 allowed or denied — containing a SHA-256 digest chained to the previous proof's hash (`domain/enforcement-proof.ts`,
 `stableStringify` + `createDigest`). This is the closest existing analog to an evidence/audit record, but it is
-explicitly *not* the full AOC Evidence Bundle referenced elsewhere in the protocol (no export format, no
+explicitly *not* the full Soberanía Evidence Bundle referenced elsewhere in the protocol (no export format, no
 cross-runtime attestation, no persistence beyond the in-memory `EnforcementStore`).
 
 ## 12. Audit / event generation

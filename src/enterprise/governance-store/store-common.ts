@@ -69,7 +69,7 @@ export function decodeQueryCursor(cursor: string): number {
  * call this before persisting, so an unknown string can never be stored and
  * later cast back as though it were a classification this build recognizes —
  * which matters most for `authorization_artifact`, the one value that reads
- * as "AOC authorized this".
+ * as "Soberanía authorized this".
  *
  * This is deliberately **write-only**. The read path stays permissive: a
  * value written by a newer runtime, or historical rows written before a

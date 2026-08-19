@@ -14,7 +14,7 @@ describe('detectFoundationRuntimeCapabilities', () => {
     const manifestStandard = findFoundationRuntimeCapabilityStatus(capabilities, 'policy_pack_manifest_standard');
     assert.equal(manifestStandard?.availability, 'available');
 
-    // Aligned by "AOC Rebase / Align Jurisdiction Pack Runtime with Policy
+    // Aligned by "Soberanía Rebase / Align Jurisdiction Pack Runtime with Policy
     // Pack Foundation v1": the module now exists and is exported, so this
     // capability is truthfully `available`, not `planned`.
     const jurisdictionPackRuntime = findFoundationRuntimeCapabilityStatus(capabilities, 'jurisdiction_pack_runtime');

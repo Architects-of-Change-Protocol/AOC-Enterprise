@@ -25,7 +25,7 @@ describe('DemoScenarioDetail', () => {
     assert.ok(html.includes('trust autonomous agents to act without proof'));
   });
 
-  it('renders the AOC value', () => {
+  it('renders the Soberanía value', () => {
     const html = renderToStaticMarkup(<DemoScenarioDetail scenario={scenario} />);
     assert.ok(html.includes(scenario.aocValue));
   });

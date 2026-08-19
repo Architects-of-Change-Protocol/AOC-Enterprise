@@ -1,4 +1,4 @@
-# AOC External Agent Handshake
+# Soberanía External Agent Handshake
 
 Recognition Runtime answers "can this action be recognized?" Authority Graph
 answers "where did the authority behind this action come from?" Approval
@@ -11,7 +11,7 @@ itself, prove identity, request limited recognition, prove authority, receive
 a bounded visa, and become eligible for recognized action without bypassing
 local governance?**
 
-That is External Agent Handshake's job -- the border-control layer for AOC
+That is External Agent Handshake's job -- the border-control layer for Soberanía
 trust domains. Its core thesis:
 
 - **Recognition Runtime** recognizes local actors and actions.
@@ -100,7 +100,7 @@ it only ever resolves a *pending* approval requirement.
 deterministic inputs: an explicit `revoked` flag, an `expiresAt` checked
 against the injected clock, and whether its issuer is accepted by this trust
 domain. A SHA-256 digest (`presentationHash`, via the same
-`stableStringify`/`createDigest` helpers used across every AOC runtime) makes
+`stableStringify`/`createDigest` helpers used across every Soberanía runtime) makes
 the presentation tamper-evident without any real cryptographic signature
 verification.
 
@@ -206,7 +206,7 @@ verification time, so a stale sweep never lets an expired grant validate.
 (request/decision IDs, passport/authority presentation IDs, approval proof
 ID, visa/ingress grant IDs, decision type, `accepted`, and evidence hashes)
 together with the previous proof's hash, using the same
-`stableStringify`/`createDigest` pattern as every other AOC proof. A rejected
+`stableStringify`/`createDigest` pattern as every other Soberanía proof. A rejected
 or quarantined decision still produces a proof -- with `accepted: false` and
 no visa/ingress grant IDs -- so "nothing was granted, and here is the
 tamper-evident record of that" is itself an auditable fact.
@@ -267,7 +267,7 @@ expiration/revocation.
 
 ## Determinism
 
-Like every AOC runtime, this module never calls `Date.now()`, never generates
+Like every Soberanía runtime, this module never calls `Date.now()`, never generates
 a random ID, and never asks an LLM to decide handshake validity:
 
 - **Injected clock** (`HandshakeRuntimeClock`/`ManualHandshakeRuntimeClock`)

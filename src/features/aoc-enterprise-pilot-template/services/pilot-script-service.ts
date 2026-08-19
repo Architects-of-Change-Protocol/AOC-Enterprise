@@ -27,7 +27,7 @@ export function createPilotContentDigest(content: string): string {
   return createHash('sha256').update(content).digest('hex');
 }
 
-const NOT_LEGAL_ADVICE_NOTICE = 'This pilot template is not legal advice. It does not prove regulatory, legal, or production compliance -- only real, runtime-backed AOC outputs (recognition, authority, approval, policy, evidence, enforcement, and export decisions) are shown, and every claim of legal sufficiency requires explicit customer or counsel validation outside this template.';
+const NOT_LEGAL_ADVICE_NOTICE = 'This pilot template is not legal advice. It does not prove regulatory, legal, or production compliance -- only real, runtime-backed Soberanía outputs (recognition, authority, approval, policy, evidence, enforcement, and export decisions) are shown, and every claim of legal sufficiency requires explicit customer or counsel validation outside this template.';
 
 function heading(text: string, level = 1): string {
   return `${'#'.repeat(level)} ${text}`;
@@ -89,7 +89,7 @@ export class PilotScriptService {
       heading('Non-goals', 2),
       bulletList(template.nonGoals),
       '',
-      heading('AOC components used', 2),
+      heading('Soberanía components used', 2),
       bulletList([
         'Recognition Runtime',
         'Authority Graph',
@@ -98,8 +98,8 @@ export class PilotScriptService {
         'Action Enforcement',
         'Domain Policy Pack Runtime',
         'Evidence / Source / Citation Runtime',
-        'AOC Control Plane',
-        'AOC Enterprise Demo',
+        'Soberanía Control Plane',
+        'Soberanía Enterprise Demo',
         'Verifiable Export Package',
       ]),
       '',
@@ -161,7 +161,7 @@ export class PilotScriptService {
   renderTechnicalSetup(template: PilotTemplate): string {
     return [
       heading(`${template.name} -- Technical Setup Notes`),
-      heading('Required AOC modules', 2),
+      heading('Required Soberanía modules', 2),
       bulletList([
         'src/features/recognition-runtime',
         'src/features/authority-graph',
@@ -213,7 +213,7 @@ export class PilotScriptService {
       heading('Business pain', 2),
       template.businessPain,
       '',
-      heading('AOC value', 2),
+      heading('Soberanía value', 2),
       template.aocValueProposition,
       '',
       heading('What this pilot proves', 2),

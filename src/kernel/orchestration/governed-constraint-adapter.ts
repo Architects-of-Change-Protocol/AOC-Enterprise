@@ -12,7 +12,7 @@ import type { KernelEvaluationRequest } from '../contracts/kernel-request.js';
  * opposite things. That adapter produces a *verdict* and can turn an outcome
  * into a denial. This one produces *facts* and can turn nothing into anything:
  * its entire effect is that a typed summary reaches the optional Domain Policy
- * Pack preflight, where the deployment's own rules — never AOC's — decide what
+ * Pack preflight, where the deployment's own rules — never Soberanía's — decide what
  * to do with it.
  *
  * ## What `undefined` means, and why it is not `resolved: false`

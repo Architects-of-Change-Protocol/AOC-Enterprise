@@ -10,16 +10,16 @@
 Two layers, two vocabularies. They are not synonyms and must not be conflated:
 
 ```
-AOC Protocol
+Soberanía Protocol
   → Sovereignty Capabilities     what a sovereign holds
 
-AOC Enterprise
+Soberanía Enterprise
   → Governed Actions             what may be exercised
   → Enforcements                 the evaluation of whether it may be
   → Grants / Mandates            the durable authorization that results
 ```
 
-AOC Enterprise now has **three** governed actions. This document covers the
+Soberanía Enterprise now has **three** governed actions. This document covers the
 second; see `docs/enterprise/AOC_LICENSE_ACTION.md` for the third, and
 `docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md` for the
 three-enforcement semantic audit that compares all of them.
@@ -29,9 +29,9 @@ TOKENIZE                    = a Governed Action.
 COLLATERALIZE               = a Governed Action.
 LICENSE                     = a Governed Action.
 
-Tokenization Enforcement    = AOC Enterprise evaluates whether TOKENIZE
+Tokenization Enforcement    = Soberanía Enterprise evaluates whether TOKENIZE
                               may be exercised.
-Collateralization           = AOC Enterprise evaluates whether COLLATERALIZE
+Collateralization           = Soberanía Enterprise evaluates whether COLLATERALIZE
 Enforcement                   may be exercised.
 
 TokenizationMandate         = the durable authorization artifact a successful
@@ -68,7 +68,7 @@ system, no second authorization system, and no action-specific API.
 ```
 Governed Asset
       ↓
-AOC Enterprise
+Soberanía Enterprise
 COLLATERALIZE request
       ↓
 authority · policy · approvals · obligations
@@ -84,7 +84,7 @@ collateral arrangement
 execution evidence
 ```
 
-**AOC Enterprise authorizes collateralization. AOC Enterprise is not the
+**Soberanía Enterprise authorizes collateralization. Soberanía Enterprise is not the
 lender, the collateral agent, the registry, or the platform.**
 
 It does not originate or service loans, compute interest or loan-to-value,
@@ -93,7 +93,7 @@ priority against any registry, file anything anywhere, liquidate or seize
 collateral, or contact any external system. It holds no keys and assumes no
 jurisdiction, no asset class, and no technology.
 
-> AOC authorizes external actions. AOC does not claim to have performed
+> Soberanía authorizes external actions. Soberanía does not claim to have performed
 > external legal or technical execution unless evidence proves that an
 > external execution occurred.
 
@@ -150,7 +150,7 @@ durable persistence          CollateralizationMandateStore (SQLite)
       ↓
 process restart              mandate, revocation, committed scope recovered
       ↓
-external execution           an external system, outside AOC
+external execution           an external system, outside Soberanía
       ↓
 execution evidence           EnterpriseCollateralizationExecutionEvidence
       ↓
@@ -160,7 +160,7 @@ evidence (optional)          — observation only, see below
 audit trail                  Governance Store references + append-only evidence
 ```
 
-Every box above is an existing AOC primitive except the four contract
+Every box above is an existing Soberanía primitive except the four contract
 artifacts, which are this action's own. The Kernel is never bypassed and no
 shortcut issues mandates directly.
 
@@ -201,7 +201,7 @@ reported as a substitution rather than as a downstream scope problem.
 
 `securedObligationRef` is an opaque canonical pointer to an obligation
 established elsewhere — an external loan, a credit facility, a contractual
-obligation, or another governed obligation. AOC does not originate that
+obligation, or another governed obligation. Soberanía does not originate that
 obligation, does not evaluate whether it is legally valid or enforceable, and
 does not resolve the reference. It preserves it because it answers *what is
 this collateral authorization securing?*, and because an execution naming a
@@ -233,7 +233,7 @@ scopes are refused, never coerced.
 
 ### Authority
 
-AOC never infers ownership or authority from the fact that somebody asked. A
+Soberanía never infers ownership or authority from the fact that somebody asked. A
 `COLLATERALIZE` request is evaluated against the existing authority model, so
 policy can require that the requester holds `COLLATERALIZE` authority, or was
 delegated it, and/or that sovereign/owner approvals are satisfied — expressed
@@ -277,11 +277,11 @@ external evidence must be returned         (obligation record)
 ```
 
 Constraint labels (`permittedRegistries`, `permittedJurisdictions`) are opaque
-strings AOC stores and compares. AOC does not resolve them, validate them
+strings Soberanía stores and compares. Soberanía does not resolve them, validate them
 against any real system, or enforce them anywhere outside itself.
 
 `maximumSecuredAmount` is an integer count of a currency's minor units
-alongside an **opaque** currency label. AOC performs no arithmetic on it beyond
+alongside an **opaque** currency label. Soberanía performs no arithmetic on it beyond
 comparing two amounts of the same label, never converts between currencies,
 never discovers a rate, and never prices an asset. Amounts whose labels differ
 are simply not comparable and fail closed. This is deliberately not a money
@@ -295,13 +295,13 @@ interests, ranking, priority and subordinate interests may exist externally,
 and collateral arrangements differ by jurisdiction and structure.
 
 Where a deployment needs exclusivity, priority or aggregate limits, those are
-expressed as policy and as the constraints above. AOC makes no universal legal
+expressed as policy and as the constraints above. Soberanía makes no universal legal
 assumptions on anyone's behalf, and in particular does not assume that all
 collateral is transferable or that collateralization transfers ownership.
 
 `requiredPriorityRank` records a requirement placed on an external system and
 is compared against what that system *reports*. Recording it is not a claim
-that AOC determined, perfected, or can enforce priority anywhere.
+that Soberanía determined, perfected, or can enforce priority anywhere.
 
 ### Mandate
 
@@ -313,7 +313,7 @@ constraints, obligation references, approval references, evidence references,
 effective time, expiry, revocation state, execution references, and
 release/discharge evidence references.
 
-Everything except the terms is a reference to a canonical AOC record. The
+Everything except the terms is a reference to a canonical Soberanía record. The
 terms are carried directly because a mandate must be auditable without
 dereferencing the request.
 
@@ -324,13 +324,13 @@ cumulative-scope containment are derived — never stored as a second source of
 truth that could disagree.
 
 ```
-revocation of authority to perform further collateralization   ← what AOC can do
-external treatment of a security interest already created      ← not AOC's to claim
+revocation of authority to perform further collateralization   ← what Soberanía can do
+external treatment of a security interest already created      ← not Soberanía's to claim
 ```
 
 Revoking a mandate blocks new external collateralization from that moment. It
 does **not** release, discharge, terminate, or invalidate a security interest
-an external system already created, and AOC does not pretend otherwise.
+an external system already created, and Soberanía does not pretend otherwise.
 Execution evidence recorded before revocation is preserved immutably, and the
 revocation record preserves both the execution count and the committed scope
 at the moment authority was withdrawn.
@@ -343,14 +343,14 @@ that an external system **reported** one of those. It is deliberately:
 
 - **not a governed action.** No `RELEASE_COLLATERAL` exists in this change. No
   authority is evaluated, no decision is produced, nothing is authorized. If
-  releasing collateral ever needs to be *authorized* by AOC rather than merely
+  releasing collateral ever needs to be *authorized* by Soberanía rather than merely
   *observed*, that is a separate governed action with its own request,
   decision and mandate.
 - **not a mandate status.** An external release is a fact about an external
-  arrangement; presenting it as governance state would be AOC claiming to
+  arrangement; presenting it as governance state would be Soberanía claiming to
   know, or to have caused, something it did not.
 - **not a restoration of headroom.** Recording a release does not decrement
-  committed scope. AOC cannot verify that the external encumbrance ended and
+  committed scope. Soberanía cannot verify that the external encumbrance ended and
   must not manufacture fresh collateralization capacity from an unverified
   report.
 
@@ -421,7 +421,7 @@ bookkeeping, so they hold against a writer this process never sees:
 `request_ref UNIQUE` (one request authorizes at most one mandate),
 `execution_id PRIMARY KEY` (one arrangement recorded at most once),
 `release_id PRIMARY KEY` with an `execution_id` foreign key (a reported
-release always references an arrangement AOC has evidence of), `mandate_id
+release always references an arrangement Soberanía has evidence of), `mandate_id
 UNIQUE` on revocations, and `(mandate_id, sequence) UNIQUE` on both evidence
 tables for a restart-stable append order.
 
@@ -541,14 +541,14 @@ recommended below, and both mandates now use it:
 ```
 COLLATERALIZE decision
       ↓
-CollateralizationMandate         → authorization_artifact   (produced by AOC Enterprise)
+CollateralizationMandate         → authorization_artifact   (produced by Soberanía Enterprise)
       ↓
 external collateral execution    → execution_record         (reported by an external system)
       ↓
 external release / discharge     → execution_record         (reported by an external system)
 ```
 
-`external_artifact` said "some artifact outside AOC" about a record AOC itself
+`external_artifact` said "some artifact outside Soberanía" about a record Soberanía itself
 produced and owns; `authorization_artifact` says what the record actually is —
 a durable artifact recording authorization resulting from enforcement. The
 external collateral arrangement and its release are observations about someone
@@ -577,7 +577,7 @@ The original recommendation, kept for the record:
 
 ## Protocol boundary
 
-No AOC Protocol changes were required, and none are recommended.
+No Soberanía Protocol changes were required, and none are recommended.
 
 > **Does Protocol need to know that an asset has been collateralized, or is
 > that entirely Enterprise governance state?**
@@ -645,7 +645,7 @@ naming rather than meaning, and does not rename a frozen field to tidy it. See
 The prediction in "Release and discharge evidence" above has come true exactly
 as it was written:
 
-> If releasing collateral ever needs to be *authorized* by AOC rather than
+> If releasing collateral ever needs to be *authorized* by Soberanía rather than
 > merely *observed*, that is a separate governed action with its own request,
 > decision and mandate.
 
@@ -653,7 +653,7 @@ That action now exists. It is **`RELEASE_ENCUMBRANCE`** (capability
 `release-encumbrance`), and — note the name — it does not govern collateral. It
 governs the `GovernedAuthorityEncumbrance` a completed collateralization leaves
 behind: the persistent constraint on the holder's authority, not the external
-arrangement itself. AOC still releases nothing in the world, and still asserts
+arrangement itself. Soberanía still releases nothing in the world, and still asserts
 nothing about whether an external encumbrance ended.
 
 **Nothing in this document changes.** `recordRelease` remains exactly what it is

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds a reproducible @aoc/protocol tarball from a pinned AOC Protocol commit.
+// Builds a reproducible @aoc/protocol tarball from a pinned Soberanía Protocol commit.
 //
 // Two supported modes:
 //   Option A - local checkout already on disk:
@@ -51,7 +51,7 @@ async function resolveRepoDirectory({ repoSource, ref, tempDirs }) {
     if (!existsSync(join(localPath, '.git'))) {
       throw new Error(`AOC_PROTOCOL_REPO="${repoSource}" is not a git checkout (no .git directory found).`);
     }
-    log(`Using local AOC Protocol checkout at ${localPath} (Option A).`);
+    log(`Using local Soberanía Protocol checkout at ${localPath} (Option A).`);
     return { repoDir: localPath, mode: 'local-checkout' };
   }
 
@@ -93,7 +93,7 @@ async function main() {
 
     const resolvedShaResult = run('git', ['rev-parse', 'HEAD'], repoDir);
     const resolvedSha = resolvedShaResult.stdout.trim().toLowerCase();
-    log(`Resolved AOC Protocol commit: ${resolvedSha}`);
+    log(`Resolved Soberanía Protocol commit: ${resolvedSha}`);
 
     if (requestedRef) {
       const pinnedRef = assertPinnedRef(requestedRef);
@@ -106,20 +106,20 @@ async function main() {
     const rootPkg = JSON.parse(await readFile(join(repoDir, 'package.json'), 'utf8'));
     const protocolPkgPath = join(repoDir, 'packages', 'protocol', 'package.json');
     if (!existsSync(protocolPkgPath)) {
-      throw new Error(`packages/protocol/package.json not found under ${repoDir}; this does not look like the AOC Protocol repository.`);
+      throw new Error(`packages/protocol/package.json not found under ${repoDir}; this does not look like the Soberanía Protocol repository.`);
     }
     const protocolPkg = JSON.parse(await readFile(protocolPkgPath, 'utf8'));
     assertIsProtocolRepository(rootPkg, protocolPkg);
     log(`Verified repository identity: root="${rootPkg.name}", packages/protocol="${protocolPkg.name}"@${protocolPkg.version}.`);
 
-    log('Installing AOC Protocol dependencies (npm ci)...');
+    log('Installing Soberanía Protocol dependencies (npm ci)...');
     run('npm', ['ci'], repoDir);
 
     log('Building @aoc/protocol (npm run build --workspace @aoc/protocol)...');
     run('npm', ['run', 'build', '--workspace', '@aoc/protocol'], repoDir);
 
     if (runConsumerCheck && existsSync(join(repoDir, 'scripts', 'validate-protocol-consumer.mjs'))) {
-      log('Running AOC Protocol\'s own consumer/package validation (npm run protocol:consumer:check)...');
+      log('Running Soberanía Protocol\'s own consumer/package validation (npm run protocol:consumer:check)...');
       const consumerCheckResult = run('npm', ['run', 'protocol:consumer:check'], repoDir, { allowFailure: true });
       if (consumerCheckResult.status !== 0) {
         log('WARNING: protocol:consumer:check reported failures. This does not block tarball generation, but should be investigated before trusting this artifact:');
@@ -129,7 +129,7 @@ async function main() {
         log('protocol:consumer:check passed.');
       }
     } else {
-      log('Skipping AOC Protocol consumer/package validation (AOC_PROTOCOL_SKIP_CONSUMER_CHECK=true or script not present).');
+      log('Skipping Soberanía Protocol consumer/package validation (AOC_PROTOCOL_SKIP_CONSUMER_CHECK=true or script not present).');
     }
 
     log('Packing @aoc/protocol (npm pack --json ./packages/protocol)...');

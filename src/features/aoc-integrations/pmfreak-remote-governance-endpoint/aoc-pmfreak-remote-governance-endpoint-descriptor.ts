@@ -13,11 +13,11 @@ import type { AocPMFreakRemoteGovernanceEndpointDescriptor } from './aoc-pmfreak
 /**
  * Builds the descriptor for `aoc.integration.pmfreak.remote_governance_endpoint.v1`.
  *
- * AOC Enterprise is the governance provider; PMFreak is the governance
+ * Soberanía Enterprise is the governance provider; PMFreak is the governance
  * consumer -- the runtime direction is `pmfreak_consumes_aoc_governance`,
  * never the reverse. This endpoint receives PMFreak governance requests over
- * a request/response boundary, evaluates them through the already-merged AOC
- * PMFreak Governance Request Intake, and returns governed AOC decisions; it
+ * a request/response boundary, evaluates them through the already-merged Soberanía
+ * PMFreak Governance Request Intake, and returns governed Soberanía decisions; it
  * never mutates PMFreak data, executes a PMFreak action, writes a decision
  * back into PMFreak, sends a communication, or creates an invoice.
  */

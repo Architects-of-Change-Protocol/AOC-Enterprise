@@ -20,7 +20,7 @@ function buildRequestWithSensitiveMetadata(): AocPMFreakGovernanceRequest {
   };
 }
 
-describe('AOC PMFreak Governance Request Intake -- redaction', () => {
+describe('Soberanía PMFreak Governance Request Intake -- redaction', () => {
   it('mode "none" returns the value unchanged', () => {
     const request = buildRequestWithSensitiveMetadata();
     const redacted = redactAocPMFreakGovernanceRequest(request, 'none');

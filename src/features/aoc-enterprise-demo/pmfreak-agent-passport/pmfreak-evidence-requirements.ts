@@ -2,7 +2,7 @@ import type { PMFreakEvidenceRequirement } from './pmfreak-agent-passport-types.
 
 /**
  * PMFreak evidence requirement catalog. Every entry describes an
- * operational evidence signal an action may require before AOC Enterprise
+ * operational evidence signal an action may require before Soberanía Enterprise
  * allows a PMFreak agent to proceed -- never a legal-completeness or
  * contractual-compliance certification. See this pack's README.
  */

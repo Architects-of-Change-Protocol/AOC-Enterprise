@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { validateAocPMFreakRemoteGovernanceAuth } from '../aoc-pmfreak-remote-governance-auth-guard.js';
 import { createAocPMFreakRemoteGovernanceEndpointConfig } from '../aoc-pmfreak-remote-governance-endpoint-config.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- auth guard', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- auth guard', () => {
   it('allows none_demo outside production', () => {
     const config = createAocPMFreakRemoteGovernanceEndpointConfig({ environment: 'demo', authMode: 'none_demo' });
     const result = validateAocPMFreakRemoteGovernanceAuth({}, config);

@@ -544,7 +544,7 @@ function corrupted(message: string, details?: Readonly<Record<string, unknown>>)
   return new AuthorityGovernanceError('GOVERNED_AUTHORITY_RECORD_CORRUPTED', message, details);
 }
 
-/** Reads a stored scope back from its columns, failing closed on anything that is not one of the two canonical shapes. A row AOC cannot read is never reconstructed into recognized authority. */
+/** Reads a stored scope back from its columns, failing closed on anything that is not one of the two canonical shapes. A row Soberanía cannot read is never reconstructed into recognized authority. */
 function readScopeColumns(
   row: { scope_kind: string; scope_basis_points: number | null; scope_units: number | null; scope_unit_denomination: string | null },
   recordId: string,
@@ -780,7 +780,7 @@ function migrateReservationsToV3(db: { exec: (sql: string) => unknown; transacti
  *
  * This store holds authority state. It never moves a right in the world, never
  * contacts a registry, and never claims legal title — the same boundary every
- * other module in AOC Enterprise keeps.
+ * other module in Soberanía Enterprise keeps.
  */
 export async function createSqliteGovernedAuthorityStore(
   dbPath: string,
@@ -1271,7 +1271,7 @@ export async function createSqliteGovernedAuthorityStore(
         // those constraints are holder-bound and do not follow the authority to
         // the recipient. Not "encumbered authority cannot move" — a holder with
         // 5 000 bp and a 4 000 bp constraint may still move 1 000 — but a
-        // refusal to leave AOC holding a constraint over authority its holder no
+        // refusal to leave Soberanía holding a constraint over authority its holder no
         // longer possesses.
         assertRemainingScopeCoversEncumbrances(
           debited,
@@ -1691,7 +1691,7 @@ export async function createSqliteGovernedAuthorityStore(
       ) {
         throw new AuthorityGovernanceError(
           'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
-          'This governed authority cannot be constrained by that quantity: the two scopes are of different kinds, or name different unit denominations, and AOC holds no conversion between them.',
+          'This governed authority cannot be constrained by that quantity: the two scopes are of different kinds, or name different unit denominations, and Soberanía holds no conversion between them.',
           {
             tenantId: input.tenantId,
             holderRef: input.holderRef,

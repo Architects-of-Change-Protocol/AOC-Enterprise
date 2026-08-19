@@ -17,7 +17,7 @@ export const EXPIRED_VISA_BLOCK_SCENARIO: DemoScenario = {
   shortTitle: 'Expired Visa Block',
   category: 'external_agents',
   summary: 'Trusted Partner Research Agent attempts the same read after its visa has expired.',
-  enterpriseMessage: 'AOC access is time-bound and automatically loses standing when expired.',
+  enterpriseMessage: 'Soberanía access is time-bound and automatically loses standing when expired.',
   buyerPain: 'Enterprises need external access to expire automatically, not rely on someone remembering to revoke it.',
   aocValue: 'Handshake Runtime marks the visa expired, and Recognition Runtime denies external standing on every subsequent check.',
   personas: [TRUSTED_PARTNER_PERSONA_ID],

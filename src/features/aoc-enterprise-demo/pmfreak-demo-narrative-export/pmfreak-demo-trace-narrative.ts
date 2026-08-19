@@ -16,7 +16,7 @@ export function createPMFreakDemoTraceNarrativeSection(viewModel: PMFreakDemoCon
     sectionId: PMFREAK_DEMO_NARRATIVE_SECTION_IDS.trace,
     kind: 'trace',
     title: 'Trace',
-    summary: 'The trace below explains, in order, how AOC Enterprise evaluated this demo action before presenting a decision.',
+    summary: 'The trace below explains, in order, how Soberanía Enterprise evaluated this demo action before presenting a decision.',
     bullets,
     safeLabels: [],
     warnings: [],

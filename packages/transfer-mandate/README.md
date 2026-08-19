@@ -14,22 +14,22 @@ that system later reported became of it. It is a pure data contract: no
 persistence, no service, no API, no policy engine, no provider SDK, no
 execution.
 
-## What AOC Enterprise governs, and what it does not
+## What Soberanía Enterprise governs, and what it does not
 
-AOC governs **the authority to transfer**. It does not transfer.
+Soberanía governs **the authority to transfer**. It does not transfer.
 
 Nothing here moves a right, updates a registry, acts as a transfer agent or
 custodian, passes title, drafts or signs an agreement, prices a transfer, holds
 or releases consideration, escrows, settles, or calculates tax. There is
 deliberately **no monetary amount anywhere in this package** — where an
 arrangement depends on consideration, the authorization requires that *evidence
-of it be reported*, and the evidence is an opaque reference AOC records and
+of it be reported*, and the evidence is an opaque reference Soberanía records and
 never interprets.
 
 The existence of a mandate is not a claim that anything moved. Until execution
-evidence is recorded, AOC's position is that it authorized the movement and
+evidence is recorded, Soberanía's position is that it authorized the movement and
 does not know whether the movement happened. And even after evidence exists, it
-is a report AOC preserved, never a fact AOC verified.
+is a report Soberanía preserved, never a fact Soberanía verified.
 
 ## The one property no sibling action has: the quantity is conserved
 
@@ -97,7 +97,7 @@ implemented.
 
 A reported reversal is recorded as **lifecycle evidence** — an observation,
 never a governed act. And it **restores nothing**: recording one does not
-decrement the mandate's transferred scope or execution count, because AOC
+decrement the mandate's transferred scope or execution count, because Soberanía
 cannot verify the reversal and must not manufacture fresh transfer capacity
 over a right already recorded as having left. Should reversing a transfer ever
 need to be *authorized* rather than *observed*, it would be a transfer in its
@@ -106,7 +106,7 @@ own right — rights moving back — rather than an undo button on this one.
 ## Revocation is not reversal
 
 Revoking a mandate withdraws the authority to move *further* rights from that
-moment. It does not undo, unwind or rescind a movement already effected — AOC
+moment. It does not undo, unwind or rescind a movement already effected — Soberanía
 cannot pull back a right it never held and did not move. The revocation record
 preserves both the execution count and the cumulative transferred scope at the
 moment authority was withdrawn, so the record shows precisely what revocation
@@ -117,7 +117,7 @@ did *not* undo.
 No governed right is marked transferable or non-transferable anywhere in this
 package. Whether a usage right may be assigned, whether an ownership interest
 may be split, and whether a contractual claim is capable of novation are
-matters of the arrangement and the jurisdiction. AOC evaluates configured
+matters of the arrangement and the jurisdiction. Soberanía evaluates configured
 authority, policy, approvals and obligations, and encodes no universal legal
 rule.
 
@@ -125,7 +125,7 @@ rule.
 
 This is the most important boundary this action has, and it is a measured
 finding rather than a design intention: after a fully-evidenced transfer, the
-recipient holds no authority inside AOC, and the transferor's authority is
+recipient holds no authority inside Soberanía, and the transferor's authority is
 unchanged. Nothing in this package or its runtime writes to the Authority
 Graph. See `docs/architecture/ADR-TRANSFER-ACTION.md`, "Post-transfer
 authority", and the suite
@@ -141,4 +141,4 @@ measures it.
 - `@aoc-enterprise/governed-authorization` — the action-neutral vocabulary this
   package consumes.
 
-Ownership: AOC Enterprise.
+Ownership: Soberanía Enterprise.

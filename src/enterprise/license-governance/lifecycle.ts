@@ -41,7 +41,7 @@ import type { LicenseMandateRecord, LicenseMandateStatus } from './contracts.js'
  *
  * Revoking a mandate withdraws the authority to grant *additional* external
  * licenses from that moment. It does **not** terminate, cancel, rescind, or
- * invalidate a license an external system has already granted — AOC governs
+ * invalidate a license an external system has already granted — Soberanía governs
  * authority and does not pretend to hold legal or contractual powers over an
  * agreement it never executed and is not a party to. Execution evidence
  * recorded before revocation is preserved immutably, and the revocation
@@ -156,7 +156,7 @@ export interface LicenseExerciseProposal {
  * mandate that permits only one.
  *
  * `externalAgreementReference` is passed as a presence flag rather than a
- * value: the constraint asks whether a reference was reported, and AOC never
+ * value: the constraint asks whether a reference was reported, and Soberanía never
  * interprets, resolves, or verifies what the reference names.
  */
 export function assertLicenseExerciseAuthorized(record: LicenseMandateRecord, proposal: LicenseExerciseProposal): void {

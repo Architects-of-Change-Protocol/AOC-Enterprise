@@ -27,7 +27,7 @@ the start:
 > holder's authority is constrained; it does not by itself decide which future
 > actions conflict.
 
-So AOC could answer "what does Alice hold?", "what is reserved?", "what is
+So Soberanía could answer "what does Alice hold?", "what is reserved?", "what is
 persistently constrained?" and "may that constraint be released?" — and could not
 answer, in any declared way, **what an active constraint means for a different
 governed action.**
@@ -193,7 +193,7 @@ The policy view carries constraints that stand over the authority the request
 engages **including those that do not apply to the action**, with
 `applicability: []`. Withholding them was tried and rejected: it made a
 deployment's most obvious rule — "require approval to tokenize collateralized
-authority" — inexpressible. AOC declines to invent that rule; it must not also
+authority" — inexpressible. Soberanía declines to invent that rule; it must not also
 hide the fact the rule needs. Constraints bound to another tenant, holder,
 resource or right are not disclosed at all, and no scope, mandate, execution,
 holder or party crosses the boundary.
@@ -203,7 +203,7 @@ one port.
 
 ### 7. No default business or legal rule
 
-AOC ships no rule connecting collateral to transfer, tokenization or licensing.
+Soberanía ships no rule connecting collateral to transfer, tokenization or licensing.
 The suite proves a deployment can add one (deny `TRANSFER`, require approval for
 `TOKENIZE`) and that a policy allowing everything still cannot buy committed
 capacity or make a structurally impossible transition possible.

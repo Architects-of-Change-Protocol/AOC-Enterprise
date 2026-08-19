@@ -3,7 +3,7 @@ import type { EnterpriseResourceDescriptor, EnterpriseResourceIntegrity, Enterpr
 
 /**
  * The business scenario this demo proves the frozen Access Governance
- * lifecycle against (AOC Commercial Consolidation Program, Sequence R006.A).
+ * lifecycle against (Soberanía Commercial Consolidation Program, Sequence R006.A).
  *
  * Customer: **Meridian Diligence** -- an enterprise data-room platform used
  * by law firms and corporate development teams to run M&A due-diligence

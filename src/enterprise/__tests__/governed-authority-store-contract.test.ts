@@ -2064,7 +2064,7 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
         // unchanged by this phase, and fail-closed either way.
         for (const [label, scope] of [
           ['a proportional share against a unitized remainder', proportional(100)],
-          ['a denomination AOC holds no conversion for', unitized(100, 'token')],
+          ['a denomination Soberanía holds no conversion for', unitized(100, 'token')],
         ] as const) {
           assert.equal(
             await errorCode(() => store.acquireReservation(ADMIN, reservation(`mandate-mixed-${label.length}`, 'party-alice', scope, { action: 'collateralize' }))),
@@ -2243,7 +2243,7 @@ describe('Governed Authority Store — SQLite', () => {
           'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED',
           'the availability question fails rather than the tampered row silently freeing its capacity',
         );
-        // And nothing may be committed against a state AOC cannot trust.
+        // And nothing may be committed against a state Soberanía cannot trust.
         assert.equal(
           await errorCode(() => reopened.acquireReservation(ADMIN, reservation('mandate-after-tamper', 'party-alice', proportional(4_000)))),
           'GOVERNED_AUTHORITY_RESERVATION_RECORD_CORRUPTED',
@@ -2600,7 +2600,7 @@ describe('Governed Authority Store — SQLite', () => {
           'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED',
           'the capacity question fails rather than the tampered row silently freeing the authority it constrains',
         );
-        // And nothing may be committed against a state AOC cannot trust.
+        // And nothing may be committed against a state Soberanía cannot trust.
         assert.equal(
           await errorCode(() => reopened.acquireReservation(ADMIN, reservation('mandate-after-tamper', 'party-alice', proportional(1_000)))),
           'GOVERNED_AUTHORITY_ENCUMBRANCE_RECORD_CORRUPTED',

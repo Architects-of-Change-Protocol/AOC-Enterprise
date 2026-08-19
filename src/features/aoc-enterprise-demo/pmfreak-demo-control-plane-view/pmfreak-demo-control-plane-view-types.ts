@@ -2,7 +2,7 @@ import type { PMFreakAgentRole, PMFreakPassportActionDecision } from '@aoc-enter
 import type { PMFreakProjectGovernanceScenarioCategory } from '../pmfreak-project-governance-scenarios/index.js';
 
 /**
- * AOC PMFreak Demo Control Plane View v1 -- view-model types.
+ * Soberanía PMFreak Demo Control Plane View v1 -- view-model types.
  *
  * This module models presentation-ready data only. It never redeclares
  * passport, authority-scope, capability, evidence, or approval gating --

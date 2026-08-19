@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { validateAocPMFreakRemoteGovernanceMethod } from '../aoc-pmfreak-remote-governance-method-guard.js';
 import { createAocPMFreakRemoteGovernanceEndpointConfig } from '../aoc-pmfreak-remote-governance-endpoint-config.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- method guard', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- method guard', () => {
   const config = createAocPMFreakRemoteGovernanceEndpointConfig();
 
   it('allows POST', () => {

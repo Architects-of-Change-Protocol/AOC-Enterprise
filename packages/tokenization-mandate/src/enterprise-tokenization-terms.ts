@@ -20,11 +20,11 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * protocolized and never tokenized, and tokenization always presupposes an
  * already-identified governed asset.
  *
- * AOC Enterprise authorizes tokenization. It is not the tokenization
+ * Soberanía Enterprise authorizes tokenization. It is not the tokenization
  * provider: nothing in this package mints, issues, transfers, or values any
  * token, and no field here is blockchain-specific in meaning. `constraints`
  * carries provider-neutral, opaque labels (a network name, a token standard
- * name, a jurisdiction code) that AOC records and compares as strings and
+ * name, a jurisdiction code) that Soberanía records and compares as strings and
  * never interprets, resolves, or executes against.
  *
  * This is a pure data contract: no persistence, no service, no API, no
@@ -36,7 +36,7 @@ import type { GovernedRightType, GovernedRightsScope } from '@aoc-enterprise/gov
  * serialization, and references to records owned elsewhere rather than
  * embeddings of them.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/tokenization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/tokenization-mandate`).
  */
 export const ENTERPRISE_TOKENIZATION_SCHEMA_VERSION = '1.0.0' as const;
 
@@ -84,8 +84,8 @@ export function isEnterpriseTokenizeCapability(capability: unknown): capability 
  * represent*, never what the token technically is: `'ownership-interest'`
  * records that the authorized rights include an ownership interest, it does
  * not assert that anyone owns anything -- that must already be established
- * upstream by the authority primitives AOC evaluates (Authority Graph), and
- * AOC never infers it from the fact that a request was submitted.
+ * upstream by the authority primitives Soberanía evaluates (Authority Graph), and
+ * Soberanía never infers it from the fact that a request was submitted.
  *
  * Deliberately a closed union, consistent with every other governance
  * vocabulary in this contract line (`ENTERPRISE_ACCESS_OBLIGATION_TYPES`,
@@ -119,7 +119,7 @@ export const ENTERPRISE_TOKENIZATION_FULL_BASIS_POINTS = GOVERNED_RIGHTS_SCOPE_F
 
 /**
  * Declared, provider-neutral limits an authorization carries. Every field is
- * a description AOC records and can compare; none is an instruction AOC
+ * a description Soberanía records and can compare; none is an instruction Soberanía
  * carries out, and none is interpreted against any real network, standard,
  * or legal system.
  *
@@ -129,7 +129,7 @@ export const ENTERPRISE_TOKENIZATION_FULL_BASIS_POINTS = GOVERNED_RIGHTS_SCOPE_F
  *   -- opaque allow-lists of labels. Absent means "not restricted by this
  *   authorization", never "any value is endorsed".
  * - `transferRestricted?` -- records that the authorization declares transfer
- *   restrictions that an external system must enforce. AOC cannot and does
+ *   restrictions that an external system must enforce. Soberanía cannot and does
  *   not enforce them.
  * - `additionalIssuanceAllowed` -- required, because "may this be exercised
  *   more than once?" has no safe default. `false` means the authorization

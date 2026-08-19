@@ -68,7 +68,7 @@ export interface CreateGovernedAuthorityResolverOptions {
  * question is answered. It is not a second authorization engine: it decides
  * nothing about actors, capabilities, delegation, approvals, obligations,
  * policy or evidence, and it cannot allow anything — `AocKernel` asks it one
- * question, gets one fact back, and remains the only component in AOC
+ * question, gets one fact back, and remains the only component in Soberanía
  * Enterprise that produces a decision.
  *
  * Store details never cross this boundary. The port returns a
@@ -125,7 +125,7 @@ export function createGovernedAuthorityResolver(
       if (requested.kind !== available.kind || (requested.kind === 'unitized' && available.kind === 'unitized' && requested.unitDenomination !== available.unitDenomination)) {
         // Never coerced. A proportional share and a unit count describe
         // different quantities, and two opaque denominations have no
-        // conversion AOC could apply without inventing one.
+        // conversion Soberanía could apply without inventing one.
         return { outcome: 'incompatible_scope', positionId: position.id, available, requested };
       }
 

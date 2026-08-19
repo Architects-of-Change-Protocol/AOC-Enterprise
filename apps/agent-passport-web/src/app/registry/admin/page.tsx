@@ -9,7 +9,7 @@ import type { RegistryBillingProfile } from '@/lib/billing-types';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Organization Agent Registry — AOC Agent Passport',
+  title: 'Organization Agent Registry — Soberanía Agent Passport',
 };
 
 interface Props {
@@ -215,7 +215,7 @@ export default function RegistryAdminPage({ searchParams }: Props) {
           <>
             <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>Registry capacity exhausted. All 10 passport slots have been used.</p>
             <a href="mailto:hello@architectsofchange.ai?subject=Registry+Capacity+Expansion" className="btn btn-secondary">
-              Contact AOC to expand registry capacity
+              Contact Soberanía to expand registry capacity
             </a>
           </>
         )}

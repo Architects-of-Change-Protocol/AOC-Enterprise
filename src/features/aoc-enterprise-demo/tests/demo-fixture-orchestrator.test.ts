@@ -22,7 +22,7 @@ describe('DemoFixtureOrchestrator', () => {
     assert.ok(displayNames.includes('Finance Approver'));
     assert.ok(displayNames.includes('Trusted Partner Research Agent'));
     assert.ok(displayNames.includes('Unknown External Agent'));
-    assert.ok(displayNames.includes('AOC Operator'));
+    assert.ok(displayNames.includes('Soberanía Operator'));
   });
 
   it('includes project:HMP-14665 and project:GCH-15992', () => {

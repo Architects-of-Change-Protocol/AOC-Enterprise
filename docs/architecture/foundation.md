@@ -1,15 +1,15 @@
-# AOC Enterprise Foundation Architecture
+# Soberanía Enterprise Foundation Architecture
 
 ## 1) Layered Separation of Concerns
 
-AOC is intentionally split into three layers with strict one-way dependency flow:
+Soberanía is intentionally split into three layers with strict one-way dependency flow:
 
-1. **AOC Protocol (primitive layer)**
+1. **Soberanía Protocol (primitive layer)**
    - Defines portable, implementation-agnostic security and governance primitives.
    - Owns the normative models for consent, scoped access, capability semantics, identity claims, and audit events.
    - Must remain product-neutral and enterprise-neutral.
 
-2. **AOC Enterprise (orchestration layer)**
+2. **Soberanía Enterprise (orchestration layer)**
    - Operationalizes protocol primitives for enterprise-grade deployment and governance.
    - Provides runtime policy decisions, organizational boundary management, tenancy, control planes, connector frameworks, and operations tooling.
    - May compose protocol primitives, but cannot redefine primitive semantics.

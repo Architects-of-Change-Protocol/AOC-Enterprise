@@ -23,7 +23,7 @@ export function DemoPolicyPackScenarioPanel({ scenario, outcome }: DemoPolicyPac
         <p data-testid="policy-scenario-buyer-pain">{scenario.buyerPain}</p>
       </section>
       <section>
-        <h3>AOC value</h3>
+        <h3>Soberanía value</h3>
         <p data-testid="policy-scenario-aoc-value">{scenario.aocValue}</p>
       </section>
       <dl className="aoc-demo-policy-pack-scenario-panel__facts">

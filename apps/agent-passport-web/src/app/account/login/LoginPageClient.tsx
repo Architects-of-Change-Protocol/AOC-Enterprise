@@ -40,7 +40,7 @@ export function LoginPageClient() {
     <div className="container" style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 480 }}>
       <div className="page-header" style={{ marginBottom: 32 }}>
         <div className="section-label">Buyer Account</div>
-        <h1>Sign in to your AOC buyer account</h1>
+        <h1>Sign in to your Soberanía buyer account</h1>
       </div>
 
       <div className="card">

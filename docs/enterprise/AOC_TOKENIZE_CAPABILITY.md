@@ -4,7 +4,7 @@
 - Runtime: `src/enterprise/tokenization-governance/`
 - Decision records: `docs/architecture/ADR-TOKENIZE-CAPABILITY.md`,
   `docs/architecture/ADR-TOKENIZATION-MANDATE-PERSISTENCE.md`
-- Sibling action: `docs/enterprise/AOC_COLLATERALIZE_ACTION.md` — AOC
+- Sibling action: `docs/enterprise/AOC_COLLATERALIZE_ACTION.md` — Soberanía
   Enterprise's second governed action. Its documentation carries the
   `TOKENIZE` vs `COLLATERALIZE` comparison matrix and the resulting
   generalization findings.
@@ -14,10 +14,10 @@
 Two layers, two vocabularies. They are not synonyms and must not be conflated:
 
 ```
-AOC Protocol
+Soberanía Protocol
   → Sovereignty Capabilities     what a sovereign holds
 
-AOC Enterprise
+Soberanía Enterprise
   → Governed Actions             what may be exercised
   → Enforcements                 the evaluation of whether it may be
   → Grants / Mandates            the durable authorization that results
@@ -28,7 +28,7 @@ Applied here:
 ```
 TOKENIZE                 = a Governed Action.
 
-Tokenization Enforcement = AOC Enterprise evaluates whether TOKENIZE may be
+Tokenization Enforcement = Soberanía Enterprise evaluates whether TOKENIZE may be
                            exercised, by whom, over which rights, in what
                            scope, and under which conditions.
 
@@ -36,7 +36,7 @@ TokenizationMandate      = the durable authorization artifact produced by a
                            successful enforcement.
 ```
 
-`TOKENIZE` is no longer the only one. AOC Enterprise now governs two actions,
+`TOKENIZE` is no longer the only one. Soberanía Enterprise now governs two actions,
 and the same asset may be the subject of both, independently:
 
 ```
@@ -59,7 +59,7 @@ documentation model, not a rename. Read `capability: 'tokenize'` in code as
 
 ## Definition
 
-`TOKENIZE` is a governed action of AOC Enterprise.
+`TOKENIZE` is a governed action of Soberanía Enterprise.
 
 > **TOKENIZE** — exercising authorized control over specified rights
 > associated with an already-governed asset, in order to create an external
@@ -72,11 +72,11 @@ system, no second authorization system, and no action-specific API.
 ## Boundary
 
 ```
-AOC Protocol
+Soberanía Protocol
     │  establishes / anchors: asset identity, authority, attestations,
     │  evidence, sovereignty boundary
     ▼
-AOC Enterprise
+Soberanía Enterprise
     │  governs exercise of authority: request, policy, decision,
     │  obligations, approvals, grant, use, revocation, evidence
     ▼
@@ -84,12 +84,12 @@ External Tokenization System
        performs issuance
 ```
 
-**AOC Enterprise authorizes tokenization. AOC Enterprise is not the
+**Soberanía Enterprise authorizes tokenization. Soberanía Enterprise is not the
 tokenization provider.**
 
 It does not mint, issue, transfer, burn, price, custody, or list tokens. It
 holds no keys, speaks to no chain, and assumes no token standard. What an
-external system does with a mandate is that system's act; AOC records the
+external system does with a mandate is that system's act; Soberanía records the
 authorization and the evidence of the exercise.
 
 ## `PROTOCOLIZATION != TOKENIZATION`
@@ -137,14 +137,14 @@ durable persistence                  TokenizationMandateStore (SQLite)
       ↓
 process restart                      mandate, revocation, and issuance totals recovered
       ↓
-external execution                   an external system, outside AOC
+external execution                   an external system, outside Soberanía
       ↓
 execution evidence                   EnterpriseTokenizationExecutionEvidence
       ↓
 audit trail                          Governance Store references + append-only executions
 ```
 
-Every box above is an existing AOC primitive except the three contract
+Every box above is an existing Soberanía primitive except the three contract
 artifacts, which are this action's own.
 
 ## Durability
@@ -241,7 +241,7 @@ authorization, and the mandate says so explicitly.
 
 ### Authority
 
-AOC never infers ownership or authority from the fact that somebody asked. A
+Soberanía never infers ownership or authority from the fact that somebody asked. A
 `TOKENIZE` request is evaluated against the existing authority model, so
 policy can require that the requester holds `TOKENIZE` authority, or was
 delegated it, and/or that sovereign/owner approvals are satisfied — expressed
@@ -270,20 +270,20 @@ by `obligationRefs`. Examples a deployment may express — none of them
 hard-coded here as universal rules, and none of them a legal conclusion:
 
 ```
-only X% may be represented                 (terms.scope)
-maximum token supply = N                   (constraints.maximumIssuedUnits)
-only provider Y may execute                (terms.executorRef)
-only network Z may be used                 (constraints.permittedNetworks)
-no additional issuance                     (constraints.additionalIssuanceAllowed: false)
-transfer restrictions must be enforced     (constraints.transferRestricted)
-tokens represent economic rights only      (terms.rights)
-KYC/AML must be performed externally       (obligation record)
-issuance evidence must be returned to AOC  (obligation record)
-authorization expires at T                 (mandate.expiresAt)
+only X% may be represented                      (terms.scope)
+maximum token supply = N                        (constraints.maximumIssuedUnits)
+only provider Y may execute                     (terms.executorRef)
+only network Z may be used                      (constraints.permittedNetworks)
+no additional issuance                          (constraints.additionalIssuanceAllowed: false)
+transfer restrictions must be enforced          (constraints.transferRestricted)
+tokens represent economic rights only           (terms.rights)
+KYC/AML must be performed externally            (obligation record)
+issuance evidence must be returned to Soberanía (obligation record)
+authorization expires at T                      (mandate.expiresAt)
 ```
 
 Constraint labels (`permittedNetworks`, `permittedTokenStandards`,
-`permittedJurisdictions`) are opaque strings AOC stores and compares. AOC
+`permittedJurisdictions`) are opaque strings Soberanía stores and compares. Soberanía
 does not resolve them, validate them against any real system, or enforce
 them anywhere outside itself.
 
@@ -297,7 +297,7 @@ obligations (`obligationRefs`), effective time, expiry, revocation status,
 approval references, evidence references, and the Governance Store aggregate
 that proves the decision (`evaluationRef`).
 
-Everything except the terms is a reference to a canonical AOC record. The
+Everything except the terms is a reference to a canonical Soberanía record. The
 terms are carried directly because a mandate must be auditable without
 dereferencing the request.
 
@@ -311,13 +311,13 @@ of truth that could disagree.
 The distinction that matters:
 
 ```
-revocation of authority to perform additional issuance   ← what AOC can do
-external treatment of already-issued tokens              ← not AOC's to claim
+revocation of authority to perform additional issuance   ← what Soberanía can do
+external treatment of already-issued tokens              ← not Soberanía's to claim
 ```
 
 Revoking a mandate blocks new external issuance from that moment. It does not
 destroy, freeze, or invalidate tokens an external system already issued, and
-AOC does not pretend otherwise. Execution evidence recorded before revocation
+Soberanía does not pretend otherwise. Execution evidence recorded before revocation
 is preserved immutably, and the revocation record itself preserves the
 execution count at the moment authority was withdrawn.
 
@@ -343,19 +343,19 @@ apart is the point:
 ```
 TOKENIZE decision
       ↓
-TokenizationMandate          → authorization_artifact   (produced by AOC Enterprise)
+TokenizationMandate          → authorization_artifact   (produced by Soberanía Enterprise)
       ↓
 external token execution     → execution_record         (reported by an external system)
 ```
 
 The `TokenizationMandate` is recorded as a `GovernanceReferenceRecord` with
 `referenceType: 'authorization_artifact'` — the Governance Store type for a
-durable artifact AOC Enterprise itself produced to record an authorization
+durable artifact Soberanía Enterprise itself produced to record an authorization
 resulting from enforcement. External token issuance is a report about
 someone else's action and stays an `execution_record`; it is never
 reclassified as authorization.
 
-This preserves the conceptual hierarchy — AOC Enterprise → Governed Actions →
+This preserves the conceptual hierarchy — Soberanía Enterprise → Governed Actions →
 Enforcements → Grants / Mandates — in the evidence record itself. The
 classification is evidence vocabulary only: it confers no authority, and a
 reference appended by hand grants nothing. See "Reference vocabulary" in
@@ -429,7 +429,7 @@ recognized in the asset's trust domain. The steward authorizes tokenization
 of **20% of specified economic participation rights** — not the asset, and
 not all of its rights.
 
-AOC evaluates authority and policy; the decision is `allowed`; the evaluation
+Soberanía evaluates authority and policy; the decision is `allowed`; the evaluation
 is committed to the Governance Store; a mandate is issued permitting exactly
 one named executor to issue at most N external units representing only those
 rights, on a named network, under a named standard, with transfer
@@ -515,14 +515,14 @@ release relationship             none
 ```
 
 With a holder at 5 000 bp and a 4 000 bp collateral constraint standing, a
-`TOKENIZE` of the whole 5 000 proceeds as far as this layer is concerned. AOC has
+`TOKENIZE` of the whole 5 000 proceeds as far as this layer is concerned. Soberanía has
 been given no evidence that tokenizing collateralized authority is a conflict and
 declines to invent one — an invented default would be one deployment's commercial
 assumption imposed on every deployment.
 
 A deployment that believes the combination is unacceptable expresses it as
 policy. The constraint is reported to policy with an empty `applicability`,
-meaning "this stands over the authority you are being asked about, and AOC has no
+meaning "this stands over the authority you are being asked about, and Soberanía has no
 rule about it" — which is exactly what such a rule needs. See
 `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.
 

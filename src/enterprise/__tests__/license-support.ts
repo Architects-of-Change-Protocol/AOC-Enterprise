@@ -90,13 +90,13 @@ export const LICENSE_EXECUTOR_REF = 'provider-licensing-platform-c';
 /** An unauthorized substitute for the executor. */
 export const OTHER_LICENSE_EXECUTOR_REF = 'provider-licensing-platform-d';
 
-/** Opaque operating-context labels. AOC never interprets a dimension name or a value. */
+/** Opaque operating-context labels. Soberanía never interprets a dimension name or a value. */
 export const PERMITTED_TERRITORY = 'territory-a';
 export const OTHER_TERRITORY = 'territory-b';
 export const PERMITTED_CHANNEL = 'channel-web';
 export const OTHER_CHANNEL = 'channel-broadcast';
 
-/** The latest the *external* license may run to. Deliberately different from `LICENSE_MANDATE_EXPIRES_AT`, which bounds AOC's authority. */
+/** The latest the *external* license may run to. Deliberately different from `LICENSE_MANDATE_EXPIRES_AT`, which bounds Soberanía's authority. */
 export const LICENSE_TERM_CEILING = '2027-01-01T00:00:00.000Z';
 
 /**

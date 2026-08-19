@@ -17,7 +17,7 @@ export interface AocNavigationItem {
 }
 
 export const AOC_NAVIGATION_ITEMS: readonly AocNavigationItem[] = [
-  { section: 'overview', label: 'Overview', description: 'Governance state at a glance across every AOC runtime.' },
+  { section: 'overview', label: 'Overview', description: 'Governance state at a glance across every Soberanía runtime.' },
   { section: 'recognition', label: 'Recognition', description: 'Actors, passports, capability tokens and recognition decisions.' },
   { section: 'authority', label: 'Authority', description: 'Authority grants, delegations, role assignments and authority chains.' },
   { section: 'approvals', label: 'Approvals', description: 'Approval requests, decisions, evidence and quorum.' },

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { validateAocPMFreakRemoteGovernancePayloadSize } from '../aoc-pmfreak-remote-governance-payload-guard.js';
 import { createAocPMFreakRemoteGovernanceEndpointConfig } from '../aoc-pmfreak-remote-governance-endpoint-config.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- payload-size guard', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- payload-size guard', () => {
   const config = createAocPMFreakRemoteGovernanceEndpointConfig({ maxPayloadSizeKb: 1 });
 
   it('allows a small body', () => {

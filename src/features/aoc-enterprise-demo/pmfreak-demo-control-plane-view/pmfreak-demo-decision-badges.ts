@@ -36,9 +36,9 @@ const DECISION_LABEL: Record<PMFreakPassportActionDecision, string> = {
 };
 
 const DECISION_DESCRIPTION: Record<PMFreakPassportActionDecision, string> = {
-  allow: 'AOC Enterprise allows the governed demo action to proceed based on the configured passport, evidence, and approvals.',
-  hold: 'AOC Enterprise holds the demo action pending passport reinstatement.',
-  deny: 'AOC Enterprise denies the demo action based on passport, capability, or authority-scope gating.',
+  allow: 'Soberanía Enterprise allows the governed demo action to proceed based on the configured passport, evidence, and approvals.',
+  hold: 'Soberanía Enterprise holds the demo action pending passport reinstatement.',
+  deny: 'Soberanía Enterprise denies the demo action based on passport, capability, or authority-scope gating.',
   require_evidence: 'Required evidence is missing before governed execution can proceed.',
   require_pm_approval: 'PM approval is required before governed execution can proceed.',
   require_customer_validation: 'Customer validation is required before governed execution can proceed.',

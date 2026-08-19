@@ -72,6 +72,6 @@ export class EnterpriseModuleShutdownError extends EnterpriseLifecycleError {
 export class EnterpriseNotReadyError extends EnterpriseLifecycleError {
   readonly code = 'ENTERPRISE_NOT_READY';
   constructor(readonly lifecycleState: string) {
-    super(`AOC Enterprise is not ready to evaluate governance requests (lifecycleState='${lifecycleState}').`);
+    super(`Soberanía Enterprise is not ready to evaluate governance requests (lifecycleState='${lifecycleState}').`);
   }
 }

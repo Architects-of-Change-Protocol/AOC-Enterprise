@@ -67,7 +67,7 @@ export interface BootstrapGovernedAuthorityInput {
  * independently — that is what the action terms mean by
  * `rights: [...]` alongside a single `scope`.
  *
- * `basis.executionRef` is the idempotency key. Replaying an execution AOC has
+ * `basis.executionRef` is the idempotency key. Replaying an execution Soberanía has
  * already applied returns the original transitions and performs no second
  * debit and no second credit.
  */
@@ -302,7 +302,7 @@ export type RecordGovernedAuthorityEncumbranceOutcome =
  * - **No holder, right, scope, resource, source action or source execution.**
  *   Every one of those is read from the stored constraint. A caller that could
  *   restate them could release a constraint on terms it chose rather than the
- *   ones AOC recorded.
+ *   ones Soberanía recorded.
  * - **No free-text reason.** `basis` is a typed union, and its
  *   `'governed-execution'` variant is only constructible by the release
  *   service, from an execution it performed itself against a trusted executor.

@@ -18,7 +18,7 @@ export const APPROVAL_REQUIRED_BLOCK_SCENARIO: DemoScenario = {
   shortTitle: 'Approval Required',
   category: 'approval',
   summary: 'PMFreak Closure Agent attempts to send a client-facing follow-up without approval from Victor.',
-  enterpriseMessage: 'AOC prevents autonomous agents from taking externally visible actions without required human approval.',
+  enterpriseMessage: 'Soberanía prevents autonomous agents from taking externally visible actions without required human approval.',
   buyerPain: 'Enterprises fear an autonomous agent emailing a client without a human ever reviewing the message.',
   aocValue: "Recognition Runtime itself requires human approval for this capability, and enforcement blocks execution until it exists.",
   personas: [PMFREAK_PERSONA_ID, VICTOR_PERSONA_ID],

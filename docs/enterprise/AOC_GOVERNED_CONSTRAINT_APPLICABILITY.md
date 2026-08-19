@@ -1,6 +1,6 @@
 # Governed constraint applicability
 
-How AOC Enterprise decides **which persistent authority constraints affect which
+How Soberanía Enterprise decides **which persistent authority constraints affect which
 governed actions, and how** — without inventing a single business or legal rule.
 
 - Scope: `@aoc-enterprise/governed-authority`,
@@ -39,7 +39,7 @@ next, and the two actions that never consult the authority store were unaffected
 by construction. Nothing could be asked which of several very different things
 had happened.
 
-**AOC must never infer either of these:**
+**Soberanía must never infer either of these:**
 
 ```
 an encumbrance exists          =>   all future actions are denied
@@ -56,7 +56,7 @@ this action is different       =>   the encumbrance does not matter
 5  the deployment's business policy disallows the combination
 ```
 
-1 does not imply 2. 2 does not imply 3 or 4. And 5 is not AOC's to assert at
+1 does not imply 2. 2 does not imply 3 or 4. And 5 is not Soberanía's to assert at
 all — it belongs to the deployment, is expressed through ordinary policy, and
 this layer's job is to hand policy the typed facts rather than to choose the
 rule.
@@ -155,18 +155,18 @@ Merge them into one `conflicts` flag and the first action that has one property
 without the other gets the wrong answer silently.
 
 **`TRANSFER` is not bounded because "collateralized authority may not be sold".**
-There is no such rule in AOC. A holder with a 4 000 bp constraint transfers 1 000
+There is no such rule in Soberanía. A holder with a 4 000 bp constraint transfers 1 000
 freely, right through this table.
 
 ### What `TOKENIZE` and `LICENSE` do *not* get
 
 Nothing. They consume no class and perform no authority transition, so no
-constraint applies to them, and AOC denies neither. Whether tokenizing or
+constraint applies to them, and Soberanía denies neither. Whether tokenizing or
 licensing collateralized authority is acceptable is a deployment's question — see
 §8.
 
 An `economic-interest` constraint does not reach a `usage-right` action either.
-There is deliberately **no cross-right hierarchy**: AOC holds no evidence that
+There is deliberately **no cross-right hierarchy**: Soberanía holds no evidence that
 those quantities are commensurable, and inventing the relation would be inventing
 the policy.
 
@@ -213,7 +213,7 @@ lifecycles.
 
 ## 8. What policy *may* decide
 
-Cross-action business compatibility, which AOC declines to choose. A deployment
+Cross-action business compatibility, which Soberanía declines to choose. A deployment
 configuring the optional `governedConstraintProvider` receives a bounded,
 read-only, typed summary in its policy pack's deployment metadata bag under
 `aoc.governedConstraints`:
@@ -244,15 +244,15 @@ read-only, typed summary in its policy pack's deployment metadata bag under
   exactly this authority but does not apply to this action is reported with an
   empty list rather than withheld — otherwise a deployment's most obvious rule
   ("require approval to tokenize collateralized authority") would be
-  inexpressible. AOC declines to invent that rule; it must not also hide the fact
+  inexpressible. Soberanía declines to invent that rule; it must not also hide the fact
   the rule needs.
 - **`resolved: false` is not "there are none".** It means no provider was
   configured or the state could not be read, and a policy must test it before
   drawing any conclusion from an empty list.
 
-### Example deployment policies — **not** AOC defaults
+### Example deployment policies — **not** Soberanía defaults
 
-These are illustrations of the mechanism. AOC ships none of them, and a
+These are illustrations of the mechanism. Soberanía ships none of them, and a
 deployment that configures nothing gets none of them:
 
 ```
@@ -327,7 +327,7 @@ result cannot cost anything.
 
 ## 10. Reason taxonomy
 
-Deliberately compact. Two codes were added, and both are about a question AOC
+Deliberately compact. Two codes were added, and both are about a question Soberanía
 could not **answer** — neither is a denial of authority and neither may be
 reported as one:
 
@@ -370,7 +370,7 @@ row ever reaches a caller.
 ## 11. What this layer deliberately does not do
 
 - **No legal interpretation.** The matrix is deployment governance semantics.
-  AOC creates no lien, perfects nothing, files nothing and ranks nothing.
+  Soberanía creates no lien, perfects nothing, files nothing and ranks nothing.
 - **No priority model.** No seniority, no first/second lien, no ordering. Multiple
   constraints have no rank.
 - **No automatic resolution.** A conflict is reported, never negotiated.

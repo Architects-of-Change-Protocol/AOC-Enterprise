@@ -1,6 +1,6 @@
 # Threat Model Addendum — Protocol-Specific Attack Classes (PR-RC Objective 6)
 
-Supplement to `THREAT_MODEL_V1.md`, reviewing the digest/canonicalization/versioning attack classes specific to the AOC integrity protocol. For each class: the mechanism that defeats it (with source location), or an explicit gap statement. Verification points refer to code, not documentation.
+Supplement to `THREAT_MODEL_V1.md`, reviewing the digest/canonicalization/versioning attack classes specific to the Soberanía integrity protocol. For each class: the mechanism that defeats it (with source location), or an explicit gap statement. Verification points refer to code, not documentation.
 
 ## 1. Digest attacks
 

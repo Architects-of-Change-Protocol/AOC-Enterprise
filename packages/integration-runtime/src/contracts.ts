@@ -2,7 +2,7 @@
  * Integration runtime orchestration contracts.
  *
  * NOTE: Capability token constraints originate in AOC-Protocol. Verified actor
- * identity claims are Enterprise-owned (see `@aoc-enterprise/identity`) -- AOC
+ * identity claims are Enterprise-owned (see `@aoc-enterprise/identity`) -- Soberanía
  * Protocol governance determined identity claims are not part of its public API.
  */
 

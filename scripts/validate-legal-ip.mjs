@@ -1,4 +1,4 @@
-// Non-destructive legal/IP governance validator for AOC Enterprise.
+// Non-destructive legal/IP governance validator for Soberanía Enterprise.
 //
 // Modes:
 //   --mode=report  (default) — prints all findings, always exits 0 unless
@@ -116,7 +116,7 @@ if (existsSync(securityPath)) {
   }
 }
 
-// Registered-trademark symbol must not be used to mark a name (e.g. "AOC®")
+// Registered-trademark symbol must not be used to mark a name (e.g. "Soberanía®")
 // without verified registration evidence. A bare prose mention of the
 // symbol itself (e.g. explaining that it is not used) is not a violation —
 // only flag ® directly attached to a word, which would assert registration.
@@ -229,7 +229,7 @@ if (existsSync(lockPath)) {
       name === '@aoc/protocol' ||
       name.startsWith('packages/') ||
       name.startsWith('apps/') ||
-      name.startsWith('../'); // sibling file: link (AOC Protocol checkout)
+      name.startsWith('../'); // sibling file: link (Soberanía Protocol checkout)
     if (isWorkspaceInternal) continue;
     if (!info.license) unknownLicense.push(`${name}@${info.version ?? '?'}`);
   }

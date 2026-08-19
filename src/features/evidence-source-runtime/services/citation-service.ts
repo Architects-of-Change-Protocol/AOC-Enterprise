@@ -31,7 +31,7 @@ export interface CreateCitationInput {
 
 /**
  * Creates CitationAnchors and Citations linking a source document and/or
- * evidence artifact to a decision or proof another AOC runtime produced.
+ * evidence artifact to a decision or proof another Soberanía runtime produced.
  * Anchors are always caller-declared -- this service never extracts a
  * location from document content (no parsing, no OCR).
  */

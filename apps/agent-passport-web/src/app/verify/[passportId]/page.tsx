@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { verifyAgentPassportBundle } from '@/lib/passport-adapter';
 
 export const metadata = {
-  title: 'Passport Verification — AOC Agent Passport',
+  title: 'Passport Verification — Soberanía Agent Passport',
 };
 
 export default async function VerifyPage({
@@ -32,7 +32,7 @@ export default async function VerifyPage({
           </p>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8 }}>
             Removing the passport does not destroy the agent, but it destroys the agent's
-            AOC-governed verification status. Inside a governed runtime, missing or invalid
+            Soberanía-governed verification status. Inside a governed runtime, missing or invalid
             passports must cause governed execution to fail.
           </p>
         </div>

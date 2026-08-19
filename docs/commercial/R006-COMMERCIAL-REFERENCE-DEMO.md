@@ -1,8 +1,8 @@
 # R006.A — Commercial Reference Demo
 
 - Status: **Implemented**
-- Sequence: R006.A, AOC Architectural Consolidation Program
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Sequence: R006.A, Soberanía Architectural Consolidation Program
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/aoc-commercial-demo-g40xfx`
 - Package: `@aoc-enterprise/commercial-demo` (`packages/commercial-demo`)
 - Required input (read, not modified): `docs/architecture/ADR-ACCESS-LIFECYCLE.md`
@@ -197,7 +197,7 @@ directly. Fast to build, but a bearer secret with no policy record, no
 selective revocation, and no evidence trail — exactly the gap Phase 1
 describes.
 
-**AOC solution.** A provider-neutral Governed Access lifecycle: every
+**Soberanía solution.** A provider-neutral Governed Access lifecycle: every
 access decision, obligation, grant, usage observation, and revocation is
 its own immutable, independently auditable record, entirely separate from
 whatever secret a provider issues underneath. Swapping the storage provider
@@ -241,7 +241,7 @@ be able to cut access off instantly if the deal falls through — without
 touching anyone else's access. A signed URL can't do any of that: it's a
 bearer secret with no policy record and no evidence trail."
 
-**[0:45–1:30] Solution.** "AOC's Access Governance lifecycle separates
+**[0:45–1:30] Solution.** "Soberanía's Access Governance lifecycle separates
 *deciding and recording* access from *executing* it. Every step — the
 decision, the conditions attached to it, the grant, who used it, and any
 revocation — is its own immutable, provider-neutral record. The provider
@@ -284,7 +284,7 @@ Suite this one does, before it ever ships."
 | README (demo instructions, architecture validation) | `packages/commercial-demo/README.md` |
 | Architecture diagram | Phase 3 above (mirrors `ADR-ACCESS-LIFECYCLE.md` Phase 3) |
 | Business flow diagram | Phase 3 above, in business terms |
-| Commercial flow diagram | Phase 8 above (problem → AOC solution) |
+| Commercial flow diagram | Phase 8 above (problem → Soberanía solution) |
 | Sequence diagram | Phase 3's flow plus Phase 9.1–9.5 of `ADR-ACCESS-LIFECYCLE.md`, which this demo instantiates concretely |
 | Demo instructions | `npm run demo` from `packages/commercial-demo`, or `npm run demo:commercial` from the repository root |
 | Screenshots | `docs/commercial/screenshots/commercial-demo-report-hero.png`, `commercial-demo-report-full.png` |

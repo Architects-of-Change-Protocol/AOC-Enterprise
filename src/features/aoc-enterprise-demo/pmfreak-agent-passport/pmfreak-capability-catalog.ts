@@ -110,7 +110,7 @@ export const PMFREAK_CAPABILITIES: readonly PMFreakCapability[] = [
   {
     capabilityId: 'pmfreak.capability.billing.mark_ready',
     title: 'Mark milestone billing-ready',
-    description: 'Mark a milestone as ready for billing within AOC Enterprise -- this is not invoice creation, invoice sending, or payment release.',
+    description: 'Mark a milestone as ready for billing within Soberanía Enterprise -- this is not invoice creation, invoice sending, or payment release.',
     category: 'billing',
     requiresEvidence: true,
     requiresApproval: true,

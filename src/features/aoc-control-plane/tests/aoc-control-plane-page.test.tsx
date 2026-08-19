@@ -20,7 +20,7 @@ describe('AocControlPlanePage', () => {
 
   it('renders the title', () => {
     const html = renderToStaticMarkup(<AocControlPlanePage readModel={model} />);
-    assert.ok(html.includes('AOC Control Plane'));
+    assert.ok(html.includes('Soberanía Control Plane'));
   });
 
   it('renders navigation sections', () => {

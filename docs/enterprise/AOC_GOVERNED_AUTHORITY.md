@@ -1,6 +1,6 @@
-# AOC Governed Authority
+# Soberanía Governed Authority
 
-The state AOC Enterprise keeps about **which governed right each party
+The state Soberanía Enterprise keeps about **which governed right each party
 controls**, how that authority arose, and how completed governed execution
 changes it.
 
@@ -11,14 +11,14 @@ records why each decision below was made rather than what it is.
 
 A governed authority position asserts exactly this:
 
-> According to the governance state and evidence this AOC Enterprise
+> According to the governance state and evidence this Soberanía Enterprise
 > deployment recognizes, Actor A has authority to exercise Scope S of Right R
 > over Resource X, within a stated effective window.
 
 It does **not** assert legal title, statutory ownership, beneficial interest,
 registry truth, or recognition by any authority outside this deployment. There
 is no ownership ledger, no title registry and no legal-owner record anywhere in
-this layer, and their absence is deliberate: AOC maintains the authority state
+this layer, and their absence is deliberate: Soberanía maintains the authority state
 its own enforcement machinery recognizes, which is sufficient for subsequent
 automated governance and does not pretend to settle anything else. Legal title,
 statutory ownership, external registry truth and cross-sovereignty recognition
@@ -219,18 +219,18 @@ TOKENIZE   COLLATERALIZE   LICENSE   TRANSFER
 The Kernel runs the check after the existing chain, only against an outcome
 that chain already found viable, and it can only **narrow** that outcome into a
 denial. It never rescues a denial and never grants anything. `AocKernel`
-remains the only component in AOC Enterprise that produces a decision — there
+remains the only component in Soberanía Enterprise that produces a decision — there
 is no second kernel and no second authorization engine.
 
 ## Trust boundary
 
 Execution evidence is not universal legal title. A committed transition means:
 
-> AOC's recognized governed authority state changed, on the strength of
+> Soberanía's recognized governed authority state changed, on the strength of
 > evidence this deployment accepted.
 
 It does not mean a registry was updated, a jurisdiction recognized anything, or
-a movement occurred in the world. AOC never verified the movement; it recorded
+a movement occurred in the world. Soberanía never verified the movement; it recorded
 what it was told, by whom, and when.
 
 ## Durability, concurrency, integrity
@@ -361,10 +361,10 @@ See `AOC_GOVERNED_AUTHORITY_RESERVATION.md`,
   ```
 
   There is no universal "available": the answer depends on which action is
-  asking. AOC still asserts **no** commercial rule — whether encumbering a right
+  asking. Soberanía still asserts **no** commercial rule — whether encumbering a right
   should make it unlicensable or untokenizable remains a deployment's decision,
   expressible as deployment policy and defaulted to nothing. The cross-action
-  rules AOC does enforce are conservation and structure, never commerce. See
+  rules Soberanía does enforce are conservation and structure, never commerce. See
   `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.
 - **A fifth governed action.** This document's own foundation work added none.
   One was added later, by the phase that closed the encumbrance-release gap:

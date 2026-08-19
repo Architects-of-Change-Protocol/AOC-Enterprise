@@ -1,10 +1,10 @@
-# AOC Enterprise Runtime Flow
+# Soberanía Enterprise Runtime Flow
 
 ## Enterprise AI Agent Access Request Flow
 
 1. **Agent identity assertion**
    - Agent presents workload identity credential (internal or federated IdP).
-   - Identity adapter normalizes claims into AOC identity model.
+   - Identity adapter normalizes claims into Soberanía identity model.
 
 2. **Request context construction**
    - Runtime builds context: principal, tenant, org boundary, requested action/resource, environment metadata, correlation ID.

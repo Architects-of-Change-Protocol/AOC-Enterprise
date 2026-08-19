@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakGovernanceRequestIntakeDescriptor } from '../aoc-pmfreak-governance-intake-descriptor.js';
 import { AOC_PMFREAK_GOVERNANCE_REQUEST_INTAKE_ID } from '../aoc-pmfreak-governance-intake-constants.js';
 
-describe('AOC PMFreak Governance Request Intake -- descriptor', () => {
-  it('carries the correct AOC provider / PMFreak consumer runtime direction', () => {
+describe('Soberanía PMFreak Governance Request Intake -- descriptor', () => {
+  it('carries the correct Soberanía provider / PMFreak consumer runtime direction', () => {
     const descriptor = createAocPMFreakGovernanceRequestIntakeDescriptor();
 
     assert.equal(descriptor.providerId, 'aoc');
@@ -36,7 +36,7 @@ describe('AOC PMFreak Governance Request Intake -- descriptor', () => {
 
     for (const fragment of [
       'receives PMFreak governance requests',
-      'evaluates requests for AOC governance decisions',
+      'evaluates requests for Soberanía governance decisions',
       'returns governed decisions to PMFreak',
       'does not mutate PMFreak data',
       'does not execute PMFreak actions',
@@ -56,8 +56,8 @@ describe('AOC PMFreak Governance Request Intake -- descriptor', () => {
     const descriptor = createAocPMFreakGovernanceRequestIntakeDescriptor();
 
     for (const label of [
-      'AOC Governance intake',
-      'PMFreak consumes AOC Governance',
+      'Soberanía Governance intake',
+      'PMFreak consumes Soberanía Governance',
       'No PMFreak mutation performed',
       'No action execution performed',
       'No invoice validity claimed',

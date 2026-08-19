@@ -8,7 +8,7 @@ import { loadEnterpriseConfiguration } from '../configuration/enterprise-configu
 import { createInMemoryGovernanceStore } from '../governance-store/index.js';
 import { buildAllowedRequestBody, buildTestKernelProviders } from './support.js';
 
-describe('AOC Enterprise Host composition root (createEnterprise)', () => {
+describe('Soberanía Enterprise Host composition root (createEnterprise)', () => {
   it('boots with the default, empty (fail-closed) provider composition when nothing is overridden', async () => {
     const enterprise = await createEnterprise({ configuration: loadEnterpriseConfiguration({ AOC_ENTERPRISE_PERSISTENCE_PROVIDER: 'memory' }) });
     assert.ok(enterprise.kernel instanceof AocKernel);

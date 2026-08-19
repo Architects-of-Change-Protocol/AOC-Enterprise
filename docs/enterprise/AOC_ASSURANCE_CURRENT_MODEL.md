@@ -1,4 +1,4 @@
-# AOC Assurance — Current Model (Preliminary Analysis, PR-007)
+# Soberanía Assurance — Current Model (Preliminary Analysis, PR-007)
 
 This document is the mandatory preliminary analysis for the Assurance Runtime
 (PR-007): a reconstruction of everything Assurance-related that existed in

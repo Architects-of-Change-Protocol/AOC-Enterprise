@@ -1,7 +1,7 @@
-# ADR: AOC Enterprise Agent Passport Runtime v1
+# ADR: Soberanía Enterprise Agent Passport Runtime v1
 
 - Status: Accepted (PR-006)
-- Deciders: AOC Enterprise architecture
+- Deciders: Soberanía Enterprise architecture
 - Related: `ADR-ENTERPRISE-GOVERNANCE-STORE.md`, `ADR-EVIDENCE-BUNDLE.md`,
   `docs/enterprise/AOC_AGENT_PASSPORT_CURRENT_MODEL.md`,
   `docs/enterprise/AOC_AGENT_PASSPORT_RUNTIME.md`,
@@ -35,7 +35,7 @@
 
 ## Decision
 
-Create the AOC Enterprise Agent Passport Runtime v1
+Create the Soberanía Enterprise Agent Passport Runtime v1
 (`src/enterprise/passport/`):
 
 - **Append-only Passport events, reconstructed state.** A Passport is

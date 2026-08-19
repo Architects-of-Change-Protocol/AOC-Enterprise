@@ -19,7 +19,7 @@ describe('createPMFreakDemoExecutiveSummarySection', () => {
     const text = section.summary.toLowerCase();
 
     assert.ok(text.includes('agent') && text.includes('attempted'));
-    assert.ok(text.includes('aoc') && text.includes('returned'));
+    assert.ok(text.includes('soberanía') && text.includes('returned'));
     assert.ok(text.includes('require_evidence'));
 
     assert.ok(!text.includes('invoice invalid'));

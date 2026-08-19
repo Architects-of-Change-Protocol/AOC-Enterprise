@@ -346,8 +346,8 @@ export interface GovernedAuthorityWorldOverrides {
    * cross-action compatibility rule of its own.
    *
    * There is no default and there must not be one. Every rule a test installs
-   * here is that test's deployment policy, never an AOC rule: the whole claim
-   * of this phase is that AOC ships no cross-action business rule, and a
+   * here is that test's deployment policy, never an Soberanía rule: the whole claim
+   * of this phase is that Soberanía ships no cross-action business rule, and a
    * fixture that shipped one would falsify it.
    */
   readonly policyPackProvider?: PolicyPackProvider;
@@ -892,7 +892,7 @@ export function conformingExecution(
 }
 
 /**
- * The canonical "the release officer asks AOC to discharge one constraint"
+ * The canonical "the release officer asks Soberanía to discharge one constraint"
  * submission.
  *
  * Note what it does *not* carry, and cannot: no holder, no right, no scope, no

@@ -137,7 +137,7 @@ describe('Governed authority resolver — the six answers it can give', () => {
     assert.equal(coverage.outcome, 'incompatible_scope');
   });
 
-  it('refuses two unit denominations AOC holds no conversion between', async () => {
+  it('refuses two unit denominations Soberanía holds no conversion between', async () => {
     const resolver = await buildResolver((store) => bootstrap(store, ALICE, { kind: 'unitized', units: 100, unitDenomination: 'share' }));
     assert.equal(
       (await resolver.resolveGovernedAuthority(query(ALICE, ECONOMIC, { kind: 'unitized', units: 10, unitDenomination: 'token' }))).outcome,

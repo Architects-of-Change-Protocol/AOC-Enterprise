@@ -1,4 +1,4 @@
-# AOC PMFreak Demo Control Plane View v1
+# Soberanía PMFreak Demo Control Plane View v1
 
 View ID:
 
@@ -8,7 +8,7 @@ aoc.demo.pmfreak.control_plane_view.v1
 
 Purpose:
 
-Provides a deterministic Control Plane view-model layer for the PMFreak AOC Enterprise demo.
+Provides a deterministic Control Plane view-model layer for the PMFreak Soberanía Enterprise demo.
 
 This view consumes scenario run results from the PMFreak Project Governance Scenario Pack and turns them into presentation-ready cards, panels, badges, timelines and dashboard metrics.
 
@@ -29,7 +29,7 @@ This view does not certify compliance.
 ```
 The previous PR answered: What happens when PMFreak agents try to act inside
 project-governance scenarios?
-This PR answers: How do we show those governed decisions clearly in an AOC
+This PR answers: How do we show those governed decisions clearly in a Soberanía
 Enterprise Control Plane demo?
 ```
 
@@ -68,7 +68,7 @@ The Control Plane view shows:
 
 - the attempted action
 - the agent passport
-- the AOC decision
+- the Soberanía decision
 - missing evidence
 - missing approvals
 - trace steps
@@ -76,7 +76,7 @@ The Control Plane view shows:
 - jurisdiction context references
 - export readiness
 
-In this demo, `allow` means that AOC Enterprise allows the governed demo action to proceed based on the configured passport, evidence and approvals.
+In this demo, `allow` means that Soberanía Enterprise allows the governed demo action to proceed based on the configured passport, evidence and approvals.
 
 It does not mean:
 
@@ -119,11 +119,11 @@ No real Datasys project codes, customer names, contract numbers, invoice numbers
 ```
 Policy Pack Foundation
   |
-AOC PMFreak Agent Passport Demo Pack v1
+Soberanía PMFreak Agent Passport Demo Pack v1
   |
-AOC PMFreak Project Governance Scenario Pack v1
+Soberanía PMFreak Project Governance Scenario Pack v1
   |
-AOC PMFreak Demo Control Plane View v1  (this module)
+Soberanía PMFreak Demo Control Plane View v1  (this module)
 ```
 
 Its claim-safety wrapper (`pmfreak-demo-control-plane-claim-safety.ts`) extends the Project Governance Scenario Pack's own wrapper (`assertNoPMFreakScenarioOverclaim`) with a small, additive list of view-specific unsafe phrases -- never the generic Policy Pack Foundation harness directly, and never a replacement of the layers below it.
@@ -159,6 +159,6 @@ No network calls, no LLM calls, no OCR/PDF parsing, no `Math.random()`, no `Date
 
 ```
 PMFreak demonstrates what autonomous project agents can do.
-AOC Enterprise demonstrates why they can be trusted to do it.
+Soberanía Enterprise demonstrates why they can be trusted to do it.
 The Control Plane shows why a governed decision was made.
 ```

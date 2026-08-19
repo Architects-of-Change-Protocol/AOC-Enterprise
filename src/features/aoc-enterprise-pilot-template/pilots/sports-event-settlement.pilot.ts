@@ -14,7 +14,7 @@ const OPERATOR_FINANCE_PERSONA_ID = 'persona-operator-finance-operator';
 const OPERATOR_PARTNER_OPS_ANALYST_PERSONA_ID = 'persona-operator-partner-operations-analyst';
 
 /**
- * Sports Event Settlement Pilot -- shows how AOC governs event settlement /
+ * Sports Event Settlement Pilot -- shows how Soberanía governs event settlement /
  * smart-contract-like payment execution: settlement is blocked until event
  * record evidence exists, settlement payments follow the same
  * approval-gated pattern just like any other financial action, and every decision
@@ -26,14 +26,14 @@ export const SPORTS_EVENT_SETTLEMENT_PILOT_TEMPLATE: PilotTemplate = {
   id: 'sports-event-settlement',
   name: 'Sports Event Settlement Pilot',
   description:
-    'A bounded pilot showing how AOC governs event settlement / smart-contract-like payment execution: settle_event_payment is blocked until event record evidence exists, settlement-adjacent payments require approval, and every decision produces a verifiable, exportable audit trail.',
+    'A bounded pilot showing how Soberanía governs event settlement / smart-contract-like payment execution: settle_event_payment is blocked until event record evidence exists, settlement-adjacent payments require approval, and every decision produces a verifiable, exportable audit trail.',
   status: 'draft',
   industry: 'sports_entertainment',
-  primaryUseCase: 'Autonomous event settlement / smart-contract-like payment execution governed end-to-end by AOC.',
+  primaryUseCase: 'Autonomous event settlement / smart-contract-like payment execution governed end-to-end by Soberanía.',
   businessPain:
     'Event platforms and leagues cannot let an autonomous settlement agent pay out an event outcome without proof the event actually happened as claimed, and without a human approval gate on the payment itself -- a smart contract that pays on an unverified claim is a liability, not a feature.',
   aocValueProposition:
-    'AOC can require event evidence and policy approval before autonomous settlement actions execute -- the Domain Policy Pack Runtime, Evidence / Source / Citation Runtime, Approval Runtime and Action Enforcement jointly decide, and the Control Plane and Verifiable Export Package prove, that no settlement paid out on an unverified event.',
+    'Soberanía can require event evidence and policy approval before autonomous settlement actions execute -- the Domain Policy Pack Runtime, Evidence / Source / Citation Runtime, Approval Runtime and Action Enforcement jointly decide, and the Control Plane and Verifiable Export Package prove, that no settlement paid out on an unverified event.',
   targetBuyerPersonaIds: [
     BUYER_LEAGUE_OPERATOR_PERSONA_ID,
     BUYER_EVENT_PLATFORM_FOUNDER_PERSONA_ID,
@@ -170,7 +170,7 @@ export const SPORTS_EVENT_SETTLEMENT_PILOT_TEMPLATE: PilotTemplate = {
       expectedOutcome: 'evidence_required',
       controlPlaneFocus: 'evidence',
       exportPackageType: 'evidence_packet',
-      buyerMessage: 'No settlement pays out on an unverified event -- AOC requires real event record evidence first.',
+      buyerMessage: 'No settlement pays out on an unverified event -- Soberanía requires real event record evidence first.',
       operatorMessage: 'Open Evidence to see the open event_record requirement, then Enforcement to see the evidence_required block.',
       technicalMessage: 'sports-event-settlement-basic returns requires_evidence; Action Enforcement blocks with evidence_required.',
       acceptanceCriterionIds: ['sports-acceptance-scenarios-pass'],
@@ -229,7 +229,7 @@ export const SPORTS_EVENT_SETTLEMENT_PILOT_TEMPLATE: PilotTemplate = {
     { id: 'sports-export-settlement-approval-packet', name: 'Settlement payment approval decision packet', packageType: 'approval_decision_packet', targetType: 'enforcement_decision', targetId: 'sports-action-settlement-payment-approval', expectedSections: ['summary', 'approval', 'policy', 'enforcement'], expectedVerificationStatus: 'verified_with_warnings', buyerPurpose: 'Gives payment partners a hash-verifiable record that the settlement payment was blocked pending finance approval.' },
   ],
   acceptanceCriteria: [
-    { id: 'sports-acceptance-scenarios-pass', title: 'All pilot scenarios run against real AOC runtimes and match expected outcomes', description: 'Every declared pilot scenario binds to a real Enterprise Demo scenario and its runtime outcome matches the pilot expected outcome.', type: 'runtime', required: true, verificationMethod: 'automated_test', expectedResult: 'Every scenario binding reports bound: true.' },
+    { id: 'sports-acceptance-scenarios-pass', title: 'All pilot scenarios run against real Soberanía runtimes and match expected outcomes', description: 'Every declared pilot scenario binds to a real Enterprise Demo scenario and its runtime outcome matches the pilot expected outcome.', type: 'runtime', required: true, verificationMethod: 'automated_test', expectedResult: 'Every scenario binding reports bound: true.' },
     { id: 'sports-acceptance-export-verified', title: 'Settlement export packets verify successfully', description: 'The settlement evidence packet and approval decision packet bind to real, verified Verifiable Export Package output.', type: 'export_package', required: true, verificationMethod: 'export_package_verification', expectedResult: 'Bound export packages report verification status verified or verified_with_warnings.' },
     { id: 'sports-acceptance-no-smart-contract-overclaim', title: 'No generated artifact claims smart-contract legal enforceability', description: 'Every generated pilot artifact carries the settlement disclaimer and never claims smart-contract legal enforceability or payment regulatory compliance.', type: 'security', required: true, verificationMethod: 'automated_test', expectedResult: 'No generated artifact contains a forbidden smart-contract/compliance claim.' },
     { id: 'sports-acceptance-customer-signoff', title: 'League/platform stakeholder signs off on pilot scope and outcomes', description: 'A sports/event buyer persona confirms the pilot demonstrated the value proposition within its stated non-goals.', type: 'buyer', required: false, verificationMethod: 'customer_signoff', expectedResult: 'Signed pilot acceptance record from a league/platform stakeholder.' },
@@ -241,7 +241,7 @@ export const SPORTS_EVENT_SETTLEMENT_PILOT_TEMPLATE: PilotTemplate = {
     { id: 'sports-metric-execution-safety', label: 'No unauthorized settlement execution occurred', description: 'Share of blocked/approval-required settlement scenarios where the real executor never ran.', category: 'execution_safety', targetValue: '0 executed settlement side effects for blocked/approval-required scenarios', measurementMethod: 'Executor-run count on blocked/approval-required enforcement outcomes.' },
     { id: 'sports-metric-policy-enforcement', label: 'Policy-pack-gated settlement actions enforced', description: 'Share of policy-flagged settlement actions actually blocked/approval-gated by Action Enforcement.', category: 'policy_enforcement', targetValue: '100% of policy-flagged settlement actions reflected in the enforcement decision', measurementMethod: 'Cross-check policyDecisionId on enforcement decisions.' },
     { id: 'sports-metric-evidence-readiness', label: 'Event record evidence resolution', description: 'Share of event_record evidence requirements eventually satisfied with accepted evidence.', category: 'evidence_readiness', targetValue: 'event_record requirements satisfied before settlement proceeds', measurementMethod: 'Evidence Runtime requirement/satisfaction status check.' },
-    { id: 'sports-metric-buyer-confidence', label: 'Buyer confidence in governed settlement execution', description: 'Qualitative buyer confidence after the pilot.', category: 'buyer_confidence', targetValue: 'Buyer persona affirms AOC prevented at least one unverified settlement', measurementMethod: 'Buyer walkthrough sign-off.' },
+    { id: 'sports-metric-buyer-confidence', label: 'Buyer confidence in governed settlement execution', description: 'Qualitative buyer confidence after the pilot.', category: 'buyer_confidence', targetValue: 'Buyer persona affirms Soberanía prevented at least one unverified settlement', measurementMethod: 'Buyer walkthrough sign-off.' },
   ],
   risks: [
     { id: 'sports-risk-smart-contract-overclaim', title: 'Stakeholders mistake this pilot for smart-contract legal enforceability', description: 'Buyers may assume this pilot proves the settlement is a legally enforceable smart contract or that payments are regulatorily compliant.', severity: 'critical', mitigation: 'Every artifact and walkthrough explicitly states this pilot does not claim smart-contract legal enforceability or payment regulatory compliance.', ownerPersonaId: BUYER_SMART_CONTRACT_PRODUCT_LEAD_PERSONA_ID },
@@ -249,7 +249,7 @@ export const SPORTS_EVENT_SETTLEMENT_PILOT_TEMPLATE: PilotTemplate = {
   ],
   script: {
     id: 'sports-pilot-script',
-    executiveTalkTrack: ['A settlement that pays out on an unverified event is a liability. AOC makes the event-record gate and the approval gate both real, both provable.'],
+    executiveTalkTrack: ['A settlement that pays out on an unverified event is a liability. Soberanía makes the event-record gate and the approval gate both real, both provable.'],
     operatorTalkTrack: ['Watch settlement get blocked for missing event evidence, then watch the payment itself get gated on finance approval.'],
     technicalTalkTrack: ['Every decision carries policyDecisionId/policyProofId/approvalProofId you can trace in Proofs / Audit.', 'The closing export packet is a hash-chained, independently verifiable artifact.'],
     buyerTalkTrack: ['This is what governed settlement looks like: no payout without verified event evidence, no payment without human financial approval, and a provable trail for every decision.'],
@@ -258,7 +258,7 @@ export const SPORTS_EVENT_SETTLEMENT_PILOT_TEMPLATE: PilotTemplate = {
       { step: 2, title: 'Settlement payment requires approval', instruction: 'Run the payment-approval-required scenario.', expectedObservation: 'Execution blocked pending finance_review approval.' },
       { step: 3, title: 'Control Plane + export', instruction: 'Walk the Control Plane and export a verified settlement decision packet.', expectedObservation: 'Verified export package with matching proof references.' },
     ],
-    closingStatement: 'AOC does not make a settlement a legally enforceable smart contract -- it makes every gate before that settlement provable.',
+    closingStatement: 'Soberanía does not make a settlement a legally enforceable smart contract -- it makes every gate before that settlement provable.',
     legalDisclaimer: 'This demo script uses demo-only policy packs and synthetic event/settlement data. It does not claim smart-contract legal enforceability or payment regulatory compliance, and it is not legal advice.',
   },
   nonGoals: [

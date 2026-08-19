@@ -4,8 +4,8 @@ import { PricingCard } from '@/components/PricingCard';
 import { CheckoutButton } from '@/components/CheckoutButton';
 
 export const metadata = {
-  title: 'AOC Agent Passport — Give your AI agents a constitution',
-  description: 'AOC Agent Passport gives AI agents identity, authority boundaries, signed constitutions, runtime seals, and public verification.',
+  title: 'Soberanía Agent Passport — Give your AI agents a constitution',
+  description: 'Soberanía Agent Passport gives AI agents identity, authority boundaries, signed constitutions, runtime seals, and public verification.',
 };
 
 export default function AgentPassportPage() {
@@ -21,7 +21,7 @@ export default function AgentPassportPage() {
             human oversight, public verification, and runtime-enforceable evidence.
           </p>
           <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 32 }}>
-            Built on AOC Passport Core, Runtime Seal, and Runtime Guard Lite. Passports can now be persisted server-side with issuer key metadata and durable verification records.
+            Built on Soberanía Passport Core, Runtime Seal, and Runtime Guard Lite. Passports can now be persisted server-side with issuer key metadata and durable verification records.
           </div>
           <div className="hero-actions">
             <CheckoutButton tierKey="agent_passport_single" label="Get Agent Passport" className="btn btn-primary" />
@@ -66,13 +66,13 @@ export default function AgentPassportPage() {
 
       <div className="divider" />
 
-      {/* ── What is AOC Agent Passport ── */}
+      {/* ── What is Soberanía Agent Passport ── */}
       <section className="section">
         <div className="container">
           <div className="section-label">Product</div>
-          <h2>What is AOC Agent Passport?</h2>
+          <h2>What is Soberanía Agent Passport?</h2>
           <p style={{ marginBottom: 40 }}>
-            AOC Agent Passport is a verifiable governance identity for AI agents. It packages an agent&apos;s
+            Soberanía Agent Passport is a verifiable governance identity for AI agents. It packages an agent&apos;s
             identity, purpose, owner, allowed actions, prohibited actions, data boundaries, human oversight rules,
             signed constitution, policy manifest, runtime seal, and public verification page.
           </p>
@@ -148,7 +148,7 @@ export default function AgentPassportPage() {
               {
                 step: '02',
                 title: 'Generate its constitution',
-                body: 'AOC creates a machine-readable Agent Constitution and Policy Manifest.',
+                body: 'Soberanía creates a machine-readable Agent Constitution and Policy Manifest.',
               },
               {
                 step: '03',
@@ -212,7 +212,7 @@ export default function AgentPassportPage() {
                 <tr>
                   <th style={{ textAlign: 'left', padding: '10px 16px', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Capability</th>
                   <th style={{ textAlign: 'center', padding: '10px 16px', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Generic governance policy</th>
-                  <th style={{ textAlign: 'center', padding: '10px 16px', color: 'var(--accent)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>AOC Agent Passport</th>
+                  <th style={{ textAlign: 'center', padding: '10px 16px', color: 'var(--accent)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>Soberanía Agent Passport</th>
                 </tr>
               </thead>
               <tbody>
@@ -244,7 +244,7 @@ export default function AgentPassportPage() {
           <div className="section-label">Runtime Guard</div>
           <h2>From verification to enforcement.</h2>
           <p style={{ marginBottom: 32 }}>
-            AOC Agent Passport gives an agent identity. Runtime Guard Lite makes that identity enforceable inside governed runtimes.
+            Soberanía Agent Passport gives an agent identity. Runtime Guard Lite makes that identity enforceable inside governed runtimes.
           </p>
           <div className="alert alert-info" style={{ marginBottom: 24, fontSize: 14 }}>
             Runtime Guard Lite does not control the model&apos;s internal reasoning. It controls whether a governed action is allowed to become real-world execution.

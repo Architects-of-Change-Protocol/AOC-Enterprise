@@ -1,5 +1,5 @@
 /**
- * AOC Enterprise Governance Store v1 — the append-oriented, integrity-
+ * Soberanía Enterprise Governance Store v1 — the append-oriented, integrity-
  * verifiable, reconstructable durable record of every governance evaluation.
  * See `docs/enterprise/AOC_ENTERPRISE_GOVERNANCE_STORE.md`.
  */

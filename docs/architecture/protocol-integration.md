@@ -1,8 +1,8 @@
-# AOC Enterprise + AOC Protocol Integration
+# Soberanía Enterprise + Soberanía Protocol Integration
 
 ## Purpose
 
-This document defines how AOC Enterprise consumes AOC Protocol primitives without redefining protocol semantics.
+This document defines how Soberanía Enterprise consumes Soberanía Protocol primitives without redefining protocol semantics.
 
 ## Canonical ownership
 

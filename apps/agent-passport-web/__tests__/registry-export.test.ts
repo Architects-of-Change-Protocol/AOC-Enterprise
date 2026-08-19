@@ -258,7 +258,7 @@ describe('buildRegistryGovernanceReportMarkdown', () => {
 
   test('includes required sections', () => {
     const md = buildRegistryGovernanceReportMarkdown({ registry, entitlement: null, passports: [], baseUrl: BASE, generatedAt: NOW });
-    assert.ok(md.includes('# AOC Agent Registry Governance Report'));
+    assert.ok(md.includes('# Soberanía Agent Registry Governance Report'));
     assert.ok(md.includes('## Registry Summary'));
     assert.ok(md.includes('## Capacity Summary'));
     assert.ok(md.includes('## Agent Passport Inventory'));
@@ -280,7 +280,7 @@ describe('buildRegistryGovernanceReportMarkdown', () => {
   test('includes recommendation for capacity exhausted', () => {
     const exhaustedReg = { ...registry, remainingPassports: 0, issuedPassports: 5, maxPassports: 5 };
     const md = buildRegistryGovernanceReportMarkdown({ registry: exhaustedReg, entitlement: null, passports: [addPassport(registry.registryId, 'A')], baseUrl: BASE, generatedAt: NOW });
-    assert.ok(md.includes('Contact AOC to expand'));
+    assert.ok(md.includes('Contact Soberanía to expand'));
   });
 
   test('does not include admin token', () => {
@@ -481,7 +481,7 @@ describe('generateRegistryExport', () => {
   test('creates markdown report artifact', () => {
     const result = generateRegistryExport({ registryId: registry.registryId, accessToken: adminToken, exportType: 'registry_governance_report_markdown', baseUrl: BASE, db });
     assert.equal(result.ok, true);
-    assert.ok(result.result?.artifact.contentText.includes('# AOC Agent Registry Governance Report'));
+    assert.ok(result.result?.artifact.contentText.includes('# Soberanía Agent Registry Governance Report'));
   });
 });
 

@@ -15,7 +15,7 @@ export type PMFreakPassportAttestorRole =
   | 'counsel_reviewed';
 
 /**
- * A deterministic, offline attestation that a real, issued AOC
+ * A deterministic, offline attestation that a real, issued Soberanía
  * `AgentPassport` (for a PMFreak agent role) has been reviewed to a
  * particular point on the `PMFreakPassportValidationStatus` trust lattice.
  *

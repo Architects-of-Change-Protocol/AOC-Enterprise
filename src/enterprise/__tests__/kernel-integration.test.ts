@@ -8,14 +8,14 @@ import { toKernelEvaluationOptions, toKernelEvaluationRequest } from '../api/gov
 import { buildAllowedRequestBody, buildDeniedRequestBody, buildTestKernelProviders } from './support.js';
 
 /**
- * Proves the AOC Enterprise Host is a transparent host, not a second
+ * Proves the Soberanía Enterprise Host is a transparent host, not a second
  * decision engine: given the same seeded world, the same request, and the
  * same deterministic clock/id sequence, `enterprise.evaluate()` must
  * produce byte-identical governance semantics to calling
  * `AocKernel.evaluate()` directly. No Enterprise module may manipulate
  * governance semantics.
  */
-describe('AOC Enterprise Host / Kernel parity', () => {
+describe('Soberanía Enterprise Host / Kernel parity', () => {
   it('produces the same decisionId, status, reasonCodes and trace as calling the Kernel directly', async () => {
     const providers = buildTestKernelProviders();
     const directKernel = createAocKernel({ recognitionProvider: providers.recognitionProvider, clock: providers.clock, idGenerator: providers.idGenerator });

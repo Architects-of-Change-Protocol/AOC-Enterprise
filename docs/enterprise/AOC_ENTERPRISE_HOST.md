@@ -1,4 +1,4 @@
-# AOC Enterprise Host v1
+# Soberanía Enterprise Host v1
 
 > This document supersedes `docs/runtime/ENTERPRISE_RUNTIME_HOST.md`
 > (PR-002's original name). The module moved from `src/kernel-host/` to
@@ -9,7 +9,7 @@
 ## Executive Summary
 
 The Kernel (`src/kernel`, `AocKernel.evaluate()`) evaluates governance
-requests. The **AOC Enterprise Host** (`src/enterprise/`) is the production
+requests. The **Soberanía Enterprise Host** (`src/enterprise/`) is the production
 HTTP service that hosts it: `POST /api/governance/evaluate`, `GET /health`,
 a single composition root (`createEnterprise()`), durable persistence of
 every governance request/evaluation/trace, an in-process event catalog,
@@ -23,7 +23,7 @@ the new module "Kernel Host" undersold its actual, long-term architectural
 job: it will eventually orchestrate more than the Kernel alone (persistence,
 audit, telemetry, APIs, SDK adapters, provider composition, and eventually
 integration with Passport/Evidence/Jurisdiction/Constitutional subsystems).
-`src/enterprise/` and the public term **AOC Enterprise Host** name that role
+`src/enterprise/` and the public term **Soberanía Enterprise Host** name that role
 directly, without colliding with `src/runtime/`'s unrelated meaning.
 
 **What stayed unchanged:**
@@ -57,13 +57,13 @@ coexist under the same package without one absorbing the other.
 ## Architecture
 
 ```
-                 AOC Protocol
+              Soberanía Protocol
                       |
                       v
-                 AOC Kernel                     (src/kernel -- decision engine, unchanged)
+               Soberanía Kernel                 (src/kernel -- decision engine, unchanged)
                       |
                       v
-             AOC Enterprise Host                (src/enterprise -- this module)
+          Soberanía Enterprise Host             (src/enterprise -- this module)
                       |
         +-------------+--------------+---------------+-------------+
         |             |              |               |             |
@@ -447,7 +447,7 @@ not a regression this PR introduces.
 
 ## Known Limitations
 
-The AOC Enterprise Host still lacks:
+The Soberanía Enterprise Host still lacks:
 
 - Full plugin lifecycle (registration, dependency graph, module readiness) -- **PR-003**.
 - The full Persistence Runtime (event sourcing, replay, retention governance, immutable storage, distributed consistency).
@@ -460,7 +460,7 @@ The AOC Enterprise Host still lacks:
 
 ## Recommended Next PR
 
-**PR-003 -- AOC Enterprise Composition Root v1.** Formalize plugin
+**PR-003 -- Soberanía Enterprise Composition Root v1.** Formalize plugin
 registration, lifecycle, provider resolution, configuration validation, the
 dependency graph, module readiness, controlled access to Runtime services,
 and Enterprise startup/shutdown semantics -- without adding governance

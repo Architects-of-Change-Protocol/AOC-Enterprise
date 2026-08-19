@@ -9,7 +9,7 @@ export interface PolicyPackControlPlaneAdapter {
 
 /**
  * Maps `PolicyPackControlPlaneRequirement`s to `ControlPlaneReference`s.
- * Never renders UI and never calls the real AOC Control Plane -- it only
+ * Never renders UI and never calls the real Soberanía Control Plane -- it only
  * preserves safe display labels (dropping any that would fail claim-safety
  * scanning as defense in depth) for a real Control Plane surface to render
  * later.

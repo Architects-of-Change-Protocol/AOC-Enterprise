@@ -41,7 +41,7 @@ import type { CollateralizationMandateRecord, CollateralizationMandateStatus } f
  * Revoking a mandate withdraws the authority to perform *additional* external
  * collateralization from that moment. It does **not** release, discharge,
  * terminate, or invalidate a security interest an external system has already
- * created — AOC governs authority and does not pretend to hold legal or
+ * created — Soberanía governs authority and does not pretend to hold legal or
  * technical powers over an arrangement it never executed. Execution evidence
  * recorded before revocation is preserved immutably, and the revocation
  * record itself preserves both the execution count and the committed scope at

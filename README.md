@@ -1,4 +1,4 @@
-# AOC Enterprise
+# Soberanía Enterprise
 
 Sovereign infrastructure for enterprise AI agents, programmable consent, scoped machine access, policy enforcement, and audit trails.
 
@@ -6,7 +6,7 @@ Sovereign infrastructure for enterprise AI agents, programmable consent, scoped 
 
 ## Overview
 
-AOC Enterprise is the enterprise orchestration layer built on top of AOC Protocol.
+Soberanía Enterprise is the enterprise orchestration layer built on top of Soberanía Protocol.
 
 It enables organizations to:
 
@@ -24,9 +24,9 @@ It enables organizations to:
 ```txt
 Applications
     ↓
-AOC Enterprise
+Soberanía Enterprise
     ↓
-AOC Protocol
+Soberanía Protocol
     ↓
 Storage / Identity / Blockchain / AI Systems
 ```
@@ -69,11 +69,18 @@ npm run start:enterprise  # boots the Enterprise Host (see the deployment guide 
 
 Client SDK: `packages/enterprise-host-sdk` (`@aoc-enterprise/enterprise-host-sdk`).
 
+### Technical namespace
+
+Soberanía Enterprise preserves the existing `aoc` and `aoc-enterprise` technical
+namespaces for compatibility. Package names, API identifiers, schemas, protocol
+identifiers, serialized values, and public code symbols using those namespaces
+remain unchanged unless explicitly versioned otherwise.
+
 ---
 
 ## License and ownership
 
-AOC Enterprise is proprietary software. Copyright © 2026 Onchainfest LLC.
+Soberanía Enterprise is proprietary software. Copyright © 2026 Onchainfest LLC.
 All Rights Reserved. Commercial use requires a written agreement. See
-`LICENSE` and `NOTICE.md`. AOC Protocol has a separate legal and
+`LICENSE` and `NOTICE.md`. Soberanía Protocol has a separate legal and
 licensing regime — see `docs/legal/PROTOCOL_ENTERPRISE_BOUNDARY.md`.

@@ -256,7 +256,7 @@ function buildScenarioNotFoundTrace(scenarioId: string): readonly PMFreakProject
 }
 
 const SAFE_FRAMING_WARNING =
-  'This scenario result reflects AOC Enterprise passport, runtime-guard, capability, authority-scope, evidence, and approval gating only, computed by the real PMFreak Agent Passport Foundation resolver. It is not legal advice, not a compliance certification, and not a guarantee of contractual, billing, or invoice validity.';
+  'This scenario result reflects Soberanía Enterprise passport, runtime-guard, capability, authority-scope, evidence, and approval gating only, computed by the real PMFreak Agent Passport Foundation resolver. It is not legal advice, not a compliance certification, and not a guarantee of contractual, billing, or invoice validity.';
 
 export async function runPMFreakProjectGovernanceScenario(
   input: RunPMFreakProjectGovernanceScenarioInput,
@@ -308,7 +308,7 @@ export async function runPMFreakProjectGovernanceScenario(
       appliedPolicyPackIds: [PMFREAK_PROJECT_GOVERNANCE_SCENARIO_PACK_ID],
       jurisdictionPackIds: [],
       scenarioTrace: buildScenarioNotFoundTrace(input.scenarioId),
-      safeNarrative: 'No demo scenario is registered for this scenario id, so AOC Enterprise denies the attempt rather than guessing at intent.',
+      safeNarrative: 'No demo scenario is registered for this scenario id, so Soberanía Enterprise denies the attempt rather than guessing at intent.',
       warnings: notFoundResolution.warnings,
       errors: notFoundResolution.errors,
     };

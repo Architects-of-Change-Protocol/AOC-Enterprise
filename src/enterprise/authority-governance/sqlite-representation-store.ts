@@ -43,7 +43,7 @@ const DEFAULT_BUSY_TIMEOUT_MS = 5_000;
 // ---------------------------------------------------------------------------
 // Schema (`aoc.governed-representation-store.schema.v1`). One current-state
 // table plus the version row — the same shape every other durable store in
-// AOC Enterprise persists, and deliberately *not* an append-only log beside a
+// Soberanía Enterprise persists, and deliberately *not* an append-only log beside a
 // projection: a representation is governance configuration rather than a
 // history of movements, and there is nothing here to conserve.
 //
@@ -153,7 +153,7 @@ function corrupted(message: string, details?: Readonly<Record<string, unknown>>)
   return new AuthorityGovernanceError('GOVERNED_REPRESENTATION_RECORD_CORRUPTED', message, details);
 }
 
-/** Reads a stored string array back, failing closed on anything that is not a non-empty array of non-empty strings. A row AOC cannot read is never reconstructed into a recognized representation. */
+/** Reads a stored string array back, failing closed on anything that is not a non-empty array of non-empty strings. A row Soberanía cannot read is never reconstructed into a recognized representation. */
 function readStringArray(json: string, recordId: string, field: string): readonly string[] {
   let parsed: unknown;
   try {

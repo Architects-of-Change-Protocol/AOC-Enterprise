@@ -22,7 +22,7 @@ export class DemoNarrativeService {
       {
         id: `narrative-${scenario.id}-aoc-value`,
         kind: 'aoc_value',
-        title: 'AOC value',
+        title: 'Soberanía value',
         body: scenario.aocValue,
       },
       {

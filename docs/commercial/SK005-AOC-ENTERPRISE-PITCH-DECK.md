@@ -1,8 +1,8 @@
-# SK005 — AOC Enterprise Official Pitch Deck
+# SK005 — Soberanía Enterprise Official Pitch Deck
 
 - Status: **Draft v1 — Repository-Backed**
 - Program: Sales Kit Program, SK005
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/aoc-enterprise-pitch-deck-jvetve`
 - Mode: Commercial design. No production code. No website implementation.
 - Audience: CTO, VP Engineering, VP Product, Head of Platform, Enterprise Founder, Technical Co-Founder
@@ -10,7 +10,7 @@
 
 ## Role of this document
 
-This is the official commercial narrative for AOC Enterprise. It is the
+This is the official commercial narrative for Soberanía Enterprise. It is the
 source of truth for every downstream commercial asset — Enterprise
 Landing, Governed Access Landing, Assurance Landing, One Pager, Executive
 Brief, Technical Assessment Proposal, website messaging, and future sales
@@ -66,19 +66,19 @@ never implies one is a runtime consumer of the other.
 ## Phase 1 — Product hierarchy (grounding reference, used on Slide 5)
 
 ```text
-AOC PROTOCOL
+SOBERANÍA PROTOCOL
   Provider-neutral, product-neutral specification layer.
   Owns: identity, capability-token, consent-grant, and audit-envelope
   contracts, and scoped-access grammar. Separate repository, separate
-  governance. AOC Enterprise depends on it; it never depends on
-  AOC Enterprise.
+  governance. Soberanía Enterprise depends on it; it never depends on
+  Soberanía Enterprise.
         │
         ▼
-AOC ENTERPRISE  (v1.0.0 core — proprietary, Onchainfest LLC)
+SOBERANÍA ENTERPRISE  (v1.0.0 core — proprietary, Onchainfest LLC)
   The commercial orchestration, runtime, and operational layer.
   Kernel (decision engine) · Enterprise Host (27 frozen API endpoints)
   Governance Store · Agent Passport / Runtime Guard · Evidence Bundle
-  Assurance Runtime (AOC SAF)
+  Assurance Runtime (Soberanía SAF)
         │
         ├── ENTERPRISE SOLUTION: GOVERNED ACCESS
         │     The 7-contract access lifecycle + Provider Adapter model.
@@ -89,7 +89,7 @@ AOC ENTERPRISE  (v1.0.0 core — proprietary, Onchainfest LLC)
         │
         └── ENTERPRISE SERVICE: ASSURANCE
               The evidence-driven control evaluation and scoring engine
-              (AOC SAF v1.0.0). Implemented, tested, API-backed, optional
+              (Soberanía SAF v1.0.0). Implemented, tested, API-backed, optional
               module. Not a certification authority.
 
 ALREADY SHIPPED, NOT ROADMAP
@@ -122,10 +122,10 @@ in black and white.
 
 ### Slide 1 — Hero
 
-**Slide Objective:** Establish who AOC Enterprise is for and what problem
+**Slide Objective:** Establish who Soberanía Enterprise is for and what problem
 it solves, in one breath, before any architecture appears.
 
-**Title:** AOC Enterprise
+**Title:** Soberanía Enterprise
 
 **Subtitle:** Governed access to every system your product depends on —
 provable, revocable, and auditable, without rebuilding your storage layer.
@@ -144,7 +144,7 @@ abstract network/lock/shield graphic — it says nothing a competitor's deck
 doesn't already say.
 
 **Body Copy:** "Every enterprise product touches a provider it doesn't
-control — storage, identity, a document vault. AOC Enterprise governs
+control — storage, identity, a document vault. Soberanía Enterprise governs
 what happens at that boundary."
 
 **Presenter Notes (≤90s):** "Thanks for the time. Before I show you
@@ -154,7 +154,7 @@ to some other system — S3, IPFS, Google Drive, whatever it is — and the
 moment you do, you lose the ability to prove who actually had access,
 when, and whether it was supposed to end. That's not a storage problem.
 It's a governance problem, and it sits exactly at the seam between your
-product and the providers underneath it. That seam is what AOC Enterprise
+product and the providers underneath it. That seam is what Soberanía Enterprise
 governs. I'll show you how, and then I want your read on whether it maps
 to a real gap in what you're running today."
 
@@ -373,10 +373,10 @@ except Pinata).
 **Suggested Diagram:**
 
 ```text
-┌─────────────────────────── AOC PROTOCOL ───────────────────────────┐
+┌──────────────────────── SOBERANÍA PROTOCOL ────────────────────────┐
 │ identity · capability tokens · consent · audit envelopes            │
 └───────────────────────────────┬─────────────────────────────────────┘
-┌─────────────────────────── AOC ENTERPRISE ──────────────────────────┐
+┌──────────────────────── SOBERANÍA ENTERPRISE ───────────────────────┐
 │ Decision · Obligation · Grant · Revocation · Usage · Evidence        │
 │ (immutable — cannot hold a credential, a signed URL, or an SDK type) │
 └───────────────────────────────┬─────────────────────────────────────┘
@@ -504,7 +504,7 @@ assessment onward.
 
 **Visual Layout:** Top half: five-stage horizontal engagement pipeline.
 Bottom half, visually separated by a divider line and a small label
-("what's running underneath"): a compact description of the AOC SAF
+("what's running underneath"): a compact description of the Soberanía SAF
 framework itself — domains, controls, evidence, eligibility tiers.
 
 **Suggested Diagram:**
@@ -515,7 +515,7 @@ framework itself — domains, controls, evidence, eligibility tiers.
       ↑ this is where a Technical Assessment (Slide 10) begins
 
   ─────────────────────────────────────────────────────────────
-  WHAT'S RUNNING UNDERNEATH — AOC SAF v1.0.0 (implemented, API-backed)
+  WHAT'S RUNNING UNDERNEATH — Soberanía SAF v1.0.0 (implemented, API-backed)
   4 control domains · 10 controls · 6 evidence requirements
   3 eligibility tiers: baseline · advanced · continuous
 ```
@@ -526,15 +526,15 @@ numeric score exists for the room's own environment, which it can't until
 an assessment runs.
 
 **Body Copy:** "Assurance evaluates your access-governance controls
-against a defined framework — AOC SAF — and produces findings and an
+against a defined framework — Soberanía SAF — and produces findings and an
 eligibility tier, backed by evidence rather than a checklist you filled
 out yourself. It is not a certification and does not replace SOC 2, ISO,
 PCI, or HIPAA — it's the evidence layer that makes those conversations
 faster because the record already exists."
 
-**Presenter Notes (≤90s):** "Assurance is the other half of AOC
+**Presenter Notes (≤90s):** "Assurance is the other half of Soberanía
 Enterprise, and it's important to be precise about what it is. It's a
-real, implemented scoring engine — the AOC SAF framework, four control
+real, implemented scoring engine — the Soberanía SAF framework, four control
 domains, ten controls, backed by actual evidence rather than a
 self-attested checklist — and it's already wired into the Enterprise Host
 as an optional module with a real API. What it is *not* is a
@@ -769,11 +769,11 @@ diagram.
 **Body Copy:**
 
 **Available today**
-- AOC Enterprise core (Kernel, Enterprise Host, 27-endpoint API surface) — v1.0.0
+- Soberanía Enterprise core (Kernel, Enterprise Host, 27-endpoint API surface) — v1.0.0
 - Governance Store (persistence, tenant isolation)
 - Agent Governance — Agent Passport Core and Runtime Guard
 - Evidence & Audit — Evidence Bundle API (`/api/evidence/build`, `/verify`)
-- Assurance Runtime — AOC SAF v1.0.0 framework, API-backed, optional module
+- Assurance Runtime — Soberanía SAF v1.0.0 framework, API-backed, optional module
 
 **Design Partner stage (architecture frozen, integration in progress)**
 - Governed Access lifecycle — all seven contracts (Envelope through
@@ -922,7 +922,7 @@ rather than redrawing it.
    against a real Pinata-backed scenario, not a mockup. Slide 12's
    "Request a Live Demo" is exactly this.
 
-7. **"What happens to our data/access model if AOC Enterprise disappears
+7. **"What happens to our data/access model if Soberanía Enterprise disappears
    or we switch vendors?"**
    The evidence and grant records are yours, immutable, and provider-
    independent by design — they don't live inside the provider's own
@@ -977,8 +977,8 @@ rather than redrawing it.
    yet as a customer-callable API — this is explicitly the Design Partner
    stage of work, stated plainly on Slide 11.
 
-8. **How is AOC Protocol licensed relative to AOC Enterprise?** They're
-   separate projects with separate governance; AOC Enterprise is
+8. **How is Soberanía Protocol licensed relative to Soberanía Enterprise?** They're
+   separate projects with separate governance; Soberanía Enterprise is
    proprietary (Onchainfest LLC). Protocol's own licensing terms are
    governed by its own separate project and aren't restated here.
 
@@ -1011,13 +1011,13 @@ rather than redrawing it.
    explicitly not a certification authority. It's built to make those
    certification processes faster, not to replace them.
 
-6. **Who owns Onchainfest LLC / AOC Enterprise commercially?** AOC
+6. **Who owns Onchainfest LLC / Soberanía Enterprise commercially?** Soberanía
    Enterprise is proprietary software owned by Onchainfest LLC; production
    use requires a written Commercial Agreement.
 
-7. **What's the relationship between AOC Protocol and AOC Enterprise
-   commercially?** Acquiring rights to AOC Enterprise does not transfer
-   any rights in AOC Protocol — they are governed separately.
+7. **What's the relationship between Soberanía Protocol and Soberanía Enterprise
+   commercially?** Acquiring rights to Soberanía Enterprise does not transfer
+   any rights in Soberanía Protocol — they are governed separately.
 
 8. **Is source code access included?** Not by default — delivery may be
    compiled artifacts unless source access is an explicit term of the
@@ -1039,8 +1039,8 @@ rather than redrawing it.
 
 ## Most important rule, restated
 
-Every slide above is written so that removing "AOC" and reading it back
+Every slide above is written so that removing "Soberanía" and reading it back
 still describes the customer's problem, not our product. If a future
-edit of this deck starts explaining AOC Enterprise before it's explained
+edit of this deck starts explaining Soberanía Enterprise before it's explained
 the customer's governance gap, that edit should be reverted, not
 polished.

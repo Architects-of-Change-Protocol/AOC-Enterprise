@@ -10,7 +10,7 @@
 
 ## Context
 
-AOC Enterprise had two verified governed actions — `TOKENIZE` (authorizing an
+Soberanía Enterprise had two verified governed actions — `TOKENIZE` (authorizing an
 external *representation* of governed rights) and `COLLATERALIZE` (authorizing
 governed rights to be committed as *security* for an obligation) — plus the
 `authorization_artifact` classification and the Governance Reference Integrity
@@ -29,9 +29,9 @@ one that could most plausibly *break* the emerging pattern:
 - it may have **no external performer at all**;
 - and its natural notion of "scope" is not obviously a fraction of anything.
 
-The question this ADR answers is not "can AOC govern licensing?" — it plainly
+The question this ADR answers is not "ca Soberanía govern licensing?" — it plainly
 can, through machinery that already exists. It is: **what did implementing it
-concretely reveal about which vocabulary genuinely belongs to AOC Enterprise?**
+concretely reveal about which vocabulary genuinely belongs to Soberanía Enterprise?**
 
 ## Decision
 
@@ -49,15 +49,15 @@ departures from its siblings where the domain demanded them.
 
 ### Boundary
 
-AOC authorizes the governed licensing action. It does not claim the license is
+Soberanía authorizes the governed licensing action. It does not claim the license is
 legally enforceable, that formalities were satisfied, that consideration
 passed, that royalties or tax were settled, that copyright subsists, that a
 patent is valid, that a trademark is registered, that the right is legally
 licensable, or that any contract was signed. Those require independent external
-evidence, and even then AOC has preserved a *report*, not verified a fact.
+evidence, and even then Soberanía has preserved a *report*, not verified a fact.
 
 **Crucially: the existence of a `LicenseMandate` is not a claim that a license
-exists.** Until execution evidence is recorded, AOC's position is that it
+exists.** Until execution evidence is recorded, Soberanía's position is that it
 authorized the grant and does not know whether the grant was made.
 
 ### Why LICENSE belongs in Enterprise, not Protocol
@@ -142,7 +142,7 @@ constrains nothing.
 ### Constraints model
 
 Permitted uses are a closed, provider-neutral, asset-neutral vocabulary of
-AOC's *own* governed-use categories — explicitly not statutory definitions and
+Soberanía's *own* governed-use categories — explicitly not statutory definitions and
 not any jurisdiction's exclusive-rights enumeration.
 
 `prohibitedUses` lives in immutable terms rather than in obligations, and is
@@ -176,7 +176,7 @@ semantic difference from collateral scope rather than an omission.
 ### Revocation vs external termination
 
 Revocation withdraws authority to grant *further* licenses. It does not
-terminate a license already granted; AOC is not a party to the agreement and
+terminate a license already granted; Soberanía is not a party to the agreement and
 cannot erase external state it does not control. The revocation record
 preserves `executionsAtRevocation` as immutable proof the authorization had
 been exercised.
@@ -230,7 +230,7 @@ reached.
 
 ## Known limitations
 
-- AOC preserves external reports; it does not verify them. Execution evidence
+- Soberanía preserves external reports; it does not verify them. Execution evidence
   is someone else's claim, correlated and sealed.
 - The privileged-writer limitation is unchanged and remains deferred: a writer
   able to rewrite data, digests, chain links and heads together can defeat

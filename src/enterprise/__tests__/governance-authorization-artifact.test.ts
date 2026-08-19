@@ -20,14 +20,14 @@ import { createSqliteGovernanceStore } from '../governance-store/sqlite-governan
 
 /**
  * `authorization_artifact` — the Governance Store reference type that names
- * an artifact **AOC Enterprise itself produced** to record an authorization
+ * an artifact **Soberanía Enterprise itself produced** to record an authorization
  * granted by a governed enforcement decision.
  *
  * The whole point of the vocabulary is a distinction this suite has to make
  * testable in both directions:
  *
  * ```
- * TOKENIZE decision -> TokenizationMandate      [authorization_artifact]  what AOC authorized
+ * TOKENIZE decision -> TokenizationMandate      [authorization_artifact]  what Soberanía authorized
  *                   -> token issuance report    [execution_record]        what someone else did
  * ```
  *

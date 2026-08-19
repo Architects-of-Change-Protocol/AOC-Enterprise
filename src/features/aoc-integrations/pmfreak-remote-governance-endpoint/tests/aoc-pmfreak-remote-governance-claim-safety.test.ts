@@ -33,8 +33,8 @@ const UNSAFE_PHRASES = [
 ];
 
 const SAFE_PHRASES = [
-  'AOC PMFreak remote governance endpoint',
-  'PMFreak consumes AOC Governance',
+  'Soberanía PMFreak remote governance endpoint',
+  'PMFreak consumes Soberanía Governance',
   'Governance decision returned',
   'No PMFreak mutation performed',
   'No action execution performed',
@@ -44,7 +44,7 @@ const SAFE_PHRASES = [
   'Not legal advice',
 ];
 
-describe('AOC PMFreak Remote Governance Endpoint -- claim safety', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- claim safety', () => {
   it('catches every required unsafe phrase', () => {
     for (const phrase of UNSAFE_PHRASES) {
       const result = evaluateAocPMFreakRemoteGovernanceEndpointClaimSafety(`This output claims: ${phrase}.`);

@@ -1,7 +1,7 @@
 import type { KernelDecisionStatus } from '../../kernel/index.js';
 
 /**
- * Canonical model of the AOC Enterprise Agent Passport Runtime v1 (PR-006).
+ * Canonical model of the Soberanía Enterprise Agent Passport Runtime v1 (PR-006).
  * An Agent Passport is the governed identity, authority, status, provenance,
  * and evidence-reference record of an autonomous or semi-autonomous agent
  * operating within an organization.

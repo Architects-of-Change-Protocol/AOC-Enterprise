@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { createAocPMFreakRemoteGovernanceEndpointError } from '../aoc-pmfreak-remote-governance-errors.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- error model', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- error model', () => {
   it('builds a safe structured error', () => {
     const error = createAocPMFreakRemoteGovernanceEndpointError('invalid_request', 'Request body is malformed.');
     assert.equal(error.code, 'invalid_request');

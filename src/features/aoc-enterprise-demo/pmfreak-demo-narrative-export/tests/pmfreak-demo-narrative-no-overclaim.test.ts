@@ -31,7 +31,7 @@ const UNSAFE_PHRASES = [
 ];
 
 const SAFE_PHRASES = [
-  'AOC-governed agent',
+  'Soberanía-governed agent',
   'Demo narrative export',
   'Not production integration',
   'Not compliance certification',

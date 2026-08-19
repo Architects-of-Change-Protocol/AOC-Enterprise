@@ -1,6 +1,6 @@
-# AOC Delegated Capabilities & Derived Authority
+# Soberanía Delegated Capabilities & Derived Authority
 
-How AOC Enterprise proves that a requester's **capability to act** was derived
+How Soberanía Enterprise proves that a requester's **capability to act** was derived
 through a bounded, traceable, still-live chain from a source that genuinely had
 it — and never became broader along the way.
 
@@ -209,7 +209,7 @@ representative binding.
 ### An issued mandate is its own authorization artifact
 
 Revoking a delegation stops **new** requests. It does not reach backwards into a
-mandate AOC has already issued. This matches the decision the holder-bound
+mandate Soberanía has already issued. This matches the decision the holder-bound
 foundation made for representative authority, and it is asserted rather than
 assumed — see scenario 20 in
 `src/enterprise/__tests__/delegated-authority-scenario.test.ts`.
@@ -294,7 +294,7 @@ holder through a longer chain neither adds nor removes one. See
 
 The bounded claim is exactly:
 
-> AOC Enterprise can recognize and enforce authority derived through a typed,
+> Soberanía Enterprise can recognize and enforce authority derived through a typed,
 > bounded, traceable delegation lineage **within this deployment's governance
 > state**.
 

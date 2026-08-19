@@ -33,7 +33,7 @@ import {
  *
  * This is the property that decides whether the layer is worth having at all.
  * A collateral arrangement an external system created does not cease to exist
- * because an AOC process restarted, so the governed state accounting for it
+ * because a Soberanía process restarted, so the governed state accounting for it
  * must not either — and a deployment that came back up reporting the whole
  * position free would hand the same authority out twice on its first request.
  *

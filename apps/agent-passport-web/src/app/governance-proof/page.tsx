@@ -29,11 +29,11 @@ export default async function GovernanceProofPage() {
   return (
     <div className="container-wide" style={{ paddingTop: 48, paddingBottom: 80 }}>
       <div className="page-header">
-        <div className="section-label">AOC Proof of Governance Demo</div>
+        <div className="section-label">Soberanía Proof of Governance Demo</div>
         <h1>Proof of Governance</h1>
         <p style={{ fontSize: 20, marginBottom: 16 }}>Not an ingredient list. A governed execution decision.</p>
         <p style={{ maxWidth: 860 }}>
-          AOC Agent Passport does not merely describe governance. Inside a governed runtime, it can be used to decide whether an AI agent action is allowed, denied, or requires human approval.
+          Soberanía Agent Passport does not merely describe governance. Inside a governed runtime, it can be used to decide whether an AI agent action is allowed, denied, or requires human approval.
         </p>
         <div className="alert alert-info" style={{ marginTop: 20 }}>
           Runtime Guard Lite does not control the model’s internal reasoning. It controls whether a governed action is allowed to become real-world execution.
@@ -59,7 +59,7 @@ export default async function GovernanceProofPage() {
 
       <div className="card" style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 18, marginBottom: 8 }}>Demo agent</h2>
-        <p style={{ color: 'var(--text-muted)' }}>SalesBot CR · AOC Demo Company · CR · medium autonomy · medium risk</p>
+        <p style={{ color: 'var(--text-muted)' }}>SalesBot CR · Soberanía Demo Company · CR · medium autonomy · medium risk</p>
         {passportId && <div className="mono-block" style={{ marginTop: 12 }}>Passport ID: {passportId}</div>}
       </div>
 

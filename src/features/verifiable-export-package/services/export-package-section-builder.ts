@@ -47,7 +47,7 @@ const SECTION_DEFAULTS: Readonly<Record<ExportPackageSectionType, { readonly tit
   enforcement: { title: 'Enforcement', description: 'Action Enforcement request, decision, and proof.' },
   execution: { title: 'Execution', description: 'Execution result and side effects, if the action executed.' },
   events: { title: 'Events', description: 'Event trail(s) recorded by the source runtimes for this decision.' },
-  control_plane: { title: 'Control Plane', description: 'AOC Control Plane snapshot reference for this decision.' },
+  control_plane: { title: 'Control Plane', description: 'Soberanía Control Plane snapshot reference for this decision.' },
   enterprise_demo: { title: 'Enterprise Demo', description: 'Enterprise Demo scenario and run reference, if this decision originated in a demo scenario.' },
   manifest: { title: 'Manifest', description: 'Deterministic manifest of every section, item, and reference hash in this package.' },
   verification: { title: 'Verification', description: 'Verification result proving whether this package is internally consistent.' },

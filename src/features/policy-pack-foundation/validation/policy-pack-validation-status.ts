@@ -2,7 +2,7 @@ import type { PolicyPackValidationStatus } from '../manifest/policy-pack-manifes
 
 /**
  * What each actual validation status is trusted to satisfy. This is the
- * single shared trust lattice for every AOC policy pack -- legal,
+ * single shared trust lattice for every Soberanía policy pack -- legal,
  * jurisdiction, domain, use-case, customer, security, privacy, finance,
  * healthcare, AI-governance, project-governance alike -- so that, for
  * example, a demo_baseline pack can never satisfy a counsel_reviewed

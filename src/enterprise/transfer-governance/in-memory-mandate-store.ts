@@ -213,7 +213,7 @@ export function createInMemoryTransferMandateStore(options: CreateInMemoryTransf
       if (transferredScope === null) {
         throw new TransferGovernanceError(
           'TRANSFER_EXECUTION_NOT_AUTHORIZED',
-          'The reported movement is not commensurable with the portion already transferred under this mandate; refusing to record a total AOC could not justify.',
+          'The reported movement is not commensurable with the portion already transferred under this mandate; refusing to record a total Soberanía could not justify.',
           { refusalCode: 'CUMULATIVE_SCOPE_EXCEEDS_MANDATE', mandateId: mandate.id },
         );
       }
@@ -286,7 +286,7 @@ export function createInMemoryTransferMandateStore(options: CreateInMemoryTransf
       if (!log.some((execution) => execution.id === input.executionId)) {
         throw new TransferGovernanceError(
           'TRANSFER_EXECUTION_NOT_FOUND',
-          `No transfer execution '${input.executionId}' recorded under mandate '${mandate.id}'; a lifecycle report must reference a movement AOC has evidence of.`,
+          `No transfer execution '${input.executionId}' recorded under mandate '${mandate.id}'; a lifecycle report must reference a movement Soberanía has evidence of.`,
           { mandateId: mandate.id, executionId: input.executionId },
         );
       }
@@ -324,7 +324,7 @@ export function createInMemoryTransferMandateStore(options: CreateInMemoryTransf
       lifecycleLog.push(event);
       // Deliberately no change to `mandate.transferredScope`,
       // `mandate.executionCount` or `mandate.status`. A reported reversal in
-      // particular restores nothing: AOC cannot verify that a movement was
+      // particular restores nothing: Soberanía cannot verify that a movement was
       // undone, and decrementing the transferred total would manufacture
       // fresh capacity over a right already recorded as having left.
       return event;

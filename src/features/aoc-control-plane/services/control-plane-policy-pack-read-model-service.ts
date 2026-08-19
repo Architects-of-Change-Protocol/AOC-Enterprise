@@ -20,7 +20,7 @@ export interface BuildPolicyPackViewModelInput {
  * action-enforcement/domain/enforcement-decision.ts. A decision only counts
  * as *blocked by policy* when the enforcement decision's own reasonCode is
  * exactly the policy decision's reasonCode -- i.e. the policy pack outcome
- * is what stopped execution, not some other AOC layer (recognition,
+ * is what stopped execution, not some other Soberanía layer (recognition,
  * authority, approval, evidence, external standing, adapter, idempotency)
  * that happened to run after a policy pack warning/allow.
  */

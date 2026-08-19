@@ -1,4 +1,4 @@
-# AOC Cryptographic Lifecycle Governance (Track 2.6)
+# Soberanía Cryptographic Lifecycle Governance (Track 2.6)
 
 ## Summary
 Track 2.6 upgrades runtime cryptographic semantics from static signer verification to evolving trust governance:

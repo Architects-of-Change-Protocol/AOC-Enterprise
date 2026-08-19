@@ -46,7 +46,7 @@ export interface AocKernelOptions {
    * Present, it answers "does this holder control this much of this right?"
    * for every right a request declares in `action.governedRights`, and can
    * only narrow an already-viable outcome into a denial. It never grants
-   * anything: this class remains the only component in AOC Enterprise that
+   * anything: this class remains the only component in Soberanía Enterprise that
    * produces a decision.
    */
   readonly governedAuthorityProvider?: GovernedAuthorityProvider;
@@ -70,7 +70,7 @@ export interface AocKernelOptions {
    *
    * Configuring it is how a deployment lets its own policy turn on persistent
    * constraints — "require approval to tokenize an asset whose economic
-   * interest is collateralized", say. AOC ships no such rule and this provider
+   * interest is collateralized", say. Soberanía ships no such rule and this provider
    * introduces none: it carries facts, and only the deployment's policy pack
    * decides anything with them. Omitted, or with no `policyPackProvider`
    * configured, kernel behaviour is identical to this layer not existing.
@@ -102,7 +102,7 @@ function createRealIdGenerator(): KernelIdGenerator {
 }
 
 /**
- * Canonical AOC Enterprise Kernel entry point. Wraps the existing, unmodified
+ * Canonical Soberanía Enterprise Kernel entry point. Wraps the existing, unmodified
  * `ActionEnforcementRuntime`/`AocGuard` engine (recognition, authority,
  * approval, evidence, external handshake, and domain policy pack are all
  * reached transitively through the injected `RecognitionProvider`) and

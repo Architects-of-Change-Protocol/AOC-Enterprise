@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { createAocPMFreakRemoteGovernanceEndpointDescriptor } from '../aoc-pmfreak-remote-governance-endpoint-descriptor.js';
 import { AOC_PMFREAK_REMOTE_GOVERNANCE_DEFAULT_PATH, AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_ID } from '../aoc-pmfreak-remote-governance-endpoint-constants.js';
 
-describe('AOC PMFreak Remote Governance Endpoint -- descriptor', () => {
-  it('carries the correct AOC-provider / PMFreak-consumer runtime direction', () => {
+describe('Soberanía PMFreak Remote Governance Endpoint -- descriptor', () => {
+  it('carries the correct Soberanía-provider / PMFreak-consumer runtime direction', () => {
     const descriptor = createAocPMFreakRemoteGovernanceEndpointDescriptor();
 
     assert.equal(descriptor.endpointId, AOC_PMFREAK_REMOTE_GOVERNANCE_ENDPOINT_ID);

@@ -305,7 +305,7 @@ export function createInMemoryCollateralizationMandateStore(
       if (!log.some((execution) => execution.id === input.executionId)) {
         throw new CollateralizationGovernanceError(
           'COLLATERALIZATION_EXECUTION_NOT_FOUND',
-          `No collateralization execution '${input.executionId}' recorded under mandate '${mandate.id}'; a release must reference an arrangement AOC has evidence of.`,
+          `No collateralization execution '${input.executionId}' recorded under mandate '${mandate.id}'; a release must reference an arrangement Soberanía has evidence of.`,
           { mandateId: mandate.id, executionId: input.executionId },
         );
       }

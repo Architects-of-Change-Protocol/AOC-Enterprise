@@ -36,7 +36,7 @@ describe('Control Plane summary is claim-safe', () => {
 
     for (const label of [
       'PMFreak project governance scenario',
-      'AOC-governed agent',
+      'Soberanía-governed agent',
       'Demo scenario',
       'Passport-gated',
       'Capability-gated',

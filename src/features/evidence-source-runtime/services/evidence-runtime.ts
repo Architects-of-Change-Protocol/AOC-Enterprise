@@ -44,7 +44,7 @@ export interface EvidenceTargetView {
 /**
  * Single composition root for the Evidence / Source / Citation Runtime.
  * Wires EvidenceStore, EvidenceLedger and every service together and
- * exposes the small, stable API surface other AOC runtimes and the demo/
+ * exposes the small, stable API surface other Soberanía runtimes and the demo/
  * control-plane adapters are expected to call. Sub-services remain
  * accessible directly (`runtime.sourceDocuments`, `runtime.proofs`, ...) for
  * callers that need finer control than the composed API offers.

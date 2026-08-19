@@ -2,7 +2,7 @@ import type { PMFreakProjectPhase, ResolvePMFreakAgentPassportActionInput } from
 import type { AocPMFreakGovernanceEvaluationInput, AocPMFreakGovernanceRequest } from './aoc-pmfreak-governance-intake-types.js';
 
 /**
- * Normalizes a PMFreak governance request into a stable AOC evaluation
+ * Normalizes a PMFreak governance request into a stable Soberanía evaluation
  * input. Pure and read-only -- never mutates `request`.
  */
 export function mapAocPMFreakGovernanceRequestToEvaluationInput(request: AocPMFreakGovernanceRequest): AocPMFreakGovernanceEvaluationInput {

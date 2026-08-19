@@ -1,7 +1,7 @@
-# AOC Enterprise Governance Store v1
+# Soberanía Enterprise Governance Store v1
 
 The Governance Store is the canonical, durable, append-oriented,
-integrity-verifiable record of every governance evaluation the AOC
+integrity-verifiable record of every governance evaluation the Soberanía
 Enterprise Host performs. It was established by PR-004, evolving the
 minimal PR-002 decision persistence.
 
@@ -22,10 +22,10 @@ Store preserves what happened in a form suitable for later verification.
 Governance Request
         │
         ▼
-AOC Enterprise Host ── authentication, validation, idempotency resolution
+Soberanía Enterprise Host ── authentication, validation, idempotency resolution
         │
         ▼
-AOC Kernel ── kernel.evaluate() (unchanged by PR-004)
+Soberanía Kernel ── kernel.evaluate() (unchanged by PR-004)
         │
         ▼
 Governance Store append transaction (atomic)
@@ -548,21 +548,21 @@ apart.
 
 | Reference type | Produced by | Means |
 | --- | --- | --- |
-| `passport_event` | AOC Enterprise | an Agent Passport lifecycle event |
-| `evidence_bundle` | AOC Enterprise | an Evidence Bundle built over this evaluation |
-| `assurance_record` | AOC Enterprise | an Assurance assessment or finding artifact |
-| `authorization_artifact` | **AOC Enterprise** | **a durable artifact produced by AOC Enterprise that records or embodies authorization resulting from a governed enforcement decision** |
-| `execution_record` | external system | a report that an external system acted on an authorization AOC issued |
-| `external_artifact` | outside AOC | an artifact originating *outside* the AOC authorization machinery, referenced as evidence or context |
+| `passport_event` | Soberanía Enterprise | an Agent Passport lifecycle event |
+| `evidence_bundle` | Soberanía Enterprise | an Evidence Bundle built over this evaluation |
+| `assurance_record` | Soberanía Enterprise | an Assurance assessment or finding artifact |
+| `authorization_artifact` | **Soberanía Enterprise** | **a durable artifact produced by Soberanía Enterprise that records or embodies authorization resulting from a governed enforcement decision** |
+| `execution_record` | external system | a report that an external system acted on an authorization Soberanía issued |
+| `external_artifact` | outside Soberanía | an artifact originating *outside* the Soberanía authorization machinery, referenced as evidence or context |
 
 ### `authorization_artifact` vs `external_artifact`
 
-The distinction the vocabulary exists to make is **what AOC authorized**
+The distinction the vocabulary exists to make is **what Soberanía authorized**
 versus **what an external system later did about it**:
 
-- `authorization_artifact` — AOC-owned durable authorization artifact
+- `authorization_artifact` — Soberanía-owned durable authorization artifact
   resulting from enforcement.
-- `external_artifact` — artifact originating outside the AOC authorization
+- `external_artifact` — artifact originating outside the Soberanía authorization
   machinery.
 
 ```
@@ -574,7 +574,7 @@ external collateral filing        -> execution_record / external_artifact
 
 In this repository both governed actions record the external side as
 `execution_record`, the more specific canonical type, and reserve
-`external_artifact` for artifacts that are neither AOC authorizations nor
+`external_artifact` for artifacts that are neither Soberanía authorizations nor
 reports of execution against one. Collapsing the two categories would make
 the record unable to answer the one question an auditor most needs answered.
 
@@ -609,7 +609,7 @@ Validation is therefore deliberately **asymmetric**:
   `GOVERNANCE_STORE_VALIDATION_ERROR`. Both providers call it, so an
   arbitrary string can never be stored and later cast back out as though it
   were a classification this build recognizes — which matters most for
-  `authorization_artifact`, the one value that reads as "AOC authorized this".
+  `authorization_artifact`, the one value that reads as "Soberanía authorized this".
 - **Read** — deliberately permissive. Reads never reject a stored value, so
   history written before a vocabulary addition, and rows written by a newer
   runtime, stay readable instead of turning an intact aggregate into a
@@ -675,4 +675,4 @@ so future Passport events, Evidence Bundles, Assurance records, and
 execution records can attach to committed evaluations without schema
 changes. `GovernanceCorrectionRecord` is reserved (type only) so future
 corrections are appended, never updated in place. The recommended next
-step is PR-005 — AOC Enterprise Evidence Bundle v1.
+step is PR-005 — Soberanía Enterprise Evidence Bundle v1.

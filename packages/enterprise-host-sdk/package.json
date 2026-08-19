@@ -2,7 +2,7 @@
   "name": "@aoc-enterprise/enterprise-host-sdk",
   "version": "1.0.0",
   "private": true,
-  "description": "Minimal typed HTTP client for the AOC Enterprise Host v1 API. Transport only: no governance logic, no local decisions.",
+  "description": "Minimal typed HTTP client for the Soberanía Enterprise Host v1 API. Transport only: no governance logic, no local decisions.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

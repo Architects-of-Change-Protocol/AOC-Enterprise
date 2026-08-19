@@ -18,7 +18,7 @@ export interface CreateAocPMFreakGovernanceRequestIntakeClientInput {
 
 /**
  * Builds the intake client/facade PMFreak (or a test) interacts with.
- * Every method is read-only with respect to PMFreak and AOC state: it never
+ * Every method is read-only with respect to PMFreak and Soberanía state: it never
  * mutates PMFreak data, never executes a PMFreak action, and never writes a
  * decision back into PMFreak.
  */

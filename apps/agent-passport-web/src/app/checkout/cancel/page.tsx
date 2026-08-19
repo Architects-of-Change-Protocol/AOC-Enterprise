@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Checkout Canceled — AOC Agent Passport',
+  title: 'Checkout Canceled — Soberanía Agent Passport',
 };
 
 export default function CheckoutCancelPage() {

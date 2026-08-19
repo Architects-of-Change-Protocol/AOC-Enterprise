@@ -1,9 +1,9 @@
 # ADR: Canonical Provider Adapter Contract (R005.A)
 
 - Status: Accepted
-- Deciders: AOC Enterprise architecture
-- Sequence: R005.A, AOC Architectural Consolidation Program
-- Repository: `architects-of-change-protocol/aoc-enterprise` (AOC Enterprise)
+- Deciders: Soberanía Enterprise architecture
+- Sequence: R005.A, Soberanía Architectural Consolidation Program
+- Repository: `architects-of-change-protocol/aoc-enterprise` (Soberanía Enterprise)
 - Branch: `claude/canonical-provider-adapter-bqa14i`
 - Related: `ADR-ACCESS-LIFECYCLE.md` (R005.0, frozen input — treated as
   frozen architecture, not modified by this change), `ADR-ACCESS-GRANT.md`
@@ -339,7 +339,7 @@ active use; this ADR is the point-in-time architectural decision record.
 | `npm run typecheck` (root) | `tsc -b --pretty false` across every project reference, including the new package added to `tsconfig.json`'s `references`. |
 | `npm run lint` (root) | `check-node16-imports.mjs` + `lint-architecture.mjs` (no explicit `any`) + `lint-public-surface.mjs`. |
 | `node scripts/check-duplicate-semantic-contracts.mjs` | Confirms no type/interface/const name in `packages/provider-adapter/src` collides with any other non-canonical package. |
-| `node scripts/check-aoc-boundaries.mjs` | Confirms no AOC boundary violation was introduced. |
+| `node scripts/check-aoc-boundaries.mjs` | Confirms no Soberanía boundary violation was introduced. |
 | `node scripts/validate-publishability.mjs` | Confirms the new package's `package.json` (`main`, `types`, `exports`, `files`) is publishable-shaped, matching every other `packages/*` entry. |
 
 Every command's actual output for this change is recorded in the pull

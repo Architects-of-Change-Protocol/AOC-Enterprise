@@ -395,7 +395,7 @@ describe('LICENSE durability — authorization_artifact and reference integrity'
 
     const reference = (record?.references ?? []).find((entry) => entry.externalId === mandateId);
     assert.ok(reference, 'the mandate reference must survive the restart');
-    assert.equal(reference.referenceType, 'authorization_artifact', 'a LicenseMandate is AOC-owned authorization, never an external artifact');
+    assert.equal(reference.referenceType, 'authorization_artifact', 'a LicenseMandate is Soberanía-owned authorization, never an external artifact');
     assert.equal(reference.integrityVersion, GOVERNANCE_REFERENCE_INTEGRITY_VERSION, 'the enforcement path must write protected references');
     assert.equal(reference.sequence, 1);
     assert.equal(verification.valid, true, JSON.stringify(verification.failures));
@@ -430,7 +430,7 @@ describe('LICENSE durability — authorization_artifact and reference integrity'
     assert.deepEqual(
       references.map((reference) => reference.referenceType),
       ['authorization_artifact', 'execution_record', 'execution_record'],
-      'AOC authorized once; the grant and its reported end are two separate external observations',
+      'Soberanía authorized once; the grant and its reported end are two separate external observations',
     );
     assert.deepEqual(references.map((reference) => reference.sequence), [1, 2, 3]);
     assert.equal(references[1]?.externalId, granted.execution.id);
@@ -488,7 +488,7 @@ describe('LICENSE reference scenario — Digital Work A licensed to Company B', 
     assert.ok(outcome.mandate);
     const mandateId = outcome.mandate.id;
     const evaluationId = outcome.evaluationId;
-    assert.equal(outcome.mandate.executionCount, 0, 'AOC authorized a license; it does not yet claim one exists');
+    assert.equal(outcome.mandate.executionCount, 0, 'Soberanía authorized a license; it does not yet claim one exists');
     await processA.close();
 
     // --- Restart: the mandate is recovered unchanged. ----------------------
@@ -503,7 +503,7 @@ describe('LICENSE reference scenario — Digital Work A licensed to Company B', 
 
     // --- The external licensing platform reports what it granted. ----------
     const granted = await processB.service.recordExecution(CONTEXT, buildConformingLicenseExecution(mandateId));
-    assert.equal(granted.mandate.executionCount, 1, 'only now does AOC have evidence a license exists');
+    assert.equal(granted.mandate.executionCount, 1, 'only now does Soberanía have evidence a license exists');
 
     // --- ...and nothing broader can be reported under this authorization. ---
     for (const [label, overrides] of [

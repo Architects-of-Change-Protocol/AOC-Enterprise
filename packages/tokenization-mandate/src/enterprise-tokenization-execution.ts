@@ -25,7 +25,7 @@ import type { EnterpriseTokenizationScope, EnterpriseTokenizationTermsValidation
  * external tokenization actually performed under a previously-issued
  * `EnterpriseTokenizationMandate`**.
  *
- * This is the integration boundary, and it is the whole of it. AOC Enterprise
+ * This is the integration boundary, and it is the whole of it. Soberanía Enterprise
  * does not mint tokens, does not call a blockchain, does not hold keys, and
  * ships no provider adapter for tokenization. An external system -- a
  * tokenization provider, a regulated platform, a transfer agent, a custodian
@@ -34,7 +34,7 @@ import type { EnterpriseTokenizationScope, EnterpriseTokenizationTermsValidation
  * therefore, transitively, to the decision, approvals, obligations, authority
  * and asset that authorized it.
  *
- * The `external*` fields are opaque, provider-neutral strings AOC stores and
+ * The `external*` fields are opaque, provider-neutral strings Soberanía stores and
  * echoes and never parses, resolves, validates against any network, or acts
  * on. `externalContractReference` is not assumed to be an EVM address,
  * `externalTokenStandard` is not assumed to be an ERC number, and no field
@@ -46,7 +46,7 @@ import type { EnterpriseTokenizationScope, EnterpriseTokenizationTermsValidation
  * observes, it does not decide -- the same observation-only posture
  * `EnterpriseUsageEvent` takes toward `EnterpriseAccessGrant`.
  *
- * Ownership: AOC Enterprise (`@aoc-enterprise/tokenization-mandate`).
+ * Ownership: Soberanía Enterprise (`@aoc-enterprise/tokenization-mandate`).
  */
 export interface EnterpriseTokenizationExecutionEvidence extends GovernedExecutionEvidenceCore {
   /** Re-declared as this action's own literal so a serialized record names its schema on its face. */

@@ -18,10 +18,10 @@ export const POLICY_PACK_SAFE_LABELS = [
 export type PolicyPackSafeLabel = (typeof POLICY_PACK_SAFE_LABELS)[number];
 
 /**
- * Universal prohibited overclaim phrases. AOC must never emit these unless a
+ * Universal prohibited overclaim phrases. Soberanía must never emit these unless a
  * source-provided claim explicitly and safely allows them (see
  * `evaluatePolicyPackClaimSafety`'s `allowedSourceProvidedClaims` option) --
- * and even then the claim must be labeled as source-provided, not as AOC's
+ * and even then the claim must be labeled as source-provided, not as Soberanía's
  * own conclusion.
  */
 export const POLICY_PACK_PROHIBITED_OVERCLAIM_PHRASES = [

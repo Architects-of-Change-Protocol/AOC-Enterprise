@@ -5,7 +5,7 @@ import { assertNoPolicyPackOverclaim } from '../../policy-pack-foundation/valida
  * PMFreak-specific unsafe claims, additive to (never replacing)
  * `POLICY_PACK_PROHIBITED_OVERCLAIM_PHRASES`. These stay local to this pack
  * rather than being merged into the universal Policy Pack Foundation list --
- * generic AOC runtimes must not depend on PMFreak-specific vocabulary. See
+ * generic Soberanía runtimes must not depend on PMFreak-specific vocabulary. See
  * `buildClaimProfile` in `policy-pack-manifest-factory.ts` for the same
  * "universal baseline stays universal, pack-specific claims stay local"
  * convention applied to manifest claim profiles.

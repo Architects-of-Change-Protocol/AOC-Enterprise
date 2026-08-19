@@ -1,9 +1,9 @@
-# AOC Agent Passport — Public Passport Flow
+# Soberanía Agent Passport — Public Passport Flow
 
 ## Overview
 
 `apps/agent-passport-web` is a Next.js 14 (App Router) web application that exposes the
-AOC Agent Passport Core (`packages/agent-governance`) as a demoable, product-ready MVP.
+Soberanía Agent Passport Core (`packages/agent-governance`) as a demoable, product-ready MVP.
 
 ---
 
@@ -89,7 +89,7 @@ To add QR rendering: integrate a lightweight library like `qrcode` or `react-qr-
 The badge snippet is plain HTML:
 
 ```html
-<a href="{verificationUrl}" rel="noopener">AOC Governed Agent: {passportId}</a>
+<a href="{verificationUrl}" rel="noopener">Soberanía Governed Agent: {passportId}</a>
 ```
 
 Shown on the passport page with a copy button. This snippet can be embedded in external sites, documentation, or agent interfaces to link to the public passport.
@@ -129,7 +129,7 @@ This proves that the passport is not just a badge — the policy manifest is enf
 
 ## Suggested Next Sprint
 
-**Option B: AOC Agent Passport Marketing Landing + Stripe Checkout**
+**Option B: Soberanía Agent Passport Marketing Landing + Stripe Checkout**
 
 The demo is now stable. The next step is to start selling the product:
 - A public marketing landing page at `aocprotocol.org` or similar.

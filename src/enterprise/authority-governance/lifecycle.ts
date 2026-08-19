@@ -127,7 +127,7 @@ export function addAuthorityScopes(a: GovernedRightsScope, b: GovernedRightsScop
   if (sum === null) {
     throw new AuthorityGovernanceError(
       'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
-      'These two governed rights scopes cannot be added: they are of different kinds, or name different unit denominations, and AOC holds no conversion between them.',
+      'These two governed rights scopes cannot be added: they are of different kinds, or name different unit denominations, and Soberanía holds no conversion between them.',
       { ...context, a: serializeGovernedRightsScope(a), b: serializeGovernedRightsScope(b) },
     );
   }

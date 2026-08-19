@@ -31,7 +31,7 @@ export type PilotTemplateIndustry =
   | 'cross_industry';
 
 /**
- * A reusable, enterprise-pilot-ready packaging of existing AOC runtime
+ * A reusable, enterprise-pilot-ready packaging of existing Soberanía runtime
  * capability around one bounded use case. A PilotTemplate is declarative
  * data only -- it orchestrates existing runtime truth, it never manufactures
  * its own recognition/authority/approval/policy/evidence/enforcement/export

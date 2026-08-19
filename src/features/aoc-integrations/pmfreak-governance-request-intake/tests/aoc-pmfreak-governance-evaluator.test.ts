@@ -23,7 +23,7 @@ function withMissingApproval(request: AocPMFreakGovernanceRequest, approvalId: s
   };
 }
 
-describe('AOC PMFreak Governance Request Intake -- deterministic evaluator', () => {
+describe('Soberanía PMFreak Governance Request Intake -- deterministic evaluator', () => {
   it('returns require_evidence for a billing action with missing evidence', () => {
     const response = evaluateAocPMFreakGovernanceRequest({ request: demoAocPMFreakBillingMissingEvidenceRequest });
     assert.equal(response.decision, 'require_evidence');
@@ -91,7 +91,7 @@ describe('AOC PMFreak Governance Request Intake -- deterministic evaluator', () 
   });
 });
 
-describe('AOC PMFreak Governance Request Intake -- passport_runtime evaluation mode', () => {
+describe('Soberanía PMFreak Governance Request Intake -- passport_runtime evaluation mode', () => {
   it('produces a response using the intake public decision vocabulary only', () => {
     const response = evaluateAocPMFreakGovernanceRequest({ request: demoAocPMFreakBillingMissingEvidenceRequest, config: { evaluationMode: 'passport_runtime' } });
     const validDecisions = ['allow', 'deny', 'hold', 'require_evidence', 'require_pm_approval', 'require_customer_validation', 'require_billing_review', 'require_contract_review', 'require_security_review', 'require_executive_approval'];

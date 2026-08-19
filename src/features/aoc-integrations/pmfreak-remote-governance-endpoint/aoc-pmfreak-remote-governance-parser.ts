@@ -21,7 +21,7 @@ function hasThreeStringArrayFields(value: Record<string, unknown>, fields: reado
  * Parses an arbitrary request body into an `AocPMFreakGovernanceRequest`.
  * This is a shape/envelope check only -- it confirms the body looks enough
  * like a governance request to be safely narrowed to the compatibility
- * type, so it can be handed to the already-merged AOC PMFreak Governance
+ * type, so it can be handed to the already-merged Soberanía PMFreak Governance
  * Request Intake. It deliberately does not duplicate that intake's own
  * `validateAocPMFreakGovernanceRequest` (cross-field consistency, empty-id
  * checks, claim-safety scanning); a body that passes this parser but fails
@@ -32,7 +32,7 @@ export function parseAocPMFreakRemoteGovernanceRequestBody(body: unknown): AocPM
   if (!isRecord(body)) {
     return {
       ok: false,
-      error: createAocPMFreakRemoteGovernanceEndpointError('invalid_request', 'Request body must be a JSON object shaped like an AOC PMFreak governance request.'),
+      error: createAocPMFreakRemoteGovernanceEndpointError('invalid_request', 'Request body must be a JSON object shaped like a Soberanía PMFreak governance request.'),
     };
   }
 

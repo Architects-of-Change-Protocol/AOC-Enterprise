@@ -3,7 +3,7 @@ import type { EnterpriseEvent } from '../events/enterprise-events.js';
 import type { EnterpriseModuleSnapshot } from '../modules/enterprise-module.js';
 
 /**
- * Canonical record model of the AOC Enterprise Governance Store v1
+ * Canonical record model of the Soberanía Enterprise Governance Store v1
  * (PR-004). These contracts describe the durable, reconstructable,
  * integrity-verifiable form of one governance evaluation. The Store
  * *records* these facts; it never decides them — decision semantics belong
@@ -237,7 +237,7 @@ export interface GovernanceIntegrityMetadata {
  * `GovernanceReferenceRecord.referenceType` is derived from this list so the
  * type and the value that reaches storage can never drift apart.
  *
- * `authorization_artifact` names *what AOC authorized*;
+ * `authorization_artifact` names *what Soberanía authorized*;
  * `execution_record` and `external_artifact` name *what someone else then
  * did about it*. Keeping those apart is the point of the vocabulary — see
  * `docs/enterprise/AOC_GOVERNANCE_RECORD_MODEL.md`, "Reference vocabulary".
@@ -246,10 +246,10 @@ export interface GovernanceIntegrityMetadata {
  * - `evidence_bundle` — an Evidence Bundle built over this evaluation.
  * - `assurance_record` — an Assurance assessment/finding artifact.
  * - `execution_record` — a report of an external system acting on an
- *   authorization AOC issued (token issuance, collateral filing, release).
- * - `external_artifact` — an artifact originating *outside* the AOC
+ *   authorization Soberanía issued (token issuance, collateral filing, release).
+ * - `external_artifact` — an artifact originating *outside* the Soberanía
  *   authorization machinery, referenced as evidence or context.
- * - `authorization_artifact` — a durable artifact produced by AOC Enterprise
+ * - `authorization_artifact` — a durable artifact produced by Soberanía Enterprise
  *   that records or embodies authorization resulting from a governed
  *   enforcement decision (`TokenizationMandate`, `CollateralizationMandate`,
  *   `LicenseMandate`, `TransferMandate`).
