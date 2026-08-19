@@ -499,3 +499,34 @@ rights-scope value type, the authorization-artifact skeleton and the execution
 evidence envelope) via aliases and interface extension. No serialized byte,
 stored record, consumer, validator or error code changed. See
 `docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md`.
+
+## Update — constraint applicability
+
+`TOKENIZE` has **no generic relationship to persistent authority constraints**,
+and that is a measured finding rather than an oversight.
+
+```
+reservation behaviour            none — it never calls the authority store
+produces persistent constraint   none
+consumes constraint class        none
+structural effect                none
+policy visibility                full
+release relationship             none
+```
+
+With a holder at 5 000 bp and a 4 000 bp collateral constraint standing, a
+`TOKENIZE` of the whole 5 000 proceeds as far as this layer is concerned. AOC has
+been given no evidence that tokenizing collateralized authority is a conflict and
+declines to invent one — an invented default would be one deployment's commercial
+assumption imposed on every deployment.
+
+A deployment that believes the combination is unacceptable expresses it as
+policy. The constraint is reported to policy with an empty `applicability`,
+meaning "this stands over the authority you are being asked about, and AOC has no
+rule about it" — which is exactly what such a rule needs. See
+`AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.
+
+Whether independent issuances should compete for one pool remains a
+tokenization-domain question, still unanswered, and answering it would mean
+introducing a constraint class for issuance capacity rather than reusing
+collateral's.

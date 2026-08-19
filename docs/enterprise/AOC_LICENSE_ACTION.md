@@ -523,3 +523,35 @@ rights-scope value type, the authorization-artifact skeleton and the evidence
 envelopes) via aliases and interface extension. No serialized byte, stored
 record, consumer, validator or error code changed. See
 `docs/architecture/ADR-ENTERPRISE-ENFORCEMENT-VOCABULARY.md`.
+
+## Update — constraint applicability
+
+`LICENSE`, like `TOKENIZE`, has **no generic relationship to persistent authority
+constraints**.
+
+```
+reservation behaviour            none — it never calls the authority store
+produces persistent constraint   none
+consumes constraint class        none
+structural effect                none
+policy visibility                full
+release relationship             none
+```
+
+Two properties matter here beyond the shared answer.
+
+**No cross-right coupling.** An `economic-interest` constraint does not reach a
+`usage-right` licence. There is deliberately no typed relation between the two:
+AOC holds no evidence those quantities are commensurable, and inventing the
+relation would be inventing the policy.
+
+**An absent `rightsScope` is still not 100 %.** A licence that expresses no
+fraction has no quantity for a constraint to reduce, and this layer does not
+manufacture one.
+
+Licence scarcity — exclusivity, seat ceilings, duration — remains action-local
+policy, and an exclusive licence produces no persistent authority constraint
+today. Should it later need to, that is a new constraint class rather than a
+reuse of collateral's. A deployment wanting to bar licensing while collateral
+stands expresses it as policy. See
+`AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.

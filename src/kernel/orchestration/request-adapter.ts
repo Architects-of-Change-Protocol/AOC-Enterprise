@@ -1,3 +1,8 @@
+import {
+  GOVERNED_CONSTRAINT_POLICY_METADATA_KEY,
+  type GovernedConstraintPolicyContext,
+} from '@aoc-enterprise/governed-authority';
+
 import type { GuardActionRequestInput } from '../../features/action-enforcement/sdk/aoc-guard.js';
 import type { EnforcementPolicyEvaluationInput } from '../../features/action-enforcement/domain/enforcement-request.js';
 import type { EnforcementTargetType } from '../../features/action-enforcement/domain/enforcement-target.js';
@@ -41,9 +46,28 @@ export function validateKernelEvaluationRequest(request: KernelEvaluationRequest
   }
 }
 
-function buildPolicyEvaluationInput(request: KernelEvaluationRequest): EnforcementPolicyEvaluationInput | undefined {
+/**
+ * Assembles the optional Domain Policy Pack preflight input.
+ *
+ * The governed constraint context, when one was resolved, travels in the
+ * deployment metadata bag under a namespaced key rather than as a new top-level
+ * field. Two reasons, both deliberate: the bag is already the documented place
+ * for facts a deployment's own rules turn on, and keeping it out of the typed
+ * policy-input surface means a deployment that has never heard of persistent
+ * constraints compiles, runs and decides exactly as it did before.
+ *
+ * A resolved context is enough on its own to build an input. A request that
+ * engages governed rights but sets none of the policy-pack fields still needs
+ * its constraint facts to reach a policy that asked for them, and returning
+ * `undefined` because no *other* field was set would drop them silently.
+ */
+function buildPolicyEvaluationInput(
+  request: KernelEvaluationRequest,
+  constraintContext: GovernedConstraintPolicyContext | undefined,
+): EnforcementPolicyEvaluationInput | undefined {
   const { action } = request;
   const hasPolicyPackFields =
+    constraintContext !== undefined ||
     action.domain !== undefined ||
     action.jurisdiction !== undefined ||
     action.country !== undefined ||
@@ -70,6 +94,7 @@ function buildPolicyEvaluationInput(request: KernelEvaluationRequest): Enforceme
     ...(action.counterpartyId !== undefined ? { counterpartyId: action.counterpartyId } : {}),
     ...(action.dataDomains !== undefined ? { dataDomains: action.dataDomains } : {}),
     ...(action.evidenceIds !== undefined ? { evidenceIds: action.evidenceIds } : {}),
+    ...(constraintContext !== undefined ? { metadata: { [GOVERNED_CONSTRAINT_POLICY_METADATA_KEY]: constraintContext } } : {}),
   };
 }
 
@@ -80,9 +105,13 @@ function buildPolicyEvaluationInput(request: KernelEvaluationRequest): Enforceme
  * (`preflight` for `evaluate()`, `execute` for `enforce()` -- set by the
  * caller of this function, not here).
  */
-export function toGuardActionRequestInput(request: KernelEvaluationRequest, options: KernelEvaluationOptions | undefined): GuardActionRequestInput {
+export function toGuardActionRequestInput(
+  request: KernelEvaluationRequest,
+  options: KernelEvaluationOptions | undefined,
+  constraintContext?: GovernedConstraintPolicyContext,
+): GuardActionRequestInput {
   const { actor, action, target } = request;
-  const policyEvaluationInput = buildPolicyEvaluationInput(request);
+  const policyEvaluationInput = buildPolicyEvaluationInput(request, constraintContext);
   const targetType = toEnforcementTargetType(target?.type);
   const context: Record<string, unknown> = { ...(request.context ?? {}) };
   if (request.organization !== undefined) {

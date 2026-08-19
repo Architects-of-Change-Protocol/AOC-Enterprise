@@ -683,3 +683,29 @@ Two things this deliberately does **not** change here:
 
 See `docs/enterprise/AOC_GOVERNED_ENCUMBRANCE_RELEASE.md` and
 `docs/architecture/ADR-GOVERNED-ENCUMBRANCE-RELEASE.md`.
+
+## Update — constraint applicability
+
+`COLLATERALIZE` is the only current governed action that both **produces** and
+**consumes** a persistent constraint class, which is exactly what makes that
+capacity finite.
+
+```
+reservation behaviour            required
+produces persistent constraint   collateral-commitment-capacity
+consumes constraint class        collateral-commitment-capacity
+structural effect                none (executing it debits no position)
+policy visibility                full
+release relationship             none — an arrangement's own mandate can never
+                                 discharge the constraint it created
+```
+
+The class is **derived** from the constraint's `sourceAction` rather than stored,
+so nothing about the records this action writes changed: no field, no digest, no
+migration.
+
+Standing constraints of the matching class reduce the capacity a further
+`COLLATERALIZE` may commit, and the reduction is a hard conservation invariant
+rather than a policy: with 5 000 bp held and 4 000 bp constrained, a further
+4 000 is refused and 1 000 is not, and no deployment policy can buy the
+difference. See `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.

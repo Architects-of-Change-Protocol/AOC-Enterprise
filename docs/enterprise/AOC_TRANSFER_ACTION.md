@@ -271,3 +271,37 @@ adapter for transfer and none is implied.
 - `docs/enterprise/AOC_COLLATERALIZE_ACTION.md`
 - `packages/transfer-mandate/README.md`
 - `packages/governed-authorization/README.md`
+
+## Update — constraint applicability
+
+`TRANSFER` is the only current governed action classified as
+**structurally constraint-aware**, and the distinction is load-bearing.
+
+```
+reservation behaviour            required (it debits a position)
+produces persistent constraint   none
+consumes constraint class        none
+structural effect                YES — the transferor's remaining authority must
+                                 still cover every persistent constraint attached
+                                 to that holder
+policy visibility                full
+release relationship             none
+```
+
+With a holder at 5 000 bp and a 4 000 bp collateral constraint standing, a
+transfer is bounded at 1 000. **That is not the rule "collateralized authority
+may not be sold."** AOC asserts no such rule: 1 000 moves freely, and the bound
+exists only because constraints are holder-bound and do not follow the authority
+to a recipient, so AOC would otherwise be left holding a constraint over
+authority its holder no longer possesses.
+
+`TRANSFER` deliberately does **not** consume the collateral capacity class, even
+though doing so would reproduce the same number today. Transferring is not
+committing collateral, and the two come apart for the first future class a
+transfer should not consume.
+
+A deployment that *does* want a commercial rule — "no transfer while collateral
+stands" — expresses it as policy, which sees the typed constraint facts and may
+narrow. It can never widen: a movement that would strand a constraint is refused
+whatever any policy concludes. See
+`AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.

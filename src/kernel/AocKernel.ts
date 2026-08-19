@@ -15,6 +15,7 @@ import type { KernelEnforcementResult } from './contracts/kernel-enforcement-res
 import type { KernelEvaluationOptions } from './contracts/kernel-options.js';
 import type {
   GovernedAuthorityProvider,
+  GovernedConstraintProvider,
   GovernedRepresentationProvider,
   KernelClock,
   KernelIdGenerator,
@@ -24,6 +25,7 @@ import type {
 import type { KernelEvaluationRequest } from './contracts/kernel-request.js';
 import type { KernelEvaluationResult } from './contracts/kernel-result.js';
 import { KernelConfigurationError, KernelDependencyError, KernelExecutionError } from './errors/kernel-errors.js';
+import { resolveGovernedConstraintContext } from './orchestration/governed-constraint-adapter.js';
 import { applyGovernedAuthorityStep, resolveGovernedAuthorityFacts, type GovernedAuthorityFacts } from './orchestration/governed-authority-adapter.js';
 import { assertKernelInvariants, cloneKernelEvaluationRequest } from './orchestration/kernel-invariants.js';
 import { toGuardActionRequestInput, validateKernelEvaluationRequest } from './orchestration/request-adapter.js';
@@ -61,6 +63,24 @@ export interface AocKernelOptions {
    * a denial.
    */
   readonly governedRepresentationProvider?: GovernedRepresentationProvider;
+  /**
+   * Optional persistent-constraint fact provider, resolved before the wrapped
+   * engine runs so the typed constraint facts reach the Domain Policy Pack
+   * preflight.
+   *
+   * Configuring it is how a deployment lets its own policy turn on persistent
+   * constraints — "require approval to tokenize an asset whose economic
+   * interest is collateralized", say. AOC ships no such rule and this provider
+   * introduces none: it carries facts, and only the deployment's policy pack
+   * decides anything with them. Omitted, or with no `policyPackProvider`
+   * configured, kernel behaviour is identical to this layer not existing.
+   *
+   * It cannot widen an outcome. Capacity conservation and structural
+   * holder/constraint coverage are enforced afterwards inside the Governed
+   * Authority Store's own transaction, so neither an absent provider nor a
+   * permissive policy can commit authority a constraint already accounts for.
+   */
+  readonly governedConstraintProvider?: GovernedConstraintProvider;
   /** Defaults to a real-time clock. Tests should supply a deterministic one (see `AOC_KERNEL_INTEGRATION_GUIDE.md`). */
   readonly clock?: KernelClock;
   /** Defaults to `crypto.randomUUID()`-backed ids. Tests should supply a deterministic sequential generator. */
@@ -103,6 +123,7 @@ export class AocKernel {
   private readonly ctx: EnforcementRuntimeContext;
   private readonly governedAuthorityProvider: GovernedAuthorityProvider | undefined;
   private readonly governedRepresentationProvider: GovernedRepresentationProvider | undefined;
+  private readonly governedConstraintProvider: GovernedConstraintProvider | undefined;
 
   constructor(options: AocKernelOptions) {
     if (options.recognitionProvider === undefined) {
@@ -125,6 +146,7 @@ export class AocKernel {
     this.guard = createAocGuard(this.runtime);
     this.governedAuthorityProvider = options.governedAuthorityProvider;
     this.governedRepresentationProvider = options.governedRepresentationProvider;
+    this.governedConstraintProvider = options.governedConstraintProvider;
 
     for (const adapter of options.adapters ?? []) {
       this.runtime.registerAdapter(adapter);
@@ -168,9 +190,17 @@ export class AocKernel {
     validateKernelEvaluationRequest(request);
     const requestSnapshot = cloneKernelEvaluationRequest(request);
 
+    // Resolved before the wrapped engine runs, because the policy pack preflight
+    // happens synchronously inside it and an asynchronous store read has no
+    // point to occur at once it has started. Facts only: nothing here can deny,
+    // and a provider that fails reports `resolved: false` rather than an empty
+    // constraint set, so a deployment's rule can tell "none stand" from "none
+    // were read".
+    const constraintContext = await resolveGovernedConstraintContext(this.governedConstraintProvider, request, this.ctx.clock.now());
+
     let decision: EnforcementDecision;
     try {
-      decision = this.guard.preflight(toGuardActionRequestInput(request, options));
+      decision = this.guard.preflight(toGuardActionRequestInput(request, options, constraintContext));
     } catch (error) {
       return this.buildIndeterminateResult(request, new KernelDependencyError('recognitionProvider failed during evaluation', error));
     }
@@ -250,9 +280,11 @@ export class AocKernel {
       }
     }
 
+    const constraintContext = await resolveGovernedConstraintContext(this.governedConstraintProvider, request, this.ctx.clock.now());
+
     let outcome;
     try {
-      outcome = await this.guard.enforce(toGuardActionRequestInput(request, options), executor);
+      outcome = await this.guard.enforce(toGuardActionRequestInput(request, options, constraintContext), executor);
     } catch (error) {
       if (error instanceof PostExecutionRecordMissingError) {
         throw new KernelExecutionError(

@@ -374,15 +374,21 @@ authority layer's own code, exactly as an unconservable execution already was.
 - **No fairness.** There is no queue, no priority and no scheduler. Under
   contention, whichever commitment reaches the transaction first wins, and a
   loser is not retried on its behalf.
-- **No inter-action conflict policy.** Still deferred, and unchanged. Capacity
-  accounting knows that two commitments against the same right compete. It does
-  **not** know whether tokenizing 5 000 bp should conflict with collateralizing
-  the same 5 000 bp — that requires an explicit typed policy about what those
-  actions mean to each other, and inventing one here would be encoding a
-  business assumption in generic accounting. The one cross-action rule that was
-  added is structural rather than commercial: AOC refuses to leave a persistent
-  constraint referring to authority a holder no longer possesses. See
-  `AOC_GOVERNED_AUTHORITY_ENCUMBRANCE.md`, "Structural consistency".
+- **No inter-action conflict policy *here*.** Closed since, and elsewhere.
+  Capacity is no longer one universal quantity: how much authority is available
+  depends on *which action is asking*, because a persistent constraint bears on
+  some actions and not others. `COLLATERALIZE` is bounded by matching-class
+  constraints; `TRANSFER` is bounded because the holder's remaining authority
+  must still cover what is attached to her — the same arithmetic by an entirely
+  different route; `TOKENIZE` and `LICENSE` are bounded by neither, and AOC still
+  does **not** claim that tokenizing 5 000 bp conflicts with collateralizing the
+  same 5 000 bp. That remains a deployment's question, now expressible as
+  deployment policy. See `AOC_GOVERNED_CONSTRAINT_APPLICABILITY.md`.
+
+  Reservation applicability itself is unchanged: `TRANSFER` and `COLLATERALIZE`
+  are still the two actions that commit capacity, for the reasons recorded above.
+  What is new is that the *constraints* a commitment must respect are now
+  selected by the requesting action rather than taken as all of them.
 - **No long-lived encumbrance *in this record*.** A reservation is still
   *pre-execution* commitment safety, and still carries a required `expiresAt`
   taken from its mandate. `COLLATERALIZE`'s constraint survives execution and

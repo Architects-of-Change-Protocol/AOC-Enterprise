@@ -33,6 +33,7 @@ export type {
   RecognitionVerificationResult,
   PolicyPackProvider,
   GovernedAuthorityProvider,
+  GovernedConstraintProvider,
   GovernedRepresentationProvider,
   KernelClock,
   KernelIdGenerator,

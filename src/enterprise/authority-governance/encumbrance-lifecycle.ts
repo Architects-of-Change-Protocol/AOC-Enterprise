@@ -396,11 +396,42 @@ export function computeCapacity(
   encumbrances: readonly GovernedAuthorityEncumbrance[],
   at: string,
 ): GovernedAuthorityAvailability {
+  return computeActionCapacity(position, reservations, encumbrances, encumbrances, at);
+}
+
+/**
+ * The same verdict, for a specific requested action, given the subset of
+ * constraints that actually bear on it.
+ *
+ * Two constraint lists rather than one, and the split is load-bearing:
+ *
+ * - `encumbrances` is **every** constraint over this authority, and is used
+ *   only for the reservation netting. That netting is about one mandate's own
+ *   reservation-to-encumbrance handoff — keeping a single commitment counted
+ *   once as it changes phase — and has nothing to do with which action is
+ *   asking. Filtering it by applicability would let a mandate's already-carved-
+ *   out instalment be counted twice.
+ * - `applicable` is the subset a `GovernedConstraintApplicability` verdict
+ *   found to bear on the requested action, and is what actually reduces the
+ *   authority available to it.
+ *
+ * `computeCapacity` is this function with the two lists equal, which is the
+ * honest reading for the question that names no action: "how much of this
+ * authority is unconstrained by anything at all?" — the shape `resolveAvailability`
+ * reports for audit and explanation.
+ */
+export function computeActionCapacity(
+  position: GovernedAuthorityPosition | null,
+  reservations: readonly GovernedAuthorityReservation[],
+  encumbrances: readonly GovernedAuthorityEncumbrance[],
+  applicable: readonly GovernedAuthorityEncumbrance[],
+  at: string,
+): GovernedAuthorityAvailability {
   if (position === null) return { outcome: 'no_authority' };
 
   const held = serializeGovernedRightsScope(position.scope);
 
-  const encumbered = sumActiveEncumbrances(encumbrances, at);
+  const encumbered = sumActiveEncumbrances(applicable, at);
   if (encumbered === 'incompatible') return { outcome: 'incompatible', positionId: position.id, held };
 
   let afterEncumbrances = position.scope;

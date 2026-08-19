@@ -1920,6 +1920,208 @@ function runContract(label: string, open: () => Promise<GovernedAuthorityStore>,
       });
     });
 
+    // -----------------------------------------------------------------------
+    // Constraint applicability. The same verdict from both backends, or the
+    // shared suite proves nothing about the durable one.
+    // -----------------------------------------------------------------------
+
+    describe('constraint applicability', () => {
+      it('reduces a committing action’s capacity by the constraints that bear on it, and by nothing else', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+
+        // COLLATERALIZE consumes the same class the constraint committed.
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-coll-over', 'party-alice', proportional(1_001), { action: 'collateralize' }))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        const fits = await store.acquireReservation(ADMIN, reservation('mandate-coll-fits', 'party-alice', proportional(1_000), { action: 'collateralize' }));
+        assert.equal(fits.outcome, 'reserved');
+        await store.close();
+      });
+
+      it('reduces a transition action’s capacity by the same constraints, on the structural ground instead', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+
+        // Same bound, different reason: what Alice keeps must still cover the
+        // 4 000 attached to her.
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-tx-over', 'party-alice', proportional(1_001), { action: 'transfer' }))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        const fits = await store.acquireReservation(ADMIN, reservation('mandate-tx-fits', 'party-alice', proportional(1_000), { action: 'transfer' }));
+        assert.equal(fits.outcome, 'reserved');
+        await store.close();
+      });
+
+      it('carries the typed evidence of which constraints applied, and on which grounds', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const recorded = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(recorded.outcome === 'encumbered');
+
+        for (const [action, expected] of [
+          ['collateralize', 'capacity'],
+          ['transfer', 'structural'],
+        ] as const) {
+          try {
+            await store.acquireReservation(ADMIN, reservation(`mandate-ev-${action}`, 'party-alice', proportional(5_000), { action }));
+            assert.fail('expected the commitment to be refused');
+          } catch (error) {
+            assert.ok(isAuthorityGovernanceError(error));
+            const details = (error.details ?? {}) as Record<string, unknown>;
+            assert.equal(details.action, action);
+            assert.deepEqual(details.applicableConstraints, [
+              { constraintId: recorded.encumbrance.id, constraintClass: 'collateral-commitment-capacity', sourceAction: 'collateralize', applicability: [expected] },
+            ]);
+          }
+        }
+        await store.close();
+      });
+
+      it('refuses to commit governed authority for an action with no declared applicability profile', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        for (const action of ['delegate', 'encumber', 'lien', '']) {
+          assert.equal(
+            await errorCode(() => store.acquireReservation(ADMIN, reservation(`mandate-undeclared-${action}`, 'party-alice', proportional(100), { action }))),
+            'GOVERNED_AUTHORITY_CONSTRAINT_APPLICABILITY_UNDECLARED',
+            `'${action}' must not be able to commit governed authority`,
+          );
+        }
+        await store.close();
+      });
+
+      it('applies nothing across holders, resources or rights', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        await seed(store, 'party-bob', proportional(5_000));
+        await seed(store, 'party-alice', proportional(5_000), { right: USAGE });
+        await seed(store, 'party-alice', proportional(5_000), { resource: OTHER_ASSET });
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+
+        for (const [label, input] of [
+          ['another holder', reservation('mandate-other-holder', 'party-bob', proportional(5_000), { action: 'collateralize' })],
+          ['another right', reservation('mandate-other-right', 'party-alice', proportional(5_000), { action: 'collateralize', governedRight: USAGE })],
+          ['another resource', reservation('mandate-other-resource', 'party-alice', proportional(5_000), { action: 'collateralize', resource: OTHER_ASSET })],
+        ] as const) {
+          const outcome = await store.acquireReservation(ADMIN, input);
+          assert.equal(outcome.outcome, 'reserved', `${label} is untouched by Alice’s constraint over the economic interest`);
+        }
+        await store.close();
+      });
+
+      it('stops counting a constraint the moment it is released, and not before', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(5_000));
+        const recorded = await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        assert.ok(recorded.outcome === 'encumbered');
+
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-before', 'party-alice', proportional(4_000), { action: 'collateralize' }))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+
+        await store.releaseEncumbrance(ADMIN, {
+          tenantId: TENANT_A,
+          encumbranceId: recorded.encumbrance.id,
+          basis: { kind: 'administrative', assertedBy: 'actor-admin', reasonCode: 'operator-withdrawal' },
+        });
+
+        const after = await store.acquireReservation(ADMIN, reservation('mandate-after', 'party-alice', proportional(4_000), { action: 'collateralize' }));
+        assert.equal(after.outcome, 'reserved');
+        await store.close();
+      });
+
+      it('counts a reservation and a constraint once each, never twice', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', proportional(10_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(3_000)));
+        await store.acquireReservation(ADMIN, reservation('mandate-2', 'party-alice', proportional(2_000), { action: 'collateralize' }));
+
+        assert.equal(
+          await errorCode(() => store.acquireReservation(ADMIN, reservation('mandate-over', 'party-alice', proportional(5_001), { action: 'collateralize' }))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        const exact = await store.acquireReservation(ADMIN, reservation('mandate-exact', 'party-alice', proportional(5_000), { action: 'collateralize' }));
+        assert.equal(exact.outcome, 'reserved', '5 000 spoken for exactly once leaves exactly 5 000');
+        await store.close();
+      });
+
+      it('refuses a request whose quantity is not commensurable with what the constraints left', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', unitized(1_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', unitized(400)));
+
+        // Never coerced and never waved through. Both of these survive the
+        // capacity computation — position and constraint are commensurable with
+        // each other, leaving 600 'share' — and are refused at the containment
+        // test, because neither a proportional share nor a different unit
+        // denomination is within a quantity of 'share'. Measured behaviour,
+        // unchanged by this phase, and fail-closed either way.
+        for (const [label, scope] of [
+          ['a proportional share against a unitized remainder', proportional(100)],
+          ['a denomination AOC holds no conversion for', unitized(100, 'token')],
+        ] as const) {
+          assert.equal(
+            await errorCode(() => store.acquireReservation(ADMIN, reservation(`mandate-mixed-${label.length}`, 'party-alice', scope, { action: 'collateralize' }))),
+            'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+            label,
+          );
+        }
+        await store.close();
+      });
+
+      it('never lets the constraint set itself become incommensurable', async () => {
+        const store = await open();
+        await seed(store, 'party-alice', unitized(1_000));
+        await store.recordEncumbrance(ADMIN, encumbrance('exec-share', 'mandate-share', 'party-alice', unitized(400)));
+
+        // The set is kept summable at the write path rather than reconciled at
+        // the read path. A second constraint in a denomination that cannot be
+        // added to the first is refused outright, so no committed state exists
+        // in which applicability would have to choose between dropping a
+        // constraint and refusing every question about the holder.
+        assert.equal(
+          await errorCode(() => store.recordEncumbrance(ADMIN, encumbrance('exec-token', 'mandate-token', 'party-alice', unitized(300, 'token')))),
+          'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
+        );
+        assert.equal(
+          await errorCode(() => store.recordEncumbrance(ADMIN, encumbrance('exec-prop', 'mandate-prop', 'party-alice', proportional(100)))),
+          'GOVERNED_AUTHORITY_SCOPE_INCOMPATIBLE',
+        );
+
+        // The one constraint that was accepted still constrains exactly what it
+        // did, so this proves the refusal rather than a store left unusable.
+        const outcome = await store.acquireReservation(ADMIN, reservation('mandate-still-works', 'party-alice', unitized(600), { action: 'collateralize' }));
+        assert.equal(outcome.outcome, 'reserved');
+        await store.close();
+      });
+
+      it('applies the constraint identically when the same state is reopened', async () => {
+        if (openNamed === undefined) return;
+        const writer = await openNamed('constraint-applicability-restart');
+        await seed(writer, 'party-alice', proportional(5_000));
+        await writer.recordEncumbrance(ADMIN, encumbrance('exec-1', 'mandate-1', 'party-alice', proportional(4_000)));
+        await writer.close();
+
+        // No class is persisted, so what survives the restart is the
+        // `sourceAction` the class is derived from — which is the whole reason
+        // deriving it needs no migration.
+        const reopened = await openNamed('constraint-applicability-restart');
+        assert.equal(
+          await errorCode(() => reopened.acquireReservation(ADMIN, reservation('mandate-after-restart', 'party-alice', proportional(1_001), { action: 'collateralize' }))),
+          'GOVERNED_AUTHORITY_AVAILABILITY_INSUFFICIENT',
+        );
+        const fits = await reopened.acquireReservation(ADMIN, reservation('mandate-fits-after-restart', 'party-alice', proportional(1_000), { action: 'transfer' }));
+        assert.equal(fits.outcome, 'reserved');
+        await reopened.close();
+      });
+    });
+
   });
 }
 
