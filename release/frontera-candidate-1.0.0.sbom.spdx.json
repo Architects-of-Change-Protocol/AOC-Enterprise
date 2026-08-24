@@ -1,0 +1,162 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "frontera-runtime-1.0.0-candidate",
+  "documentNamespace": "https://github.com/Soberania-Protocol/Soberania-Enterprise/spdxdocs/frontera-runtime-1.0.0-11edd06e7d6ea38ae0bc037e91854444b84a50a7",
+  "creationInfo": {
+    "created": "2026-08-24T00:00:00Z",
+    "creators": [
+      "Tool: P0-PKG-03-candidate-evidence"
+    ],
+    "comment": "Candidate SBOM. Records artifact composition only; authorizes no publication, tag or release. Bundled private modules are recorded with CONTAINS relationships because they ship inside the artifact."
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-frontera-runtime",
+      "name": "@aoc-enterprise/runtime",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "supplier": "Organization: Soberania Protocol",
+      "comment": "Human-facing product name: Frontera. Built from Soberania-Protocol/Soberania-Enterprise@11edd06e7d6ea38ae0bc037e91854444b84a50a7. private:true - not published to any registry. Self-contained: private implementation modules travel inside the artifact as npm bundleDependencies.",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40aoc-enterprise/runtime@1.0.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "53d9e6ce4f3ba8fd82bbd90ebe5bc53f8bffb597b0d11bfd22d9a1ba5245a2de"
+        },
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "bbf9f4780d373797a384e10c41c9546dcedcd2249b937c8485045c6e7b1ac6bade6b690234630f63ae32d0bd8f3a726347be851c7b28010e77629a3e3cc18eb9"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-aoc-protocol",
+      "name": "@aoc/protocol",
+      "versionInfo": "0.2.0-rc.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "supplier": "Organization: Soberania Protocol",
+      "comment": "Frozen release candidate consumed as an EXTERNAL peer dependency (never bundled) and validated against as a vendored, checksummed tarball. Source commit dde34517d956156a0c735c18a805763a5e712879.",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40aoc/protocol@0.2.0-rc.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "dbe8a08f432a0324ad34eb7cb85054b6dcd23c0d9a073914edf23fccd10445e5"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-better-sqlite3",
+      "name": "better-sqlite3",
+      "versionInfo": "^12.11.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "Ordinary external runtime dependency, resolved from a registry by the consumer. Not bundled; no native binary is inlined in the artifact."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bundled-0",
+      "name": "@aoc-enterprise/governed-authority",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "Private Frontera implementation module (private:true), distributed INSIDE the @aoc-enterprise/runtime artifact via npm bundleDependencies. Not an independently published product; a consumer never installs or resolves it separately. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bundled-1",
+      "name": "@aoc-enterprise/governed-authorization",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "Private Frontera implementation module (private:true), distributed INSIDE the @aoc-enterprise/runtime artifact via npm bundleDependencies. Not an independently published product; a consumer never installs or resolves it separately. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bundled-2",
+      "name": "@aoc-enterprise/identity",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "Private Frontera implementation module (private:true), distributed INSIDE the @aoc-enterprise/runtime artifact via npm bundleDependencies. Not an independently published product; a consumer never installs or resolves it separately. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bundled-3",
+      "name": "@aoc-enterprise/scoped-access",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "Private Frontera implementation module (private:true), distributed INSIDE the @aoc-enterprise/runtime artifact via npm bundleDependencies. Not an independently published product; a consumer never installs or resolves it separately. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md."
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Package-frontera-runtime",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-frontera-runtime",
+      "relatedSpdxElement": "SPDXRef-Package-aoc-protocol",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-frontera-runtime",
+      "relatedSpdxElement": "SPDXRef-Package-better-sqlite3",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-frontera-runtime",
+      "relatedSpdxElement": "SPDXRef-Package-bundled-0",
+      "relationshipType": "CONTAINS"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-frontera-runtime",
+      "relatedSpdxElement": "SPDXRef-Package-bundled-1",
+      "relationshipType": "CONTAINS"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-frontera-runtime",
+      "relatedSpdxElement": "SPDXRef-Package-bundled-2",
+      "relationshipType": "CONTAINS"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-frontera-runtime",
+      "relatedSpdxElement": "SPDXRef-Package-bundled-3",
+      "relationshipType": "CONTAINS"
+    }
+  ]
+}

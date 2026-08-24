@@ -10,7 +10,6 @@
   "devDependencies": {
     "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "@aoc/protocol": "file:../Architects_of_Change_Protocol/packages/protocol"
-  }
+  "_dependenciesComment": "Intentionally empty. scripts/validate-publishability.mjs injects every dependency (@aoc-enterprise/runtime, @aoc-enterprise/identity, @aoc-enterprise/scoped-access, @aoc/protocol) as packed tarballs into a throwaway copy of this fixture before installing. A committed sibling-source path such as 'file:../Architects_of_Change_Protocol/packages/protocol' was dead metadata that the harness always overwrote, and it is exactly the resolution form the clean-room proof must exclude.",
+  "dependencies": {}
 }

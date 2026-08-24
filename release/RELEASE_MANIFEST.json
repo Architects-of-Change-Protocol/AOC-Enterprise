@@ -2,8 +2,8 @@
   "name": "@aoc-enterprise/runtime",
   "version": "1.0.0",
   "generated": {
-    "commit": "be1d90d4f145dedc4e7524f80b8c7d54255d7271",
-    "branch": "claude/aoc-v1-release-validation-5jl2ld",
+    "commit": "60a37d0088c9416ad15a0da285f7e108150aecfa",
+    "branch": "claude/frontera-protocol-rc-freeze-fegene",
     "node": "v22.22.2"
   },
   "runtimeVersions": {
@@ -43,7 +43,7 @@
   "artifacts": [
     {
       "path": "./dist/src/enterprise/index.js",
-      "checksum": "sha256:751079a4768b7cfa5ebf13a005c75251d3b5eeadeb81c74ec0ef9f772419e3b2"
+      "checksum": "sha256:eb160d1a6becfe983fc7b1197e3f44e7368f2e82d9d5e8a8510b4cd0658895b0"
     },
     {
       "path": "./dist/src/index.js",

@@ -6,7 +6,7 @@ Soberanía Enterprise consumes Soberanía Protocol exclusively as a **published 
 
 ```text
 Soberanía Protocol (packages/protocol, @aoc/protocol)
-    ↓ versioned public package (peerDependency ">=0.1.0")
+    ↓ versioned public package (peerDependency ">=0.1.0 || >=0.2.0-rc.0")
 Soberanía Enterprise (this repository)
     ↓ proprietary runtime and implementation
 PMFreak
@@ -36,7 +36,7 @@ which are a point-in-time summary:
 | Protocol commit | see `protocol-consumer.lock.json` → `commit` |
 | Protocol package | `@aoc/protocol` |
 | Protocol package version | see `protocol-consumer.lock.json` → `expectedVersion` |
-| Enterprise peer range | `package.json` → `peerDependencies["@aoc/protocol"]` (currently `>=0.1.0`) |
+| Enterprise peer range | `package.json` → `peerDependencies["@aoc/protocol"]` (currently `>=0.1.0 \|\| >=0.2.0-rc.0`) |
 
 `protocol-consumer.lock.json` is **not an npm lockfile**. It is a small, auditable, hand-updated
 record of which Protocol artifact this repository has actually been validated against — the
@@ -109,7 +109,7 @@ or tag. This job is **blocking** (`continue-on-error` was removed once the Proto
 Adoption sprint resolved every documented gap — see "Known gaps" below). `.github/workflows/ci.yml`
 (typecheck/build/lint/test/legal) is unaffected — it has never required the Protocol sibling
 checkout, because `package.json`'s `@aoc/protocol` devDependency now points at the vendored,
-checksummed tarball (`vendor/aoc-protocol-0.1.0.tgz`), which is a real, tracked file, not a shim.
+checksummed tarball (`vendor/aoc-protocol-0.2.0-rc.0.tgz`), which is a real, tracked file, not a shim.
 
 ## Allowed imports
 
@@ -150,7 +150,7 @@ be found on disk.
 
 ## Dependency mechanism (canonical, not a shim)
 
-`package.json` → `devDependencies["@aoc/protocol"] = "file:./vendor/aoc-protocol-0.1.0.tgz"`. This
+`package.json` → `devDependencies["@aoc/protocol"] = "file:./vendor/aoc-protocol-0.2.0-rc.0.tgz"`. This
 is a real, tracked, checksummed npm tarball (see `vendor/README.md`, `protocol-consumer.lock.json`),
 not a sibling-directory reference and not an ambient shim — `npm install`/`npm ci` extract it into a
 real `node_modules/@aoc/protocol` (confirmed not a symlink), and `tsconfig.base.json` has no `paths`
@@ -158,6 +158,45 @@ override for `@aoc/protocol` at all, so TypeScript resolves it exactly the way a
 `tsc` would. This is the canonical interim mechanism while `@aoc/protocol` remains unpublished (see
 "Registry transition" below); it works identically in CI and in a fresh clone, with no dependency on
 a Protocol sibling checkout being present.
+
+## Prerelease peer compatibility
+
+`@aoc/protocol@0.2.0-rc.0` is a **prerelease**. npm's semver deliberately excludes prereleases from
+any range whose comparators carry no prerelease of the same `major.minor.patch` tuple, so:
+
+```js
+semver.satisfies('0.2.0-rc.0', '>=0.1.0')   // false
+```
+
+This is not a compatibility statement about Enterprise — `0.2.0-rc.0` sorts *above* `0.1.0` — it is
+a mechanical property of range matching. Left uncorrected it is not cosmetic: an external consumer
+installing `@aoc-enterprise/runtime` alongside the frozen candidate fails hard.
+
+```text
+npm error code ERESOLVE
+npm error Found: @aoc/protocol@0.2.0-rc.0
+npm error Could not resolve dependency:
+npm error peer @aoc/protocol@">=0.1.0" from @aoc-enterprise/runtime@1.0.0
+```
+
+The peer range is therefore stated as `>=0.1.0 || >=0.2.0-rc.0`. The added clause is deliberately
+the narrowest expression that admits the frozen candidate, and it is **not** a widening of stable
+compatibility:
+
+| Protocol version | `>=0.1.0` | `>=0.1.0 \|\| >=0.2.0-rc.0` |
+| --- | --- | --- |
+| `0.1.0`, `0.1.5`, `0.2.0`, `0.3.0`, `1.0.0`, `2.0.0` | satisfied | satisfied (unchanged) |
+| `0.0.9` | not satisfied | not satisfied (unchanged) |
+| `0.2.0-rc.0`, `0.2.0-rc.1` | not satisfied | **satisfied (newly admitted)** |
+| `0.2.0-alpha.1`, `0.2.0-beta.9` | not satisfied | not satisfied (unchanged) |
+| `0.1.0-rc.1`, `0.3.0-rc.0`, `1.0.0-rc.1` | not satisfied | not satisfied (unchanged) |
+
+No stable version changes status, and no prerelease family other than the frozen `0.2.0` `rc` line
+is admitted. `scripts/check-protocol-consumption.mjs` still asserts the range is an explicit semver
+range (not `*`, not `file:`), so this does not weaken that gate.
+
+When Protocol cuts a stable `0.2.0`, the `|| >=0.2.0-rc.0` clause should be dropped again — it
+exists to express a candidate relationship, not a permanent one.
 
 ## Upgrade procedure
 
