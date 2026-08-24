@@ -126,6 +126,7 @@ function targetStorePaths(targetDir) {
     governance: join(targetDir, 'enterprise-host.sqlite'),
     'agent-passport': join(targetDir, 'agent-passport.sqlite'),
     assurance: join(targetDir, 'assurance.sqlite'),
+    'kernel-authority': join(targetDir, 'kernel-authority.sqlite'),
   };
 }
 

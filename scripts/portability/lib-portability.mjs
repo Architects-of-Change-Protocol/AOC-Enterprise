@@ -19,7 +19,18 @@ export const BACKUP_FORMAT = 'aoc.enterprise.backup.v1';
 
 export const REPO_ROOT = resolve(new URL('../..', import.meta.url).pathname);
 
-/** The three durable SQLite stores backed up as one set (Phase 1 inventory). Evidence Bundles have no SQLite store in v1 -- see the current-state doc -- so there is deliberately no fourth entry here. */
+/**
+ * The durable SQLite stores backed up as one set (Phase 1 inventory).
+ *
+ * Evidence Bundles still have no SQLite store -- see the current-state doc --
+ * so there is deliberately no entry for them.
+ *
+ * The Kernel Authority Store (P0-PKG-07) IS here, and its inclusion is not
+ * optional the way an audit store's would be: it is authority
+ * source-of-truth, so a disaster recovery that restored evaluation history
+ * but not the authority world would come back with every actor unrecognized
+ * and every action denied. A backup that loses it is not a backup.
+ */
 export const STORE_DEFINITIONS = [
   {
     name: 'governance',
@@ -47,6 +58,15 @@ export const STORE_DEFINITIONS = [
     recordTable: 'assurance_assessments',
     schemaVersionKeyOf: (enterprise) => enterprise.ASSURANCE_STORE_SCHEMA_VERSION,
     openStore: (enterprise, path) => enterprise.createSqliteAssuranceStore(path),
+  },
+  {
+    name: 'kernel-authority',
+    filename: 'kernel-authority.sqlite',
+    configPathOf: (config) => config.kernelAuthority.sqlitePath,
+    versionTable: 'kernel_authority_store_versions',
+    recordTable: 'kernel_authority_events',
+    schemaVersionKeyOf: (enterprise) => enterprise.KERNEL_AUTHORITY_SCHEMA_VERSION,
+    openStore: (enterprise, path) => enterprise.createSqliteKernelAuthorityStore(path),
   },
 ];
 

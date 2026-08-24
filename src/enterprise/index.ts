@@ -402,6 +402,88 @@ export {
 } from './api/assurance-contract.js';
 export type { AssuranceEnterpriseEvent, AssuranceEnterpriseEventType } from './events/enterprise-events.js';
 
+// -- Frontera Kernel Authority Runtime v1 (P0-PKG-07) ----------------------------
+//
+// The durable, operator-provisioned recognition/authority world
+// `AocKernel.evaluate()` decides against. Composition surface, so it ships on
+// this existing `./enterprise` subpath rather than claiming a new one.
+//
+// Note what is exported and what is not: the store, the hydration, the durable
+// provider set and the operator provisioning service are all here, because an
+// external consumer legitimately needs to open a store, restore a world and
+// (as an operator) provision one. Nothing here lets an *evaluation* write:
+// every write path demands a privileged operator context that the evaluation
+// path never holds.
+
+export {
+  AOC_KERNEL_AUTHORITY_RUNTIME_VERSION,
+  KERNEL_AUTHORITY_SCHEMA_VERSION,
+  KERNEL_AUTHORITY_CONTRACT_IDS,
+  KERNEL_AUTHORITY_ENTITY_KINDS,
+} from './kernel-authority/contracts.js';
+export type {
+  KernelAuthorityAccessContext,
+  KernelAuthorityActorType,
+  KernelAuthorityDelegateActorType,
+  KernelAuthorityEntityKind,
+  KernelAuthorityEntityStatus,
+  KernelAuthorityEvent,
+  KernelAuthorityEventType,
+  KernelAuthorityExternalSubject,
+  KernelAuthorityIdempotency,
+  KernelAuthorityPassportType,
+  KernelAuthorityRecord,
+  KernelAuthorityRecordQuery,
+  KernelAuthorityRiskLevel,
+  KernelAuthorityStoreHealth,
+  AppendKernelAuthorityEventInput,
+  AppendKernelAuthorityEventResult,
+  KernelAuthorityProvisionInput,
+  ProvisionActorInput,
+  ProvisionAuthorityGrantInput,
+  ProvisionCapabilityTokenInput,
+  ProvisionDelegationGrantInput,
+  ProvisionPassportInput,
+  ProvisionRootIssuerInput,
+  ProvisionTrustDomainInput,
+} from './kernel-authority/contracts.js';
+
+export { KernelAuthorityError, isKernelAuthorityError } from './kernel-authority/errors.js';
+export type { KernelAuthorityErrorCode } from './kernel-authority/errors.js';
+
+export type { KernelAuthorityStore } from './kernel-authority/kernel-authority-store.js';
+export {
+  canAccessKernelAuthorityOrganization,
+  requireKernelAuthorityOperator,
+  requireKernelAuthorityReadAccess,
+  requireKernelAuthorityTenantScope,
+  reconstructKernelAuthorityRecord,
+} from './kernel-authority/kernel-authority-store.js';
+
+export { createInMemoryKernelAuthorityStore } from './kernel-authority/in-memory-kernel-authority-store.js';
+export type { CreateInMemoryKernelAuthorityStoreOptions } from './kernel-authority/in-memory-kernel-authority-store.js';
+export { createSqliteKernelAuthorityStore } from './kernel-authority/sqlite-kernel-authority-store.js';
+export type { CreateSqliteKernelAuthorityStoreOptions } from './kernel-authority/sqlite-kernel-authority-store.js';
+
+export { hydrateKernelAuthorityWorld } from './kernel-authority/hydration.js';
+export type { KernelAuthorityHydrationContext, KernelAuthorityHydrationResult } from './kernel-authority/hydration.js';
+
+export { createDurableRecognitionProvider, resolveRecognitionCredentials } from './kernel-authority/recognition-bridge.js';
+export type { DurableRecognitionBridgeOptions, ResolvedRecognitionCredentials } from './kernel-authority/recognition-bridge.js';
+
+export { createDurableKernelProviders } from './kernel-authority/durable-kernel-providers.js';
+export type { CreateDurableKernelProvidersOptions, DurableKernelProviderSet } from './kernel-authority/durable-kernel-providers.js';
+
+export { createKernelAuthorityProvisioningService } from './kernel-authority/provisioning-service.js';
+export type {
+  CreateKernelAuthorityProvisioningServiceOptions,
+  KernelAuthorityProvisioningOptions,
+  KernelAuthorityProvisioningResult,
+  KernelAuthorityProvisioningService,
+  KernelAuthorityRevocationInput,
+} from './kernel-authority/provisioning-service.js';
+export { createKernelAuthorityModule, KERNEL_AUTHORITY_MODULE_ID } from './modules/kernel-authority-module.js';
+
 export { computeEnterpriseHealth } from './health/health-check.js';
 export type { EnterpriseHealthReport, EnterpriseHealthState, EnterpriseHealthDependencies } from './health/health-check.js';
 

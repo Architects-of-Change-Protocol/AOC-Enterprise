@@ -50,12 +50,14 @@ export async function buildReleaseManifest() {
       evidenceBundle: enterprise.AOC_EVIDENCE_BUNDLE_VERSION,
       agentPassportRuntime: enterprise.AOC_AGENT_PASSPORT_RUNTIME_VERSION,
       assuranceRuntime: enterprise.AOC_ASSURANCE_RUNTIME_VERSION,
+      kernelAuthorityRuntime: enterprise.AOC_KERNEL_AUTHORITY_RUNTIME_VERSION,
     },
     storeSchemaVersions: {
       governance: enterprise.GOVERNANCE_STORE_SCHEMA_VERSION,
       evidence: enterprise.EVIDENCE_BUNDLE_SCHEMA_VERSION,
       agentPassport: enterprise.AGENT_PASSPORT_SCHEMA_VERSION,
       assurance: enterprise.ASSURANCE_STORE_SCHEMA_VERSION,
+      kernelAuthority: enterprise.KERNEL_AUTHORITY_SCHEMA_VERSION,
     },
     canonicalizationVersion: enterprise.AOC_CANONICALIZATION_VERSION,
     frameworks: [

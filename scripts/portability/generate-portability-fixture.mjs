@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Synthetic, non-sensitive, deterministic portability fixture (Phase 10).
 //
-// Seeds a fresh SQLite store set (governance + agent-passport + assurance)
+// Seeds a fresh SQLite store set (governance + agent-passport + assurance +
+// kernel-authority)
 // under `--target` with a real, representative slice of governed history --
 // built through the actual Enterprise Host services (never hand-crafted
 // rows), so a backup/restore drill exercises the same code paths production
@@ -35,7 +36,15 @@ export function targetStorePaths(targetDir) {
     governance: join(targetDir, 'enterprise-host.sqlite'),
     passport: join(targetDir, 'agent-passport.sqlite'),
     assurance: join(targetDir, 'assurance.sqlite'),
+    kernelAuthority: join(targetDir, 'kernel-authority.sqlite'),
   };
+}
+
+async function loadAuthorityFixture() {
+  // The same generic, application-neutral authority fixture the runtime's own
+  // durable-authority suite uses -- not a second, parallel fixture that could
+  // drift from what the tests actually prove.
+  return import(resolve(new URL('../..', import.meta.url).pathname, 'dist/src/enterprise/kernel-authority/fixtures/durable-authority.fixture.js'));
 }
 
 async function loadTestSupport() {
@@ -50,6 +59,7 @@ async function loadTestSupport() {
 export async function generateFixture({ target }) {
   const enterprise = await loadEnterpriseModule();
   const support = await loadTestSupport();
+  const authorityFixture = await loadAuthorityFixture();
 
   const targetPath = resolve(target);
   mkdirSync(targetPath, { recursive: true });
@@ -61,6 +71,7 @@ export async function generateFixture({ target }) {
     AOC_ENTERPRISE_SQLITE_PATH: paths.governance,
     AOC_ENTERPRISE_PASSPORT_SQLITE_PATH: paths.passport,
     AOC_ENTERPRISE_ASSURANCE_SQLITE_PATH: paths.assurance,
+    AOC_ENTERPRISE_KERNEL_AUTHORITY_SQLITE_PATH: paths.kernelAuthority,
   });
 
   const kernelProviders = support.buildTestKernelProviders();
@@ -175,6 +186,46 @@ export async function generateFixture({ target }) {
       eligibilityProfileIds: completed.eligibility.map((e) => e.profileId),
       assessmentDigest: completed.integrity.assessmentDigest,
     };
+
+    // -- One operator-provisioned Kernel Authority world, plus one revocation --
+    //
+    // Seeded through the real public operator surface, never by writing rows,
+    // and deliberately containing BOTH live and revoked authority: a restore
+    // that silently dropped the revocation would restore an actor to authority
+    // an operator had already withdrawn, which is the one direction a
+    // backup/restore cycle must never move in.
+    const authorityStore = await enterprise.createSqliteKernelAuthorityStore(paths.kernelAuthority);
+    try {
+      const provisioning = enterprise.createKernelAuthorityProvisioningService({ store: authorityStore, organizationId: FIXTURE_ORG });
+      const authorityIds = await authorityFixture.provisionDurableAuthorityFixture(provisioning, { trustDomainId: 'trust-domain-portability-fixture' });
+      await provisioning.provisionCapabilityToken(authorityFixture.DURABLE_FIXTURE_OPERATOR, {
+        ...authorityFixture.buildDurableAuthorityPayloads(FIXTURE_ORG, 'trust-domain-portability-fixture').capabilityToken,
+        capabilityTokenId: 'cap-agent-revoked',
+      });
+      await provisioning.revoke(authorityFixture.DURABLE_FIXTURE_OPERATOR, {
+        entityKind: 'capability-token',
+        entityId: 'cap-agent-revoked',
+        reason: 'Portability fixture: withdrawn before backup, must stay withdrawn after restore.',
+      });
+
+      const authorityRecords = await provisioning.listRecords(authorityFixture.DURABLE_FIXTURE_OPERATOR);
+      record.kernelAuthority = {
+        organizationId: FIXTURE_ORG,
+        trustDomainId: authorityIds.trustDomainId,
+        agentActorId: authorityIds.agentActorId,
+        ownerActorId: authorityIds.ownerActorId,
+        action: authorityIds.action,
+        resourceScope: authorityIds.resourceScope,
+        capability: authorityIds.capability,
+        activeCapabilityTokenId: authorityIds.capabilityTokenId,
+        revokedCapabilityTokenId: 'cap-agent-revoked',
+        recordCount: authorityRecords.length,
+        externalSubject: { system: 'example-app', subjectId: 'external-user-42' },
+        recordDigests: authorityRecords.map((entry) => `${entry.entityKind}:${entry.entityId}:${entry.status}:${entry.latestEventDigest}`).sort(),
+      };
+    } finally {
+      await authorityStore.close();
+    }
 
     const fixture = {
       fixtureVersion: 'aoc.enterprise.portability-fixture.v1',
