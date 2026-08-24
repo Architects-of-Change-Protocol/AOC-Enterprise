@@ -3,13 +3,13 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "frontera-runtime-1.0.0-candidate",
-  "documentNamespace": "https://github.com/Soberania-Protocol/Soberania-Enterprise/spdxdocs/frontera-runtime-1.0.0-65db731e24a67fd5850ce29092e39a175f890211",
+  "documentNamespace": "https://github.com/Soberania-Protocol/Soberania-Enterprise/spdxdocs/frontera-runtime-1.0.0-11edd06e7d6ea38ae0bc037e91854444b84a50a7",
   "creationInfo": {
     "created": "2026-08-24T00:00:00Z",
     "creators": [
-      "Tool: P0-PKG-02-candidate-evidence"
+      "Tool: P0-PKG-03-candidate-evidence"
     ],
-    "comment": "Candidate SBOM. Records artifact composition only; authorizes no publication, tag or release."
+    "comment": "Candidate SBOM. Records artifact composition only; authorizes no publication, tag or release. Bundled private modules are recorded with CONTAINS relationships because they ship inside the artifact."
   },
   "packages": [
     {
@@ -22,7 +22,7 @@
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "supplier": "Organization: Soberania Protocol",
-      "comment": "Human-facing product name: Frontera. Built from Soberania-Protocol/Soberania-Enterprise@65db731e24a67fd5850ce29092e39a175f890211. private:true - not published to any registry.",
+      "comment": "Human-facing product name: Frontera. Built from Soberania-Protocol/Soberania-Enterprise@11edd06e7d6ea38ae0bc037e91854444b84a50a7. private:true - not published to any registry. Self-contained: private implementation modules travel inside the artifact as npm bundleDependencies.",
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
@@ -33,11 +33,11 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "93b9d9f13bf908eeb7a1e62c24b6207fa6d9dd212faa0b5295cdb065e79b4e63"
+          "checksumValue": "53d9e6ce4f3ba8fd82bbd90ebe5bc53f8bffb597b0d11bfd22d9a1ba5245a2de"
         },
         {
           "algorithm": "SHA512",
-          "checksumValue": "648f15c3d26393c56d24cdeecdaab4d8179c749e44baabcb9661ceddc5deeb2538546639bca13f7c86c6493722c2a65ec469ffe1014559f35e511066cf7913ca"
+          "checksumValue": "bbf9f4780d373797a384e10c41c9546dcedcd2249b937c8485045c6e7b1ac6bade6b690234630f63ae32d0bd8f3a726347be851c7b28010e77629a3e3cc18eb9"
         }
       ]
     },
@@ -51,7 +51,7 @@
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "NOASSERTION",
       "supplier": "Organization: Soberania Protocol",
-      "comment": "Frozen release candidate consumed as a peer dependency and validated against as a vendored, checksummed tarball. Source commit dde34517d956156a0c735c18a805763a5e712879.",
+      "comment": "Frozen release candidate consumed as an EXTERNAL peer dependency (never bundled) and validated against as a vendored, checksummed tarball. Source commit dde34517d956156a0c735c18a805763a5e712879.",
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
@@ -67,29 +67,7 @@
       ]
     },
     {
-      "SPDXID": "SPDXRef-Package-dep-0",
-      "name": "@aoc-enterprise/identity",
-      "versionInfo": "*",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "Declared runtime dependency of the packaged Frontera runtime."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-dep-1",
-      "name": "@aoc-enterprise/scoped-access",
-      "versionInfo": "*",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "Declared runtime dependency of the packaged Frontera runtime."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-dep-2",
+      "SPDXID": "SPDXRef-Package-better-sqlite3",
       "name": "better-sqlite3",
       "versionInfo": "^12.11.1",
       "downloadLocation": "NOASSERTION",
@@ -97,150 +75,51 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "comment": "Declared runtime dependency of the packaged Frontera runtime."
+      "comment": "Ordinary external runtime dependency, resolved from a registry by the consumer. Not bundled; no native binary is inlined in the artifact."
     },
     {
-      "SPDXID": "SPDXRef-Package-undeclared-3",
-      "name": "@aoc-enterprise/access-grant",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-4",
-      "name": "@aoc-enterprise/agent-governance",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-5",
-      "name": "@aoc-enterprise/collateralization-mandate",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-6",
+      "SPDXID": "SPDXRef-Package-bundled-0",
       "name": "@aoc-enterprise/governed-authority",
-      "versionInfo": "NOASSERTION",
+      "versionInfo": "0.1.0",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
+      "comment": "Private Frontera implementation module (private:true), distributed INSIDE the @aoc-enterprise/runtime artifact via npm bundleDependencies. Not an independently published product; a consumer never installs or resolves it separately. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md."
     },
     {
-      "SPDXID": "SPDXRef-Package-undeclared-7",
+      "SPDXID": "SPDXRef-Package-bundled-1",
       "name": "@aoc-enterprise/governed-authorization",
-      "versionInfo": "NOASSERTION",
+      "versionInfo": "0.1.0",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
+      "comment": "Private Frontera implementation module (private:true), distributed INSIDE the @aoc-enterprise/runtime artifact via npm bundleDependencies. Not an independently published product; a consumer never installs or resolves it separately. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md."
     },
     {
-      "SPDXID": "SPDXRef-Package-undeclared-8",
-      "name": "@aoc-enterprise/grant-revocation",
-      "versionInfo": "NOASSERTION",
+      "SPDXID": "SPDXRef-Package-bundled-2",
+      "name": "@aoc-enterprise/identity",
+      "versionInfo": "0.1.0",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
+      "comment": "Private Frontera implementation module (private:true), distributed INSIDE the @aoc-enterprise/runtime artifact via npm bundleDependencies. Not an independently published product; a consumer never installs or resolves it separately. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md."
     },
     {
-      "SPDXID": "SPDXRef-Package-undeclared-9",
-      "name": "@aoc-enterprise/license-mandate",
-      "versionInfo": "NOASSERTION",
+      "SPDXID": "SPDXRef-Package-bundled-3",
+      "name": "@aoc-enterprise/scoped-access",
+      "versionInfo": "0.1.0",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-10",
-      "name": "@aoc-enterprise/pinata-adapter",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-11",
-      "name": "@aoc-enterprise/pmfreak-agent-passport-foundation",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-12",
-      "name": "@aoc-enterprise/provider-adapter",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-13",
-      "name": "@aoc-enterprise/provider-translation",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-14",
-      "name": "@aoc-enterprise/tokenization-mandate",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
-    },
-    {
-      "SPDXID": "SPDXRef-Package-undeclared-15",
-      "name": "@aoc-enterprise/transfer-mandate",
-      "versionInfo": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "copyrightText": "NOASSERTION",
-      "comment": "REQUIRED AT RUNTIME BY THE SHIPPED dist BUT NOT DECLARED IN package.json dependencies. Recorded here so the SBOM is honest about what the artifact actually needs. See blocking_finding in release/frontera-candidate-manifest-1.0.0.json."
+      "comment": "Private Frontera implementation module (private:true), distributed INSIDE the @aoc-enterprise/runtime artifact via npm bundleDependencies. Not an independently published product; a consumer never installs or resolves it separately. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md."
     }
   ],
   "relationships": [
@@ -256,83 +135,28 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-dep-0",
+      "relatedSpdxElement": "SPDXRef-Package-better-sqlite3",
       "relationshipType": "DEPENDS_ON"
     },
     {
       "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-dep-1",
-      "relationshipType": "DEPENDS_ON"
+      "relatedSpdxElement": "SPDXRef-Package-bundled-0",
+      "relationshipType": "CONTAINS"
     },
     {
       "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-dep-2",
-      "relationshipType": "DEPENDS_ON"
+      "relatedSpdxElement": "SPDXRef-Package-bundled-1",
+      "relationshipType": "CONTAINS"
     },
     {
       "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-3",
-      "relationshipType": "DEPENDS_ON"
+      "relatedSpdxElement": "SPDXRef-Package-bundled-2",
+      "relationshipType": "CONTAINS"
     },
     {
       "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-4",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-5",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-6",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-7",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-8",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-9",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-10",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-11",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-12",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-13",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-14",
-      "relationshipType": "DEPENDS_ON"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-frontera-runtime",
-      "relatedSpdxElement": "SPDXRef-Package-undeclared-15",
-      "relationshipType": "DEPENDS_ON"
+      "relatedSpdxElement": "SPDXRef-Package-bundled-3",
+      "relationshipType": "CONTAINS"
     }
   ]
 }

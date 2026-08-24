@@ -1,10 +1,10 @@
 {
-  "$comment": "Canonical cross-repository integration lock for the Frontera runtime, frozen by P0-PKG-02. It is the handoff PMFreak consumes next. It records identities and authorizes nothing: no registry publication, no tag, no GitHub Release, no merge. Validate the Protocol half with `node scripts/protocol/check-compatibility-lock.mjs`; reproduce the Frontera half with `npm run check:clean-room-consumer`.",
+  "$comment": "Canonical cross-repository integration lock for the Frontera runtime. Frozen by P0-PKG-02 (Protocol RC adoption) and corrected by P0-PKG-03 (self-contained artifact). It is the handoff PMFreak consumes next. It records identities and authorizes nothing: no registry publication, no tag, no GitHub Release, no merge. Validate the Protocol half with `node scripts/protocol/check-compatibility-lock.mjs`; reproduce the Frontera half with `npm run check:clean-room-consumer`.",
   "contract": "soberania.frontera-runtime-handoff",
-  "contractVersion": "1.0.0",
-  "status": "frozen-with-blocking-finding",
+  "contractVersion": "1.1.0",
+  "status": "frozen",
   "frozenAt": "2026-08-24",
-  "frozenBy": "P0-PKG-02",
+  "frozenBy": "P0-PKG-03",
 
   "enterprise": {
     "humanProductName": "Frontera",
@@ -12,15 +12,24 @@
     "version": "1.0.0",
     "private": true,
     "sourceRepository": "Soberania-Protocol/Soberania-Enterprise",
-    "sourceCommit": "65db731e24a67fd5850ce29092e39a175f890211",
-    "sourceTree": "d33a945463cede5a81c7fcccaebc874de3c2fc1a",
+    "sourceCommit": "11edd06e7d6ea38ae0bc037e91854444b84a50a7",
+    "sourceTree": "6ab9b36d0bd1169ab6cc9955e109ed974ebe623d",
     "tarball": "aoc-enterprise-runtime-1.0.0.tgz",
-    "tarballSha256": "93b9d9f13bf908eeb7a1e62c24b6207fa6d9dd212faa0b5295cdb065e79b4e63",
-    "tarballSha512": "648f15c3d26393c56d24cdeecdaab4d8179c749e44baabcb9661ceddc5deeb2538546639bca13f7c86c6493722c2a65ec469ffe1014559f35e511066cf7913ca",
-    "tarballIntegrity": "sha512-ZI8Vw9Jjk8VtJM3uzaq02BecdJ5EuqvLlmHO3cXe6yU4VGY5vKE/fIbGSTciwqZexGn/4QFFWfNeURBmz3kTyg==",
-    "tarballSize": 3244268,
-    "tarballFileCount": 6212,
+    "tarballSha256": "53d9e6ce4f3ba8fd82bbd90ebe5bc53f8bffb597b0d11bfd22d9a1ba5245a2de",
+    "tarballSha512": "bbf9f4780d373797a384e10c41c9546dcedcd2249b937c8485045c6e7b1ac6bade6b690234630f63ae32d0bd8f3a726347be851c7b28010e77629a3e3cc18eb9",
+    "tarballIntegrity": "sha512-u/n0eA03N5ejhOEMQclUbc7c0iSbk3yEhQRcbnsaxrrea2kCNGMPY64y0L2POnJjR76FHHsoAQ53Ypo+PMGOuQ==",
+    "tarballSize": 3303573,
+    "tarballFileCount": 6298,
     "exportsFingerprint": "2b0ee1e3afee7c02d600615771eac3fa8aeec680c27bf4189041715729a22438",
+    "selfContained": true,
+    "bundlingMode": "npm bundleDependencies (docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md)",
+    "bundledInternalModules": [
+      "@aoc-enterprise/governed-authority",
+      "@aoc-enterprise/governed-authorization",
+      "@aoc-enterprise/identity",
+      "@aoc-enterprise/scoped-access"
+    ],
+    "externallyConsumableExports": "10/10 -- verified by check:clean-room-consumer (40/40 checks), including tsc with skipLibCheck=false and npm ci --offline",
     "reproducible": true,
     "engines": { "node": ">=22" },
     "moduleFormat": "commonjs",
@@ -40,7 +49,7 @@
     "integrationContract": "aoc.cross-repository-integration@1.0.0 (frozen)",
     "independentlyVerifiedHere": true,
     "verificationMethod": "Repacked from the pinned source commit with scripts/protocol/build-protocol-tarball.mjs in a clean worktree; name, version, private status, SHA-256, SHA-512, size, file count and exports fingerprint all recomputed locally and matched.",
-    "consumedAs": "peerDependency for consumers; vendored, checksummed tarball for this repository's own validation",
+    "consumedAs": "EXTERNAL peer dependency for consumers (never bundled into the Frontera artifact); vendored, checksummed tarball for this repository's own validation",
     "peerDependencyRange": ">=0.1.0 || >=0.2.0-rc.0"
   },
 
@@ -49,36 +58,23 @@
     "answer": "YES",
     "evidence": [
       "It is the root package of Soberania-Protocol/Soberania-Enterprise (package.json name = @aoc-enterprise/runtime, version 1.0.0).",
-      "It is the only package in this repository with a public exports map intended for external consumption (10 declared export keys) and a files allowlist restricting the artifact to dist.",
-      "It is the package the repository's own release machinery targets: validate-publishability.mjs packs it and installs it into an external-consumer fixture; check-runtime-release-integrity.mjs asserts its export targets exist; release/RELEASE_MANIFEST.json names it.",
-      "It is the identifier PMFreak already declares (as file:src/aoc/enterprise), per the Protocol repository's frozen cross-repository integration contract."
+      "It is the only package in this repository with a public exports map intended for external consumption (10 declared export keys) and a files allowlist restricting the artifact to dist plus its bundled private modules.",
+      "It is the package the repository's own release machinery targets: validate-publishability.mjs and check-clean-room-consumer.mjs pack it and install it into external consumers; check-runtime-release-integrity.mjs asserts its export targets exist; release/RELEASE_MANIFEST.json names it.",
+      "It is the identifier PMFreak already declares (as file:src/aoc/enterprise), per the Protocol repository's frozen cross-repository integration contract.",
+      "As of P0-PKG-03 it is self-contained: a clean external consumer installing only this artifact and the Protocol candidate loads all ten declared exports."
     ],
-    "relationshipToAocEnterprise": "@aoc/enterprise is a DIFFERENT, unrelated package: a private:true Assurance workspace living at enterprise/ inside the Soberania_Protocol repository, version 0.1.0, with its own ./assurance/* export map. It is not an alias of @aoc-enterprise/runtime, is not built by this repository, and is not the PMFreak handoff. Protocol's own integration-contract.json recorded this as unresolved; this increment resolves it: @aoc-enterprise/runtime is produced by Soberania-Protocol/Soberania-Enterprise, and @aoc/enterprise is a Protocol-internal workspace with a coincidentally similar name."
+    "relationshipToAocEnterprise": "@aoc/enterprise is a DIFFERENT, unrelated package: a private:true Assurance workspace living at enterprise/ inside the Soberania_Protocol repository, version 0.1.0, with its own ./assurance/* export map. It is not an alias of @aoc-enterprise/runtime, is not built by this repository, and is not the PMFreak handoff."
   },
 
-  "blockingFinding": {
-    "id": "frontera-runtime-not-self-contained",
-    "preExisting": true,
-    "introducedByThisIncrement": false,
-    "summary": "The packaged artifact is not self-contained. Its shipped dist requires 13 @aoc-enterprise/* workspace packages at runtime that are absent from `dependencies`; all are private:true and depend on each other through file:../<sibling> specifiers that resolve only inside this monorepo.",
-    "consumableExports": [
-      "@aoc-enterprise/runtime",
-      "@aoc-enterprise/runtime/authorization",
-      "@aoc-enterprise/runtime/audit",
-      "@aoc-enterprise/runtime/crypto",
-      "@aoc-enterprise/runtime/adapters",
-      "@aoc-enterprise/runtime/runtime",
-      "@aoc-enterprise/runtime/runtime-host"
-    ],
-    "blockedExports": [
-      "@aoc-enterprise/runtime/kernel",
-      "@aoc-enterprise/runtime/enterprise",
-      "@aoc-enterprise/runtime/kernel-host"
-    ],
-    "consequenceForPmfreak": "PMFreak may consume the 7 exports above from the frozen artifact today. The 3 blocked exports cannot be consumed from a packaged install by any external repository until an artifact-shape decision is made and executed.",
-    "decisionRequired": "Choose how the 13 private workspace packages reach an external consumer: (a) bundledDependencies in @aoc-enterprise/runtime, (b) inline them into dist at build time, (c) publish them as real packages and replace the file:../ specifiers with versions, or (d) narrow the public export surface so kernel/enterprise/kernel-host are not offered externally. Each changes the artifact or the public API and therefore needs its own approved increment.",
-    "detectedBy": "npm run check:clean-room-consumer"
-  },
+  "resolvedFindings": [
+    {
+      "id": "frontera-runtime-not-self-contained",
+      "raisedBy": "P0-PKG-02",
+      "resolvedBy": "P0-PKG-03",
+      "resolution": "The measured closure from the ten public export entry points is four private workspace packages (governed-authority, governed-authorization, identity, scoped-access) -- P0-PKG-02's figure of 13 came from grepping all of dist including modules no export reaches. All four now travel inside the artifact as npm bundleDependencies, remain private:true, and are asserted present, real (non-symlink) and private by check:clean-room-consumer on every run. /kernel, /enterprise and /kernel-host load externally. The superseded blocked candidate (sha256 93b9d9f1...5c1c30f8, commit 65db731e...) is recorded in release/frontera-candidate-manifest-1.0.0.json under superseded_candidate.",
+      "adr": "docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md"
+    }
+  ],
 
   "pmfreakObligations": [
     "PMFreak must consume the exact frozen Frontera artifact identified above, by SHA-256.",
@@ -87,9 +83,9 @@
     "PMFreak must not copy Frontera source.",
     "PMFreak must not reinterpret Protocol contracts through local copies.",
     "PMFreak must import only through declared export keys of each package.",
+    "PMFreak must not install, declare or depend on any private @aoc-enterprise/* implementation module -- they are internal to the Frontera artifact.",
     "PMFreak must record repository, commit, version and SHA-256 of every installed artifact in its own consumer lock file.",
-    "PMFreak must run a blocking CI job that reinstalls the pinned artifacts and re-runs its consumer battery.",
-    "PMFreak must not depend on the 3 blocked exports until the blocking finding above is closed."
+    "PMFreak must run a blocking CI job that reinstalls the pinned artifacts (npm ci) and re-runs its consumer battery."
   ],
 
   "statuses": {

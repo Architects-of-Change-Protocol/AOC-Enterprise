@@ -1,22 +1,22 @@
 {
-  "_comment": "Candidate-specific packaging manifest for the Frontera runtime produced by P0-PKG-02. It records the identity of a produced artifact and authorizes nothing: no registry publication, no tag, no GitHub Release, no merge. release/RELEASE_MANIFEST.json (the v1.0.0 release manifest) is deliberately NOT overwritten by this file.",
+  "_comment": "Candidate-specific packaging manifest for the Frontera runtime. Produced by P0-PKG-02 (Protocol RC adoption) and corrected by P0-PKG-03 (self-contained artifact). It records the identity of a produced artifact and authorizes nothing: no registry publication, no tag, no GitHub Release, no merge. release/RELEASE_MANIFEST.json (the v1.0.0 release manifest) is a separate, machine-generated file and is not this document.",
   "human_product_name": "Frontera",
   "technical_package_name": "@aoc-enterprise/runtime",
   "package_version": "1.0.0",
   "package_private": true,
   "source_repository": "Soberania-Protocol/Soberania-Enterprise",
-  "source_commit": "65db731e24a67fd5850ce29092e39a175f890211",
-  "source_tree": "d33a945463cede5a81c7fcccaebc874de3c2fc1a",
+  "source_commit": "11edd06e7d6ea38ae0bc037e91854444b84a50a7",
+  "source_tree": "6ab9b36d0bd1169ab6cc9955e109ed974ebe623d",
   "source_clean": true,
   "tarball_filename": "aoc-enterprise-runtime-1.0.0.tgz",
-  "tarball_sha256": "93b9d9f13bf908eeb7a1e62c24b6207fa6d9dd212faa0b5295cdb065e79b4e63",
-  "tarball_sha512": "648f15c3d26393c56d24cdeecdaab4d8179c749e44baabcb9661ceddc5deeb2538546639bca13f7c86c6493722c2a65ec469ffe1014559f35e511066cf7913ca",
-  "tarball_integrity": "sha512-ZI8Vw9Jjk8VtJM3uzaq02BecdJ5EuqvLlmHO3cXe6yU4VGY5vKE/fIbGSTciwqZexGn/4QFFWfNeURBmz3kTyg==",
-  "tarball_size": 3244268,
-  "tarball_file_count": 6212,
-  "tarball_unpacked_size": 18523323,
+  "tarball_sha256": "53d9e6ce4f3ba8fd82bbd90ebe5bc53f8bffb597b0d11bfd22d9a1ba5245a2de",
+  "tarball_sha512": "bbf9f4780d373797a384e10c41c9546dcedcd2249b937c8485045c6e7b1ac6bade6b690234630f63ae32d0bd8f3a726347be851c7b28010e77629a3e3cc18eb9",
+  "tarball_integrity": "sha512-u/n0eA03N5ejhOEMQclUbc7c0iSbk3yEhQRcbnsaxrrea2kCNGMPY64y0L2POnJjR76FHHsoAQ53Ypo+PMGOuQ==",
+  "tarball_size": 3303573,
+  "tarball_file_count": 6298,
+  "tarball_unpacked_size": 18732235,
   "exports_fingerprint": "2b0ee1e3afee7c02d600615771eac3fa8aeec680c27bf4189041715729a22438",
-  "exports_fingerprint_note": "sha256 of the canonically ordered exports object (10 keys), computed the way Soberania Protocol computes its own. Unchanged from origin/main.",
+  "exports_fingerprint_note": "sha256 of the canonically ordered exports object (10 keys), computed the way Soberania Protocol computes its own. Unchanged since origin/main.",
   "export_keys": [
     ".",
     "./adapters",
@@ -29,6 +29,14 @@
     "./runtime",
     "./runtime-host"
   ],
+  "bundling_mode": "npm bundleDependencies (Option A) -- see docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md",
+  "bundled_internal_modules": [
+    "@aoc-enterprise/governed-authority",
+    "@aoc-enterprise/governed-authorization",
+    "@aoc-enterprise/identity",
+    "@aoc-enterprise/scoped-access"
+  ],
+  "bundled_internal_module_count": 4,
   "protocol_package": "@aoc/protocol",
   "protocol_version": "0.2.0-rc.0",
   "protocol_source_commit": "dde34517d956156a0c735c18a805763a5e712879",
@@ -44,6 +52,7 @@
   "consumer_test_command": "npm run check:clean-room-consumer",
   "verification_commands": [
     "npm run validate:release",
+    "npm run validate:v1-release",
     "npm run check:protocol-consumption",
     "npm run check:protocol-contract-adoption",
     "npm run check:protocol-compatibility-lock",
@@ -55,63 +64,40 @@
   ],
   "verification_results": {
     "validate:release": "PASS (exit 0)",
+    "validate:v1-release": "PASS (exit 0) -- passes for the first time in this candidate line; the stale RELEASE_MANIFEST.json checksum that predated P0-PKG-02 was regenerated",
     "protocol:tarball:validate": "PASS (14/14 steps)",
     "protocol:tarball:verify-lock": "PASS",
     "validate:publishability": "PASS",
     "check:release-integrity": "PASS",
-    "check:clean-room-consumer": "FAIL (exit 1) - 7/10 exports consumable; see blocking_finding",
-    "validate:v1-release": "FAIL (exit 1) - pre-existing stale release/RELEASE_MANIFEST.json, reproduced identically on untouched origin/main"
+    "check:clean-room-consumer": "PASS (40/40 checks; 10/10 exports load; tsc skipLibCheck=false clean; npm install and npm ci --offline both green)"
   },
   "reproducibility": {
     "independent_packs": 2,
-    "pack_a_sha256": "93b9d9f13bf908eeb7a1e62c24b6207fa6d9dd212faa0b5295cdb065e79b4e63",
-    "pack_b_sha256": "93b9d9f13bf908eeb7a1e62c24b6207fa6d9dd212faa0b5295cdb065e79b4e63",
+    "pack_a_sha256": "53d9e6ce4f3ba8fd82bbd90ebe5bc53f8bffb597b0d11bfd22d9a1ba5245a2de",
+    "pack_b_sha256": "53d9e6ce4f3ba8fd82bbd90ebe5bc53f8bffb597b0d11bfd22d9a1ba5245a2de",
     "comparison": "MATCH",
-    "method": "two git worktrees detached at source_commit, in different directories, each npm ci + npm run build + npm pack"
+    "method": "two git worktrees detached at source_commit, in different directories, each npm ci + npm run build + npm pack; identical file listings"
   },
-  "blocking_finding": {
-    "id": "frontera-runtime-not-self-contained",
-    "severity": "blocking for the PMFreak handoff",
-    "pre_existing": true,
-    "introduced_by_this_increment": false,
-    "summary": "The packaged runtime requires 13 @aoc-enterprise/* workspace packages at runtime that are not declared in dependencies. Three declared exports therefore fail to load for an external consumer.",
-    "blocked_exports": [
-      "@aoc-enterprise/runtime/kernel",
-      "@aoc-enterprise/runtime/enterprise",
-      "@aoc-enterprise/runtime/kernel-host"
+  "clean_room_consumer": {
+    "consumer_installs": [
+      "@aoc-enterprise/runtime (packed tarball)",
+      "@aoc/protocol (frozen candidate tarball)"
     ],
-    "consumable_exports": [
-      "@aoc-enterprise/runtime",
-      "@aoc-enterprise/runtime/authorization",
-      "@aoc-enterprise/runtime/audit",
-      "@aoc-enterprise/runtime/crypto",
-      "@aoc-enterprise/runtime/adapters",
-      "@aoc-enterprise/runtime/runtime",
-      "@aoc-enterprise/runtime/runtime-host"
-    ],
-    "first_missing_dependency": "@aoc-enterprise/governed-authority",
-    "undeclared_runtime_dependencies": [
-      "@aoc-enterprise/access-grant",
-      "@aoc-enterprise/agent-governance",
-      "@aoc-enterprise/collateralization-mandate",
-      "@aoc-enterprise/governed-authority",
-      "@aoc-enterprise/governed-authorization",
-      "@aoc-enterprise/grant-revocation",
-      "@aoc-enterprise/license-mandate",
-      "@aoc-enterprise/pinata-adapter",
-      "@aoc-enterprise/pmfreak-agent-passport-foundation",
-      "@aoc-enterprise/provider-adapter",
-      "@aoc-enterprise/provider-translation",
-      "@aoc-enterprise/tokenization-mandate",
-      "@aoc-enterprise/transfer-mandate"
-    ],
-    "declaration_leak": [
-      "dist/src/kernel/contracts/ports.d.ts imports @aoc-enterprise/governed-authority",
-      "dist/src/kernel/contracts/kernel-request.d.ts imports @aoc-enterprise/governed-authorization"
-    ],
-    "why_not_a_one_line_fix": "All of them are private:true and depend on each other through file:../<sibling> specifiers, which only resolve inside this monorepo. Declaring them as ordinary dependencies does not make them installable by an external consumer; the fix is an artifact-shape decision (bundledDependencies, inlining into dist, publishing them as real packages, or narrowing the public export surface), which is outside the authorized scope of this increment.",
-    "why_existing_gates_miss_it": "scripts/validate-publishability.mjs calls import.meta.resolve on the export specifiers, which answers whether a file exists at that path without executing the module, and its fixture imports only 3 of the 10 exports. A shipped-but-undeclared dependency is invisible to resolution and surfaces only on load.",
-    "detected_by": "npm run check:clean-room-consumer (added by this increment)"
+    "private_workspace_tarballs_installed_separately": false,
+    "workspace_links": false,
+    "source_checkout_resolution": false,
+    "exports_loading": "10/10",
+    "typecheck": "PASS with skipLibCheck=false",
+    "npm_ci_offline": "PASS (lockfile coherent; no registry lookup for private modules)"
+  },
+  "superseded_candidate": {
+    "frozen_by": "P0-PKG-02",
+    "status": "BLOCKED -- superseded, never merged, never published",
+    "source_commit": "65db731e24a67fd5850ce29092e39a175f890211",
+    "tarball_sha256": "93b9d9f13bf908eeb7a1e62c24b6207fa6d9dd212faa0b5295cdb065e79b4e63",
+    "tarball_size": 3244268,
+    "tarball_file_count": 6212,
+    "blocking_finding": "frontera-runtime-not-self-contained: /kernel, /enterprise and /kernel-host failed to load externally (7/10 exports consumable). Closed by P0-PKG-03 via bundleDependencies; the honest record of the blocked measurement is preserved in the git history of this file and in docs/release/FRONTERA_CANDIDATE_EVIDENCE_1.0.0.md."
   },
   "publication_status": "NOT_PUBLISHED",
   "tag_status": "NOT_CREATED",
