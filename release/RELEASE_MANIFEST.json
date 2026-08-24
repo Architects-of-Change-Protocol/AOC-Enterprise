@@ -2,7 +2,7 @@
   "name": "@aoc-enterprise/runtime",
   "version": "1.0.0",
   "generated": {
-    "commit": "031c1685226faf49819636e2ff437363967badf9",
+    "commit": "60a37d0088c9416ad15a0da285f7e108150aecfa",
     "branch": "claude/frontera-protocol-rc-freeze-fegene",
     "node": "v22.22.2"
   },

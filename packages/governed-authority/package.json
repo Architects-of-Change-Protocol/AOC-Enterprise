@@ -20,6 +20,6 @@
     "dist"
   ],
   "dependencies": {
-    "@aoc-enterprise/governed-authorization": "file:../governed-authorization"
+    "@aoc-enterprise/governed-authorization": "*"
   }
 }

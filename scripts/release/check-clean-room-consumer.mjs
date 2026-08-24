@@ -195,6 +195,16 @@ process.stdout.write(JSON.stringify(out));
     }
   }
 
+  // A consumer's CI runs `npm ci`, not `npm install`, and `npm ci` refuses to run
+  // when package.json and the lockfile disagree. A bundled dependency whose own
+  // manifest names a sibling by a path specifier desynchronises the consumer's
+  // lockfile and fails there while `npm install` passes, so both are exercised.
+  // --offline additionally proves nothing in the private graph is fetched from a
+  // registry.
+  const ciRun = run('npm', ['ci', '--offline', '--no-audit', '--no-fund'], consumer, { allowFailure: true });
+  if (ciRun.status !== 0) process.stderr.write(`${ciRun.stdout ?? ''}${ciRun.stderr ?? ''}`);
+  check(ciRun.status === 0, 'npm ci --offline reinstalls from the lockfile with no registry lookup for private modules');
+
   // --- Self-containment: the private graph must travel INSIDE the artifact ----
   const consumerScope = join(consumer, 'node_modules', '@aoc-enterprise');
   const topLevelEnterprise = existsSync(consumerScope)
@@ -283,7 +293,7 @@ process.stdout.write(JSON.stringify(out));
     consumerDeclaredDependencies: declared,
     workspaceLinksUsed: false,
     localSourceResolutionUsed: false,
-    installFlags: 'npm install (no --force, no --legacy-peer-deps)',
+    installFlags: 'npm install then npm ci --offline (no --force, no --legacy-peer-deps)',
     ok: failures.length === 0,
   };
 
