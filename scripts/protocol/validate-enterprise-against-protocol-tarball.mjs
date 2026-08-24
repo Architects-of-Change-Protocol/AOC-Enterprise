@@ -105,7 +105,15 @@ async function forbiddenImportScan(tempDir) {
   // Negative-test fixtures contain these forbidden patterns as string *data*
   // passed to unit-tested detector functions, not as real imports -- same
   // allowlist rationale as scripts/check-protocol-consumption.mjs.
-  const excludedFiles = new Set([join(tempDir, 'tests', 'protocol-tarball-lock.test.mjs')]);
+  //
+  // scripts/release/check-clean-room-consumer.mjs is the same class: it carries
+  // '@aoc/protocol/src/index' and '@aoc/protocol/dist/contracts/index.js' in a
+  // list of specifiers it asserts must FAIL to resolve from a clean external
+  // install. They are assertions that deep imports stay unavailable, not imports.
+  const excludedFiles = new Set([
+    join(tempDir, 'tests', 'protocol-tarball-lock.test.mjs'),
+    join(tempDir, 'scripts', 'release', 'check-clean-room-consumer.mjs'),
+  ]);
 
   async function walk(dir) {
     if (excludedDirs.has(dir)) return;
