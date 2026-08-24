@@ -77,6 +77,17 @@ async function walk(dir) {
   return out;
 }
 
+async function walkAll(dir) {
+  const out = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (EXCLUDED_DIR_NAMES.has(entry.name) || entry.name.startsWith('.')) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await walkAll(full)));
+    else out.push(full);
+  }
+  return out;
+}
+
 function relPath(file) {
   return file.slice(ROOT.length + 1).replace(/\\/g, '/');
 }
@@ -136,6 +147,43 @@ for (const root of scanRoots) {
   }
 }
 violations.push(...defs);
+
+// --- 3b. No package manifest resolves @aoc/protocol from a source tree -----
+// containsProtocolSiblingPath() only matches a quote immediately followed by
+// '../', which is the shape a TypeScript/JS *import* takes. A package.json
+// dependency spec looks like "file:../Architects_of_Change_Protocol/..." --
+// the quote is followed by 'file:', so the source-scan regex above never saw
+// it. Manifests therefore get their own, explicit check: no dependency of any
+// kind may resolve @aoc/protocol (or anything else) out of a Protocol source
+// checkout. The canonical form is the vendored, checksummed tarball recorded
+// in protocol-consumer.lock.json.
+const manifestPaths = [join(ROOT, 'package.json')];
+for (const root of scanRoots) {
+  let files = [];
+  try {
+    files = await walkAll(join(ROOT, root));
+  } catch {
+    continue;
+  }
+  manifestPaths.push(...files.filter((file) => file.endsWith('package.json')));
+}
+for (const manifestPath of manifestPaths) {
+  let manifest;
+  try {
+    manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  } catch {
+    continue;
+  }
+  const rel = relPath(manifestPath);
+  for (const field of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
+    for (const [name, spec] of Object.entries(manifest[field] ?? {})) {
+      if (typeof spec !== 'string') continue;
+      if (spec.includes('Architects_of_Change_Protocol') || spec.includes('Soberania_Protocol')) {
+        violations.push(`${rel}: ${field}["${name}"] = "${spec}" resolves out of a Soberanía Protocol source checkout; use the vendored, checksummed tarball pinned by protocol-consumer.lock.json.`);
+      }
+    }
+  }
+}
 
 // --- 4. No shipped dist artifact leaks a local/sibling filesystem path ------
 const distDir = join(ROOT, 'dist');

@@ -27,6 +27,7 @@
     "check:runtime-vault": "node scripts/check-runtime-vault-boundary.mjs",
     "check:aoc-boundaries": "node scripts/check-aoc-boundaries.mjs",
     "check:release-integrity": "node scripts/check-runtime-release-integrity.mjs",
+    "check:clean-room-consumer": "node scripts/release/check-clean-room-consumer.mjs",
     "protocol:tarball:build": "node scripts/protocol/build-protocol-tarball.mjs",
     "protocol:tarball:validate": "node scripts/protocol/validate-enterprise-against-protocol-tarball.mjs",
     "protocol:tarball:verify-lock": "node scripts/protocol/verify-tarball-against-lock.mjs",
@@ -93,7 +94,7 @@
     }
   },
   "peerDependencies": {
-    "@aoc/protocol": ">=0.1.0",
+    "@aoc/protocol": ">=0.1.0 || >=0.2.0-rc.0",
     "react": ">=18.3.1",
     "react-dom": ">=18.3.1"
   },
@@ -108,7 +109,7 @@
   },
   "devDependencies": {
     "@aoc-enterprise/pmfreak-agent-passport-foundation": "*",
-    "@aoc/protocol": "file:./vendor/aoc-protocol-0.1.0.tgz",
+    "@aoc/protocol": "file:./vendor/aoc-protocol-0.2.0-rc.0.tgz",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",

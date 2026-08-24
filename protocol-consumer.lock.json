@@ -1,15 +1,29 @@
 {
-  "$comment": "This is NOT an npm lockfile. It is a small, auditable record of which Soberanía Protocol commit/artifact Soberanía Enterprise has actually been validated against. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md for the full upgrade/rollback procedure. Validate this file with `node scripts/protocol/check-compatibility-lock.mjs`.",
+  "$comment": "This is NOT an npm lockfile. It is a small, auditable record of which Soberanía Protocol commit/artifact Soberanía Enterprise (human product: Frontera) has actually been validated against. See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md for the full upgrade/rollback procedure. Validate this file with `node scripts/protocol/check-compatibility-lock.mjs`.",
   "repository": "Architects-of-Change-Protocol/Architects_of_Change_Protocol",
-  "commit": "ab2ac6ef573c871a029a67b13d33ba9738cb5939",
+  "repositoryNote": "This field records the pre-rebrand repository slug, which is what packages/protocol/package.json still declares upstream and what scripts/protocol/lib-protocol-artifact.mjs validates against. The git remote this artifact was actually built from is Soberania-Protocol/Soberania_Protocol. Both identifiers are recorded rather than reconciled, exactly as Protocol's own frozen integration contract does; whether they are one renamed repository is a GitHub-side fact neither repository evidences. Renaming this field is a separate, approved migration -- not part of this increment.",
+  "commit": "dde34517d956156a0c735c18a805763a5e712879",
   "package": "@aoc/protocol",
-  "expectedVersion": "0.1.0",
+  "expectedVersion": "0.2.0-rc.0",
   "enterpriseSupportedVersion": "1.0.0",
-  "peerDependencyRange": ">=0.1.0",
+  "peerDependencyRange": ">=0.1.0 || >=0.2.0-rc.0",
+  "peerDependencyRangeNote": "The `|| >=0.2.0-rc.0` clause exists solely because npm's semver excludes prereleases from ranges whose comparators carry no prerelease: 0.2.0-rc.0 does NOT satisfy '>=0.1.0', so an external consumer installing @aoc-enterprise/runtime alongside the frozen candidate fails with ERESOLVE. The clause admits no additional stable version (0.1.0, 0.2.0, 0.3.0, 1.0.0, 2.0.0 all satisfied before and after) and no other prerelease family (0.2.0-alpha.1, 0.2.0-beta.9, 0.3.0-rc.0, 1.0.0-rc.1 remain excluded). It admits exactly the 0.2.0 `rc` family this increment freezes and validates.",
   "tarball": {
-    "filename": "aoc-protocol-0.1.0.tgz",
-    "sha256": "4e5289b74bc30bcbd63afe87cd00d5417aa6bc665fe50d7c9c1b845bf1896b27",
-    "sizeBytes": 35526
+    "filename": "aoc-protocol-0.2.0-rc.0.tgz",
+    "sha256": "dbe8a08f432a0324ad34eb7cb85054b6dcd23c0d9a073914edf23fccd10445e5",
+    "sha512": "f8cb8dd45bc656a2ab0ba8b01a80d6edad7291addb36088606a9ba4bf547c62333e32c137c6776ea308e25022673ecebabb6f797bfd580a22675132cdba90573",
+    "integrity": "sha512-+MuN1FvGVqKrC6iwGoDW7a1yka3bNgiGBqm6S/VHxiMz4ywTfGd26jCOJQImc+zrq7b3l7/VgKImdRMs26kFcw==",
+    "sizeBytes": 278205,
+    "fileCount": 407,
+    "vendoredAt": "vendor/aoc-protocol-0.2.0-rc.0.tgz"
+  },
+  "exportsFingerprint": "a67d65b17dcb34c7da84d9a07cb893e073e21e9edbbc621bcae649afa5cdeb45",
+  "exportsFingerprintNote": "sha256 of the canonically ordered `exports` object of the installed package (15 keys), computed the way Protocol's scripts/fingerprint-public-surface.mjs computes it. Independently recomputed here from the packed artifact's own package.json, not copied from Protocol's evidence.",
+  "integrationContract": {
+    "contract": "aoc.cross-repository-integration",
+    "contractVersion": "1.0.0",
+    "status": "frozen",
+    "shippedAt": "node_modules/@aoc/protocol/integration-contract.json"
   },
   "verifiedPublicExports": [
     "@aoc/protocol",
@@ -19,6 +33,7 @@
     "@aoc/protocol/adapters",
     "@aoc/protocol/runtime-registry"
   ],
+  "verifiedPublicExportsNote": "The subpaths Enterprise is allowed to import and does verify (ALLOWED_PROTOCOL_SUBPATHS in scripts/protocol/lib-protocol-artifact.mjs). @aoc/protocol@0.2.0-rc.0 declares 15 export keys; the nine additional ones (./canonical, ./identity, ./manifest, ./portability, ./interoperability, ./licensing, ./governance-compatibility, ./sovereignty-capabilities, ./package.json) are deliberately NOT added to the allowlist: Enterprise imports none of them, and widening a consumption allowlist without a consumer would weaken the check for no gain.",
   "knownGaps": [],
   "resolvedGaps": [
     {
@@ -40,7 +55,14 @@
       "resolvedInCommit": "see git history of this file"
     }
   ],
-  "validatedAt": "2026-07-15",
-  "validationEvidence": "docs/release/PROTOCOL_CONSUMPTION_EVIDENCE.md",
+  "supersedes": {
+    "expectedVersion": "0.1.0",
+    "commit": "ab2ac6ef573c871a029a67b13d33ba9738cb5939",
+    "tarball": "aoc-protocol-0.1.0.tgz",
+    "sha256": "4e5289b74bc30bcbd63afe87cd00d5417aa6bc665fe50d7c9c1b845bf1896b27",
+    "note": "The superseded artifact remains tracked at vendor/aoc-protocol-0.1.0.tgz and its evidence at docs/release/PROTOCOL_CONSUMPTION_EVIDENCE.md is left byte-identical. Historical evidence is never rewritten under a new candidate's identity."
+  },
+  "validatedAt": "2026-08-24",
+  "validationEvidence": "docs/release/PROTOCOL_CONSUMPTION_EVIDENCE_0.2.0-rc.0.md",
   "updateProcedure": "See docs/integration/PROTOCOL_PACKAGE_CONSUMPTION.md, section 'Upgrade procedure'."
 }
