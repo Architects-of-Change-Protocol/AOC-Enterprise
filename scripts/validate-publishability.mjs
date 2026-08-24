@@ -8,19 +8,14 @@ const fixtureDir = resolve(root, 'tests/fixtures/external-consumer');
 const tmp = await mkdtemp(join(tmpdir(), 'aoc-publishability-'));
 const consumerDir = join(tmp, 'external-consumer');
 let packedTarballPath;
-const packedWorkspaceTarballPaths = [];
 
-// @aoc-enterprise/identity and @aoc-enterprise/scoped-access are real
-// dependencies of the shipped public API (VerifiedActorClaims and
-// EnterpriseScopedAccessRequest appear in exported .d.ts files, e.g.
-// RuntimeContext, AuthorizationGrantInput). An external consumer needs them
-// resolvable too, so they must be packed and installed exactly like the root
-// package itself -- not left to workspace-only "*" resolution, which only
-// works inside this monorepo.
-const bundledWorkspacePackages = [
-  { name: '@aoc-enterprise/identity', dir: resolve(root, 'packages/identity') },
-  { name: '@aoc-enterprise/scoped-access', dir: resolve(root, 'packages/scoped-access') },
-];
+// Frontera's private implementation packages (@aoc-enterprise/identity,
+// scoped-access, governed-authority, governed-authorization) travel INSIDE the
+// root artifact as npm bundleDependencies, so an external consumer installs the
+// runtime tarball and nothing else. This check used to pack and inject them
+// alongside the root package; doing that now would mask the very property the
+// artifact is supposed to have, so it does not. See
+// docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md.
 
 const rootPkg = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 const protocolSpec = rootPkg.devDependencies?.['@aoc/protocol'] ?? rootPkg.dependencies?.['@aoc/protocol'];
@@ -85,18 +80,6 @@ try {
   fixturePkg.dependencies['@aoc/protocol'] = `file:${protocolPath}`;
   fixturePkg.dependencies['@aoc-enterprise/runtime'] = `file:${tarballPath}`;
 
-  for (const { name, dir } of bundledWorkspacePackages) {
-    const workspacePackStdout = run('npm', ['pack', '--json', dir], root);
-    const workspacePackMeta = JSON.parse(workspacePackStdout);
-    const workspaceTarballName = workspacePackMeta[0]?.filename;
-    if (!workspaceTarballName) {
-      throw new Error(`Could not read tarball name from npm pack output for ${name}.`);
-    }
-    const workspaceTarballPath = resolve(root, workspaceTarballName);
-    packedWorkspaceTarballPaths.push(workspaceTarballPath);
-    fixturePkg.dependencies[name] = `file:${workspaceTarballPath}`;
-  }
-
   await writeFile(fixturePkgPath, `${JSON.stringify(fixturePkg, null, 2)}\n`);
 
   run('npm', ['install', '--prefer-offline'], consumerDir);
@@ -142,7 +125,4 @@ try {
 } finally {
   await rm(tmp, { recursive: true, force: true });
   if (packedTarballPath !== undefined) await rm(packedTarballPath, { force: true });
-  for (const workspaceTarballPath of packedWorkspaceTarballPaths) {
-    await rm(workspaceTarballPath, { force: true });
-  }
 }

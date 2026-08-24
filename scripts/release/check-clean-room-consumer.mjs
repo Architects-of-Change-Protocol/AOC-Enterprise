@@ -17,7 +17,7 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -36,12 +36,20 @@ const run = (cmd, args, cwd, { allowFailure = false } = {}) => {
 
 const sha256 = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 
-// Workspace packages that are real dependencies of the shipped public API and so
-// must be installed as packed tarballs too, exactly like the root package --
-// never through workspace "*" resolution, which only works inside this monorepo.
-const WORKSPACE_DEPS = [
-  { name: '@aoc-enterprise/identity', dir: 'packages/identity' },
-  { name: '@aoc-enterprise/scoped-access', dir: 'packages/scoped-access' },
+// The consumer installs the Frontera artifact and the Protocol candidate. Nothing
+// else. Frontera's private implementation packages travel INSIDE the artifact as
+// npm bundleDependencies, so a consumer never learns their names, never resolves
+// them from a registry, and never reconstructs this monorepo's workspace graph.
+//
+// Installing those private packages here as separate tarballs -- which this gate
+// used to do -- would prove only that a consumer can rebuild the dependency graph
+// by hand. It would NOT prove that @aoc-enterprise/runtime is a self-contained
+// distributable, which is the entire claim under test. Do not add them back.
+const EXPECTED_BUNDLED = [
+  '@aoc-enterprise/governed-authority',
+  '@aoc-enterprise/governed-authorization',
+  '@aoc-enterprise/identity',
+  '@aoc-enterprise/scoped-access',
 ];
 
 const failures = [];
@@ -76,12 +84,6 @@ try {
   const fronteraSha = sha256(fronteraTarball);
   log(`Frontera artifact ${packMeta.filename} sha256=${fronteraSha}`);
 
-  const workspaceTarballs = [];
-  for (const dep of WORKSPACE_DEPS) {
-    const meta = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', staging, resolve(ROOT, dep.dir)], ROOT).stdout)[0];
-    workspaceTarballs.push({ ...dep, path: join(staging, meta.filename) });
-  }
-
   // --- the clean room: a package that has never heard of this repository ------
   const consumer = await mkdtemp(join(tmpdir(), 'frontera-cleanroom-consumer-'));
   tempDirs.push(consumer);
@@ -91,7 +93,6 @@ try {
     '@aoc/protocol': `file:${protocolTarball}`,
     [pkg.name]: `file:${fronteraTarball}`,
   };
-  for (const w of workspaceTarballs) dependencies[w.name] = `file:${w.path}`;
 
   await writeFile(
     join(consumer, 'package.json'),
@@ -194,6 +195,40 @@ process.stdout.write(JSON.stringify(out));
     }
   }
 
+  // --- Self-containment: the private graph must travel INSIDE the artifact ----
+  const consumerScope = join(consumer, 'node_modules', '@aoc-enterprise');
+  const topLevelEnterprise = existsSync(consumerScope)
+    ? (await readdir(consumerScope)).filter((n) => n !== 'runtime')
+    : [];
+  check(
+    topLevelEnterprise.length === 0,
+    `no private @aoc-enterprise/* package is installed alongside the runtime${topLevelEnterprise.length ? ` (found: ${topLevelEnterprise.join(', ')})` : ''}`,
+  );
+
+  const bundledDir = join(consumer, 'node_modules', pkg.name, 'node_modules', '@aoc-enterprise');
+  const bundled = existsSync(bundledDir) ? (await readdir(bundledDir)).sort() : [];
+  const expectedBundled = EXPECTED_BUNDLED.map((n) => n.split('/')[1]).sort();
+  check(
+    JSON.stringify(bundled) === JSON.stringify(expectedBundled),
+    `artifact carries exactly its private implementation packages [${expectedBundled.join(', ')}]${JSON.stringify(bundled) === JSON.stringify(expectedBundled) ? '' : ` (found: ${bundled.join(', ') || 'none'})`}`,
+  );
+
+  for (const name of bundled) {
+    const dir = join(bundledDir, name);
+    const isLink = run('node', ['-e', `process.stdout.write(String(require('node:fs').lstatSync(${JSON.stringify(dir)}).isSymbolicLink()))`], consumer).stdout.trim();
+    check(isLink === 'false', `bundled ${name} is a real directory, not a symlink into the monorepo`);
+    const bundledPkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
+    check(bundledPkg.private === true, `bundled ${name} remains private (not promoted to a published product)`);
+  }
+
+  // The consumer's own manifest must name only the two external artifacts.
+  const consumerPkg = JSON.parse(await readFile(join(consumer, 'package.json'), 'utf8'));
+  const declared = Object.keys(consumerPkg.dependencies).sort();
+  check(
+    JSON.stringify(declared) === JSON.stringify(['@aoc-enterprise/runtime', '@aoc/protocol']),
+    `consumer declares only the runtime and Protocol artifacts (declared: ${declared.join(', ')})`,
+  );
+
   // The installed Protocol must be the real package, not a symlinked checkout.
   const protocolDir = join(consumer, 'node_modules', '@aoc', 'protocol');
   const lstat = run('node', ['-e', `process.stdout.write(String(require('node:fs').lstatSync(${JSON.stringify(protocolDir)}).isSymbolicLink()))`], consumer).stdout.trim();
@@ -243,6 +278,9 @@ process.stdout.write(JSON.stringify(out));
     exportsBlocked: blocked,
     perExport,
     negativeImports: negativeResults,
+    bundledPrivateModules: bundled,
+    privatePackagesInstalledSeparately: topLevelEnterprise,
+    consumerDeclaredDependencies: declared,
     workspaceLinksUsed: false,
     localSourceResolutionUsed: false,
     installFlags: 'npm install (no --force, no --legacy-peer-deps)',

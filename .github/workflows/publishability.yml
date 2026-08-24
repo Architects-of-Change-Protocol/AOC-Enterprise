@@ -21,6 +21,26 @@ jobs:
       # @aoc/protocol at runtime. No Protocol checkout is needed here.
       - run: npm run validate:publishability
 
+  clean-room-consumer:
+    # Blocking. Proves @aoc-enterprise/runtime is a self-contained distributable:
+    # installs the packed artifact plus the pinned @aoc/protocol candidate into a
+    # throwaway package outside the repository -- and nothing else -- then loads
+    # and typechecks all ten declared exports. Frontera's private implementation
+    # packages travel inside the artifact as bundleDependencies, so the consumer
+    # never installs them separately. Do not add private @aoc-enterprise/*
+    # tarballs to that fixture to make this pass: that would prove a consumer can
+    # rebuild this monorepo's workspace graph by hand, not that the artifact is
+    # self-contained. See docs/architecture/ADR-FRONTERA-SELF-CONTAINED-PACKAGING.md.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run check:clean-room-consumer
+
   protocol-tarball-consumption:
     runs-on: ubuntu-latest
     steps:
