@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { KernelClock, KernelIdGenerator } from '../../kernel/index.js';
+import type { KernelClock, KernelIdGenerator, RecognitionProvider } from '../../kernel/index.js';
 import type { KernelProviderSet } from '../providers/kernel-provider-composition.js';
 import type { KernelAuthorityAccessContext, KernelAuthorityRecord } from './contracts.js';
 import { hydrateKernelAuthorityWorld } from './hydration.js';
@@ -10,22 +10,39 @@ import { createDurableRecognitionProvider } from './recognition-bridge.js';
 export interface CreateDurableKernelProvidersOptions {
   /** The durable authority source. Memory or SQLite -- the composition is identical; only the survival guarantee differs. */
   readonly store: KernelAuthorityStore;
-  /** The organization whose authority world this provider set decides for. One provider set serves exactly one organization. */
+  /** The organization whose authority world this decision service decides for. One service serves exactly one organization. */
   readonly organizationId: string;
   readonly clock?: KernelClock;
   readonly idGenerator?: KernelIdGenerator;
 }
 
 /**
- * A `KernelProviderSet` whose world was restored from durable,
- * operator-provisioned state rather than seeded in-process.
+ * The decision surface an application receives: everything needed to *ask*
+ * `AocKernel` a question, and nothing that could answer one by changing the
+ * world.
  *
- * The runtime handles it exposes are real and honest: they hold exactly the
- * records the store holds for `organizationId`, and nothing else. They are a
- * *projection* of the store, never a second source of truth -- which is why
- * they are rebuilt by `reload()` rather than mutated in place.
+ * It deliberately does **not** carry the Recognition/Authority/Approval/
+ * Handshake runtime handles that `KernelProviderSet` exposes. Those are
+ * concrete, mutable engines whose public methods include `registerActor`,
+ * `issuePassport`, `issueCapabilityToken`, `registerRootIssuer` and
+ * `issueAuthorityGrant`. Handing them to a consumer alongside a
+ * `recognitionProvider` would mean an application could mint itself an actor
+ * and a covering token in the live world, name them in its request metadata,
+ * and be allowed -- without ever holding an operator context, and without the
+ * durable store recording anything. The separation this layer exists to
+ * establish would hold only by convention.
+ *
+ * So the handles stay private to the composition that builds the world. What
+ * crosses this boundary is a provider that answers, a clock, an id generator,
+ * the store (whose own writes independently demand an operator context), and
+ * the ability to re-read.
  */
-export interface DurableKernelProviderSet extends KernelProviderSet {
+export interface DurableKernelDecisionService {
+  /** Read-only. Answers recognition questions; cannot register, issue, grant or revoke anything. */
+  readonly recognitionProvider: RecognitionProvider;
+  readonly clock: KernelClock;
+  readonly idGenerator: KernelIdGenerator;
+  /** The durable authority source. Reads are organization-scoped; every write independently requires a privileged operator context. */
   readonly authorityStore: KernelAuthorityStore;
   readonly organizationId: string;
   /** The records this world was last hydrated from -- the exact provenance of every decision it can produce. */
@@ -36,12 +53,30 @@ export interface DurableKernelProviderSet extends KernelProviderSet {
    * The provisioning service calls this after every committed write, so a
    * single-process deployment never observes a stale world. A deployment where
    * a *different* process provisions must call it (or restart) to observe that
-   * process's writes -- this is documented rather than papered over, because a
-   * world that silently lags its store is exactly the kind of thing this layer
-   * must not claim to be. See `docs/enterprise/AOC_DURABLE_KERNEL_AUTHORITY.md`,
+   * process's writes -- documented rather than papered over, because a world
+   * that silently lagged its store is exactly what this layer must not claim
+   * to be. See `docs/enterprise/AOC_DURABLE_KERNEL_AUTHORITY.md`,
    * "Propagation across processes".
    */
   reload(): Promise<void>;
+}
+
+/** @deprecated Name retained for the 1.1.0 call sites; `DurableKernelDecisionService` describes what it actually is. */
+export type DurableKernelProviderSet = DurableKernelDecisionService;
+
+/**
+ * Internal composition result: the decision service **plus** the mutable world
+ * handles, for the one caller that legitimately needs both -- the Enterprise
+ * composition root, which must satisfy `KernelProviderSet` and which already
+ * holds the operator provisioning surface anyway.
+ *
+ * Not exported from `enterprise/index.ts`. If this ever becomes reachable from
+ * a package export, the guarantee above is gone.
+ */
+export interface DurableKernelWorld {
+  readonly service: DurableKernelDecisionService;
+  /** Satisfies the Kernel's own provider contract. Carries mutable engine handles; never hand this to an application. */
+  readonly providerSet: KernelProviderSet;
 }
 
 function defaultClockAndIds(): { readonly now: () => string; readonly nextId: (prefix: string) => string } {
@@ -52,30 +87,23 @@ function defaultClockAndIds(): { readonly now: () => string; readonly nextId: (p
 }
 
 /**
- * Restores the operator-provisioned Recognition/Authority world for one
- * organization from a durable Kernel Authority Store and composes it into the
- * `KernelProviderSet` `AocKernel` accepts.
- *
- * The sibling of `createDefaultKernelProviders()`, not a replacement for it.
- * That factory keeps its exact behaviour -- a real but empty, fail-closed
- * world -- and remains correct for every deployment that has not adopted
- * durable authority. This one differs in exactly one respect: where the
- * world's contents come from.
+ * Builds the durable world for one organization, returning both the narrow
+ * decision service and the full provider set.
  *
  * Fail-closed is preserved end to end. A store holding no records for this
  * organization hydrates an empty world, and an empty world denies every
- * request with `RECOGNITION_ACTOR_UNKNOWN` exactly as before. Nothing here
- * auto-creates an actor, a trust domain, an authority grant or a token, and
- * no request can cause one to be created: this function reads the store, and
- * the returned provider set carries no write surface at all.
+ * request with `RECOGNITION_ACTOR_UNKNOWN` exactly as
+ * `createDefaultKernelProviders()` does. Nothing here auto-creates an actor, a
+ * trust domain, an authority grant or a token, and no request can cause one to
+ * be created.
  */
-export async function createDurableKernelProviders(options: CreateDurableKernelProvidersOptions): Promise<DurableKernelProviderSet> {
+export async function createDurableKernelWorld(options: CreateDurableKernelProvidersOptions): Promise<DurableKernelWorld> {
   const fallback = defaultClockAndIds();
   const clock: KernelClock = options.clock ?? { now: fallback.now };
   const idGenerator: KernelIdGenerator = options.idGenerator ?? { nextId: fallback.nextId };
   const { store, organizationId } = options;
 
-  // A read context, never an operator context. This provider set is
+  // A read context, never an operator context. This composition is
   // structurally incapable of writing to the authority source: it never holds
   // `system: true`, and `requireKernelAuthorityOperator` refuses every write
   // without it.
@@ -85,10 +113,25 @@ export async function createDurableKernelProviders(options: CreateDurableKernelP
 
   const recognitionProvider = createDurableRecognitionProvider({
     organizationId,
+    now: clock.now,
     world: () => ({ recognitionRuntime: world.recognitionRuntime, records: world.records }),
   });
 
-  return {
+  async function reload(): Promise<void> {
+    world = hydrateKernelAuthorityWorld(await store.listRecords(readContext, { organizationId }), { now: clock.now, nextId: idGenerator.nextId });
+  }
+
+  const service: DurableKernelDecisionService = {
+    recognitionProvider,
+    clock,
+    idGenerator,
+    authorityStore: store,
+    organizationId,
+    records: () => world.records,
+    reload,
+  };
+
+  const providerSet: KernelProviderSet = {
     get recognitionRuntime() {
       return world.recognitionRuntime;
     },
@@ -104,11 +147,22 @@ export async function createDurableKernelProviders(options: CreateDurableKernelP
     recognitionProvider,
     clock,
     idGenerator,
-    authorityStore: store,
-    organizationId,
-    records: () => world.records,
-    async reload(): Promise<void> {
-      world = hydrateKernelAuthorityWorld(await store.listRecords(readContext, { organizationId }), { now: clock.now, nextId: idGenerator.nextId });
-    },
   };
+
+  return { service, providerSet };
+}
+
+/**
+ * Restores the operator-provisioned Recognition/Authority world for one
+ * organization from a durable Kernel Authority Store, and returns the
+ * read-only surface an application evaluates against.
+ *
+ * The sibling of `createDefaultKernelProviders()`, not a replacement for it.
+ * That factory keeps its exact behaviour -- a real but empty, fail-closed
+ * world -- and remains correct for every deployment that has not adopted
+ * durable authority. This one differs in exactly one respect: where the
+ * world's contents come from.
+ */
+export async function createDurableKernelProviders(options: CreateDurableKernelProvidersOptions): Promise<DurableKernelDecisionService> {
+  return (await createDurableKernelWorld(options)).service;
 }

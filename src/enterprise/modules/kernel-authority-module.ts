@@ -67,3 +67,43 @@ export function createKernelAuthorityModule(store: KernelAuthorityStore, now: ()
     },
   };
 }
+
+/**
+ * The module a deployment gets when it configured durable authority, declared
+ * it optional, and the store could not be opened or its world could not be
+ * restored.
+ *
+ * It exists so the failure is visible in health rather than inferred from a
+ * missing module. It reports unhealthy and never becomes ready; the Host stays
+ * live because the operator asked for that, and the world it evaluates against
+ * is the empty fail-closed one, so every request denies.
+ */
+export function createUnavailableKernelAuthorityModule(failure: Error, now: () => string): EnterpriseModule {
+  return {
+    descriptor: {
+      id: KERNEL_AUTHORITY_MODULE_ID,
+      version: AOC_KERNEL_AUTHORITY_RUNTIME_VERSION,
+      displayName: 'Kernel Authority Runtime (unavailable)',
+      description: 'Configured durable authority source that could not be opened. Declared optional, so the Host runs against an empty fail-closed world.',
+      criticality: 'optional',
+      capabilities: [],
+    },
+    async initialize() {
+      // Deliberately does not throw: an optional module that failed to come up
+      // must degrade the Host, not prevent it from starting.
+    },
+    async health(): Promise<EnterpriseModuleHealth> {
+      return {
+        status: 'unhealthy',
+        checkedAt: now(),
+        message: 'The configured Kernel Authority Store is unavailable; the Kernel is evaluating against an empty, fail-closed world.',
+        // The reason, never the authority content -- and never a path, which
+        // would disclose deployment layout through a health endpoint.
+        details: { provider: 'unavailable', durable: false, writable: false, readable: false, reason: failure.name },
+      };
+    },
+    async shutdown() {
+      // Nothing was opened.
+    },
+  };
+}

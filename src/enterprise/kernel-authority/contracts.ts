@@ -29,7 +29,7 @@
 
 import type { AuthorityActorType } from '../../features/authority-graph/domain/authority-grant.js';
 import type { ActorType } from '../../features/recognition-runtime/domain/actor.js';
-import type { RiskLevel } from '../../features/recognition-runtime/domain/capability-token.js';
+import type { ApprovalRequirement, EvidenceRequirement, RiskLevel } from '../../features/recognition-runtime/domain/capability-token.js';
 import type { PassportType } from '../../features/recognition-runtime/domain/passport.js';
 
 /** Runtime version of the Kernel Authority Runtime — reported in the release manifest alongside its sibling runtimes. */
@@ -123,6 +123,8 @@ export interface KernelAuthorityExternalSubject {
  * them -- and a provisioning payload whose vocabulary has drifted from the
  * engine's is a payload that cannot be replayed.
  */
+export type KernelAuthorityEvidenceRequirement = EvidenceRequirement;
+export type KernelAuthorityApprovalRequirement = ApprovalRequirement;
 export type KernelAuthorityActorType = ActorType;
 export type KernelAuthorityDelegateActorType = AuthorityActorType;
 export type KernelAuthorityPassportType = PassportType;
@@ -169,6 +171,17 @@ export interface ProvisionCapabilityTokenInput {
   readonly actions: readonly string[];
   readonly resourceScopes: readonly string[];
   readonly riskLevel: KernelAuthorityRiskLevel;
+  /**
+   * Evidence the engine requires before an action may proceed.
+   *
+   * Part of the durable contract rather than left out of it: the recognition
+   * policy chain enforces these, so a token that omitted them on the way into
+   * the store would come back out of it *less* restricted than the operator
+   * provisioned -- authority widening by round-trip.
+   */
+  readonly evidenceRequirements?: readonly KernelAuthorityEvidenceRequirement[];
+  /** Human approval the engine requires for the named actions. Persisted for the same reason as `evidenceRequirements`. */
+  readonly approvalRequirement?: KernelAuthorityApprovalRequirement;
   readonly prohibitedActions?: readonly string[];
   readonly delegable?: boolean;
   readonly maxDelegationDepth?: number;

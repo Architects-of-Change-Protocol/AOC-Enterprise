@@ -151,6 +151,9 @@ the provisioning service and never holds an operator context.
 import { createSqliteKernelAuthorityStore, createDurableKernelProviders } from '@aoc-enterprise/runtime/enterprise';
 import { createAocKernel } from '@aoc-enterprise/runtime/kernel';
 
+// Returns a DurableKernelDecisionService: a provider that answers, a clock,
+// an id generator, the store, and reload(). It deliberately carries no
+// Recognition/Authority runtime handles -- see "The evaluation surface" below.
 const store = await createSqliteKernelAuthorityStore('.data/kernel-authority.sqlite');
 const providers = await createDurableKernelProviders({ store, organizationId: 'org-acme' });
 const kernel = createAocKernel({
@@ -169,10 +172,32 @@ const decision = await kernel.evaluate({
 // decision.status === 'allowed' | 'denied' | ...
 ```
 
+`organization` is **required**. An omitted organization is not read as an
+implicit match for the configured one: two organizations may legitimately use
+the same actor ids, so "unstated" and "this one" are different claims and only
+one is safe to act on. It also matters upstream — organization-scoped API keys
+reject a *mismatch*, so treating absence as a match would let a caller skip
+that check by simply not naming an organization. The value is taken from the
+typed `organization` field only; a `context.organizationId` supplied in the
+free-form bag is stripped before evaluation and can never establish scope.
+
 The application does **not** supply passport or capability-token ids. Frontera
 resolves the credentials this actor durably holds, subject-bound to that actor
-in that trust domain, and the unmodified policy chain re-verifies every one of
-them. A caller that already knows the ids may still pass them in `context`.
+in that trust domain, preferring one that is neither revoked nor expired at
+evaluation time, and the unmodified policy chain re-verifies every one of them.
+A caller that already knows the ids may still pass them in `context`.
+
+### The evaluation surface
+
+`createDurableKernelProviders()` returns a `DurableKernelDecisionService`, and
+what it leaves out is the point: it carries **no** Recognition, Authority,
+Approval or Handshake runtime handles. Those are concrete mutable engines whose
+public methods include `registerActor`, `issuePassport`, `issueCapabilityToken`,
+`registerRootIssuer` and `issueAuthorityGrant`. Handing them to a consumer
+alongside a provider would let an application mint itself an actor and a
+covering token in the live world, name them in its request, and be allowed —
+without an operator context and without the store recording anything. The
+handles stay private to the composition that builds the world.
 
 ### Binding an external principal
 
@@ -267,7 +292,11 @@ may legitimately use the same actor ids.
 | Condition | Behaviour |
 | --------- | --------- |
 | Store empty | Every request denied (`RECOGNITION_ACTOR_UNKNOWN`) |
+| Organization not stated on a request | Denied (`RECOGNITION_ORGANIZATION_SCOPE_REQUIRED`) |
 | Required store unavailable | `createEnterprise()` raises; **never** substituted with an empty in-memory store |
+| *Optional* store unavailable (`REQUIRED=false`) | Host starts, module reports unhealthy, Kernel evaluates against the empty fail-closed world — so every request denies |
+| Persisted event altered in place | `KERNEL_AUTHORITY_INTEGRITY_FAILED` — digests are recomputed from the event's own fields, never trusted as stored |
+| Events lost from the *end* of a chain | `KERNEL_AUTHORITY_INTEGRITY_FAILED` — the reconstructed head is cross-checked against the independently recorded one, so a lost revocation cannot read back as live |
 | Store unhealthy at runtime | Module unhealthy; Host not-ready when `REQUIRED=true` |
 | Foreign schema version | Store refused at open, and left byte-for-byte untouched |
 | Malformed persisted payload | `KERNEL_AUTHORITY_INTEGRITY_FAILED` — never skipped |
@@ -292,9 +321,16 @@ npm run restore:v1 -- --backup ./backup --target ./restored
 ```
 
 It is included in `backup:v1`, `restore:v1`, `check:portability-smoke` and the
-clean-room drill, and its inclusion is not optional the way an audit store's
-would be: a recovery that restored evaluation history but not the authority
-world would come back with every actor unrecognized and every action denied.
+clean-room drill **whenever durable authority is enabled**, and there its
+inclusion is not optional the way an audit store's would be: a recovery that
+restored evaluation history but not the authority world would come back with
+every actor unrecognized and every action denied.
+
+A deployment that has *not* enabled durable authority has no such database and
+never will, so backup does not ask for one. Requiring it unconditionally would
+break every previously-working `backup:v1` invocation on upgrade, and the usual
+remedy ("start the Host once, it creates an empty store") cannot help for a
+feature that is switched off.
 
 `tests/durable-authority-portability.contract.test.mjs` destroys the original
 store outright, restores from the backup alone, and asserts that a legitimate
@@ -333,7 +369,7 @@ All on `@aoc-enterprise/runtime/enterprise`:
 | `createSqliteKernelAuthorityStore` | Open/create the durable authority source |
 | `createInMemoryKernelAuthorityStore` | Non-durable equivalent for tests and demos |
 | `createKernelAuthorityProvisioningService` | **Trusted operator** write surface |
-| `createDurableKernelProviders` | Restore a world and compose the Kernel's provider set |
+| `createDurableKernelProviders` | Restore a world and return the read-only `DurableKernelDecisionService` |
 | `hydrateKernelAuthorityWorld` | The pure records-to-world projection |
 | `createDurableRecognitionProvider` | The read-only bridge onto the Kernel's port |
 | `KernelAuthorityError` / `isKernelAuthorityError` | Operational error taxonomy |

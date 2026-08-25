@@ -34,12 +34,17 @@ export interface ResolvedRecognitionCredentials {
  *     revocation, expiry, suspension, prohibited actions, action grant,
  *     resource scope, delegation depth, evidence and approval against it, and
  *     the Authority Graph still has to prove the chain behind it.
- *   * When several credentials could apply, a live one is preferred over a
- *     revoked or expired one -- because a live grant is a real grant, and
- *     denying an actor who genuinely holds one would be a false denial. When
- *     *only* a revoked or expired credential covers the action it is still the
- *     one presented, so the denial says `CAPABILITY_TOKEN_REVOKED` rather than
- *     the vaguer `CAPABILITY_TOKEN_REQUIRED`.
+ *   * When several credentials could apply, a usable one -- neither revoked
+ *     nor expired at evaluation time -- is preferred, because a live grant is a
+ *     real grant and denying an actor who genuinely holds one would be a false
+ *     denial. Expiry is checked against the payload rather than the record's
+ *     status: the store only knows whether a credential was revoked, so a
+ *     long-expired token is still `active` to it, and selecting on status
+ *     alone would let an expired credential that happens to sort first shadow
+ *     a valid one. When *only* a revoked or expired credential covers the
+ *     action it is still the one presented, so the denial says
+ *     `CAPABILITY_TOKEN_REVOKED` or `CAPABILITY_TOKEN_EXPIRED` rather than the
+ *     vaguer `CAPABILITY_TOKEN_REQUIRED`.
  *   * When nothing covers the action, nothing is presented and the request
  *     denies for want of a capability token. Absence is never resolved into a
  *     grant.
@@ -50,7 +55,14 @@ export interface ResolvedRecognitionCredentials {
  */
 export function resolveRecognitionCredentials(
   records: readonly KernelAuthorityRecord[],
-  request: { readonly actorId: string; readonly trustDomainId: string; readonly action: string; readonly resourceScope: string },
+  request: {
+    readonly actorId: string;
+    readonly trustDomainId: string;
+    readonly action: string;
+    readonly resourceScope: string;
+    /** Evaluation time, so expiry participates in selection. Without it an expired credential that happens to sort first would be chosen over a live one. */
+    readonly now: string;
+  },
 ): ResolvedRecognitionCredentials {
   const passports = records.filter(
     (record): record is KernelAuthorityRecord =>
@@ -58,7 +70,13 @@ export function resolveRecognitionCredentials(
       (record.payload as unknown as ProvisionPassportInput).subjectActorId === request.actorId &&
       (record.payload as unknown as ProvisionPassportInput).trustDomainId === request.trustDomainId,
   );
-  const passport = passports.find((record) => record.status === 'active') ?? passports[0];
+  // `status` is the *store's* view -- provisioned or revoked -- and says
+  // nothing about expiry, which lives in the payload. A credential is only
+  // usable if it is both.
+  const usable = (record: KernelAuthorityRecord, expiresAt: string | undefined): boolean =>
+    record.status === 'active' && (expiresAt === undefined || expiresAt > request.now);
+
+  const passport = passports.find((record) => usable(record, (record.payload as unknown as ProvisionPassportInput).expiresAt)) ?? passports[0];
 
   const tokens = records.filter(
     (record): record is KernelAuthorityRecord =>
@@ -73,7 +91,7 @@ export function resolveRecognitionCredentials(
     const inScope = token.resourceScopes.some((scope) => request.resourceScope === scope || request.resourceScope.startsWith(`${scope}:`));
     return grantsAction && inScope;
   });
-  const token = covering.find((record) => record.status === 'active') ?? covering[0];
+  const token = covering.find((record) => usable(record, (record.payload as unknown as ProvisionCapabilityTokenInput).expiresAt)) ?? covering[0];
 
   return {
     ...(passport !== undefined ? { passportId: passport.entityId } : {}),
@@ -84,6 +102,8 @@ export function resolveRecognitionCredentials(
 export interface DurableRecognitionBridgeOptions {
   /** The organization whose authority world `recognitionRuntime` was hydrated from. */
   readonly organizationId: string;
+  /** Evaluation clock, so credential resolution can tell a live credential from an expired one. */
+  readonly now: () => string;
   /** Live view of the hydrated world. Read through a getter so a re-hydration after provisioning is picked up without rebuilding the bridge. */
   readonly world: () => { readonly recognitionRuntime: AocRecognitionRuntime; readonly records: readonly KernelAuthorityRecord[] };
 }
@@ -113,7 +133,32 @@ export function createDurableRecognitionProvider(options: DurableRecognitionBrid
       const metadata = input.metadata ?? {};
       const requestedOrganizationId = typeof metadata.organizationId === 'string' ? metadata.organizationId : undefined;
 
-      if (requestedOrganizationId !== undefined && requestedOrganizationId !== organizationId) {
+      // The organization must be stated, and must match. An omitted
+      // organization is not an implicit match for the configured one: two
+      // organizations may legitimately use the same actor ids, so "unstated"
+      // and "this one" are different claims and only one of them is safe to
+      // act on. It also matters upstream -- the Enterprise Host's
+      // organization-scoped API keys reject a *mismatch*, so treating absence
+      // as a match would let a caller skip that check entirely by simply not
+      // naming an organization.
+      //
+      // `metadata.organizationId` is authoritative here because the Kernel's
+      // request adapter derives it solely from the typed `organization` field
+      // and strips any caller-supplied value of that name from the free-form
+      // context bag (`kernel/orchestration/request-adapter.ts`).
+      if (requestedOrganizationId === undefined) {
+        return {
+          id: `recognition-organization-missing-${input.actionRequestId ?? input.actorId}`,
+          type: 'unrecognized_actor',
+          allowed: false,
+          recognized: false,
+          reasonCode: 'RECOGNITION_ORGANIZATION_SCOPE_REQUIRED',
+          reason: `This decision service is provisioned for organization '${organizationId}'; a request must name the organization it is made in.`,
+          ...(input.actionRequestId !== undefined ? { actionRequestId: input.actionRequestId } : {}),
+        };
+      }
+
+      if (requestedOrganizationId !== organizationId) {
         return {
           id: `recognition-organization-scope-${input.actionRequestId ?? input.actorId}`,
           type: 'unrecognized_actor',
@@ -136,6 +181,7 @@ export function createDurableRecognitionProvider(options: DurableRecognitionBrid
         trustDomainId: input.trustDomainId,
         action: input.action,
         resourceScope: input.resourceScope,
+        now: options.now(),
       });
       const passportId = explicitPassportId ?? resolved.passportId;
       const capabilityTokenId = explicitCapabilityTokenId ?? resolved.capabilityTokenId;

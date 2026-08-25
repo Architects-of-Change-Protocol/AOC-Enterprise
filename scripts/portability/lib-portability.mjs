@@ -67,8 +67,22 @@ export const STORE_DEFINITIONS = [
     recordTable: 'kernel_authority_events',
     schemaVersionKeyOf: (enterprise) => enterprise.KERNEL_AUTHORITY_SCHEMA_VERSION,
     openStore: (enterprise, path) => enterprise.createSqliteKernelAuthorityStore(path),
+    // Durable authority is opt-in and defaults to off, so a deployment that
+    // has not adopted it has no such database -- and never will, since a
+    // disabled feature never creates one. Demanding it unconditionally would
+    // break every previously-working `backup:v1` invocation on upgrade, and
+    // the standard remedy the error suggests ("start the Host once") cannot
+    // help. When the feature is enabled the store is required exactly like its
+    // siblings: it is authority source-of-truth, and a backup that omits it
+    // restores a deployment in which every actor is unrecognized.
+    isConfigured: (config) => config.kernelAuthority?.enabled === true,
   },
 ];
+
+/** The stores a given configuration actually expects on disk. Stores gate themselves via `isConfigured`; one without it is always expected. */
+export function configuredStoreDefinitions(configuration) {
+  return STORE_DEFINITIONS.filter((storeDef) => storeDef.isConfigured === undefined || storeDef.isConfigured(configuration));
+}
 
 /** Secrets that must never be copied into a backup, even if present in the ambient environment (Phase 7). */
 export const EXCLUDED_SECRET_ENV_VARS = ['AOC_ENTERPRISE_API_KEYS'];

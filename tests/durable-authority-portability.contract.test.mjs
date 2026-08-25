@@ -34,6 +34,8 @@ function backupEnvFor(preDir) {
     AOC_ENTERPRISE_PASSPORT_SQLITE_PATH: join(preDir, 'agent-passport.sqlite'),
     AOC_ENTERPRISE_ASSURANCE_SQLITE_PATH: join(preDir, 'assurance.sqlite'),
     AOC_ENTERPRISE_KERNEL_AUTHORITY_SQLITE_PATH: join(preDir, 'kernel-authority.sqlite'),
+    // This suite is about a deployment that HAS adopted durable authority.
+    AOC_ENTERPRISE_KERNEL_AUTHORITY_ENABLED: 'true',
   };
 }
 

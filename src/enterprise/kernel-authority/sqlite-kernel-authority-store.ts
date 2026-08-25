@@ -300,6 +300,9 @@ export async function createSqliteKernelAuthorityStore(
   const selectExternalSubject = db.prepare(
     `SELECT actor_id FROM kernel_authority_external_subjects WHERE organization_id = ? AND external_system = ? AND external_subject_id = ?`,
   );
+  const selectChainHead = db.prepare(
+    `SELECT latest_sequence, latest_event_digest FROM kernel_authority_records WHERE organization_id = ? AND entity_kind = ? AND entity_id = ?`,
+  );
   const selectRecordKeys = db.prepare(
     `SELECT organization_id, entity_kind, entity_id FROM kernel_authority_records WHERE organization_id = ? ORDER BY entity_kind ASC, entity_id ASC`,
   );
@@ -313,6 +316,24 @@ export async function createSqliteKernelAuthorityStore(
 
   function loadEvents(organizationId: string, entityKind: KernelAuthorityEntityKind, entityId: string): KernelAuthorityEvent[] {
     return (selectEventsByEntity.all(organizationId, entityKind, entityId) as EventRow[]).map(rowToEvent);
+  }
+
+  /**
+   * Reconstructs from the canonical event chain, cross-checked against the
+   * independently-written head on the projection row.
+   *
+   * The projection is a cache of state, but its head columns serve a second
+   * purpose that is not caching at all: they are the only record of how long
+   * the chain is supposed to be. Without comparing them, losing the last event
+   * of a chain is undetectable -- and the last event is exactly where a
+   * revocation lives.
+   */
+  function reconstructWithHead(organizationId: string, entityKind: KernelAuthorityEntityKind, entityId: string, events: readonly KernelAuthorityEvent[]): KernelAuthorityRecord {
+    const head = selectChainHead.get(organizationId, entityKind, entityId) as { latest_sequence: number; latest_event_digest: string } | undefined;
+    return reconstructKernelAuthorityRecord(
+      events,
+      head !== undefined ? { latestSequence: head.latest_sequence, latestEventDigest: head.latest_event_digest } : undefined,
+    );
   }
 
   return {
@@ -347,6 +368,20 @@ export async function createSqliteKernelAuthorityStore(
         });
 
         if (decision.outcome === 'replay') {
+          // The entity needs no second event, but an unclaimed key still must
+          // be pinned to this payload -- otherwise a key first used on a
+          // replayed provision stays free, and can later be spent on a
+          // different entity in the same organization.
+          if (input.idempotency !== undefined && claimRow === undefined) {
+            insertIdempotency.run({
+              organizationId: input.organizationId,
+              idempotencyKey: input.idempotency.idempotencyKey,
+              payloadDigest: decision.payloadDigest,
+              entityKind: input.entityKind,
+              entityId: input.entityId,
+              createdAt: now(),
+            });
+          }
           return { event: existingEvents[existingEvents.length - 1] as KernelAuthorityEvent, record: decision.record, replayed: true };
         }
 
@@ -451,7 +486,7 @@ export async function createSqliteKernelAuthorityStore(
       assertOpen();
       requireKernelAuthorityReadAccess(context, organizationId);
       const events = loadEvents(organizationId, entityKind, entityId);
-      return events.length === 0 ? null : reconstructKernelAuthorityRecord(events);
+      return events.length === 0 ? null : reconstructWithHead(organizationId, entityKind, entityId, events);
     },
 
     async listRecords(context, query: KernelAuthorityRecordQuery): Promise<readonly KernelAuthorityRecord[]> {
@@ -470,7 +505,7 @@ export async function createSqliteKernelAuthorityStore(
         // Replayed from the canonical event chain rather than read off the
         // projection row: the row is a cache, and a hydration must never
         // inherit a status the events do not support.
-        const record = reconstructKernelAuthorityRecord(loadEvents(query.organizationId, key.entity_kind, key.entity_id));
+        const record = reconstructWithHead(query.organizationId, key.entity_kind, key.entity_id, loadEvents(query.organizationId, key.entity_kind, key.entity_id));
         if (query.trustDomainId !== undefined && record.trustDomainId !== query.trustDomainId) continue;
         if (query.status !== undefined && record.status !== query.status) continue;
         records.push(record);
@@ -494,7 +529,7 @@ export async function createSqliteKernelAuthorityStore(
       const row = selectExternalSubject.get(organizationId, externalSubject.system, externalSubject.subjectId) as { actor_id: string } | undefined;
       if (row === undefined) return null;
       const events = loadEvents(organizationId, 'actor', row.actor_id);
-      return events.length === 0 ? null : reconstructKernelAuthorityRecord(events);
+      return events.length === 0 ? null : reconstructWithHead(organizationId, 'actor', row.actor_id, events);
     },
 
     async health(): Promise<KernelAuthorityStoreHealth> {

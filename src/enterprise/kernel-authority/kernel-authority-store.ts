@@ -163,12 +163,40 @@ export interface BuildKernelAuthorityEventInput {
 }
 
 /**
- * Builds one event and its chain digest. The digest covers the previous
- * digest, so a tampered or reordered history is detectable and an entity's
- * chain names exactly which prior state each event superseded.
+ * Computes an event's digest from its own fields.
+ *
+ * The single definition used both when an event is written and when one read
+ * back is verified. Two implementations would be worse than none: a verifier
+ * that drifted from the writer would either reject every honest event or --
+ * far worse -- accept a dishonest one.
+ */
+export function computeKernelAuthorityEventDigest(event: Omit<KernelAuthorityEvent, 'eventDigest'>): string {
+  const unsigned = {
+    eventId: event.eventId,
+    organizationId: event.organizationId,
+    entityKind: event.entityKind,
+    entityId: event.entityId,
+    eventType: event.eventType,
+    sequence: event.sequence,
+    payload: event.payload,
+    provisionedBy: event.provisionedBy,
+    occurredAt: event.occurredAt,
+    persistedAt: event.persistedAt,
+    schemaVersion: event.schemaVersion,
+    runtimeVersion: event.runtimeVersion,
+    ...(event.previousEventDigest !== undefined ? { previousEventDigest: event.previousEventDigest } : {}),
+  };
+  return computeDigest(canonicalSerialize(unsigned));
+}
+
+/**
+ * Builds one event and its chain digest. The digest covers the event's own
+ * payload *and* the previous digest, so both a tampered payload and a
+ * reordered history are detectable, and an entity's chain names exactly which
+ * prior state each event superseded.
  */
 export function buildKernelAuthorityEvent(input: BuildKernelAuthorityEventInput): KernelAuthorityEvent {
-  const unsigned = {
+  const unsigned: Omit<KernelAuthorityEvent, 'eventDigest'> = {
     eventId: input.eventId,
     organizationId: input.organizationId,
     entityKind: input.entityKind,
@@ -183,7 +211,22 @@ export function buildKernelAuthorityEvent(input: BuildKernelAuthorityEventInput)
     runtimeVersion: input.runtimeVersion,
     ...(input.previousEventDigest !== undefined ? { previousEventDigest: input.previousEventDigest } : {}),
   };
-  return { ...unsigned, eventDigest: computeDigest(canonicalSerialize(unsigned)) };
+  return { ...unsigned, eventDigest: computeKernelAuthorityEventDigest(unsigned) };
+}
+
+/**
+ * The chain head an entity's events are expected to reconstruct to.
+ *
+ * Supplied by a store that keeps an independently-written record of the head
+ * (the SQLite projection row). Without it, a chain whose *tail* was lost is
+ * indistinguishable from a chain that was always shorter: the surviving prefix
+ * is perfectly self-consistent, so neither sequence contiguity nor digest
+ * linkage notices anything wrong -- and a lost revocation event would read
+ * back as live authority.
+ */
+export interface KernelAuthorityChainHead {
+  readonly latestSequence: number;
+  readonly latestEventDigest: string;
 }
 
 /**
@@ -196,7 +239,7 @@ export function buildKernelAuthorityEvent(input: BuildKernelAuthorityEventInput)
  * would be exactly the widening failure mode this layer must not have -- a
  * dropped revocation event would resurrect authority.
  */
-export function reconstructKernelAuthorityRecord(events: readonly KernelAuthorityEvent[]): KernelAuthorityRecord {
+export function reconstructKernelAuthorityRecord(events: readonly KernelAuthorityEvent[], expectedHead?: KernelAuthorityChainHead): KernelAuthorityRecord {
   const first = events[0];
   if (first === undefined) {
     throw new KernelAuthorityError('KERNEL_AUTHORITY_INTEGRITY_FAILED', 'Cannot reconstruct a Kernel Authority record from an empty event chain.');
@@ -227,6 +270,18 @@ export function reconstructKernelAuthorityRecord(events: readonly KernelAuthorit
         `Kernel Authority event chain for '${event.entityKind}:${event.entityId}' is broken at sequence ${event.sequence}: the recorded previous digest does not match the preceding event.`,
       );
     }
+    // Recomputed, never trusted. Checking only that the *next* event cites this
+    // event's stored digest proves the events are in the order someone wrote
+    // them down -- it proves nothing about whether the payload still says what
+    // it said when it was signed. Editing a capability token's actions in place
+    // and leaving the digest columns alone passes that weaker check.
+    const recomputed = computeKernelAuthorityEventDigest(event);
+    if (recomputed !== event.eventDigest) {
+      throw new KernelAuthorityError(
+        'KERNEL_AUTHORITY_INTEGRITY_FAILED',
+        `Kernel Authority event '${event.eventId}' (${event.entityKind}:${event.entityId} sequence ${event.sequence}) does not match its recorded digest: the persisted event has been altered since it was written.`,
+      );
+    }
     previousDigest = event.eventDigest;
 
     if (event.eventType === 'KernelAuthorityEntityRevoked') {
@@ -239,6 +294,14 @@ export function reconstructKernelAuthorityRecord(events: readonly KernelAuthorit
   }
 
   const latest = events[events.length - 1] as KernelAuthorityEvent;
+
+  if (expectedHead !== undefined && (latest.sequence !== expectedHead.latestSequence || latest.eventDigest !== expectedHead.latestEventDigest)) {
+    throw new KernelAuthorityError(
+      'KERNEL_AUTHORITY_INTEGRITY_FAILED',
+      `Kernel Authority event chain for '${latest.entityKind}:${latest.entityId}' ends at sequence ${latest.sequence}, but the store records its head at sequence ${expectedHead.latestSequence}. Events are missing from the end of the chain; refusing to interpret the surviving prefix, which would read back as live authority.`,
+    );
+  }
+
   const trustDomainId = extractTrustDomainId(first.entityKind, first.entityId, first.payload);
 
   return {

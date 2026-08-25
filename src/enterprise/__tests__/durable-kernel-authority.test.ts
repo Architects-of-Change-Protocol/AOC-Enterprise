@@ -129,8 +129,8 @@ describe('Durable Kernel Authority: restart matrix', () => {
     await first.authorityStore.close();
     const second = await reopen(path);
     assert.notEqual(second, first);
-    assert.notEqual(second.recognitionRuntime, first.recognitionRuntime, 'the restarted world must be a genuinely different runtime instance');
-    assert.notEqual(second.authorityStore, first.authorityStore);
+    assert.notEqual(second.authorityStore, first.authorityStore, 'the restarted world must read through a genuinely different store handle');
+    assert.notEqual(second.recognitionProvider, first.recognitionProvider, 'and answer through a genuinely different provider instance');
 
     const secondKernel = kernelFor(second);
     const after_ = {
