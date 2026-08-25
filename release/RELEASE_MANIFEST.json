@@ -1,8 +1,8 @@
 {
   "name": "@aoc-enterprise/runtime",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "generated": {
-    "commit": "7d8b6baad6c675d730e89e58ca4e426b3a3b747a",
+    "commit": "8e7ded3b70855a47eb01bf2a9bc466f098b02438",
     "branch": "claude/frontera-authority-productionize-wsuoxj",
     "node": "v22.22.2"
   },
@@ -114,11 +114,11 @@
       },
       {
         "path": "scripts/portability/backup-enterprise-v1.mjs",
-        "checksum": "sha256:85250ae5dd6e6e0c29b481209ab02991d3e2a832a34ca30e6c3ab1229dcd0944"
+        "checksum": "sha256:ad52126b46e452a225ef7a5bb6a86a7347a88b512671f7dbac557a1b24084ba2"
       },
       {
         "path": "scripts/portability/check-portability-smoke.mjs",
-        "checksum": "sha256:e6e113c4b9c62264a09855cbf9448dd85684f89c8dce20aa18aad6f96214eb18"
+        "checksum": "sha256:9b57b253d68678e769f6b479e2573e5dfa1544d4c88c4ebaa3352e737563f50c"
       },
       {
         "path": "scripts/portability/compare-portability-state.mjs",
@@ -130,7 +130,7 @@
       },
       {
         "path": "scripts/portability/lib-portability.mjs",
-        "checksum": "sha256:f5363b0d0a4dfaebb02e1ec5ed8c00a2cf389f59fa4e1d11a6c1bd55a7aaefca"
+        "checksum": "sha256:25e8bc467e37cd1628df91d29eb0d693b913853770d41fb057846e4f4ae7bf28"
       },
       {
         "path": "scripts/portability/restore-enterprise-v1.mjs",

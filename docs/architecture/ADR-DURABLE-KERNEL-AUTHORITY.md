@@ -219,3 +219,45 @@ rather than left to be discovered.
 revoking the authority inside it. This is a deliberate narrowing: revoking the
 boundary itself would leave its credentials replayed as live, which widens what
 the remaining state appears to mean.
+
+---
+
+## Corrections (post-merge review)
+
+The first implementation of this ADR shipped in `1.1.0` with ten defects that a
+review surfaced after merge. Six were reproduced against the merged code before
+any fix was written. They are recorded here rather than quietly repaired,
+because four of them contradicted guarantees this document asserts, and a
+reader deserves to know which claims were once wrong.
+
+| Claim in this ADR | What the code actually did | Fixed in `1.2.0` by |
+| --- | --- | --- |
+| Digest-chained, tamper-evident | Verified only that each event *cited* the previous stored digest; never recomputed a digest from the event's own fields. Editing a capability token's `actions` in place, leaving digest columns untouched, hydrated as authority. | `computeKernelAuthorityEventDigest`, recomputed and compared for every event on every read |
+| "A dropped revocation event would resurrect authority" — presented as prevented | Prevented for an event lost from the *middle* of a chain. An event lost from the *end* left a perfectly self-consistent prefix, so the entity read back as `active`. | Cross-checking the reconstructed head against the independently recorded `latest_sequence`/`latest_event_digest` |
+| The provider set carries no write surface | It extended `KernelProviderSet`, which exposes the concrete mutable Recognition and Authority runtimes — `registerActor`, `issueCapabilityToken`, `issueAuthorityGrant`. An application could mint credentials in the live world and be allowed. | Splitting `DurableKernelDecisionService` (public, read-only) from `createDurableKernelWorld` (internal, keeps the handles private to the composition root) |
+| Cross-organization isolation | Only an explicit *mismatch* denied. An omitted organization was treated as an implicit match, which also bypassed organization-scoped API-key authorization; a caller could alternatively inject the id through free-form `context`. | Requiring the organization explicitly, and stripping the reserved `organizationId`/`organizationName` keys from the free-form context bag in the Kernel's request adapter |
+| Durable world survives restart | A grant whose id sorted before its parent's committed successfully and then failed *every* subsequent hydration — permanently bricking the world through a legitimate operator action. | Dependency-aware topological ordering within each entity kind, failing closed on a cycle |
+| Additive, no behavioural difference | `backup:v1` began demanding `kernel-authority.sqlite` from every SQLite deployment, including those with the feature disabled, breaking existing backup automation. | Gating the store definition on `kernelAuthority.enabled` |
+
+Four further defects were fixed in the same pass: an expired credential that
+sorted first could shadow a valid one (expiry is now checked against the
+payload, not the record's revoked/not-revoked status); an idempotency key
+supplied on a replayed provision was never claimed and could later be spent on
+a different entity; `AOC_ENTERPRISE_KERNEL_AUTHORITY_REQUIRED=false` was inert
+because the store was opened before the lifecycle controller ever saw the
+criticality; and the durable contract could not express the engine's
+`evidenceRequirements` or `approvalRequirement`, so an approval-gated token
+could not be persisted at all.
+
+Two things are worth drawing out, because they generalise past these ten bugs.
+
+**A digest chain that is never recomputed is decorative.** The original code
+had every structural element of tamper evidence — canonical serialization, a
+sha256 digest per event, a `previousEventDigest` link — and verified the one
+property that does not require the payload to be honest. The lesson is not
+"add a check"; it is that an integrity mechanism has to be tested by *tampering*,
+not by reading the code and agreeing with it.
+
+**Ordering by a name is not ordering by a dependency.** Entity ids sort
+lexically; authority chains do not. The original ordering worked for every
+world the test fixtures built, which is precisely why it survived to merge.

@@ -472,7 +472,7 @@ export { createDurableRecognitionProvider, resolveRecognitionCredentials } from 
 export type { DurableRecognitionBridgeOptions, ResolvedRecognitionCredentials } from './kernel-authority/recognition-bridge.js';
 
 export { createDurableKernelProviders } from './kernel-authority/durable-kernel-providers.js';
-export type { CreateDurableKernelProvidersOptions, DurableKernelProviderSet } from './kernel-authority/durable-kernel-providers.js';
+export type { CreateDurableKernelProvidersOptions, DurableKernelDecisionService, DurableKernelProviderSet } from './kernel-authority/durable-kernel-providers.js';
 
 export { createKernelAuthorityProvisioningService } from './kernel-authority/provisioning-service.js';
 export type {

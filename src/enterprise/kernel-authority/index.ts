@@ -65,7 +65,7 @@ export { createDurableRecognitionProvider, resolveRecognitionCredentials } from 
 export type { DurableRecognitionBridgeOptions, ResolvedRecognitionCredentials } from './recognition-bridge.js';
 
 export { createDurableKernelProviders } from './durable-kernel-providers.js';
-export type { CreateDurableKernelProvidersOptions, DurableKernelProviderSet } from './durable-kernel-providers.js';
+export type { CreateDurableKernelProvidersOptions, DurableKernelDecisionService, DurableKernelProviderSet } from './durable-kernel-providers.js';
 
 export { createKernelAuthorityProvisioningService } from './provisioning-service.js';
 export type {

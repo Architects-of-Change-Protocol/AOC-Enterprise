@@ -72,12 +72,20 @@ export function hydrateKernelAuthorityWorld(
 
   const applied: KernelAuthorityRecord[] = [];
 
-  // Pass 1 -- replay every record as provisioned. `records` arrives sorted by
-  // `compareKernelAuthorityRecords`, whose kind ordering is the dependency
-  // order these engines require (actors and trust domains before the
-  // passports and tokens that reference them; root issuers before the grants
-  // they authorize; grants before the delegations derived from them).
-  for (const record of records) {
+  // Pass 1 -- replay every record as provisioned, in dependency order.
+  //
+  // Kind ordering alone is not enough. It gets actors and trust domains ahead
+  // of the passports and tokens that reference them, and root issuers ahead of
+  // the grants they authorize -- but it says nothing about dependencies
+  // *within* a kind, and both grant kinds have them: an authority grant may
+  // name a `parentGrantId`, and a delegation grant's `sourceAuthorityGrantId`
+  // may name either a grant or another delegation. Ordering those by entity id
+  // is ordering by a name, which has nothing to do with what depends on what:
+  // a parent called `z-parent` would be replayed after its child `a-child`,
+  // the engine would reject the child, and the whole world would fail to
+  // hydrate -- permanently, on every restart, for a world an operator had
+  // legitimately provisioned.
+  for (const record of orderByDependency(records)) {
     applyProvisioned(record, recognitionRuntime, authorityRuntime);
     applied.push(record);
   }
@@ -96,6 +104,71 @@ export function hydrateKernelAuthorityWorld(
 
 function payloadOf<T>(record: KernelAuthorityRecord): T {
   return record.payload as unknown as T;
+}
+
+/** The record this one must be replayed after, when it names one within its own kind. */
+function intraKindDependencyOf(record: KernelAuthorityRecord): string | undefined {
+  if (record.entityKind === 'authority-grant') {
+    const parent = payloadOf<ProvisionAuthorityGrantInput>(record).parentGrantId;
+    return typeof parent === 'string' && parent.length > 0 ? parent : undefined;
+  }
+  if (record.entityKind === 'delegation-grant') {
+    // May point at an authority grant (already ordered earlier by kind) or at
+    // another delegation (which is what actually needs ordering here).
+    const source = payloadOf<ProvisionDelegationGrantInput>(record).sourceAuthorityGrantId;
+    return typeof source === 'string' && source.length > 0 ? source : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Stable topological order: kind order first (which the incoming sort already
+ * establishes), then dependencies within each kind.
+ *
+ * Deliberately not a general graph sort over everything -- cross-kind ordering
+ * is already correct and re-deriving it would risk changing it. This only
+ * reorders records whose dependency sits in the same kind, and it preserves
+ * the incoming relative order everywhere else so a hydration stays
+ * byte-reproducible across processes.
+ *
+ * A cycle raises rather than silently dropping the records involved. Dropping
+ * them would hydrate a world missing authority records without saying so,
+ * which is the one failure mode this layer must never have -- a partial world
+ * is not a narrower world, it is an unknown one.
+ */
+function orderByDependency(records: readonly KernelAuthorityRecord[]): readonly KernelAuthorityRecord[] {
+  const byKindAndId = new Map<string, KernelAuthorityRecord>();
+  for (const record of records) byKindAndId.set(`${record.entityKind} ${record.entityId}`, record);
+
+  const ordered: KernelAuthorityRecord[] = [];
+  const placed = new Set<KernelAuthorityRecord>();
+  const visiting = new Set<KernelAuthorityRecord>();
+
+  function place(record: KernelAuthorityRecord): void {
+    if (placed.has(record)) return;
+    if (visiting.has(record)) {
+      throw new KernelAuthorityError(
+        'KERNEL_AUTHORITY_REFERENCE_INVALID',
+        `Kernel Authority records in organization '${record.organizationId}' form a dependency cycle at '${record.entityKind}:${record.entityId}'. Refusing to hydrate a world whose authority chain cannot be ordered.`,
+        { entityKind: record.entityKind, entityId: record.entityId },
+      );
+    }
+    visiting.add(record);
+    const dependencyId = intraKindDependencyOf(record);
+    if (dependencyId !== undefined) {
+      const dependency = byKindAndId.get(`${record.entityKind} ${dependencyId}`);
+      // Absent means the dependency is of another kind (already ordered
+      // earlier) or genuinely missing -- the latter is the engine's to reject,
+      // with its own precise message, when the record is replayed.
+      if (dependency !== undefined) place(dependency);
+    }
+    visiting.delete(record);
+    placed.add(record);
+    ordered.push(record);
+  }
+
+  for (const record of records) place(record);
+  return ordered;
 }
 
 function applyProvisioned(record: KernelAuthorityRecord, recognition: AocRecognitionRuntime, authority: AuthorityGraphRuntime): void {
@@ -151,6 +224,8 @@ function applyProvisioned(record: KernelAuthorityRecord, recognition: AocRecogni
           actions: input.actions,
           resourceScopes: input.resourceScopes,
           riskLevel: input.riskLevel,
+          ...(input.evidenceRequirements !== undefined ? { evidenceRequirements: input.evidenceRequirements } : {}),
+          ...(input.approvalRequirement !== undefined ? { approvalRequirement: input.approvalRequirement } : {}),
           ...(input.prohibitedActions !== undefined ? { prohibitedActions: input.prohibitedActions } : {}),
           ...(input.delegable !== undefined ? { delegable: input.delegable } : {}),
           ...(input.maxDelegationDepth !== undefined ? { maxDelegationDepth: input.maxDelegationDepth } : {}),

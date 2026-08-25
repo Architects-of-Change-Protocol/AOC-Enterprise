@@ -31,6 +31,7 @@ function backupEnvFor(preDir) {
     AOC_ENTERPRISE_PASSPORT_SQLITE_PATH: join(preDir, 'agent-passport.sqlite'),
     AOC_ENTERPRISE_ASSURANCE_SQLITE_PATH: join(preDir, 'assurance.sqlite'),
     AOC_ENTERPRISE_KERNEL_AUTHORITY_SQLITE_PATH: join(preDir, 'kernel-authority.sqlite'),
+    AOC_ENTERPRISE_KERNEL_AUTHORITY_ENABLED: 'true',
   };
 }
 
@@ -71,6 +72,35 @@ test('complete backup: manifest, checksums, RESTORE.md, and stable store orderin
     assert.equal(store.integrityCheck, 'ok');
     assert.equal(sha256(join(sharedBackupDir, 'stores', store.filename)), store.checksum);
   }
+});
+
+test('backup does not demand the authority store when durable authority is disabled', async () => {
+  // Durable authority is opt-in and defaults to off, so an existing SQLite
+  // deployment has no kernel-authority.sqlite. Requiring one would break every
+  // previously-working backup command on upgrade, and the usual remedy ("start
+  // the Host once") cannot help -- a disabled feature never creates the file.
+  const root = workDir('authority-disabled');
+  const preDir = join(root, 'pre');
+  const backupDir = join(root, 'backup');
+  await generateFixture({ target: preDir });
+  unlinkSync(join(preDir, 'kernel-authority.sqlite'));
+
+  const env = { ...backupEnvFor(preDir), AOC_ENTERPRISE_KERNEL_AUTHORITY_ENABLED: 'false' };
+  const report = await runBackup({ output: backupDir, env });
+
+  assert.deepEqual(
+    report.stores.map((s) => s.name),
+    ['governance', 'agent-passport', 'assurance'],
+    'a disabled authority store must simply not be part of the backup set',
+  );
+  assert.equal(existsSync(join(backupDir, 'stores', 'kernel-authority.sqlite')), false);
+  // And the backup is a real, restorable one rather than a partial write.
+  const manifest = JSON.parse(readFileSync(join(backupDir, 'backup-manifest.json'), 'utf8'));
+  assert.deepEqual(manifest.stores.map((s) => s.name), ['governance', 'agent-passport', 'assurance']);
+  const target = join(root, 'restored');
+  const restored = await runRestore({ backup: backupDir, target });
+  assert.equal(restored.status, 'restored');
+  rmSync(root, { recursive: true, force: true });
 });
 
 test('secret exclusion: manifest declares excluded secrets and never embeds them', () => {

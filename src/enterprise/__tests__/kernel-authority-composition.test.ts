@@ -183,6 +183,52 @@ describe('Kernel Authority composition: opt-in, additive, fail-closed', () => {
     );
   });
 
+  it('degrades instead of refusing to start when the configured authority module is optional', async () => {
+    const dir = tempDir();
+    // A path that is a directory, so the store cannot be opened at all.
+    const app = await track(
+      createEnterprise({
+        configuration: loadEnterpriseConfiguration(
+          baseEnv(dir, {
+            AOC_ENTERPRISE_KERNEL_AUTHORITY_ENABLED: 'true',
+            AOC_ENTERPRISE_KERNEL_AUTHORITY_REQUIRED: 'false',
+            AOC_ENTERPRISE_KERNEL_AUTHORITY_SQLITE_PATH: dir,
+          }),
+        ),
+      }),
+    );
+
+    // Declaring the module optional has to mean something: the Host comes up,
+    // and the world it evaluates against is the empty fail-closed one rather
+    // than a stale or invented substitute.
+    assert.equal(app.isLive(), true);
+    const request = {
+      requestId: 'req-degraded',
+      actor: { id: 'actor-alice', trustDomainId: 'trust-domain-acme', type: 'human' },
+      action: { type: 'execute.material-action', resourceScope: 'resource-project-1' },
+      organization: { id: DURABLE_FIXTURE_ORGANIZATION_ID },
+      requestedAt: '2026-01-01T00:00:00.000Z',
+    };
+    assert.equal((await app.kernel.evaluate(request)).status, 'denied', 'a degraded authority source must deny, never allow');
+  });
+
+  it('still refuses to start when the authority module is required and its store cannot be opened', async () => {
+    const dir = tempDir();
+    await assert.rejects(
+      () =>
+        createEnterprise({
+          configuration: loadEnterpriseConfiguration(
+            baseEnv(dir, {
+              AOC_ENTERPRISE_KERNEL_AUTHORITY_ENABLED: 'true',
+              AOC_ENTERPRISE_KERNEL_AUTHORITY_REQUIRED: 'true',
+              AOC_ENTERPRISE_KERNEL_AUTHORITY_SQLITE_PATH: dir,
+            }),
+          ),
+        }),
+      (error: unknown) => error instanceof Error,
+    );
+  });
+
   it('closes the authority store on shutdown', async () => {
     const store = createInMemoryKernelAuthorityStore();
     const app = await createEnterprise({ configuration: loadEnterpriseConfiguration(baseEnv(tempDir())), kernelAuthorityStore: store });

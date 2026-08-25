@@ -114,6 +114,20 @@ export function toGuardActionRequestInput(
   const policyEvaluationInput = buildPolicyEvaluationInput(request, constraintContext);
   const targetType = toEnforcementTargetType(target?.type);
   const context: Record<string, unknown> = { ...(request.context ?? {}) };
+
+  // `organizationId`/`organizationName` are reserved: they are derived from
+  // the typed `organization` field and from nowhere else. A caller-supplied
+  // value of either name is dropped rather than passed through.
+  //
+  // This matters because `context` is a free-form bag that travels into the
+  // metadata a `RecognitionProvider` reads. A provider that scopes decisions by
+  // organization -- the durable Kernel Authority one does -- would otherwise be
+  // reading a claim the requester wrote about itself, which is exactly the
+  // self-assertion the governance boundary exists to prevent. Leaving the
+  // typed field absent must mean "no organization stated", never "whatever the
+  // request put in the bag".
+  delete context.organizationId;
+  delete context.organizationName;
   if (request.organization !== undefined) {
     context.organizationId = request.organization.id;
     if (request.organization.name !== undefined) {

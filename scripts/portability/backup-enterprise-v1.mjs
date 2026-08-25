@@ -21,7 +21,7 @@ import { platform, arch } from 'node:os';
 
 import {
   BACKUP_FORMAT,
-  STORE_DEFINITIONS,
+  configuredStoreDefinitions,
   EXCLUDED_SECRET_ENV_VARS,
   loadEnterpriseModule,
   sha256File,
@@ -91,7 +91,8 @@ export async function runBackup({ output, force = false, allowMissingStores = fa
   }
 
   const outputPath = resolve(output);
-  for (const storeDef of STORE_DEFINITIONS) {
+  const storeDefinitions = configuredStoreDefinitions(configuration);
+  for (const storeDef of storeDefinitions) {
     const sourcePath = resolve(storeDef.configPathOf(configuration));
     if (sourcePath === ':memory:') continue;
     assertNoPathOverlap(outputPath, sourcePath, `Backup output directory must not overlap a source store path (${storeDef.name})`);
@@ -110,7 +111,7 @@ export async function runBackup({ output, force = false, allowMissingStores = fa
 
   try {
     const storeEntries = [];
-    for (const storeDef of STORE_DEFINITIONS) {
+    for (const storeDef of storeDefinitions) {
       const sourcePath = resolve(storeDef.configPathOf(configuration));
       if (!existsSync(sourcePath)) {
         if (allowMissingStores) continue;

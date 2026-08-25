@@ -91,6 +91,11 @@ export function createInMemoryKernelAuthorityStore(options: CreateInMemoryKernel
       });
 
       if (decision.outcome === 'replay') {
+        // Mirrors the SQLite store: an unclaimed key is still pinned to this
+        // payload, so it cannot later be spent on a different entity.
+        if (idempotencyMapKey !== undefined && !idempotency.has(idempotencyMapKey)) {
+          idempotency.set(idempotencyMapKey, { payloadDigest: decision.payloadDigest, entityKind: input.entityKind, entityId: input.entityId });
+        }
         return { event: existingEvents[existingEvents.length - 1] as KernelAuthorityEvent, record: decision.record, replayed: true };
       }
 

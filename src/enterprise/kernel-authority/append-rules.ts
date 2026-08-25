@@ -24,7 +24,8 @@ export interface KernelAuthorityAppendState {
 }
 
 export type KernelAuthorityAppendDecision =
-  | { readonly outcome: 'replay'; readonly record: KernelAuthorityRecord }
+  /** `payloadDigest` is carried on a replay too, because an unclaimed idempotency key still has to be pinned to this payload even when the entity itself needs no second event. */
+  | { readonly outcome: 'replay'; readonly record: KernelAuthorityRecord; readonly payloadDigest: string }
   | { readonly outcome: 'append'; readonly sequence: number; readonly previousEventDigest?: string; readonly payloadDigest: string };
 
 /** Structural validation of the append input itself, before any state is consulted. */
@@ -79,7 +80,7 @@ export function decideKernelAuthorityAppend(input: AppendKernelAuthorityEventInp
       );
     }
     if (current !== undefined) {
-      return { outcome: 'replay', record: current };
+      return { outcome: 'replay', record: current, payloadDigest };
     }
   }
 
@@ -105,7 +106,7 @@ export function decideKernelAuthorityAppend(input: AppendKernelAuthorityEventInp
         `Kernel Authority entity '${input.entityKind}:${input.entityId}' in organization '${input.organizationId}' is already provisioned with different terms. Authority is changed by revoking this entity and provisioning a new one, never by rewriting a record in place.`,
       );
     }
-    return { outcome: 'replay', record: current };
+    return { outcome: 'replay', record: current, payloadDigest };
   }
 
   // Revocation.
@@ -116,7 +117,7 @@ export function decideKernelAuthorityAppend(input: AppendKernelAuthorityEventInp
     );
   }
   if (current.status === 'revoked') {
-    return { outcome: 'replay', record: current };
+    return { outcome: 'replay', record: current, payloadDigest };
   }
   const last = existing[existing.length - 1] as KernelAuthorityEvent;
   return { outcome: 'append', sequence: existing.length + 1, previousEventDigest: last.eventDigest, payloadDigest };

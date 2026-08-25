@@ -24,9 +24,9 @@ import { createDefaultKernelProviders, type KernelProviderSet } from '../provide
 import { createInMemoryKernelAuthorityStore } from '../kernel-authority/in-memory-kernel-authority-store.js';
 import { createSqliteKernelAuthorityStore } from '../kernel-authority/sqlite-kernel-authority-store.js';
 import type { KernelAuthorityStore } from '../kernel-authority/kernel-authority-store.js';
-import { createDurableKernelProviders, type DurableKernelProviderSet } from '../kernel-authority/durable-kernel-providers.js';
+import { createDurableKernelWorld, type DurableKernelWorld } from '../kernel-authority/durable-kernel-providers.js';
 import { createKernelAuthorityProvisioningService, type KernelAuthorityProvisioningService } from '../kernel-authority/provisioning-service.js';
-import { createKernelAuthorityModule } from '../modules/kernel-authority-module.js';
+import { createKernelAuthorityModule, createUnavailableKernelAuthorityModule } from '../modules/kernel-authority-module.js';
 import { createEnterpriseLogger, type EnterpriseLogger } from '../telemetry/enterprise-logger.js';
 import { createEnterpriseTelemetry, type EnterpriseTelemetry } from '../telemetry/enterprise-telemetry.js';
 import { EnterpriseHttpErrors } from '../api/enterprise-http-errors.js';
@@ -314,16 +314,41 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   // Otherwise: a deployment that configured (or injected) a Kernel Authority
   // Store gets its operator-provisioned world restored from that store; every
   // other deployment gets exactly what it always got.
-  const kernelAuthorityStore =
-    options.kernelAuthorityStore ??
-    (configuration.kernelAuthority.enabled ? await buildKernelAuthorityStore(configuration, () => new Date().toISOString(), eventIdGenerator.nextId) : undefined);
+  // Opening the authority source and restoring its world is where a
+  // misconfigured or corrupt deployment fails, so the module's declared
+  // criticality has to be honoured *here* -- the lifecycle controller only
+  // sees modules that were successfully constructed.
+  //
+  // `required` (the default) fails startup outright: a Host that cannot read
+  // its authority source must not run. `optional` degrades instead, and
+  // degrading means falling back to the empty, fail-closed world -- which
+  // denies everything. It never means carrying on with a stale or invented
+  // one. Either way no request is ever allowed out of a world this Host could
+  // not verify.
+  let kernelAuthorityStore: KernelAuthorityStore | undefined;
+  let kernelAuthorityStartupFailure: Error | undefined;
+  if (options.kernelAuthorityStore !== undefined) {
+    kernelAuthorityStore = options.kernelAuthorityStore;
+  } else if (configuration.kernelAuthority.enabled) {
+    try {
+      kernelAuthorityStore = await buildKernelAuthorityStore(configuration, () => new Date().toISOString(), eventIdGenerator.nextId);
+    } catch (error) {
+      if (configuration.kernelAuthority.required) throw error;
+      kernelAuthorityStartupFailure = error instanceof Error ? error : new Error(String(error));
+    }
+  }
 
-  const durableKernelProviders: DurableKernelProviderSet | undefined =
-    options.kernelProviders === undefined && kernelAuthorityStore !== undefined
-      ? await createDurableKernelProviders({ store: kernelAuthorityStore, organizationId: configuration.kernelAuthority.organizationId })
-      : undefined;
+  let durableKernelWorld: DurableKernelWorld | undefined;
+  if (options.kernelProviders === undefined && kernelAuthorityStore !== undefined) {
+    try {
+      durableKernelWorld = await createDurableKernelWorld({ store: kernelAuthorityStore, organizationId: configuration.kernelAuthority.organizationId });
+    } catch (error) {
+      if (configuration.kernelAuthority.required) throw error;
+      kernelAuthorityStartupFailure = error instanceof Error ? error : new Error(String(error));
+    }
+  }
 
-  const kernelProviders: KernelProviderSet = options.kernelProviders ?? durableKernelProviders ?? createDefaultKernelProviders();
+  const kernelProviders: KernelProviderSet = options.kernelProviders ?? durableKernelWorld?.providerSet ?? createDefaultKernelProviders();
 
   // The write half of the provisioning/evaluation separation. It is
   // constructed only when a durable authority source exists, it is never
@@ -336,7 +361,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
       : createKernelAuthorityProvisioningService({
           store: kernelAuthorityStore,
           organizationId: configuration.kernelAuthority.organizationId,
-          ...(durableKernelProviders !== undefined ? { onCommitted: () => durableKernelProviders.reload() } : {}),
+          ...(durableKernelWorld !== undefined ? { onCommitted: () => durableKernelWorld.service.reload() } : {}),
         });
 
   const persistence = options.persistence ?? (await buildStore(configuration, kernelProviders.clock.now));
@@ -400,6 +425,10 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   registry.register(createAssuranceModule(assuranceStore, assuranceFrameworkRegistry, kernelProviders.clock.now, configuration.assurance.required));
   if (kernelAuthorityStore !== undefined) {
     registry.register(createKernelAuthorityModule(kernelAuthorityStore, kernelProviders.clock.now, configuration.kernelAuthority.required));
+  } else if (kernelAuthorityStartupFailure !== undefined) {
+    // Configured, optional, and unusable: the deployment is entitled to know
+    // that from health rather than from the absence of a module.
+    registry.register(createUnavailableKernelAuthorityModule(kernelAuthorityStartupFailure, kernelProviders.clock.now));
   }
   for (const module of options.modules ?? []) registry.register(module);
   registry.freeze();
@@ -426,7 +455,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     lifecycleState: lifecycle.lifecycleState(),
     modules: lifecycle.modules(),
     providers: [
-      { providerType: durableKernelProviders !== undefined ? 'recognition-durable' : 'recognition', ready: true },
+      { providerType: durableKernelWorld !== undefined ? 'recognition-durable' : 'recognition', ready: true },
       ...(options.policyPackProvider !== undefined ? [{ providerType: 'policy-pack', ready: true }] : []),
     ],
     environment: configuration.environment,
