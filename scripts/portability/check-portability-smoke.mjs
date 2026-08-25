@@ -34,6 +34,7 @@ async function main() {
       AOC_ENTERPRISE_SQLITE_PATH: join(preDir, 'enterprise-host.sqlite'),
       AOC_ENTERPRISE_PASSPORT_SQLITE_PATH: join(preDir, 'agent-passport.sqlite'),
       AOC_ENTERPRISE_ASSURANCE_SQLITE_PATH: join(preDir, 'assurance.sqlite'),
+      AOC_ENTERPRISE_KERNEL_AUTHORITY_SQLITE_PATH: join(preDir, 'kernel-authority.sqlite'),
     };
     await runBackup({ output: backupDir, env: backupEnv });
     await runRestore({ backup: backupDir, target: postDir });

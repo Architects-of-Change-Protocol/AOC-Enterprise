@@ -9,7 +9,11 @@
 // projections: decision ids/status, aggregate digests, bundle digests
 // (Evidence Bundles are rebuilt deterministically -- see
 // AOC_ENTERPRISE_V1_PORTABILITY_CURRENT_STATE.md for why), Passport
-// state/digests, and Assurance scores/findings/eligibility/digests.
+// state/digests, Assurance scores/findings/eligibility/digests, and -- for the
+// Kernel Authority Store -- the *decisions* the restored authority world
+// produces, not merely its rows. A restore that reproduced every row but
+// hydrated into a world that decided differently would be a failed restore,
+// and only evaluating proves it did not happen.
 //
 // Usage:
 //   node scripts/portability/compare-portability-state.mjs \
@@ -41,6 +45,7 @@ function storePaths(dir) {
     governance: join(dir, 'enterprise-host.sqlite'),
     passport: join(dir, 'agent-passport.sqlite'),
     assurance: join(dir, 'assurance.sqlite'),
+    kernelAuthority: join(dir, 'kernel-authority.sqlite'),
   };
 }
 
@@ -50,11 +55,12 @@ async function openStores(enterprise, dir) {
     governance: await enterprise.createSqliteGovernanceStore(paths.governance),
     passport: await enterprise.createSqlitePassportStore(paths.passport),
     assurance: await enterprise.createSqliteAssuranceStore(paths.assurance),
+    kernelAuthority: await enterprise.createSqliteKernelAuthorityStore(paths.kernelAuthority),
   };
 }
 
 async function closeStores(stores) {
-  await Promise.all([stores.governance.close(), stores.passport.close(), stores.assurance.close()]);
+  await Promise.all([stores.governance.close(), stores.passport.close(), stores.assurance.close(), stores.kernelAuthority.close()]);
 }
 
 async function compareGovernance(enterprise, preStores, postStores, fixture) {
@@ -180,6 +186,77 @@ async function compareAssurance(enterprise, preStores, postStores, fixture) {
   return { case: result, equivalent: result.scoreMatches && result.findingIdsMatch && result.eligibilityMatches && result.assessmentDigestMatches && result.preValid && result.postValid };
 }
 
+/**
+ * Compares the restored authority world against the original by *deciding*
+ * with both.
+ *
+ * Row equality is checked too (record digests), but the load-bearing assertion
+ * is the decision matrix: the same request must be allowed before and after,
+ * the revoked credential must stay denied before and after, and the external
+ * principal must still resolve to the same actor. Those are the three
+ * properties a disaster recovery actually has to preserve.
+ */
+async function compareKernelAuthority(enterprise, preStores, postStores, fixture) {
+  const kernelModule = await import(resolve(new URL('../..', import.meta.url).pathname, 'dist/src/kernel/index.js'));
+  const expected = fixture.record.kernelAuthority;
+  const context = { system: true };
+
+  async function inspect(store) {
+    const records = await store.listRecords(context, { organizationId: expected.organizationId });
+    const providers = await enterprise.createDurableKernelProviders({ store, organizationId: expected.organizationId });
+    const kernel = kernelModule.createAocKernel({
+      recognitionProvider: providers.recognitionProvider,
+      clock: providers.clock,
+      idGenerator: providers.idGenerator,
+    });
+
+    const evaluate = async (requestId, capabilityTokenId) => {
+      const decision = await kernel.evaluate({
+        requestId,
+        actor: { id: expected.agentActorId, principalId: expected.ownerActorId, trustDomainId: expected.trustDomainId, type: 'agent' },
+        action: { type: expected.action, resourceScope: expected.resourceScope, capability: expected.capability },
+        organization: { id: expected.organizationId },
+        requestedAt: fixture.generatedAt,
+        ...(capabilityTokenId !== undefined ? { context: { capabilityTokenId } } : {}),
+      });
+      return decision.status;
+    };
+
+    const externalActor = await store.findActorByExternalSubject(context, expected.organizationId, expected.externalSubject);
+
+    return {
+      recordDigests: records.map((entry) => `${entry.entityKind}:${entry.entityId}:${entry.status}:${entry.latestEventDigest}`).sort(),
+      allowedDecision: await evaluate('portability-authority-allowed'),
+      revokedDecision: await evaluate('portability-authority-revoked', expected.revokedCapabilityTokenId),
+      externalSubjectActorId: externalActor?.entityId ?? null,
+    };
+  }
+
+  const pre = await inspect(preStores.kernelAuthority);
+  const post = await inspect(postStores.kernelAuthority);
+
+  const result = {
+    organizationId: expected.organizationId,
+    recordDigestsMatch: JSON.stringify(pre.recordDigests) === JSON.stringify(post.recordDigests) && JSON.stringify(post.recordDigests) === JSON.stringify(expected.recordDigests),
+    recordCountMatches: post.recordDigests.length === expected.recordCount,
+    allowedSurvivesRestore: pre.allowedDecision === 'allowed' && post.allowedDecision === 'allowed',
+    revocationSurvivesRestore: pre.revokedDecision === 'denied' && post.revokedDecision === 'denied',
+    externalSubjectBindingMatches: pre.externalSubjectActorId === post.externalSubjectActorId && post.externalSubjectActorId === expected.ownerActorId,
+    preDecisions: { allowed: pre.allowedDecision, revoked: pre.revokedDecision },
+    postDecisions: { allowed: post.allowedDecision, revoked: post.revokedDecision },
+  };
+
+  return {
+    case: result,
+    equivalent:
+      result.recordDigestsMatch &&
+      result.recordCountMatches &&
+      result.allowedSurvivesRestore &&
+      result.revocationSurvivesRestore &&
+      result.externalSubjectBindingMatches,
+  };
+}
+
 export async function comparePortabilityState({ pre, post, fixture }) {
   const enterprise = await loadEnterpriseModule();
   const fixtureData = JSON.parse(readFileSync(resolve(fixture), 'utf8'));
@@ -192,6 +269,7 @@ export async function comparePortabilityState({ pre, post, fixture }) {
     const evidence = await compareEvidence(enterprise, preStores, postStores, fixtureData);
     const passport = await comparePassport(enterprise, preStores, postStores, fixtureData);
     const assurance = await compareAssurance(enterprise, preStores, postStores, fixtureData);
+    const kernelAuthority = await compareKernelAuthority(enterprise, preStores, postStores, fixtureData);
 
     const comparison = {
       comparedAt: fixtureData.generatedAt,
@@ -200,7 +278,8 @@ export async function comparePortabilityState({ pre, post, fixture }) {
       evidence,
       passport,
       assurance,
-      overallEquivalent: governance.equivalent && evidence.equivalent && passport.equivalent && assurance.equivalent,
+      kernelAuthority,
+      overallEquivalent: governance.equivalent && evidence.equivalent && passport.equivalent && assurance.equivalent && kernelAuthority.equivalent,
     };
     return comparison;
   } finally {

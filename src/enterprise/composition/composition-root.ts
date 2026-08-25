@@ -21,6 +21,12 @@ import { createSqlitePassportStore } from '../passport/sqlite-passport-store.js'
 import type { AgentPassportStore } from '../passport/passport-store.js';
 import { createAgentPassportService, type AgentPassportService } from '../passport/service.js';
 import { createDefaultKernelProviders, type KernelProviderSet } from '../providers/kernel-provider-composition.js';
+import { createInMemoryKernelAuthorityStore } from '../kernel-authority/in-memory-kernel-authority-store.js';
+import { createSqliteKernelAuthorityStore } from '../kernel-authority/sqlite-kernel-authority-store.js';
+import type { KernelAuthorityStore } from '../kernel-authority/kernel-authority-store.js';
+import { createDurableKernelProviders, type DurableKernelProviderSet } from '../kernel-authority/durable-kernel-providers.js';
+import { createKernelAuthorityProvisioningService, type KernelAuthorityProvisioningService } from '../kernel-authority/provisioning-service.js';
+import { createKernelAuthorityModule } from '../modules/kernel-authority-module.js';
 import { createEnterpriseLogger, type EnterpriseLogger } from '../telemetry/enterprise-logger.js';
 import { createEnterpriseTelemetry, type EnterpriseTelemetry } from '../telemetry/enterprise-telemetry.js';
 import { EnterpriseHttpErrors } from '../api/enterprise-http-errors.js';
@@ -81,6 +87,18 @@ export interface CreateEnterpriseOptions {
   readonly passportStore?: AgentPassportStore;
   /** PR-007: the Assurance Store. Independent of every other store -- assessments are never persisted inside the Governance, Evidence, or Passport stores (mission section 48). */
   readonly assuranceStore?: AssuranceStore;
+  /**
+   * P0-PKG-07: the Kernel Authority Store -- the durable, operator-provisioned
+   * authority source. Independent of every other store: authority
+   * source-of-truth is never persisted inside a record of past evaluations.
+   *
+   * Supplying it turns on the durable authority path regardless of
+   * `configuration.kernelAuthority.enabled`, which is what a test or an
+   * embedder that composes its own store needs. Leaving it out and leaving
+   * the configuration flag off keeps the historical behaviour exactly:
+   * `createDefaultKernelProviders()`'s real-but-empty, fail-closed world.
+   */
+  readonly kernelAuthorityStore?: KernelAuthorityStore;
   /** PR-007: additional Assurance frameworks registered alongside the built-in `aoc.saf` 1.0.0. Each is validated at registration; an invalid framework fails composition. */
   readonly assuranceFrameworks?: readonly AssuranceFramework[];
   readonly eventPublisher?: EnterpriseEventPublisher;
@@ -135,6 +153,25 @@ export interface AocEnterprise {
   readonly assurance: AssuranceService;
   /** PR-007: the frozen Assurance Framework Registry (read surface: `get`/`list`/`validate`). */
   readonly assuranceFrameworks: AssuranceFrameworkRegistry;
+  /**
+   * P0-PKG-07: the durable authority source, when this deployment configured
+   * one. `undefined` means this Host runs the historical empty, fail-closed
+   * Kernel world -- never that authority is unrestricted.
+   */
+  readonly kernelAuthorityStore?: KernelAuthorityStore;
+  /**
+   * P0-PKG-07: the **trusted operator** write surface over the durable
+   * authority source, present only when one is configured.
+   *
+   * Exposed here so a deployment's own administration code (a bootstrap
+   * script, a CLI, an authenticated admin route) can provision without
+   * reaching into internals. It is emphatically not part of the evaluation
+   * path: `evaluate()` never touches it, every method on it requires a
+   * privileged operator context, and an application that is handed an
+   * `AocEnterprise` should be handed the evaluation surface rather than this
+   * object. See `docs/enterprise/AOC_DURABLE_KERNEL_AUTHORITY.md`.
+   */
+  readonly kernelAuthorityProvisioning?: KernelAuthorityProvisioningService;
   readonly eventPublisher: EnterpriseEventPublisher;
   readonly telemetry: EnterpriseTelemetry;
   readonly logger: EnterpriseLogger;
@@ -182,6 +219,29 @@ async function buildAssuranceStore(configuration: EnterpriseConfiguration, now: 
     return createSqliteAssuranceStore(configuration.assurance.sqlitePath, { now, busyTimeoutMs: configuration.persistence.busyTimeoutMs });
   }
   return createInMemoryAssuranceStore({ now });
+}
+
+/**
+ * Mirrors `buildPassportStore`, but for the independent Kernel Authority Store
+ * -- again a distinct on-disk file, because an authority registry and a record
+ * of past evaluations are different things and a deployment must be able to
+ * back up, restore and rotate them independently.
+ *
+ * Fails closed on purpose: a configured SQLite authority source that cannot be
+ * opened raises, and is never quietly replaced by an empty in-memory store.
+ * That substitution would erase every provisioned actor and grant while the
+ * Host reported itself healthy -- authority would appear to have been revoked
+ * en masse, and a later write would begin building a second, divergent world.
+ */
+async function buildKernelAuthorityStore(configuration: EnterpriseConfiguration, now: () => string, nextId: (prefix: string) => string): Promise<KernelAuthorityStore> {
+  if (configuration.persistence.provider === 'sqlite') {
+    return createSqliteKernelAuthorityStore(configuration.kernelAuthority.sqlitePath, {
+      now,
+      nextId,
+      busyTimeoutMs: configuration.persistence.busyTimeoutMs,
+    });
+  }
+  return createInMemoryKernelAuthorityStore({ now, nextId });
 }
 
 /** A dedicated id source for Enterprise-internal bookkeeping (event ids, boot id) -- independent of the Kernel's own `idGenerator`, so Enterprise bookkeeping never perturbs the Kernel's internal id sequence. */
@@ -244,8 +304,41 @@ export function getInternalEnterpriseConfiguration(enterprise: AocEnterprise): E
  */
 export async function createEnterprise(options: CreateEnterpriseOptions = {}): Promise<AocEnterprise> {
   const configuration = options.configuration ?? loadEnterpriseConfiguration();
-  const kernelProviders = options.kernelProviders ?? createDefaultKernelProviders();
   const eventIdGenerator = createEnterpriseIdGenerator();
+
+  // P0-PKG-07: the durable authority path. Explicitly-supplied
+  // `kernelProviders` still win outright -- that is how the Kernel's own
+  // characterization suite injects a seeded world, and how an embedder
+  // composes a provider set this root knows nothing about.
+  //
+  // Otherwise: a deployment that configured (or injected) a Kernel Authority
+  // Store gets its operator-provisioned world restored from that store; every
+  // other deployment gets exactly what it always got.
+  const kernelAuthorityStore =
+    options.kernelAuthorityStore ??
+    (configuration.kernelAuthority.enabled ? await buildKernelAuthorityStore(configuration, () => new Date().toISOString(), eventIdGenerator.nextId) : undefined);
+
+  const durableKernelProviders: DurableKernelProviderSet | undefined =
+    options.kernelProviders === undefined && kernelAuthorityStore !== undefined
+      ? await createDurableKernelProviders({ store: kernelAuthorityStore, organizationId: configuration.kernelAuthority.organizationId })
+      : undefined;
+
+  const kernelProviders: KernelProviderSet = options.kernelProviders ?? durableKernelProviders ?? createDefaultKernelProviders();
+
+  // The write half of the provisioning/evaluation separation. It is
+  // constructed only when a durable authority source exists, it is never
+  // consulted by `evaluate()`, and every method on it independently demands a
+  // privileged operator context -- so possessing this object is not by itself
+  // authority to use it.
+  const kernelAuthorityProvisioning: KernelAuthorityProvisioningService | undefined =
+    kernelAuthorityStore === undefined
+      ? undefined
+      : createKernelAuthorityProvisioningService({
+          store: kernelAuthorityStore,
+          organizationId: configuration.kernelAuthority.organizationId,
+          ...(durableKernelProviders !== undefined ? { onCommitted: () => durableKernelProviders.reload() } : {}),
+        });
+
   const persistence = options.persistence ?? (await buildStore(configuration, kernelProviders.clock.now));
   const evidenceStore = options.evidenceStore ?? createInMemoryEvidenceStore({ now: kernelProviders.clock.now });
   const passportStore = options.passportStore ?? (await buildPassportStore(configuration, kernelProviders.clock.now, eventIdGenerator.nextId));
@@ -305,6 +398,9 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
   registry.register(createKernelModule(kernel, kernelProviders.clock.now));
   registry.register(createAgentPassportModule(passportStore, kernelProviders.clock.now, configuration.passport.required));
   registry.register(createAssuranceModule(assuranceStore, assuranceFrameworkRegistry, kernelProviders.clock.now, configuration.assurance.required));
+  if (kernelAuthorityStore !== undefined) {
+    registry.register(createKernelAuthorityModule(kernelAuthorityStore, kernelProviders.clock.now, configuration.kernelAuthority.required));
+  }
   for (const module of options.modules ?? []) registry.register(module);
   registry.freeze();
 
@@ -330,7 +426,7 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     lifecycleState: lifecycle.lifecycleState(),
     modules: lifecycle.modules(),
     providers: [
-      { providerType: 'recognition', ready: true },
+      { providerType: durableKernelProviders !== undefined ? 'recognition-durable' : 'recognition', ready: true },
       ...(options.policyPackProvider !== undefined ? [{ providerType: 'policy-pack', ready: true }] : []),
     ],
     environment: configuration.environment,
@@ -388,6 +484,8 @@ export async function createEnterprise(options: CreateEnterpriseOptions = {}): P
     assuranceStore,
     assurance,
     assuranceFrameworks: assuranceFrameworkRegistry,
+    ...(kernelAuthorityStore !== undefined ? { kernelAuthorityStore } : {}),
+    ...(kernelAuthorityProvisioning !== undefined ? { kernelAuthorityProvisioning } : {}),
     eventPublisher,
     telemetry,
     logger,

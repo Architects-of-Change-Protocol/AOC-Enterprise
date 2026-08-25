@@ -30,6 +30,7 @@ function backupEnvFor(preDir) {
     AOC_ENTERPRISE_SQLITE_PATH: join(preDir, 'enterprise-host.sqlite'),
     AOC_ENTERPRISE_PASSPORT_SQLITE_PATH: join(preDir, 'agent-passport.sqlite'),
     AOC_ENTERPRISE_ASSURANCE_SQLITE_PATH: join(preDir, 'assurance.sqlite'),
+    AOC_ENTERPRISE_KERNEL_AUTHORITY_SQLITE_PATH: join(preDir, 'kernel-authority.sqlite'),
   };
 }
 
@@ -59,7 +60,10 @@ test.after(() => {
 test('complete backup: manifest, checksums, RESTORE.md, and stable store ordering', () => {
   const manifest = JSON.parse(readFileSync(join(sharedBackupDir, 'backup-manifest.json'), 'utf8'));
   assert.equal(manifest.backupFormat, 'aoc.enterprise.backup.v1');
-  assert.deepEqual(manifest.stores.map((s) => s.name), ['governance', 'agent-passport', 'assurance']);
+  // Four stores as of P0-PKG-07: the Kernel Authority Store is authority
+  // source-of-truth, so a backup that omitted it would restore a deployment in
+  // which every actor is unrecognized and every action denied.
+  assert.deepEqual(manifest.stores.map((s) => s.name), ['governance', 'agent-passport', 'assurance', 'kernel-authority']);
   assert.ok(existsSync(join(sharedBackupDir, 'checksums.sha256')));
   assert.ok(existsSync(join(sharedBackupDir, 'RESTORE.md')));
   assert.ok(existsSync(join(sharedBackupDir, 'metadata', 'store-versions.json')));
@@ -76,17 +80,17 @@ test('secret exclusion: manifest declares excluded secrets and never embeds them
   assert.ok(!raw.includes('AOC_ENTERPRISE_API_KEYS='), 'manifest must never embed an actual secret value');
 });
 
-test('successful restore into a fresh target opens all three stores healthy', async () => {
+test('successful restore into a fresh target opens all four stores healthy', async () => {
   const target = join(workDir('restore-ok'), 'target');
   const report = await runRestore({ backup: sharedBackupDir, target });
   assert.equal(report.status, 'restored');
-  for (const name of ['governance', 'agent-passport', 'assurance']) {
+  for (const name of ['governance', 'agent-passport', 'assurance', 'kernel-authority']) {
     assert.equal(report.objectVerification[name].status, 'healthy');
   }
   rmSync(dirname(target), { recursive: true, force: true });
 });
 
-test('full backup -> restore -> compare proves logical equivalence across Governance, Evidence, Passport, and Assurance', async () => {
+test('full backup -> restore -> compare proves logical equivalence across Governance, Evidence, Passport, Assurance, and Kernel Authority', async () => {
   const root = workDir('roundtrip');
   const preDir = join(root, 'pre');
   const backupDir = join(root, 'backup');

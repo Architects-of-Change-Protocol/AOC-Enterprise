@@ -76,6 +76,26 @@ export interface EnterpriseConfiguration {
     /** When `true`, a Passport Store outage makes the Enterprise Host not-ready (`criticality: 'required'`). Defaults to `false`: Passport-backed agent recognition degrades gracefully rather than blocking governance evaluation. */
     readonly required: boolean;
   };
+  /**
+   * P0-PKG-07: Kernel Authority Runtime configuration -- the durable,
+   * operator-provisioned recognition/authority world the Kernel decides
+   * against.
+   *
+   * Opt-in (`enabled: false` by default) because turning it on changes where
+   * the Kernel's world comes from. A deployment that has not adopted durable
+   * authority keeps `createDefaultKernelProviders()`'s real-but-empty,
+   * fail-closed world byte for byte.
+   */
+  readonly kernelAuthority: {
+    /** When `true`, the composition root restores the Kernel's world from the Kernel Authority Store instead of composing an empty one. */
+    readonly enabled: boolean;
+    /** The organization whose authority world this deployment decides for. One Enterprise instance serves exactly one authority organization. */
+    readonly organizationId: string;
+    /** SQLite path for the Kernel Authority Store when `persistence.provider === 'sqlite'`. Independent of every other store's path -- authority source-of-truth is never stored inside an evaluation-history database. */
+    readonly sqlitePath: string;
+    /** When `true` (the default), an authority-source outage makes the Enterprise Host not-ready rather than letting it answer out of a world it can no longer verify. */
+    readonly required: boolean;
+  };
   /** PR-007: Assurance Runtime configuration (mission section 57 -- Assurance criticality is deployment-configurable, never hardcoded). */
   readonly assurance: {
     /** SQLite path for the Assurance Store when `persistence.provider === 'sqlite'`. Independent of every other store's path -- the Assurance Store is an independent store (mission section 48). */
@@ -166,6 +186,15 @@ export function loadEnterpriseConfiguration(env: Readonly<Record<string, string 
       sqlitePath: env.AOC_ENTERPRISE_PASSPORT_SQLITE_PATH ?? '.data/agent-passport.sqlite',
       required: parseBoolean(env.AOC_ENTERPRISE_PASSPORT_REQUIRED, false),
     },
+    kernelAuthority: {
+      enabled: parseBoolean(env.AOC_ENTERPRISE_KERNEL_AUTHORITY_ENABLED, false),
+      organizationId: env.AOC_ENTERPRISE_KERNEL_AUTHORITY_ORGANIZATION_ID ?? 'default',
+      sqlitePath: env.AOC_ENTERPRISE_KERNEL_AUTHORITY_SQLITE_PATH ?? '.data/kernel-authority.sqlite',
+      // Defaults to required, unlike Passport and Assurance: an authority
+      // source that is silently absent is not a degraded feature, it is a Host
+      // answering out of a world it cannot verify.
+      required: parseBoolean(env.AOC_ENTERPRISE_KERNEL_AUTHORITY_REQUIRED, true),
+    },
     assurance: {
       sqlitePath: env.AOC_ENTERPRISE_ASSURANCE_SQLITE_PATH ?? '.data/assurance.sqlite',
       required: parseBoolean(env.AOC_ENTERPRISE_ASSURANCE_REQUIRED, false),
@@ -226,6 +255,9 @@ export function computeConfigurationChecksum(config: EnterpriseConfiguration): s
     requireAuthentication: config.features.requireAuthentication,
     passportRequired: config.passport.required,
     assuranceRequired: config.assurance.required,
+    kernelAuthorityEnabled: config.kernelAuthority.enabled,
+    kernelAuthorityOrganizationId: config.kernelAuthority.organizationId,
+    kernelAuthorityRequired: config.kernelAuthority.required,
   };
   const serialized = JSON.stringify(shape);
   let hash = 0;
