@@ -42,6 +42,27 @@ which are a point-in-time summary:
 record of which Protocol artifact this repository has actually been validated against — the
 cross-repository analogue of a commit pin.
 
+### Burned candidate: `0.2.0-rc.0`
+
+`@aoc/protocol@0.2.0-rc.0` (commit `dde34517…`, sha256 `dbe8a08f…`) is **BURNED and must never be
+reinstated as the active pin.** Its canonical-JSON writer truncated exponent digits, so
+`canonicalizeJSON(7.9e-10)` and `canonicalizeJSON(7.9e-100)` both produced `"7.9e-1"` — two distinct
+numbers collapsing to one canonical form, and therefore one digest. Soberanía Protocol declared the
+candidate burned rather than repacking its bytes, and cut `0.2.0-rc.1` from commit `eec79cdd…` as
+the repaired successor, carrying the frozen integration contract from `1.0.0` to `1.0.1`. The
+Protocol public export map did **not** move: 15 export keys, digest
+`a67d65b17dcb34c7da84d9a07cb893e073e21e9edbbc621bcae649afa5cdeb45`, recomputed here from the packed
+rc.1 artifact rather than copied from Protocol's evidence.
+
+Frontera did not bundle the defect — the artifact ships no Protocol code, and `@aoc/protocol` is an
+external peer dependency for every consumer. What the burn invalidated is Frontera's *compatibility
+evidence*: candidates up to and including `1.2.0` were validated and handed off against an input
+later declared burned. `vendor/aoc-protocol-0.2.0-rc.0.tgz`,
+`docs/release/PROTOCOL_CONSUMPTION_EVIDENCE_0.2.0-rc.0.md` and every candidate manifest naming rc.0
+are therefore left byte-identical: they are the honest record of what was true at the time.
+`scripts/protocol/check-canonicalization-regression.mjs` (`npm run check:protocol-canonicalization`,
+also run by `npm test`) fails the build if this repository ever resolves the burned candidate again.
+
 ## Local validation
 
 Two scripts under `scripts/protocol/` reproduce the full consumption story locally, without
@@ -109,7 +130,7 @@ or tag. This job is **blocking** (`continue-on-error` was removed once the Proto
 Adoption sprint resolved every documented gap — see "Known gaps" below). `.github/workflows/ci.yml`
 (typecheck/build/lint/test/legal) is unaffected — it has never required the Protocol sibling
 checkout, because `package.json`'s `@aoc/protocol` devDependency now points at the vendored,
-checksummed tarball (`vendor/aoc-protocol-0.2.0-rc.0.tgz`), which is a real, tracked file, not a shim.
+checksummed tarball (`vendor/aoc-protocol-0.2.0-rc.1.tgz`), which is a real, tracked file, not a shim.
 
 ## Allowed imports
 
@@ -150,7 +171,7 @@ be found on disk.
 
 ## Dependency mechanism (canonical, not a shim)
 
-`package.json` → `devDependencies["@aoc/protocol"] = "file:./vendor/aoc-protocol-0.2.0-rc.0.tgz"`. This
+`package.json` → `devDependencies["@aoc/protocol"] = "file:./vendor/aoc-protocol-0.2.0-rc.1.tgz"`. This
 is a real, tracked, checksummed npm tarball (see `vendor/README.md`, `protocol-consumer.lock.json`),
 not a sibling-directory reference and not an ambient shim — `npm install`/`npm ci` extract it into a
 real `node_modules/@aoc/protocol` (confirmed not a symlink), and `tsconfig.base.json` has no `paths`
@@ -194,6 +215,11 @@ compatibility:
 No stable version changes status, and no prerelease family other than the frozen `0.2.0` `rc` line
 is admitted. `scripts/check-protocol-consumption.mjs` still asserts the range is an explicit semver
 range (not `*`, not `file:`), so this does not weaken that gate.
+
+The repin from the burned `0.2.0-rc.0` to the repaired `0.2.0-rc.1` therefore required **no change
+to this range**: `semver.satisfies('0.2.0-rc.1', '>=0.1.0 || >=0.2.0-rc.0')` is already `true`, and
+re-expressing the range to name `rc.1` would admit nothing new while discarding a validated
+expression. The table above was re-verified mechanically before the range was left alone.
 
 When Protocol cuts a stable `0.2.0`, the `|| >=0.2.0-rc.0` clause should be dropped again — it
 exists to express a candidate relationship, not a permanent one.

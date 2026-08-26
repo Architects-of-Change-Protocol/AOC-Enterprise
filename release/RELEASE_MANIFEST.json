@@ -1,10 +1,10 @@
 {
   "name": "@aoc-enterprise/runtime",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "generated": {
-    "commit": "8e7ded3b70855a47eb01bf2a9bc466f098b02438",
-    "branch": "claude/frontera-authority-productionize-wsuoxj",
-    "node": "v22.22.2"
+    "commit": "a937cfb4180ec02de7b736b92039f5f8210152bc",
+    "branch": "fix/frontera-protocol-rc1-repin",
+    "node": "v22.23.1"
   },
   "runtimeVersions": {
     "enterpriseHost": "1.0.0",

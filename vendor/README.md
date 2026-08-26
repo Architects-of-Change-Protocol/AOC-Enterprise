@@ -7,8 +7,19 @@ referenced by ADRs, source comments and prior release evidence.
 
 | Artifact | State | Protocol version | Pinned commit |
 | --- | --- | --- | --- |
-| `aoc-protocol-0.2.0-rc.0.tgz` | **active** | `0.2.0-rc.0` (release candidate) | `dde34517d956156a0c735c18a805763a5e712879` |
+| `aoc-protocol-0.2.0-rc.1.tgz` | **active** | `0.2.0-rc.1` (repaired release candidate) | `eec79cdd4019dd42e1767909c5bd4e26d04c6f0f` |
+| `aoc-protocol-0.2.0-rc.0.tgz` | **burned**, retained as evidence | `0.2.0-rc.0` | `dde34517d956156a0c735c18a805763a5e712879` |
 | `aoc-protocol-0.1.0.tgz` | superseded, retained | `0.1.0` | `ab2ac6ef573c871a029a67b13d33ba9738cb5939` |
+
+`aoc-protocol-0.2.0-rc.0.tgz` is **BURNED — never reinstate it as the active artifact.** Its
+canonical-JSON writer truncated exponent digits, so `canonicalizeJSON(7.9e-10)` and
+`canonicalizeJSON(7.9e-100)` both produced `"7.9e-1"`: two distinct numbers, one canonical form,
+one digest. Soberanía Protocol declared the candidate burned rather than repacking its bytes and cut
+`0.2.0-rc.1` (commit `eec79cdd…`) as the repaired successor. The burned tarball stays tracked here
+because every Frontera candidate through `1.2.0` really was validated against it and the evidence
+has to keep saying so — it is a historical record, not an install target.
+`scripts/protocol/check-canonicalization-regression.mjs` (run by `npm test`) fails the build if this
+repository ever resolves `0.2.0-rc.0` again.
 
 The active artifact's commit, filename and SHA-256 are pinned in
 [`protocol-consumer.lock.json`](../protocol-consumer.lock.json). A superseded artifact is never

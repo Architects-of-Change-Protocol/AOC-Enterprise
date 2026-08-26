@@ -1,7 +1,7 @@
 {
   "name": "@aoc-enterprise/runtime",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -32,6 +32,7 @@
     "protocol:tarball:validate": "node scripts/protocol/validate-enterprise-against-protocol-tarball.mjs",
     "protocol:tarball:verify-lock": "node scripts/protocol/verify-tarball-against-lock.mjs",
     "check:protocol-compatibility-lock": "node scripts/protocol/check-compatibility-lock.mjs",
+    "check:protocol-canonicalization": "node scripts/protocol/check-canonicalization-regression.mjs",
     "legal:check": "node scripts/validate-legal-ip.mjs --mode=report",
     "legal:check:strict": "node scripts/validate-legal-ip.mjs --mode=strict",
     "backup:v1": "node scripts/portability/backup-enterprise-v1.mjs",
@@ -121,7 +122,7 @@
   ],
   "devDependencies": {
     "@aoc-enterprise/pmfreak-agent-passport-foundation": "*",
-    "@aoc/protocol": "file:./vendor/aoc-protocol-0.2.0-rc.0.tgz",
+    "@aoc/protocol": "file:./vendor/aoc-protocol-0.2.0-rc.1.tgz",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
